@@ -41,10 +41,12 @@
           >
         </div>
         <div class="controls">
-          <mat-slide-toggle
+          <np-toggle
+            #active
             [checked]="c.isActive"
-            (change)="toggle(c, $event)"
-            [attr.aria-label]="'Active: ' + c.name"
+            (checkedChange)="toggle(c, $event, active)"
+            class="bb-label-hidden"
+            [label]="'Active: ' + c.name"
           />
           <button mat-icon-button (click)="open(c)" [attr.aria-label]="'Edit ' + c.name">
             <mat-icon>edit</mat-icon>

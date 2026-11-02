@@ -1,9 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { FormRoot, form, maxLength, validate } from '@angular/forms/signals';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { NP_FORM_FIELDS } from '../../forms/np-form-fields';
 
 export interface ConfirmDialogData {
   title: string;
@@ -20,7 +19,7 @@ export interface ConfirmDialogData {
  */
 @Component({
   selector: 'bb-confirm-dialog',
-  imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [FormRoot, NP_FORM_FIELDS, MatDialogModule, MatButtonModule],
   templateUrl: './confirm-dialog.html',
   styleUrl: './confirm-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,18 +27,17 @@ export interface ConfirmDialogData {
 export class ConfirmDialog {
   protected readonly data = inject<ConfirmDialogData>(MAT_DIALOG_DATA);
   private readonly ref = inject(MatDialogRef<ConfirmDialog, true | string>);
-  protected readonly reason = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(500)] });
 
-  confirm(): void {
-    if (!this.data.reasonLabel) {
-      this.ref.close(true);
-      return;
-    }
-    if (this.reason.invalid || !this.reason.value.trim()) {
-      this.reason.markAsTouched();
-      this.reason.setErrors({ required: true });
-      return;
-    }
-    this.ref.close(this.reason.value.trim());
-  }
+  protected readonly model = signal({ reason: '' });
+  protected readonly form = form(
+    this.model,
+    (path) => {
+      // Only asked for when the caller wants a reason; whitespace does not count.
+      validate(path.reason, ({ value }) =>
+        this.data.reasonLabel && !value().trim() ? { kind: 'required', message: 'A reason is required' } : undefined,
+      );
+      maxLength(path.reason, 500, { message: 'Keep it under 500 characters' });
+    },
+    { submission: { action: async () => this.ref.close(this.data.reasonLabel ? this.model().reason.trim() : true) } },
+  );
 }

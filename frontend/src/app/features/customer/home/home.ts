@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, PLATFORM_ID, effect, inject, signal, untracked } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormRoot, form } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,10 +13,11 @@ import { DeliveryLocationService } from '../../../core/services/delivery-locatio
 import { LocationPickerDialog } from '../../../shared/components/location-picker/location-picker-dialog';
 import { RestaurantCard } from '../../../shared/components/restaurant-card/restaurant-card';
 import { FoodCategory, Restaurant } from '../../../shared/models/catalog.models';
+import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 
 @Component({
   selector: 'bb-home',
-  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatIconModule, RestaurantCard, AnimateOnScrollComponent],
+  imports: [FormRoot, NP_FORM_FIELDS, RouterLink, MatButtonModule, MatIconModule, RestaurantCard, AnimateOnScrollComponent],
   templateUrl: './home.html',
   styleUrl: './home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,7 +30,9 @@ export class Home {
   private readonly dialog = inject(MatDialog);
   protected readonly deliveryLocation = inject(DeliveryLocationService).location;
 
-  protected readonly searchControl = new FormControl('', { nonNullable: true });
+  protected readonly searchForm = form(signal({ search: '' }), {
+    submission: { action: async () => this.submitSearch() },
+  });
   protected readonly categories = signal<FoodCategory[]>([]);
   protected readonly restaurants = signal<Restaurant[]>([]);
   /** null = still loading; the page is prerendered, so data is fetched in the browser only. */
@@ -64,8 +67,8 @@ export class Home {
     this.dialog.open(LocationPickerDialog, { width: '520px', maxWidth: '95vw', autoFocus: 'first-tabbable' });
   }
 
-  protected submitSearch(): void {
-    const search = this.searchControl.value.trim();
+  private submitSearch(): void {
+    const search = this.searchForm.search().value().trim();
     void this.router.navigate(['/restaurants'], { queryParams: search ? { search } : {} });
   }
 

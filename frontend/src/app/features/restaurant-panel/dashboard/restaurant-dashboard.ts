@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { ToggleComponent } from 'nexprime';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { AuthService } from '../../../core/auth/auth.service';
 import { errorMessage } from '../../../core/services/api-error';
 import { MyRestaurantService, MyRestaurantState } from '../../../core/services/my-restaurant.service';
@@ -12,7 +12,7 @@ import { StatusBanner } from '../status-banner/status-banner';
 
 @Component({
   selector: 'bb-restaurant-dashboard',
-  imports: [RouterLink, MatButtonModule, MatIconModule, MatSlideToggleModule, InrPipe, StatusBanner],
+  imports: [ToggleComponent, RouterLink, MatButtonModule, MatIconModule, InrPipe, StatusBanner],
   templateUrl: './restaurant-dashboard.html',
   styleUrl: './restaurant-dashboard.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,16 +38,16 @@ export class RestaurantDashboard {
     });
   }
 
-  protected toggleOrders(event: MatSlideToggleChange): void {
+  protected toggleOrders(checked: boolean, toggle: ToggleComponent): void {
     this.toggling.set(true);
-    this.service.setAcceptingOrders(event.checked).subscribe({
+    this.service.setAcceptingOrders(checked).subscribe({
       next: (restaurant) => {
         this.state.update((s) => (s ? { ...s, restaurant } : s));
         this.notify.success(restaurant.isAcceptingOrders ? 'You are accepting orders' : 'Orders paused');
         this.toggling.set(false);
       },
       error: (err: unknown) => {
-        event.source.checked = !event.checked;
+        toggle.checked.set(!checked); // back to what the server has
         this.notify.error(errorMessage(err));
         this.toggling.set(false);
       },

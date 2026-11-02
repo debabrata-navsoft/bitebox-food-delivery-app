@@ -54,10 +54,15 @@
               </li>
             }
           </ul>
-          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="note">
-            <mat-label>Note for the restaurant (optional)</mat-label>
-            <input matInput [formControl]="note" maxlength="300" placeholder="e.g. less spicy, no onions" />
-          </mat-form-field>
+          <np-textarea
+            class="note"
+            [formField]="noteForm.note"
+            label="Note for the restaurant (optional)"
+            placeholder="e.g. less spicy, no onions"
+            rows="2"
+            autoResize
+          />
+          <bb-field-error [field]="noteForm.note" />
         </section>
 
         <!-- Address -->
@@ -121,12 +126,16 @@
                 <span>{{ ce.code }}: {{ ce.message }} <button class="bb-link-button" (click)="removeCoupon()">Remove</button></span>
               </div>
             }
-            <form class="coupon-form" (ngSubmit)="applyCoupon()">
-              <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                <mat-label>Coupon code</mat-label>
-                <input matInput [formControl]="couponCode" autocapitalize="characters" maxlength="30" />
-              </mat-form-field>
-              <button mat-stroked-button type="submit" [disabled]="applyingCoupon() || !couponCode.value.trim()">Apply</button>
+            <form class="coupon-form" [formRoot]="couponForm">
+              <np-text-input
+                [formField]="couponForm.code"
+                ariaLabel="Coupon code"
+                placeholder="Enter coupon code"
+                icon="tag"
+                autocapitalize="characters"
+                [error]="shownError(couponForm.code)"
+              />
+              <button mat-stroked-button type="submit" [disabled]="applyingCoupon() || !couponForm.code().value().trim()">Apply</button>
             </form>
             @if (couponError()) {
               <p class="field-error" role="alert">{{ couponError() }}</p>

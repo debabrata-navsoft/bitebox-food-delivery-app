@@ -3,11 +3,9 @@ import { DOCUMENT } from '@angular/common';
 import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { ToggleComponent } from 'nexprime';
 import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { HttpErrorResponse } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 import { CartActions } from '../../../core/services/cart-actions.service';
@@ -21,15 +19,17 @@ import { FoodItem, MenuSection, Restaurant } from '../../../shared/models/catalo
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { FoodDetailDialog, FoodDetailData } from '../../food/food-detail-dialog/food-detail-dialog';
 
+import { form } from '@angular/forms/signals';
+import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
+
 @Component({
   selector: 'bb-restaurant-detail',
   imports: [
+    ToggleComponent,
+    NP_FORM_FIELDS,
     RouterLink,
     MatButtonModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
-    MatSlideToggleModule,
     EmptyState,
     QtyStepper,
     VegBadge,
@@ -57,7 +57,8 @@ export class RestaurantDetail {
   protected readonly error = signal<string | null>(null);
 
   protected readonly vegOnly = signal(false);
-  protected readonly menuSearch = signal('');
+  /** "Search this menu" box (filters locally). */
+  protected readonly menuSearch = form(signal({ search: '' }));
 
   protected readonly rating = computed(() => {
     const r = this.restaurant()?.rating;
@@ -66,7 +67,7 @@ export class RestaurantDetail {
 
   /** Menu after the veg / search filters. Empty sections are dropped. */
   protected readonly visibleSections = computed(() => {
-    const term = this.menuSearch().trim().toLowerCase();
+    const term = this.menuSearch.search().value().trim().toLowerCase();
     const veg = this.vegOnly();
     return this.sections()
       .map((s) => ({

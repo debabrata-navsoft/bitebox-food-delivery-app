@@ -32,27 +32,31 @@
             <mat-icon aria-hidden="true">error</mat-icon><span>{{ profileError() }}</span>
           </div>
         }
-        <form class="bb-form" [formGroup]="profileForm" (ngSubmit)="saveProfile()" novalidate>
+        <form class="bb-form" [formRoot]="profileForm">
           <div class="bb-form-row">
-            <mat-form-field appearance="outline">
-              <mat-label>Full name</mat-label>
-              <input matInput formControlName="name" autocomplete="name" />
-              <mat-error>{{ controlError(profileForm.controls.name, 'Name') }}</mat-error>
-            </mat-form-field>
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Mobile number</mat-label>
-              <input matInput type="tel" formControlName="phone" autocomplete="tel" inputmode="tel" />
-              <mat-hint>Leave empty to remove</mat-hint>
-              <mat-error>{{ controlError(profileForm.controls.phone, 'Phone number') }}</mat-error>
-            </mat-form-field>
+            <np-text-input
+              [formField]="profileForm.name"
+              label="Full name"
+              autocomplete="name"
+              [error]="shownError(profileForm.name)"
+            />
+            <np-text-input
+              [formField]="profileForm.phone"
+              label="Mobile number"
+              type="tel"
+              hint="Leave empty to remove"
+              autocomplete="tel"
+              inputmode="tel"
+              [error]="shownError(profileForm.phone)"
+            />
           </div>
           <div class="actions">
             <button
               mat-flat-button
               type="submit"
-              [disabled]="savingProfile() || profileForm.pristine"
+              [disabled]="profileForm().submitting() || !profileForm().dirty()"
             >
-              @if (savingProfile()) {
+              @if (profileForm().submitting()) {
                 <mat-progress-spinner mode="indeterminate" diameter="20" aria-label="Saving" />
               } @else {
                 Save changes
@@ -70,31 +74,34 @@
             <mat-icon aria-hidden="true">error</mat-icon><span>{{ passwordError() }}</span>
           </div>
         }
-        <form class="bb-form" [formGroup]="passwordForm" (ngSubmit)="changePassword()" novalidate>
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>Current password</mat-label>
-            <input matInput #cur type="password" formControlName="currentPassword" autocomplete="current-password" />
-            <bb-password-toggle matSuffix [input]="cur" />
-            <mat-error>{{ controlError(passwordForm.controls.currentPassword, 'Current password') }}</mat-error>
-          </mat-form-field>
+        <form class="bb-form" [formRoot]="passwordForm">
+          <np-text-input
+            [formField]="passwordForm.currentPassword"
+            label="Current password"
+            type="password"
+            autocomplete="current-password"
+            [error]="shownError(passwordForm.currentPassword)"
+          />
           <div class="bb-form-row">
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>New password</mat-label>
-              <input matInput #npw type="password" formControlName="newPassword" autocomplete="new-password" />
-              <bb-password-toggle matSuffix [input]="npw" />
-              <mat-hint>At least 8 characters, with a letter and a number</mat-hint>
-              <mat-error>{{ controlError(passwordForm.controls.newPassword, 'Password') }}</mat-error>
-            </mat-form-field>
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Confirm new password</mat-label>
-              <input matInput #cnpw type="password" formControlName="confirmPassword" autocomplete="new-password" />
-              <bb-password-toggle matSuffix [input]="cnpw" />
-              <mat-error>{{ controlError(passwordForm.controls.confirmPassword, 'Confirmation') }}</mat-error>
-            </mat-form-field>
+            <np-text-input
+              [formField]="passwordForm.newPassword"
+              label="New password"
+              type="password"
+              hint="At least 8 characters, with a letter and a number"
+              autocomplete="new-password"
+              [error]="shownError(passwordForm.newPassword)"
+            />
+            <np-text-input
+              [formField]="passwordForm.confirmPassword"
+              label="Confirm new password"
+              type="password"
+              autocomplete="new-password"
+              [error]="shownError(passwordForm.confirmPassword)"
+            />
           </div>
           <div class="actions">
-            <button mat-stroked-button type="submit" [disabled]="savingPassword()">
-              @if (savingPassword()) {
+            <button mat-stroked-button type="submit" [disabled]="passwordForm().submitting()">
+              @if (passwordForm().submitting()) {
                 <mat-progress-spinner mode="indeterminate" diameter="20" aria-label="Updating" />
               } @else {
                 Update password

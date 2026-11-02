@@ -7,7 +7,12 @@ import { DeliveryLocationService } from '../../../core/services/delivery-locatio
 import { GeolocationService } from '../../../core/services/geolocation.service';
 import { AddressFormDialog } from './address-form-dialog';
 
-type Form = { controls: Record<string, { value: unknown; setValue: (v: unknown) => void }> };
+type Model = Record<string, unknown>;
+type Internals = {
+  model: { (): Model; update: (fn: (v: Model) => Model) => void };
+  useCurrentLocation: () => Promise<void>;
+  pinned: () => boolean;
+};
 
 describe('AddressFormDialog', () => {
   const geo = { supported: true, currentPrecise: vi.fn() };
@@ -37,24 +42,24 @@ describe('AddressFormDialog', () => {
       of({ label: 'Test Area, Test City', displayName: 'Test Area, Test City, Test State', area: 'Test Area', city: 'Test City', state: 'Test State', postalCode: '100001', latitude: 10.5, longitude: 20.5 }),
     );
     const fixture = await create();
-    const component = fixture.componentInstance as unknown as { form: Form; useCurrentLocation: () => Promise<void>; pinned: () => boolean };
-    component.form.controls['city'].setValue('Sample City'); // typed by the user: must be kept
+    const component = fixture.componentInstance as unknown as Internals;
+    component.model.update((v) => ({ ...v, city: 'Sample City' })); // typed by the user: must be kept
 
     await component.useCurrentLocation();
 
     expect(component.pinned()).toBe(true);
-    expect(component.form.controls['latitude'].value).toBe(10.5);
-    expect(component.form.controls['area'].value).toBe('Test Area');
-    expect(component.form.controls['city'].value).toBe('Sample City');
-    expect(component.form.controls['postalCode'].value).toBe('100001');
+    expect(component.model()).toEqual(
+      expect.objectContaining({ latitude: 10.5, area: 'Test Area', city: 'Sample City', postalCode: '100001' }),
+    );
     await fixture.whenStable();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Delivering here');
   });
 
   it('refuses to save without a pinned location', async () => {
     const fixture = await create();
-    const component = fixture.componentInstance as unknown as { save: () => void };
-    component.save();
+    const el = fixture.nativeElement as HTMLElement;
+    (el.querySelector('button[type="submit"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
     expect(service.create).not.toHaveBeenCalled();
     await fixture.whenStable();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Pin your delivery location first');

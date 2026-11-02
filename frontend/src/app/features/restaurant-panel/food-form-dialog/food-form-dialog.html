@@ -1,63 +1,63 @@
 <h2 mat-dialog-title>{{ data.item ? 'Edit dish' : 'Add a dish' }}</h2>
-<form [formGroup]="form" (ngSubmit)="save()" novalidate>
+<form [formRoot]="form">
   <mat-dialog-content class="bb-form">
     @if (error()) {
       <div class="bb-alert error" role="alert">
         <mat-icon aria-hidden="true">error</mat-icon><span>{{ error() }}</span>
       </div>
     }
-    <mat-form-field appearance="outline">
-      <mat-label>Dish name</mat-label>
-      <input matInput formControlName="name" cdkFocusInitial />
-      <mat-error>{{ controlError(form.controls.name, 'Name') }}</mat-error>
-    </mat-form-field>
+    <np-text-input
+      [formField]="form.name"
+      label="Dish name"
+      cdkFocusInitial
+      [error]="shownError(form.name)"
+    />
     <div class="bb-form-row">
-      <mat-form-field appearance="outline">
-        <mat-label>Category</mat-label>
-        <mat-select formControlName="category">
-          @for (c of data.categories; track c.id) {
-            <mat-option [value]="c.id">{{ c.name }}</mat-option>
-          }
-        </mat-select>
-        <mat-error>{{ controlError(form.controls.category, 'Category') }}</mat-error>
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Price</mat-label>
-        <span matTextPrefix>₹&nbsp;</span>
-        <input
-          matInput
-          type="number"
-          min="1"
-          step="0.01"
-          formControlName="price"
-          inputmode="decimal"
+      <div class="bb-field">
+        <np-select [formField]="form.category" label="Category" placeholder="Choose a category" [options]="categoryOptions" />
+        <bb-field-error [field]="form.category" />
+      </div>
+      <div class="bb-field">
+        <np-input-number
+          [formField]="form.price"
+          label="Price"
+          prefix="₹ "
+          [maxFractionDigits]="2"
         />
-        <mat-error>Enter a price of at least ₹1</mat-error>
-      </mat-form-field>
+        <bb-field-error [field]="form.price" />
+      </div>
     </div>
-    <mat-form-field appearance="outline" subscriptSizing="dynamic">
-      <mat-label>Description (optional)</mat-label>
-      <textarea matInput formControlName="description" rows="2" maxlength="500"></textarea>
-      <mat-hint align="end">{{ form.controls.description.value.length }}/500</mat-hint>
-    </mat-form-field>
+    <div class="bb-field">
+      <np-textarea
+        [formField]="form.description"
+        label="Description (optional)"
+        rows="2"
+        autoResize
+      />
+      <bb-field-error [field]="form.description" />
+    </div>
     <div class="row">
-      <mat-button-toggle-group formControlName="isVeg" aria-label="Veg or non-veg">
+      <mat-button-toggle-group [formField]="form.isVeg" aria-label="Veg or non-veg">
         <mat-button-toggle [value]="true">Veg</mat-button-toggle>
         <mat-button-toggle [value]="false">Non-veg</mat-button-toggle>
       </mat-button-toggle-group>
-      <mat-form-field appearance="outline" class="prep" subscriptSizing="dynamic">
-        <mat-label>Prep time</mat-label>
-        <input matInput type="number" min="1" max="180" formControlName="prepTimeMinutes" />
-        <span matTextSuffix>&nbsp;min</span>
-      </mat-form-field>
+      <div class="bb-field">
+        <np-input-number
+          [formField]="form.prepTimeMinutes"
+          label="Prep time"
+          suffix=" min"
+          [maxFractionDigits]="0"
+        />
+        <bb-field-error [field]="form.prepTimeMinutes" />
+      </div>
     </div>
-    <mat-slide-toggle formControlName="isAvailable">Available to order</mat-slide-toggle>
+    <np-toggle class="bb-toggle-success" [formField]="form.isAvailable" label="Available to order" />
     <bb-image-upload [(url)]="imageUrl" label="Add a dish photo" aspectRatio="4 / 3" />
   </mat-dialog-content>
   <mat-dialog-actions align="end">
     <button mat-button type="button" mat-dialog-close>Cancel</button>
-    <button mat-flat-button type="submit" [disabled]="saving()">
-      @if (saving()) {
+    <button mat-flat-button type="submit" [disabled]="form().submitting()">
+      @if (form().submitting()) {
         <mat-progress-spinner mode="indeterminate" diameter="20" aria-label="Saving" />
       } @else {
         {{ data.item ? 'Save' : 'Add dish' }}

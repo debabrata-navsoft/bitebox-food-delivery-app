@@ -69,13 +69,16 @@
 
     <div class="menu">
       <div class="menu-tools">
-        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="menu-search">
-          <mat-icon matPrefix aria-hidden="true">search</mat-icon>
-          <mat-label>Search this menu</mat-label>
-          <input matInput type="search" [value]="menuSearch()" (input)="menuSearch.set($any($event.target).value)" />
-        </mat-form-field>
+        <np-text-input
+          class="menu-search"
+          [formField]="menuSearch.search"
+          ariaLabel="Search this menu"
+          placeholder="Search this menu"
+          icon="search"
+          clearable
+        />
         @if (!r.isPureVeg) {
-          <mat-slide-toggle [checked]="vegOnly()" (change)="vegOnly.set($event.checked)">Veg only</mat-slide-toggle>
+          <np-toggle label="Veg only" [(checked)]="vegOnly" />
         }
       </div>
 

@@ -1,11 +1,14 @@
 <bb-page-header title="Food items" subtitle="Every dish on BiteBox across all restaurants." />
 
 <div class="filters">
-  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search">
-    <mat-icon matPrefix aria-hidden="true">search</mat-icon>
-    <mat-label>Search dishes</mat-label>
-    <input matInput type="search" [formControl]="search" />
-  </mat-form-field>
+  <np-text-input
+    class="search"
+    [formField]="filters.search"
+    ariaLabel="Search dishes"
+    placeholder="Search dishes"
+    icon="search"
+    clearable
+  />
   @if (restaurant()) {
     <button mat-stroked-button (click)="clearRestaurant()">
       <mat-icon>close</mat-icon>One restaurant only
@@ -40,10 +43,12 @@
               · {{ item.category.name }} · {{ item.pricePaise | inr }}
             </span>
           </div>
-          <mat-slide-toggle
+          <np-toggle
+            #availability
             [checked]="item.isAvailable"
-            (change)="toggle(item, $event)"
-            [attr.aria-label]="'Available: ' + item.name"
+            (checkedChange)="toggle(item, $event, availability)"
+            class="bb-toggle-success bb-label-hidden"
+            [label]="'Available: ' + item.name"
           />
           <button mat-icon-button (click)="remove(item)" [attr.aria-label]="'Delete ' + item.name">
             <mat-icon>delete</mat-icon>

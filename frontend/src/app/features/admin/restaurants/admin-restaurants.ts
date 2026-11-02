@@ -1,19 +1,18 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal, computed } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { form } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTabsModule } from '@angular/material/tabs';
-import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subscription, debounceTime, distinctUntilChanged, skip } from 'rxjs';
 import { AdminCatalogService } from '../../../core/services/admin/admin-catalog.service';
 import { errorMessage } from '../../../core/services/api-error';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
+import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { Pagination } from '../../../shared/models/api.models';
 import { AdminRestaurant, RestaurantStatus } from '../../../shared/models/catalog.models';
 
@@ -29,12 +28,10 @@ const TABS: { status: RestaurantStatus; label: string }[] = [
   selector: 'bb-admin-restaurants',
   imports: [
     DatePipe,
-    ReactiveFormsModule,
+    NP_FORM_FIELDS,
     RouterLink,
     MatButtonModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
     MatPaginatorModule,
     MatTabsModule,
     EmptyState,
@@ -57,11 +54,14 @@ export class AdminRestaurants implements OnInit {
   protected readonly pagination = signal<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0 });
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
-  protected readonly search = new FormControl('', { nonNullable: true });
+  protected readonly filters = form(signal({ search: '' }));
   private inFlight?: Subscription;
 
   constructor() {
-    this.search.valueChanges.pipe(debounceTime(350), distinctUntilChanged(), takeUntilDestroyed()).subscribe(() => this.load(1));
+    // skip(1): the first emission is the starting value, which is loaded on init.
+    toObservable(computed(() => this.filters.search().value().trim()))
+      .pipe(skip(1), debounceTime(350), distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe(() => this.load(1));
   }
 
   ngOnInit(): void {
@@ -93,7 +93,7 @@ export class AdminRestaurants implements OnInit {
     this.inFlight = this.service
       .restaurants({
         status: TABS[this.activeTab()].status,
-        search: this.search.value.trim() || undefined,
+        search: this.filters.search().value().trim() || undefined,
         page,
         limit: this.pagination().limit,
       })

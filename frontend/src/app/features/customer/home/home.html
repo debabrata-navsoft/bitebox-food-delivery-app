@@ -10,10 +10,14 @@
         BiteBox connects you with the best local restaurants and riders nearby. Order in a few taps and
         follow your delivery live on the map.
       </p>
-      <form class="hero-search" role="search" (ngSubmit)="submitSearch()">
-        <mat-icon aria-hidden="true">search</mat-icon>
-        <label for="hero-search" class="bb-sr-only">Search restaurants, cuisines or dishes</label>
-        <input id="hero-search" type="search" [formControl]="searchControl" placeholder="Search for biryani, pizza, a restaurant…" />
+      <form class="hero-search" role="search" [formRoot]="searchForm">
+        <np-text-input
+          [formField]="searchForm.search"
+          ariaLabel="Search restaurants, cuisines or dishes"
+          placeholder="Search for biryani, pizza, a restaurant…"
+          icon="search"
+          enterkeyhint="search"
+        />
         <button mat-flat-button class="bb-btn-accent" type="submit">Search</button>
       </form>
       <div class="hero-actions">

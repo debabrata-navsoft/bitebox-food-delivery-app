@@ -1,14 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { form } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { Subscription, catchError, debounceTime, distinctUntilChanged, of } from 'rxjs';
 import { CatalogService } from '../../../core/services/catalog.service';
 import { errorMessage } from '../../../core/services/api-error';
@@ -33,18 +29,18 @@ const SORT_LABELS: Record<RestaurantSort, string> = {
  * Restaurant discovery. All filters live in the URL query string, so results
  * are shareable and survive refresh / back navigation.
  */
+import { SelectOption, ToggleComponent } from 'nexprime';
+import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
+
 @Component({
   selector: 'bb-restaurant-list',
   imports: [
-    ReactiveFormsModule,
+    ToggleComponent,
+    NP_FORM_FIELDS,
     RouterLink,
     MatButtonModule,
     MatChipsModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
-    MatSelectModule,
-    MatSlideToggleModule,
     EmptyState,
     RestaurantCard,
   ],
@@ -71,13 +67,18 @@ export class RestaurantList {
 
   protected readonly categories = toSignal(this.catalog.categories().pipe(catchError(() => of([]))), { initialValue: [] });
   protected readonly cuisines = toSignal(this.catalog.cuisines().pipe(catchError(() => of([]))), { initialValue: [] });
+  protected readonly cuisineOptions = computed<SelectOption[]>(() => [
+    { value: '', label: 'All cuisines' },
+    ...this.cuisines().map((c) => ({ value: c, label: c })),
+  ]);
   protected readonly sortOptions = computed(() =>
     (Object.keys(SORT_LABELS) as RestaurantSort[])
       .filter((s) => s !== 'distance' || this.nearby())
       .map((value) => ({ value, label: SORT_LABELS[value] })),
   );
 
-  protected readonly searchControl = new FormControl('', { nonNullable: true });
+  /** The search box; the URL (?search=) is the source of truth for what is shown. */
+  protected readonly filters = form(signal({ search: '' }));
   protected readonly restaurants = signal<Restaurant[]>([]);
   protected readonly pagination = signal<Pagination | null>(null);
   protected readonly loading = signal(true);
@@ -122,14 +123,18 @@ export class RestaurantList {
     effect(() => {
       const query = this.query();
       untracked(() => {
-        this.searchControl.setValue(query.search ?? '', { emitEvent: false });
+        // Follow the URL (back/forward, links) without fighting what is being typed.
+        const box = this.filters.search().value;
+        if (box().trim() !== (query.search ?? '')) box.set(query.search ?? '');
         this.load(query, 1);
       });
     });
 
-    this.searchControl.valueChanges
+    toObservable(computed(() => this.filters.search().value().trim()))
       .pipe(debounceTime(400), distinctUntilChanged(), takeUntilDestroyed())
-      .subscribe((search) => this.setParams({ search: search.trim() || null }));
+      .subscribe((search) => {
+        if (search !== (this.search() ?? '')) this.setParams({ search: search || null });
+      });
   }
 
   protected setParams(params: Record<string, string | number | boolean | null>): void {

@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { ToggleComponent } from 'nexprime';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { filter } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
 import { AdminCouponService } from '../../../core/services/checkout-api.service';
@@ -17,7 +17,7 @@ import { CouponFormDialog } from './coupon-form-dialog';
 
 @Component({
   selector: 'bb-admin-coupons',
-  imports: [DatePipe, MatButtonModule, MatIconModule, MatSlideToggleModule, MatDialogModule, EmptyState, PageHeader, InrPipe],
+  imports: [ToggleComponent, DatePipe, MatButtonModule, MatIconModule, MatDialogModule, EmptyState, PageHeader, InrPipe],
   templateUrl: './admin-coupons.html',
   styleUrl: './admin-coupons.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -63,11 +63,11 @@ export class AdminCoupons {
       });
   }
 
-  protected toggle(coupon: AdminCoupon, event: MatSlideToggleChange): void {
-    this.service.update(coupon.id, { isActive: event.checked }).subscribe({
-      next: () => this.coupons.update((list) => list.map((c) => (c.id === coupon.id ? { ...c, isActive: event.checked } : c))),
+  protected toggle(coupon: AdminCoupon, checked: boolean, toggle: ToggleComponent): void {
+    this.service.update(coupon.id, { isActive: checked }).subscribe({
+      next: () => this.coupons.update((list) => list.map((c) => (c.id === coupon.id ? { ...c, isActive: checked } : c))),
       error: (err: unknown) => {
-        event.source.checked = !event.checked;
+        toggle.checked.set(!checked); // back to what the server has
         this.notify.error(errorMessage(err));
       },
     });

@@ -1,24 +1,24 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormRoot, TreeValidationResult, form } from '@angular/forms/signals';
+import { firstValueFrom } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../../core/auth/auth.service';
 import { errorMessage } from '../../../core/services/api-error';
-import { controlError } from '../../../shared/validators/form-validators';
+import { shownError } from '../../../shared/forms/form-errors';
+import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
+import { emailRules } from '../../../shared/forms/form-rules';
 
 @Component({
   selector: 'bb-forgot-password',
   imports: [
-    ReactiveFormsModule,
+    FormRoot,
+    NP_FORM_FIELDS,
     RouterLink,
     MatButtonModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
     MatProgressSpinnerModule,
   ],
   templateUrl: './forgot-password.html',
@@ -27,30 +27,21 @@ import { controlError } from '../../../shared/validators/form-validators';
 export class ForgotPassword {
   private readonly auth = inject(AuthService);
 
-  protected readonly form = inject(FormBuilder).nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
+  protected readonly model = signal({ email: '' });
+  protected readonly form = form(this.model, (path) => emailRules(path.email), {
+    submission: { action: () => this.sendLink() },
   });
-  protected readonly submitting = signal(false);
   protected readonly sentMessage = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
-  protected readonly controlError = controlError;
+  protected readonly shownError = shownError;
 
-  submit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-    this.submitting.set(true);
+  private async sendLink(): Promise<TreeValidationResult> {
     this.error.set(null);
-    this.auth.forgotPassword(this.form.getRawValue().email).subscribe({
-      next: (message) => {
-        this.sentMessage.set(message);
-        this.submitting.set(false);
-      },
-      error: (err: unknown) => {
-        this.error.set(errorMessage(err));
-        this.submitting.set(false);
-      },
-    });
+    try {
+      this.sentMessage.set(await firstValueFrom(this.auth.forgotPassword(this.model().email)));
+    } catch (err) {
+      this.error.set(errorMessage(err));
+    }
+    return undefined;
   }
 }

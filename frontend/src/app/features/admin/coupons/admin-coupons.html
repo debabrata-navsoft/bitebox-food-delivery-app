@@ -18,10 +18,12 @@
       <article class="bb-card coupon" [class.inactive]="!c.isActive || expired(c)">
         <header>
           <strong class="code">{{ c.code }}</strong>
-          <mat-slide-toggle
+          <np-toggle
+            #active
             [checked]="c.isActive"
-            (change)="toggle(c, $event)"
-            [attr.aria-label]="'Active: ' + c.code"
+            (checkedChange)="toggle(c, $event, active)"
+            class="bb-label-hidden"
+            [label]="'Active: ' + c.code"
           />
         </header>
         <p class="value">

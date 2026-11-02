@@ -62,7 +62,7 @@ describe('RestaurantDetail', () => {
 
   it('filters to veg dishes and drops empty sections', async () => {
     const el = await create();
-    const toggle = el.querySelector<HTMLButtonElement>('.menu-tools mat-slide-toggle button')!;
+    const toggle = el.querySelector<HTMLInputElement>('.menu-tools np-toggle input[role=switch]')!;
     toggle.click();
     await fixture.whenStable();
     // Strip the veg badge's screen-reader label ("Vegetarian") from each name.

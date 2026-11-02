@@ -86,9 +86,17 @@
   font-size: 0.88rem;
 }
 
-// Hide the toggle's text on phones to keep rows compact.
-.toggle-label {
-  @include bp.phone-only {
-    display: none;
+
+// "Off" and "Available" get the same width, so the switch does not jump
+// sideways when it is flipped (the label is visually hidden on phones).
+np-toggle.availability {
+  ::ng-deep .toggle-label {
+    display: inline-block;
+    min-width: 9ch;
+  }
+
+  &.on ::ng-deep .toggle-label {
+    color: var(--bb-success);
+    font-weight: 600;
   }
 }

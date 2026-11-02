@@ -31,19 +31,35 @@ describe('FoodFormDialog', () => {
     ref.close.mockReset();
   });
 
-  it('does not submit an invalid form', async () => {
+  type Internals = {
+    model: { set: (v: unknown) => void; (): { price: number | null; category: string } };
+  };
+  const submit = async (fixture: Awaited<ReturnType<typeof create>>) => {
+    (fixture.nativeElement as HTMLElement).querySelector('form')!.dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+  };
+
+  it('does not submit an invalid form and shows the errors', async () => {
     const fixture = await create();
-    fixture.componentInstance.save();
+    await submit(fixture);
     expect(service.createFood).not.toHaveBeenCalled();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Choose a category');
   });
 
   it('sends the price as integer paise and closes with the saved item', async () => {
     const saved = { id: 'f1', name: 'Margherita' } as FoodItem;
     service.createFood.mockReturnValue(of(saved));
     const fixture = await create();
-    const form = (fixture.componentInstance as unknown as { form: { setValue: (v: unknown) => void } }).form;
-    form.setValue({ name: ' Margherita ', category: 'c1', price: 249.99, description: '', isVeg: true, prepTimeMinutes: null, isAvailable: true });
-    fixture.componentInstance.save();
+    (fixture.componentInstance as unknown as Internals).model.set({
+      name: ' Margherita ',
+      category: 'c1',
+      price: 249.99,
+      description: '',
+      isVeg: true,
+      prepTimeMinutes: null,
+      isAvailable: true,
+    });
+    await submit(fixture);
     expect(service.createFood).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Margherita', category: 'c1', pricePaise: 24999, isVeg: true }),
     );
@@ -53,8 +69,8 @@ describe('FoodFormDialog', () => {
   it('pre-fills rupees from paise when editing', async () => {
     const item = { id: 'f1', name: 'Naan', pricePaise: 6900, isVeg: true, isAvailable: true, category: { id: 'c1', name: 'Pizza', slug: 'pizza', icon: 'x' } } as FoodItem;
     const fixture = await create(item);
-    const form = (fixture.componentInstance as unknown as { form: { getRawValue: () => { price: number; category: string } } }).form;
-    expect(form.getRawValue().price).toBe(69);
-    expect(form.getRawValue().category).toBe('c1');
+    const model = (fixture.componentInstance as unknown as Internals).model();
+    expect(model.price).toBe(69);
+    expect(model.category).toBe('c1');
   });
 });

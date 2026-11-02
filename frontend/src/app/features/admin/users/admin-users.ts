@@ -1,19 +1,18 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
-import { debounceTime, distinctUntilChanged, map } from 'rxjs';
+import { SelectOption } from 'nexprime';
+import { debounceTime, distinctUntilChanged, map, skip } from 'rxjs';
 import { AdminUsersService } from '../../../core/services/admin/admin-users.service';
 import { errorMessage } from '../../../core/services/api-error';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
+import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { Pagination } from '../../../shared/models/api.models';
 import { ROLE_META, Role, User } from '../../../shared/models/user.models';
 
@@ -21,13 +20,10 @@ import { ROLE_META, Role, User } from '../../../shared/models/user.models';
   selector: 'bb-admin-users',
   imports: [
     DatePipe,
-    ReactiveFormsModule,
+    NP_FORM_FIELDS,
     MatButtonModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
     MatPaginatorModule,
-    MatSelectModule,
     MatTableModule,
     PageHeader,
   ],
@@ -46,8 +42,13 @@ export class AdminUsers implements OnInit {
   protected readonly roles = Object.keys(ROLE_META) as Role[];
   protected readonly columns = ['name', 'phone', 'role', 'status', 'createdAt'];
 
-  protected readonly search = new FormControl('', { nonNullable: true });
-  protected readonly roleFilter = new FormControl<Role | ''>('', { nonNullable: true });
+  protected readonly roleOptions: SelectOption[] = [
+    { value: '', label: 'All roles' },
+    ...this.roles.map((r) => ({ value: r, label: ROLE_META[r].label })),
+  ];
+
+  /** Search box + role dropdown above the table. */
+  protected readonly filters = form(signal({ search: '', role: '' as Role | '' }));
 
   protected readonly users = signal<User[]>([]);
   protected readonly pagination = signal<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0 });
@@ -62,15 +63,18 @@ export class AdminUsers implements OnInit {
   );
 
   constructor() {
-    this.search.valueChanges
-      .pipe(debounceTime(350), distinctUntilChanged(), takeUntilDestroyed())
+    // skip(1): the first emission is the starting value, which ngOnInit already loads.
+    toObservable(computed(() => this.filters.search().value().trim()))
+      .pipe(skip(1), debounceTime(350), distinctUntilChanged(), takeUntilDestroyed())
       .subscribe(() => this.load(1));
-    this.roleFilter.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.load(1));
+    toObservable(this.filters.role().value)
+      .pipe(skip(1), takeUntilDestroyed())
+      .subscribe(() => this.load(1));
   }
 
   ngOnInit(): void {
     const role = this.role();
-    if (role && this.roles.includes(role)) this.roleFilter.setValue(role, { emitEvent: false });
+    if (role && this.roles.includes(role)) this.filters.role().value.set(role);
     this.load(1);
   }
 
@@ -86,8 +90,8 @@ export class AdminUsers implements OnInit {
       .list({
         page,
         limit: this.pagination().limit,
-        search: this.search.value.trim() || undefined,
-        role: this.roleFilter.value || undefined,
+        search: this.filters.search().value().trim() || undefined,
+        role: this.filters.role().value() || undefined,
       })
       .subscribe({
         next: (res) => {

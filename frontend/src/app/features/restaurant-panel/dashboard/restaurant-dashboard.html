@@ -44,9 +44,13 @@
       </div>
     </div>
     <div class="orders-toggle">
-      <mat-slide-toggle [checked]="r.isAcceptingOrders" [disabled]="toggling()" (change)="toggleOrders($event)">
-        {{ r.isAcceptingOrders ? 'Accepting orders' : 'Orders paused' }}
-      </mat-slide-toggle>
+      <np-toggle
+        #accepting
+        [checked]="r.isAcceptingOrders"
+        [disabled]="toggling()"
+        [label]="r.isAcceptingOrders ? 'Accepting orders' : 'Orders paused'"
+        (checkedChange)="toggleOrders($event, accepting)"
+      />
       <span class="open-state" [class.open]="r.isOpenNow">{{ r.isOpenNow ? 'Open now' : 'Closed now' }}</span>
     </div>
   </section>

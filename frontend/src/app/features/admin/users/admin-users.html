@@ -1,20 +1,15 @@
 <bb-page-header title="Users" subtitle="Every BiteBox account across all roles." />
 
 <div class="filters">
-  <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
-    <mat-label>Search name, email or phone</mat-label>
-    <mat-icon matPrefix aria-hidden="true">search</mat-icon>
-    <input matInput type="search" [formControl]="search" />
-  </mat-form-field>
-  <mat-form-field appearance="outline" class="role-select" subscriptSizing="dynamic">
-    <mat-label>Role</mat-label>
-    <mat-select [formControl]="roleFilter">
-      <mat-option value="">All roles</mat-option>
-      @for (r of roles; track r) {
-        <mat-option [value]="r">{{ roleMeta[r].label }}</mat-option>
-      }
-    </mat-select>
-  </mat-form-field>
+  <np-text-input
+    class="search"
+    [formField]="filters.search"
+    ariaLabel="Search users"
+    placeholder="Search name, email or phone"
+    icon="search"
+    clearable
+  />
+  <np-select class="role-select" [formField]="filters.role" ariaLabel="Role" [options]="roleOptions" />
 </div>
 
 @if (error()) {

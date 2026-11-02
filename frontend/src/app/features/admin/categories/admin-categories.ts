@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { ToggleComponent } from 'nexprime';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { filter } from 'rxjs';
 import { AdminCatalogService } from '../../../core/services/admin/admin-catalog.service';
@@ -16,7 +16,7 @@ import { CategoryFormDialog } from './category-form-dialog';
 
 @Component({
   selector: 'bb-admin-categories',
-  imports: [MatButtonModule, MatIconModule, MatSlideToggleModule, MatTooltipModule, EmptyState, PageHeader],
+  imports: [ToggleComponent, MatButtonModule, MatIconModule, MatTooltipModule, EmptyState, PageHeader],
   templateUrl: './admin-categories.html',
   styleUrl: './admin-categories.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -60,11 +60,11 @@ export class AdminCategories {
       });
   }
 
-  protected toggle(category: FoodCategory, event: MatSlideToggleChange): void {
-    this.service.updateCategory(category.id, { isActive: event.checked }).subscribe({
+  protected toggle(category: FoodCategory, checked: boolean, toggle: ToggleComponent): void {
+    this.service.updateCategory(category.id, { isActive: checked }).subscribe({
       next: (updated) => this.categories.update((list) => list.map((c) => (c.id === updated.id ? { ...c, ...updated } : c))),
       error: (err: unknown) => {
-        event.source.checked = !event.checked;
+        toggle.checked.set(!checked); // back to what the server has
         this.notify.error(errorMessage(err));
       },
     });

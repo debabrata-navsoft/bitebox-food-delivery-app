@@ -107,7 +107,7 @@ h2 {
 }
 
 .note {
-  width: 100%;
+  margin-top: var(--bb-space-3);
 }
 
 .addresses {
@@ -196,10 +196,16 @@ h2 {
 .coupon-form {
   display: flex;
   gap: var(--bb-space-2);
-  align-items: center;
+  // Top-aligned so an error line under the input does not shift the button.
+  align-items: flex-start;
 
-  mat-form-field {
+  np-text-input {
     flex: 1;
+  }
+
+  button {
+    flex-shrink: 0;
+    height: 44px;
   }
 }
 

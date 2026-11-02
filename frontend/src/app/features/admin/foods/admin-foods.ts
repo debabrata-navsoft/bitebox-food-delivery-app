@@ -1,21 +1,20 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal, computed } from '@angular/core';
+import { form } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
+import { ToggleComponent } from 'nexprime';
 import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { Subscription, debounceTime, distinctUntilChanged, filter } from 'rxjs';
+import { Subscription, debounceTime, distinctUntilChanged, filter, skip } from 'rxjs';
 import { AdminCatalogService, AdminFoodItem } from '../../../core/services/admin/admin-catalog.service';
 import { errorMessage } from '../../../core/services/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { ConfirmDialog, ConfirmDialogData } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
+import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
 import { Pagination } from '../../../shared/models/api.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
@@ -24,14 +23,12 @@ import { InrPipe } from '../../../shared/pipes/money.pipes';
 @Component({
   selector: 'bb-admin-foods',
   imports: [
-    ReactiveFormsModule,
+    ToggleComponent,
+    NP_FORM_FIELDS,
     RouterLink,
     MatButtonModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
     MatPaginatorModule,
-    MatSlideToggleModule,
     EmptyState,
     PageHeader,
     VegBadge,
@@ -50,7 +47,7 @@ export class AdminFoods implements OnInit {
   /** Optional ?restaurant=<id> filter (linked from the restaurant review page). */
   readonly restaurant = input<string>();
 
-  protected readonly search = new FormControl('', { nonNullable: true });
+  protected readonly filters = form(signal({ search: '' }));
   protected readonly items = signal<AdminFoodItem[]>([]);
   protected readonly pagination = signal<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
   protected readonly loading = signal(true);
@@ -58,7 +55,10 @@ export class AdminFoods implements OnInit {
   private inFlight?: Subscription;
 
   constructor() {
-    this.search.valueChanges.pipe(debounceTime(350), distinctUntilChanged(), takeUntilDestroyed()).subscribe(() => this.load(1));
+    // skip(1): the first emission is the starting value, which is loaded on init.
+    toObservable(computed(() => this.filters.search().value().trim()))
+      .pipe(skip(1), debounceTime(350), distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe(() => this.load(1));
   }
 
   ngOnInit(): void {
@@ -79,7 +79,7 @@ export class AdminFoods implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     this.inFlight = this.service
-      .foods({ search: this.search.value.trim() || undefined, restaurant: this.restaurant() || undefined, page, limit: this.pagination().limit })
+      .foods({ search: this.filters.search().value().trim() || undefined, restaurant: this.restaurant() || undefined, page, limit: this.pagination().limit })
       .subscribe({
         next: (res) => {
           this.items.set(res.items);
@@ -93,11 +93,11 @@ export class AdminFoods implements OnInit {
       });
   }
 
-  protected toggle(item: AdminFoodItem, event: MatSlideToggleChange): void {
-    this.service.setFoodAvailability(item.id, event.checked).subscribe({
+  protected toggle(item: AdminFoodItem, checked: boolean, toggle: ToggleComponent): void {
+    this.service.setFoodAvailability(item.id, checked).subscribe({
       next: (updated) => this.items.update((list) => list.map((i) => (i.id === updated.id ? updated : i))),
       error: (err: unknown) => {
-        event.source.checked = !event.checked;
+        toggle.checked.set(!checked); // back to what the server has
         this.notify.error(errorMessage(err));
       },
     });

@@ -1,11 +1,9 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { SearchInputComponent } from 'nexprime';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Subscription, catchError, debounceTime, distinctUntilChanged, filter, firstValueFrom, of, switchMap, tap } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -33,7 +31,7 @@ interface Candidate {
  */
 @Component({
   selector: 'bb-location-picker-dialog',
-  imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MapPicker],
+  imports: [SearchInputComponent, MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule, MapPicker],
   templateUrl: './location-picker-dialog.html',
   styleUrl: './location-picker-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,8 +42,9 @@ export class LocationPickerDialog {
   private readonly ref = inject(MatDialogRef<LocationPickerDialog>);
   private readonly auth = inject(AuthService);
 
-  protected readonly query = new FormControl('', { nonNullable: true });
-  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+  /** Text in the search box (follows typing). */
+  protected readonly query = signal('');
+  private readonly searchInput = viewChild(SearchInputComponent, { read: ElementRef });
   protected readonly results = signal<Place[]>([]);
   protected readonly searching = signal(false);
   protected readonly searched = signal(false);
@@ -67,7 +66,7 @@ export class LocationPickerDialog {
         .subscribe({ next: (list) => this.addresses.set(list), error: () => undefined });
     }
 
-    this.query.valueChanges
+    toObservable(this.query)
       .pipe(
         debounceTime(500),
         distinctUntilChanged(),
@@ -116,7 +115,7 @@ export class LocationPickerDialog {
     } catch (err) {
       // Never use a vague reading: it would show a place the customer is not at.
       this.gpsError.set(err instanceof ImpreciseLocationError ? err.message : `${(err as Error).message} Search for your area instead.`);
-      this.searchInput()?.nativeElement.focus();
+      this.searchInput()?.nativeElement.querySelector('input')?.focus();
     } finally {
       this.locating.set(false);
     }

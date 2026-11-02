@@ -23,28 +23,16 @@
   </bb-empty-state>
 } @else {
   <div class="filters">
-    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search">
-      <mat-icon matPrefix aria-hidden="true">search</mat-icon>
-      <mat-label>Search dishes</mat-label>
-      <input matInput type="search" [value]="search()" (input)="search.set($any($event.target).value)" />
-    </mat-form-field>
-    <mat-form-field appearance="outline" subscriptSizing="dynamic">
-      <mat-label>Category</mat-label>
-      <mat-select [value]="categoryFilter()" (selectionChange)="categoryFilter.set($event.value)">
-        <mat-option value="">All categories</mat-option>
-        @for (c of categories(); track c.id) {
-          <mat-option [value]="c.id">{{ c.name }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-    <mat-form-field appearance="outline" subscriptSizing="dynamic">
-      <mat-label>Availability</mat-label>
-      <mat-select [value]="availabilityFilter()" (selectionChange)="availabilityFilter.set($event.value)">
-        <mat-option value="all">All dishes</mat-option>
-        <mat-option value="available">Available</mat-option>
-        <mat-option value="unavailable">Unavailable</mat-option>
-      </mat-select>
-    </mat-form-field>
+    <np-text-input
+      class="search"
+      [formField]="filters.search"
+      ariaLabel="Search dishes"
+      placeholder="Search dishes"
+      icon="search"
+      clearable
+    />
+    <np-select [formField]="filters.category" ariaLabel="Category" [options]="categoryOptions()" />
+    <np-select [formField]="filters.availability" ariaLabel="Availability" [options]="availabilityOptions" />
   </div>
 
   <p class="count bb-muted">Showing {{ filtered().length }} of {{ items().length }} dishes</p>
@@ -67,14 +55,16 @@
           <span class="name"><bb-veg-badge [veg]="item.isVeg" /> {{ item.name }}</span>
           <span class="bb-muted meta">{{ item.category.name }} · {{ item.pricePaise | inr }}</span>
         </div>
-        <mat-slide-toggle
+        <np-toggle
+          #availability
           [checked]="item.isAvailable"
           [disabled]="busyId() === item.id"
-          (change)="toggleAvailability(item, $event)"
-          [attr.aria-label]="'Available: ' + item.name"
-        >
-          <span class="toggle-label">{{ item.isAvailable ? 'Available' : 'Off' }}</span>
-        </mat-slide-toggle>
+          class="availability bb-toggle-success bb-label-hidden-phone"
+          [class.on]="item.isAvailable"
+          [label]="(item.isAvailable ? 'Available' : 'Off')"
+          [attr.title]="'Available: ' + item.name"
+          (checkedChange)="toggleAvailability(item, $event, availability)"
+        />
         <button mat-icon-button [matMenuTriggerFor]="itemMenu" [attr.aria-label]="'Actions for ' + item.name" [disabled]="busyId() === item.id">
           <mat-icon>more_vert</mat-icon>
         </button>

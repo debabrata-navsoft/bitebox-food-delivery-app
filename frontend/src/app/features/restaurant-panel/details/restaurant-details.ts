@@ -1,16 +1,12 @@
-import { COMMA, ENTER } from '@angular/cdk/keycodes';
 import { ChangeDetectionStrategy, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { FormRoot, TreeValidationResult, applyEach, email, form, maxLength, pattern, required, validate } from '@angular/forms/signals';
 import { catchError, debounceTime, distinctUntilChanged, filter, firstValueFrom, of, switchMap, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { ChipComponent, SearchInputComponent, ToggleComponent } from 'nexprime';
 import { errorMessage, fieldErrors } from '../../../core/services/api-error';
 import { DeliveryLocationService, Place } from '../../../core/services/delivery-location.service';
 import { GeolocationService, ImpreciseLocationError } from '../../../core/services/geolocation.service';
@@ -19,25 +15,51 @@ import { NotificationService } from '../../../core/services/notification.service
 import { ImageUpload } from '../../../shared/components/image-upload/image-upload';
 import { LatLng, MapPicker } from '../../../shared/components/map-picker/map-picker';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
+import { serverErrors, shownError } from '../../../shared/forms/form-errors';
+import { POSTAL_CODE_PATTERN, numberRange, phoneRules, requiredText } from '../../../shared/forms/form-rules';
+import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { Restaurant, RestaurantInput } from '../../../shared/models/catalog.models';
 import { rupeesToPaise } from '../../../shared/pipes/money.pipes';
-import { PHONE_PATTERN, applyServerErrors, controlError } from '../../../shared/validators/form-validators';
 import { StatusBanner } from '../status-banner/status-banner';
 
-const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+/** "HH:mm" <-> a Date today at that time (what the NexPrime time picker edits). */
+function timeToDate(time: string): Date {
+  const [h, m] = time.split(':').map(Number);
+  const date = new Date();
+  date.setHours(h, m, 0, 0);
+  return date;
+}
+const dateToTime = (date: Date) => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+function emptyModel() {
+  return {
+    name: '',
+    description: '',
+    cuisines: [] as string[],
+    phone: '',
+    email: '',
+    address: { line1: '', line2: '', area: '', city: '', state: '', postalCode: '' },
+    location: { latitude: null as number | null, longitude: null as number | null },
+    isPureVeg: false,
+    costForTwo: null as number | null,
+    minOrder: 0 as number | null,
+    avgPrepTimeMinutes: 25 as number | null,
+    openingTime: timeToDate('10:00') as Date | null,
+    closingTime: timeToDate('23:00') as Date | null,
+  };
+}
 
 /** Create or edit the partner's restaurant (business info, address, location, hours, pricing). */
 @Component({
   selector: 'bb-restaurant-details',
   imports: [
-    ReactiveFormsModule,
+    ToggleComponent,
+    FormRoot,
+    NP_FORM_FIELDS,
+    ChipComponent,
     MatButtonModule,
-    MatChipsModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
     MatProgressSpinnerModule,
-    MatSlideToggleModule,
     ImageUpload,
     MapPicker,
     PageHeader,
@@ -53,54 +75,62 @@ export class RestaurantDetails {
   private readonly router = inject(Router);
   protected readonly geo = inject(GeolocationService);
   private readonly places = inject(DeliveryLocationService);
-  private readonly fb = inject(FormBuilder).nonNullable;
 
-  protected readonly separatorKeys = [ENTER, COMMA] as const;
-  protected readonly controlError = controlError;
+  protected readonly shownError = shownError;
 
   protected readonly restaurant = signal<Restaurant | null>(null);
   protected readonly loading = signal(true);
-  protected readonly saving = signal(false);
   protected readonly locating = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly cuisines = signal<string[]>([]);
-  protected readonly cuisineError = signal<string | null>(null);
   protected readonly imageUrl = signal('');
 
+  /** Text in the cuisine box, added as a chip on Enter or comma. */
+  protected readonly cuisineDraft = signal('');
+  protected readonly cuisineError = signal<string | null>(null);
+
   // Map location (search / current location / drag the pin)
-  protected readonly placeQuery = new FormControl('', { nonNullable: true });
+  protected readonly placeQuery = signal('');
   protected readonly placeResults = signal<Place[]>([]);
   protected readonly locationError = signal<string | null>(null);
   protected readonly showCoordinates = signal(false);
-  private readonly placeSearchInput = viewChild<ElementRef<HTMLInputElement>>('placeSearchInput');
+  private readonly placeSearch = viewChild(SearchInputComponent, { read: ElementRef });
 
-  protected readonly form = this.fb.group({
-    name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
-    description: ['', Validators.maxLength(1000)],
-    phone: ['', [Validators.required, Validators.pattern(PHONE_PATTERN)]],
-    email: ['', Validators.email],
-    address: this.fb.group({
-      line1: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120)]],
-      line2: ['', Validators.maxLength(120)],
-      area: ['', Validators.maxLength(80)],
-      city: ['', [Validators.required, Validators.minLength(2)]],
-      state: ['', [Validators.required, Validators.minLength(2)]],
-      postalCode: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9 -]{3,10}$/)]],
-    }),
-    location: this.fb.group({
-      latitude: [null as number | null, [Validators.required, Validators.min(-90), Validators.max(90)]],
-      longitude: [null as number | null, [Validators.required, Validators.min(-180), Validators.max(180)]],
-    }),
-    isPureVeg: [false],
-    costForTwo: [null as number | null, [Validators.required, Validators.min(0), Validators.max(100000)]],
-    minOrder: [0, [Validators.min(0), Validators.max(100000)]],
-    avgPrepTimeMinutes: [25, [Validators.required, Validators.min(5), Validators.max(180)]],
-    openingTime: ['10:00', [Validators.required, Validators.pattern(TIME)]],
-    closingTime: ['23:00', [Validators.required, Validators.pattern(TIME)]],
-  });
+  protected readonly model = signal(emptyModel());
+  protected readonly form = form(
+    this.model,
+    (path) => {
+      requiredText(path.name, 'Name', { min: 2, max: 100 });
+      maxLength(path.description, 1000, { message: 'Keep the description under 1000 characters' });
+      validate(path.cuisines, ({ value }) =>
+        value().length === 0
+          ? { kind: 'required', message: 'Add at least one cuisine' }
+          : value().length > 10
+            ? { kind: 'maxItems', message: 'Add at most 10 cuisines' }
+            : undefined,
+      );
+      applyEach(path.cuisines, (cuisine) => requiredText(cuisine, 'Cuisine', { min: 2, max: 40 }));
+      phoneRules(path.phone);
+      email(path.email, { message: 'Enter a valid email address' });
+      requiredText(path.address.line1, 'Street address', { min: 3, max: 120 });
+      maxLength(path.address.line2, 120, { message: 'Keep it under 120 characters' });
+      maxLength(path.address.area, 80, { message: 'Keep it under 80 characters' });
+      requiredText(path.address.city, 'City', { min: 2, max: 80 });
+      requiredText(path.address.state, 'State', { min: 2, max: 80 });
+      required(path.address.postalCode, { message: 'PIN code is required' });
+      pattern(path.address.postalCode, POSTAL_CODE_PATTERN, { message: 'Enter a valid PIN code' });
+      numberRange(path.location.latitude, 'Latitude', -90, 90);
+      numberRange(path.location.longitude, 'Longitude', -180, 180);
+      numberRange(path.costForTwo, 'Cost for two', 0, 100_000);
+      numberRange(path.minOrder, 'Minimum order', 0, 100_000, { optional: true });
+      numberRange(path.avgPrepTimeMinutes, 'Preparation time', 5, 180);
+      required(path.openingTime, { message: 'Opening time is required' });
+      required(path.closingTime, { message: 'Closing time is required' });
+    },
+    { submission: { action: () => this.save() } },
+  );
 
   constructor() {
-    this.placeQuery.valueChanges
+    toObservable(this.placeQuery)
       .pipe(
         debounceTime(500),
         distinctUntilChanged(),
@@ -132,11 +162,11 @@ export class RestaurantDetails {
 
   private fill(r: Restaurant): void {
     this.restaurant.set(r);
-    this.cuisines.set([...r.cuisines]);
     this.imageUrl.set(r.imageUrl ?? '');
-    this.form.reset({
+    this.form().reset({
       name: r.name,
       description: r.description ?? '',
+      cuisines: [...r.cuisines],
       phone: r.phone,
       email: r.email ?? '',
       address: { line1: r.address.line1, line2: r.address.line2 ?? '', area: r.address.area ?? '', city: r.address.city, state: r.address.state, postalCode: r.address.postalCode },
@@ -145,31 +175,41 @@ export class RestaurantDetails {
       costForTwo: r.costForTwoPaise / 100,
       minOrder: r.minOrderPaise / 100,
       avgPrepTimeMinutes: r.avgPrepTimeMinutes,
-      openingTime: r.openingTime,
-      closingTime: r.closingTime,
+      openingTime: timeToDate(r.openingTime),
+      closingTime: timeToDate(r.closingTime),
     });
   }
 
-  protected addCuisine(event: MatChipInputEvent): void {
-    const value = event.value.trim();
-    event.chipInput.clear();
+  /** Enter or comma in the cuisine box turns the typed text into a chip. */
+  protected onCuisineKey(event: KeyboardEvent): void {
+    if (event.key !== 'Enter' && event.key !== ',') return;
+    event.preventDefault(); // Enter must not submit the whole form
+    this.addCuisine();
+  }
+
+  private addCuisine(): void {
+    const value = this.cuisineDraft().replace(/,/g, '').trim();
+    this.cuisineDraft.set('');
     if (!value) return;
+    const cuisines = this.model().cuisines;
     if (value.length < 2 || value.length > 40) {
       this.cuisineError.set('Each cuisine must be 2-40 characters');
       return;
     }
-    if (this.cuisines().length >= 10) {
+    if (cuisines.length >= 10) {
       this.cuisineError.set('Add at most 10 cuisines');
       return;
     }
-    if (!this.cuisines().some((c) => c.toLowerCase() === value.toLowerCase())) {
-      this.cuisines.update((list) => [...list, value]);
+    if (!cuisines.some((c) => c.toLowerCase() === value.toLowerCase())) {
+      this.form.cuisines().value.set([...cuisines, value]);
     }
+    this.form.cuisines().markAsTouched();
     this.cuisineError.set(null);
   }
 
   protected removeCuisine(cuisine: string): void {
-    this.cuisines.update((list) => list.filter((c) => c !== cuisine));
+    this.form.cuisines().value.update((list) => list.filter((c) => c !== cuisine));
+    this.form.cuisines().markAsTouched();
   }
 
   protected async useCurrentLocation(): Promise<void> {
@@ -181,7 +221,7 @@ export class RestaurantDetails {
     } catch (err) {
       // A vague reading would put the restaurant in the wrong place; ask for a search instead.
       this.locationError.set(err instanceof ImpreciseLocationError ? err.message : (err as Error).message);
-      this.placeSearchInput()?.nativeElement.focus();
+      this.placeSearch()?.nativeElement.querySelector('input')?.focus();
     } finally {
       this.locating.set(false);
     }
@@ -189,21 +229,18 @@ export class RestaurantDetails {
 
   protected async pickPlace(place: Place): Promise<void> {
     this.placeResults.set([]);
-    this.placeQuery.setValue('', { emitEvent: false });
+    this.placeQuery.set('');
     await this.setPin(place);
   }
 
   /** Sets the pin and fills empty address fields from it (never overwrites typed values). */
   protected async setPin({ latitude, longitude }: LatLng): Promise<void> {
-    const location = this.form.controls.location;
-    location.setValue({ latitude: +latitude.toFixed(6), longitude: +longitude.toFixed(6) });
-    location.markAsDirty();
-    location.markAsTouched();
+    this.form.location().value.set({ latitude: +latitude.toFixed(6), longitude: +longitude.toFixed(6) });
+    this.form.location().markAsTouched();
     try {
       const place = await firstValueFrom(this.places.reverse(latitude, longitude));
-      const address = this.form.controls.address.controls;
       const fill = (name: 'area' | 'city' | 'state' | 'postalCode', value?: string | null) => {
-        if (value && !address[name].value.trim()) address[name].setValue(value);
+        if (value && !this.model().address[name].trim()) this.form.address[name]().value.set(value);
       };
       fill('area', place.area);
       fill('city', place.city);
@@ -214,17 +251,12 @@ export class RestaurantDetails {
     }
   }
 
-  protected save(): void {
-    if (this.cuisines().length === 0) this.cuisineError.set('Add at least one cuisine');
-    if (this.form.invalid || this.cuisines().length === 0) {
-      this.form.markAllAsTouched();
-      return;
-    }
-    const v = this.form.getRawValue();
+  private async save(): Promise<TreeValidationResult> {
+    const v = this.model();
     const input: RestaurantInput = {
       name: v.name.trim(),
       description: v.description.trim(),
-      cuisines: this.cuisines(),
+      cuisines: v.cuisines,
       phone: v.phone.trim(),
       ...(v.email.trim() ? { email: v.email.trim() } : {}),
       address: {
@@ -241,25 +273,21 @@ export class RestaurantDetails {
       costForTwoPaise: rupeesToPaise(Number(v.costForTwo)),
       minOrderPaise: rupeesToPaise(Number(v.minOrder ?? 0)),
       avgPrepTimeMinutes: Number(v.avgPrepTimeMinutes),
-      openingTime: v.openingTime,
-      closingTime: v.closingTime,
+      openingTime: dateToTime(v.openingTime!),
+      closingTime: dateToTime(v.closingTime!),
     };
 
     const creating = this.restaurant() === null;
-    this.saving.set(true);
     this.error.set(null);
-    (creating ? this.service.create(input) : this.service.update(input)).subscribe({
-      next: (restaurant) => {
-        this.fill(restaurant);
-        this.saving.set(false);
-        this.notify.success(creating ? 'Restaurant submitted for approval' : 'Restaurant details saved');
-        if (creating) void this.router.navigateByUrl('/restaurant');
-      },
-      error: (err: unknown) => {
-        applyServerErrors(this.form, fieldErrors(err));
-        this.error.set(errorMessage(err, 'Could not save your restaurant.'));
-        this.saving.set(false);
-      },
-    });
+    try {
+      const restaurant = await firstValueFrom(creating ? this.service.create(input) : this.service.update(input));
+      this.fill(restaurant);
+      this.notify.success(creating ? 'Restaurant submitted for approval' : 'Restaurant details saved');
+      if (creating) void this.router.navigateByUrl('/restaurant');
+      return undefined;
+    } catch (err) {
+      this.error.set(errorMessage(err, 'Could not save your restaurant.'));
+      return serverErrors(this.form, fieldErrors(err));
+    }
   }
 }

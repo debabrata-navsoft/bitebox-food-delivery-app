@@ -238,23 +238,20 @@ h1 {
   max-width: 560px;
   background: #fff;
   border-radius: 16px;
-  padding: 6px 6px 6px 14px;
+  padding: 6px;
   box-shadow: var(--bb-shadow);
 
-  mat-icon {
-    color: var(--bb-ink-muted);
-  }
-
-  input {
+  np-text-input {
     flex: 1;
     min-width: 0;
+  }
+
+  // The pill is the field here: drop the NexPrime input's own border and ring.
+  ::ng-deep np-text-input .ui-control {
     border: 0;
-    outline: 0;
-    font: inherit;
-    font-size: 1rem;
-    color: var(--bb-ink);
+    box-shadow: none;
     background: transparent;
-    padding: 10px 0;
+    font-size: 1rem;
   }
 
   &:focus-within {

@@ -14,30 +14,26 @@
   </header>
 
   <div class="toolbar">
-    <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
-      <mat-icon matPrefix aria-hidden="true">search</mat-icon>
-      <mat-label>Search restaurants, cuisines or dishes</mat-label>
-      <input matInput type="search" [formControl]="searchControl" />
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" subscriptSizing="dynamic">
-      <mat-label>Cuisine</mat-label>
-      <mat-select [value]="cuisine() ?? ''" (selectionChange)="setParams({ cuisine: $event.value || null })">
-        <mat-option value="">All cuisines</mat-option>
-        @for (c of cuisines(); track c) {
-          <mat-option [value]="c">{{ c }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" subscriptSizing="dynamic">
-      <mat-label>Sort by</mat-label>
-      <mat-select [value]="sort() ?? (nearby() ? 'distance' : 'rating')" (selectionChange)="setParams({ sort: $event.value })">
-        @for (opt of sortOptions(); track opt.value) {
-          <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+    <np-text-input
+      class="search"
+      [formField]="filters.search"
+      ariaLabel="Search restaurants"
+      placeholder="Search restaurants, cuisines or dishes"
+      icon="search"
+      clearable
+    />
+    <np-select
+      ariaLabel="Cuisine"
+      [options]="cuisineOptions()"
+      [value]="cuisine() ?? ''"
+      (valueChange)="setParams({ cuisine: $event || null })"
+    />
+    <np-select
+      ariaLabel="Sort by"
+      [options]="sortOptions()"
+      [value]="sort() ?? (nearby() ? 'distance' : 'rating')"
+      (valueChange)="setParams({ sort: $event })"
+    />
   </div>
 
   <div class="quick-filters">
@@ -53,7 +49,7 @@
         {{ deliveryLocation() ? 'Only near ' + deliveryLocation()!.label : 'Set delivery location' }}
       </button>
     }
-    <mat-slide-toggle [checked]="vegOnly()" (change)="setParams({ veg: $event.checked || null })">Pure veg</mat-slide-toggle>
+    <np-toggle label="Pure veg" [checked]="vegOnly()" (checkedChange)="setParams({ veg: $event || null })" />
     @if (hasFilters()) {
       <button mat-button (click)="clearFilters()">Clear all</button>
     }

@@ -1,20 +1,20 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormRoot, TreeValidationResult, form, maxLength, required } from '@angular/forms/signals';
+import { firstValueFrom } from 'rxjs';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { errorMessage, fieldErrors } from '../../../core/services/api-error';
 import { MyRestaurantService } from '../../../core/services/my-restaurant.service';
 import { ImageUpload } from '../../../shared/components/image-upload/image-upload';
 import { FoodCategory, FoodItem, FoodItemInput, categoryIdOf } from '../../../shared/models/catalog.models';
 import { rupeesToPaise } from '../../../shared/pipes/money.pipes';
-import { applyServerErrors, controlError } from '../../../shared/validators/form-validators';
+import { serverErrors, shownError } from '../../../shared/forms/form-errors';
+import { SelectOption, ToggleComponent } from 'nexprime';
+import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
+import { numberRange, requiredText } from '../../../shared/forms/form-rules';
 
 export interface FoodFormData {
   item?: FoodItem;
@@ -25,16 +25,14 @@ export interface FoodFormData {
 @Component({
   selector: 'bb-food-form-dialog',
   imports: [
-    ReactiveFormsModule,
+    ToggleComponent,
+    NP_FORM_FIELDS,
+    FormRoot,
     MatDialogModule,
     MatButtonModule,
     MatButtonToggleModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
     MatProgressSpinnerModule,
-    MatSelectModule,
-    MatSlideToggleModule,
     ImageUpload,
   ],
   templateUrl: './food-form-dialog.html',
@@ -43,30 +41,39 @@ export interface FoodFormData {
 })
 export class FoodFormDialog {
   protected readonly data = inject<FoodFormData>(MAT_DIALOG_DATA);
+  protected readonly categoryOptions: SelectOption[] = this.data.categories.map((c) => ({ value: c.id, label: c.name }));
   private readonly ref = inject(MatDialogRef<FoodFormDialog, FoodItem>);
   private readonly service = inject(MyRestaurantService);
-  protected readonly controlError = controlError;
+  protected readonly shownError = shownError;
 
-  protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly imageUrl = signal(this.data.item?.imageUrl ?? '');
 
-  protected readonly form = inject(FormBuilder).nonNullable.group({
-    name: [this.data.item?.name ?? '', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
-    category: [this.data.item ? categoryIdOf(this.data.item) : '', Validators.required],
-    price: [this.data.item ? this.data.item.pricePaise / 100 : (null as number | null), [Validators.required, Validators.min(1), Validators.max(100000)]],
-    description: [this.data.item?.description ?? '', Validators.maxLength(500)],
-    isVeg: [this.data.item?.isVeg ?? true],
-    prepTimeMinutes: [this.data.item?.prepTimeMinutes ?? (null as number | null), [Validators.min(1), Validators.max(180)]],
-    isAvailable: [this.data.item?.isAvailable ?? true],
+  /** Price is typed in rupees and sent to the API as integer paise. */
+  protected readonly model = signal({
+    name: this.data.item?.name ?? '',
+    category: this.data.item ? categoryIdOf(this.data.item) : '',
+    price: this.data.item ? this.data.item.pricePaise / 100 : (null as number | null),
+    description: this.data.item?.description ?? '',
+    isVeg: this.data.item?.isVeg ?? true,
+    prepTimeMinutes: this.data.item?.prepTimeMinutes ?? (null as number | null),
+    isAvailable: this.data.item?.isAvailable ?? true,
   });
 
-  save(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-    const v = this.form.getRawValue();
+  protected readonly form = form(
+    this.model,
+    (path) => {
+      requiredText(path.name, 'Name', { min: 2, max: 100 });
+      required(path.category, { message: 'Choose a category' });
+      numberRange(path.price, 'Price', 1, 100000);
+      maxLength(path.description, 500, { message: 'Description must be at most 500 characters' });
+      numberRange(path.prepTimeMinutes, 'Prep time', 1, 180, { optional: true });
+    },
+    { submission: { action: () => this.save() } },
+  );
+
+  private async save(): Promise<TreeValidationResult> {
+    const v = this.model();
     const input: FoodItemInput = {
       name: v.name.trim(),
       category: v.category,
@@ -77,16 +84,15 @@ export class FoodFormDialog {
       imageUrl: this.imageUrl(),
       prepTimeMinutes: v.prepTimeMinutes ? Number(v.prepTimeMinutes) : null,
     };
-    this.saving.set(true);
     this.error.set(null);
-    const request = this.data.item ? this.service.updateFood(this.data.item.id, input) : this.service.createFood(input);
-    request.subscribe({
-      next: (item) => this.ref.close(item),
-      error: (err: unknown) => {
-        applyServerErrors(this.form, fieldErrors(err));
-        this.error.set(errorMessage(err, 'Could not save this dish.'));
-        this.saving.set(false);
-      },
-    });
+    try {
+      const request = this.data.item ? this.service.updateFood(this.data.item.id, input) : this.service.createFood(input);
+      this.ref.close(await firstValueFrom(request));
+      return undefined;
+    } catch (err) {
+      this.error.set(errorMessage(err, 'Could not save this dish.'));
+      // The API reports the price as "pricePaise"; show it under the Price field.
+      return serverErrors(this.form, fieldErrors(err).map((e) => (e.field === 'pricePaise' ? { ...e, field: 'price' } : e)));
+    }
   }
 }

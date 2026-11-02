@@ -1,8 +1,13 @@
 <h2 mat-dialog-title>{{ data ? 'Edit address' : 'Add a delivery address' }}</h2>
-<form [formGroup]="form" (ngSubmit)="save()" novalidate>
+<form [formRoot]="form">
   <mat-dialog-content class="bb-form">
     @if (error()) {
       <div class="bb-alert error" role="alert"><mat-icon aria-hidden="true">error</mat-icon><span>{{ error() }}</span></div>
+    } @else if (pinMissing()) {
+      <div class="bb-alert error" role="alert">
+        <mat-icon aria-hidden="true">error</mat-icon>
+        <span>Pin your delivery location first (use your current location, search, or tap the map).</span>
+      </div>
     }
 
     <!-- 1. Location pin -->
@@ -10,11 +15,13 @@
       <h3 id="pin-title">Delivery location</h3>
 
       <div class="find">
-        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="place-search">
-          <mat-icon matPrefix aria-hidden="true">search</mat-icon>
-          <mat-label>Search area, street or landmark</mat-label>
-          <input #placeSearchInput matInput type="search" [formControl]="placeQuery" autocomplete="off" />
-        </mat-form-field>
+        <np-search-input
+          class="place-search"
+          placeholder="Search area, street or landmark"
+          [value]="placeQuery()"
+          [loading]="searching()"
+          (search)="placeQuery.set($event)"
+        />
         @if (geo.supported) {
           <button mat-stroked-button type="button" class="gps" (click)="useCurrentLocation()" [disabled]="locating()">
             <mat-icon>my_location</mat-icon>
@@ -44,8 +51,8 @@
         </div>
       }
       <bb-map-picker
-        [latitude]="form.controls.latitude.value"
-        [longitude]="form.controls.longitude.value"
+        [latitude]="model().latitude"
+        [longitude]="model().longitude"
         (moved)="onPinMoved($event)"
       />
 
@@ -54,11 +61,11 @@
           <mat-icon aria-hidden="true">where_to_vote</mat-icon>
           <div class="pin-text">
             <strong>Delivering here</strong>
-            <span>{{ pinLabel() || (form.controls.latitude.value + ', ' + form.controls.longitude.value) }}</span>
+            <span>{{ pinLabel() || (model().latitude + ', ' + model().longitude) }}</span>
           </div>
         </div>
       } @else {
-        <div class="pin" [class.missing]="triedSave()">
+        <div class="pin" [class.missing]="pinMissing()">
           <mat-icon aria-hidden="true">add_location_alt</mat-icon>
           <div class="pin-text">
             <strong>Pin where we should deliver</strong>
@@ -72,16 +79,14 @@
       </button>
       @if (showCoordinates()) {
         <div class="bb-form-row coords">
-          <mat-form-field appearance="outline">
-            <mat-label>Latitude</mat-label>
-            <input matInput type="number" step="any" formControlName="latitude" />
-            <mat-error>Between -90 and 90</mat-error>
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Longitude</mat-label>
-            <input matInput type="number" step="any" formControlName="longitude" />
-            <mat-error>Between -180 and 180</mat-error>
-          </mat-form-field>
+          <div class="bb-field">
+            <np-input-number [formField]="form.latitude" label="Latitude" [maxFractionDigits]="6" [useGrouping]="false" />
+            <bb-field-error [field]="form.latitude" />
+          </div>
+          <div class="bb-field">
+            <np-input-number [formField]="form.longitude" label="Longitude" [maxFractionDigits]="6" [useGrouping]="false" />
+            <bb-field-error [field]="form.longitude" />
+          </div>
         </div>
       }
     </section>
@@ -89,43 +94,52 @@
     <!-- 2. Address -->
     <section class="block" aria-labelledby="address-title">
       <h3 id="address-title">Address</h3>
-      <mat-form-field appearance="outline">
-        <mat-label>House / flat no. and street</mat-label>
-        <input matInput formControlName="line1" autocomplete="address-line1" />
-        <mat-error>{{ controlError(form.controls.line1, 'Address') }}</mat-error>
-      </mat-form-field>
+      <np-text-input
+        [formField]="form.line1"
+        label="House / flat no. and street"
+        autocomplete="address-line1"
+        [error]="shownError(form.line1)"
+      />
       <div class="bb-form-row">
-        <mat-form-field appearance="outline">
-          <mat-label>Building / apartment (optional)</mat-label>
-          <input matInput formControlName="line2" autocomplete="address-line2" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Landmark (optional)</mat-label>
-          <input matInput formControlName="landmark" />
-        </mat-form-field>
+        <np-text-input
+          [formField]="form.line2"
+          label="Building / apartment (optional)"
+          autocomplete="address-line2"
+          [error]="shownError(form.line2)"
+        />
+        <np-text-input
+          [formField]="form.landmark"
+          label="Landmark (optional)"
+          [error]="shownError(form.landmark)"
+        />
       </div>
       <div class="bb-form-row">
-        <mat-form-field appearance="outline">
-          <mat-label>Area / locality</mat-label>
-          <input matInput formControlName="area" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>City</mat-label>
-          <input matInput formControlName="city" autocomplete="address-level2" />
-          <mat-error>{{ controlError(form.controls.city, 'City') }}</mat-error>
-        </mat-form-field>
+        <np-text-input
+          [formField]="form.area"
+          label="Area / locality"
+          [error]="shownError(form.area)"
+        />
+        <np-text-input
+          [formField]="form.city"
+          label="City"
+          autocomplete="address-level2"
+          [error]="shownError(form.city)"
+        />
       </div>
       <div class="bb-form-row">
-        <mat-form-field appearance="outline">
-          <mat-label>State</mat-label>
-          <input matInput formControlName="state" autocomplete="address-level1" />
-          <mat-error>{{ controlError(form.controls.state, 'State') }}</mat-error>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>PIN code</mat-label>
-          <input matInput formControlName="postalCode" autocomplete="postal-code" inputmode="numeric" />
-          <mat-error>{{ controlError(form.controls.postalCode, 'PIN code') }}</mat-error>
-        </mat-form-field>
+        <np-text-input
+          [formField]="form.state"
+          label="State"
+          autocomplete="address-level1"
+          [error]="shownError(form.state)"
+        />
+        <np-text-input
+          [formField]="form.postalCode"
+          label="PIN code"
+          autocomplete="postal-code"
+          inputmode="numeric"
+          [error]="shownError(form.postalCode)"
+        />
       </div>
     </section>
 
@@ -133,31 +147,36 @@
     <section class="block" aria-labelledby="contact-title">
       <h3 id="contact-title">Receiver</h3>
       <div class="bb-form-row">
-        <mat-form-field appearance="outline">
-          <mat-label>Name</mat-label>
-          <input matInput formControlName="recipientName" autocomplete="name" />
-          <mat-error>{{ controlError(form.controls.recipientName, 'Name') }}</mat-error>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Phone</mat-label>
-          <input matInput type="tel" formControlName="phone" autocomplete="tel" inputmode="tel" />
-          <mat-error>{{ controlError(form.controls.phone, 'Phone number') }}</mat-error>
-        </mat-form-field>
+        <np-text-input
+          [formField]="form.recipientName"
+          label="Name"
+          autocomplete="name"
+          [error]="shownError(form.recipientName)"
+        />
+        <np-text-input
+          [formField]="form.phone"
+          label="Phone"
+          type="tel"
+          autocomplete="tel"
+          inputmode="tel"
+          [error]="shownError(form.phone)"
+        />
       </div>
 
       <span class="label-title" id="label-title">Save as</span>
-      <mat-button-toggle-group formControlName="label" aria-labelledby="label-title" class="labels">
+      <mat-button-toggle-group [formField]="form.label" aria-labelledby="label-title" class="labels">
         <mat-button-toggle value="home"><mat-icon>home</mat-icon> Home</mat-button-toggle>
         <mat-button-toggle value="work"><mat-icon>work</mat-icon> Work</mat-button-toggle>
         <mat-button-toggle value="other"><mat-icon>place</mat-icon> Other</mat-button-toggle>
       </mat-button-toggle-group>
-      <mat-checkbox formControlName="isDefault">Make this my default address</mat-checkbox>
+      <np-checkbox [formField]="form.isDefault" label="Make this my default address" />
     </section>
   </mat-dialog-content>
   <mat-dialog-actions align="end">
     <button mat-button type="button" mat-dialog-close>Cancel</button>
-    <button mat-flat-button type="submit" [disabled]="saving() || locating()">
-      @if (saving()) {
+    <button mat-flat-button type="submit" [disabled]="form().submitting() || locating()"
+      (click)="onSaveClick()">
+      @if (form().submitting()) {
         <mat-progress-spinner mode="indeterminate" diameter="20" aria-label="Saving" />
       } @else {
         Save address

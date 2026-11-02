@@ -249,6 +249,49 @@ img {
   --mat-form-field-outlined-container-shape: 12px;
 }
 
+// NexPrime inputs fill their container. Their own (emulated) host styles size
+// them to 200-400px or max-content and outrank a plain element selector.
+:is(np-text-input, np-textarea, np-input-number, np-select, np-search-input, np-calendar, np-time-picker) {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+// Availability switches are green when on (NexPrime fills the track with --ui-gradient).
+np-toggle.bb-toggle-success {
+  --ui-gradient: var(--bb-success);
+}
+
+// np-toggle whose label only names it for screen readers (lists of switches).
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+np-toggle.bb-label-hidden .toggle-label {
+  @include visually-hidden;
+}
+np-toggle.bb-label-hidden-phone .toggle-label {
+  @include bp.phone-only {
+    @include visually-hidden;
+  }
+}
+
+// Same height as the app's 44px buttons, so a field and a button side by side line up.
+:is(np-text-input, np-search-input, np-input-number, np-select, np-calendar, np-time-picker) .ui-control {
+  min-height: 44px;
+}
+
+// The date and time pickers also fix the width of their inner field.
+np-calendar .calendar-field,
+np-time-picker .time-picker-field {
+  width: 100% !important;
+}
+
 // Snackbar variants used by NotificationService
 .bb-snack-success {
   --mat-snack-bar-container-color: var(--bb-success);
@@ -312,10 +355,23 @@ img {
     margin-bottom: var(--bb-space-5);
   }
 
+  // NexPrime fields (and .bb-field wrappers: a control plus its <bb-field-error>).
+  :is(np-text-input, np-textarea, np-input-number, np-select, np-calendar, np-time-picker, .bb-field) {
+    margin-bottom: var(--bb-space-4);
+  }
+  .bb-field > :is(np-text-input, np-textarea, np-input-number, np-select, np-calendar, np-time-picker) {
+    margin-bottom: 0;
+  }
+
   .bb-form-row {
     display: grid;
     gap: 0 var(--bb-space-3);
     grid-template-columns: 1fr;
+
+    // Let controls shrink to their column instead of overflowing it.
+    > * {
+      min-width: 0;
+    }
     @include bp.tablet-up {
       grid-template-columns: 1fr 1fr;
     }

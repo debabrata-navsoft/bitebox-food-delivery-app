@@ -5,12 +5,15 @@
   </header>
 
   <div class="toolbar">
-    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search">
-      <mat-icon matPrefix aria-hidden="true">search</mat-icon>
-      <mat-label>Search dishes, e.g. biryani</mat-label>
-      <input matInput type="search" [formControl]="searchControl" />
-    </mat-form-field>
-    <mat-slide-toggle [checked]="vegOnly()" (change)="setParams({ veg: $event.checked || null })">Veg only</mat-slide-toggle>
+    <np-text-input
+      class="search"
+      [formField]="filters.search"
+      ariaLabel="Search dishes"
+      placeholder="Search dishes, e.g. biryani"
+      icon="search"
+      clearable
+    />
+    <np-toggle label="Veg only" [checked]="vegOnly()" (checkedChange)="setParams({ veg: $event || null })" />
   </div>
 
   @if (categories().length) {

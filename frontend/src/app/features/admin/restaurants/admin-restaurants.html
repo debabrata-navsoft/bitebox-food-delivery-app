@@ -13,11 +13,14 @@
   }
 </mat-tab-group>
 
-<mat-form-field appearance="outline" subscriptSizing="dynamic" class="search">
-  <mat-icon matPrefix aria-hidden="true">search</mat-icon>
-  <mat-label>Search by name, city or cuisine</mat-label>
-  <input matInput type="search" [formControl]="search" />
-</mat-form-field>
+<np-text-input
+  class="search"
+  [formField]="filters.search"
+  ariaLabel="Search restaurants"
+  placeholder="Search by name, city or cuisine"
+  icon="search"
+  clearable
+/>
 
 @if (error()) {
   <div class="bb-alert error" role="alert">

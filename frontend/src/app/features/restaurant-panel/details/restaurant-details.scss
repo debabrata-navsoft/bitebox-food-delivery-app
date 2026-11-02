@@ -41,7 +41,11 @@
   grid-template-columns: 1fr;
 
   @include bp.tablet-up {
-    grid-template-columns: 2fr 2fr 1fr;
+    grid-template-columns: 3fr 3fr 2fr;
+  }
+
+  > * {
+    min-width: 0;
   }
 }
 
@@ -85,17 +89,15 @@
   gap: var(--bb-space-2);
   margin-bottom: var(--bb-space-3);
 
-  // The shared form spacing would push the field down relative to the button;
-  // this row handles its own spacing instead.
-  .place-search.mat-mdc-form-field {
+  .place-search {
     flex: 1 1 240px;
-    margin-bottom: 0;
+    width: auto;
   }
 
-  // Same height as the outlined search field so both line up.
+  // Same height as the NexPrime search field so both line up.
   button {
-    --mat-button-outlined-container-height: 56px;
-    height: 56px;
+    --mat-button-outlined-container-height: 44px;
+    height: 44px;
     flex-shrink: 0;
   }
 }
@@ -156,4 +158,11 @@ bb-map-picker {
 // Leave room for the first field's floating label under each card heading.
 .bb-card > h3 {
   margin-bottom: var(--bb-space-4);
+}
+
+.cuisines .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bb-space-2);
+  margin-top: var(--bb-space-2);
 }

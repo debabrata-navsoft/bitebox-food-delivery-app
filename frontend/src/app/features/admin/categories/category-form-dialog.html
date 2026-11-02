@@ -1,54 +1,54 @@
 <h2 mat-dialog-title>{{ data ? 'Edit category' : 'New category' }}</h2>
-<form [formGroup]="form" (ngSubmit)="save()" novalidate>
+<form [formRoot]="form">
   <mat-dialog-content class="bb-form">
     @if (error()) {
       <div class="bb-alert error" role="alert">
         <mat-icon aria-hidden="true">error</mat-icon><span>{{ error() }}</span>
       </div>
     }
-    <mat-form-field appearance="outline">
-      <mat-label>Name</mat-label>
-      <input matInput formControlName="name" cdkFocusInitial />
-      <mat-error>{{ controlError(form.controls.name, 'Name') }}</mat-error>
-    </mat-form-field>
-    <mat-form-field appearance="outline">
-      <mat-label>Description (optional)</mat-label>
-      <input matInput formControlName="description" maxlength="300" />
-    </mat-form-field>
+    <np-text-input
+      [formField]="form.name"
+      label="Name"
+      cdkFocusInitial
+      [error]="shownError(form.name)"
+    />
+    <np-text-input
+      [formField]="form.description"
+      label="Description (optional)"
+      [error]="shownError(form.description)"
+    />
     <div class="bb-form-row">
-      <mat-form-field appearance="outline">
-        <mat-label>Icon</mat-label>
-        <mat-icon matPrefix aria-hidden="true">{{
-          form.controls.icon.value || 'restaurant'
-        }}</mat-icon>
-        <input matInput formControlName="icon" />
-        <mat-error>Use a Material Symbols name, e.g. local_pizza</mat-error>
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Sort order</mat-label>
-        <input matInput type="number" min="0" formControlName="sortOrder" />
-      </mat-form-field>
+      <np-text-input
+        [formField]="form.icon"
+        label="Icon"
+        [error]="shownError(form.icon)"
+      />
+      <div class="bb-field">
+        <np-input-number
+          [formField]="form.sortOrder"
+          label="Sort order"
+        />
+        <bb-field-error [field]="form.sortOrder" />
+      </div>
     </div>
     <div class="icons" role="group" aria-label="Icon suggestions">
       @for (icon of icons; track icon) {
         <button
           type="button"
           mat-icon-button
-          [class.picked]="form.controls.icon.value === icon"
-          (click)="form.controls.icon.setValue(icon)"
+          [class.picked]="model().icon === icon"
+          (click)="form.icon().value.set(icon)"
           [attr.aria-label]="icon"
         >
           <mat-icon>{{ icon }}</mat-icon>
         </button>
       }
     </div>
-    <mat-slide-toggle formControlName="isActive"
-      >Active (visible to restaurants and customers)</mat-slide-toggle
-    >
+    <np-toggle [formField]="form.isActive" label="Active (visible to restaurants and customers)" />
   </mat-dialog-content>
   <mat-dialog-actions align="end">
     <button mat-button type="button" mat-dialog-close>Cancel</button>
-    <button mat-flat-button type="submit" [disabled]="saving()">
+    <button mat-flat-button type="submit" [disabled]="form().submitting()">
       {{ data ? 'Save' : 'Create' }}
     </button>
   </mat-dialog-actions>

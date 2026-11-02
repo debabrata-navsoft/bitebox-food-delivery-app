@@ -1,14 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { form } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
+import { ToggleComponent } from 'nexprime';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { Subscription, catchError, debounceTime, distinctUntilChanged, of } from 'rxjs';
 import { CatalogService } from '../../../core/services/catalog.service';
 import { errorMessage } from '../../../core/services/api-error';
@@ -20,17 +18,17 @@ import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { FoodDetailDialog, FoodDetailData } from '../food-detail-dialog/food-detail-dialog';
 
 /** Food search: available dishes across all approved restaurants. */
+import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
+
 @Component({
   selector: 'bb-food-search',
   imports: [
-    ReactiveFormsModule,
+    ToggleComponent,
+    NP_FORM_FIELDS,
     RouterLink,
     MatButtonModule,
     MatChipsModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
-    MatSlideToggleModule,
     EmptyState,
     VegBadge,
     InrPipe,
@@ -49,7 +47,8 @@ export class FoodSearch {
   readonly veg = input<string>();
 
   protected readonly categories = toSignal(this.catalog.categories().pipe(catchError(() => of([]))), { initialValue: [] });
-  protected readonly searchControl = new FormControl('', { nonNullable: true });
+  /** The search box; the URL (?search=) is the source of truth for what is shown. */
+  protected readonly filters = form(signal({ search: '' }));
   protected readonly dishes = signal<DishSearchResult[]>([]);
   protected readonly pagination = signal<Pagination | null>(null);
   protected readonly loading = signal(true);
@@ -72,13 +71,17 @@ export class FoodSearch {
     effect(() => {
       const query = this.query();
       untracked(() => {
-        this.searchControl.setValue(query.search ?? '', { emitEvent: false });
+        // Follow the URL (back/forward, links) without fighting what is being typed.
+        const box = this.filters.search().value;
+        if (box().trim() !== (query.search ?? '')) box.set(query.search ?? '');
         this.load(1);
       });
     });
-    this.searchControl.valueChanges
+    toObservable(computed(() => this.filters.search().value().trim()))
       .pipe(debounceTime(400), distinctUntilChanged(), takeUntilDestroyed())
-      .subscribe((search) => this.setParams({ search: search.trim() || null }));
+      .subscribe((search) => {
+        if (search !== (this.search() ?? '')) this.setParams({ search: search || null });
+      });
   }
 
   protected setParams(params: Record<string, string | boolean | null>): void {

@@ -37,14 +37,14 @@
       </div>
     }
 
-    <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
-      <mat-icon matPrefix aria-hidden="true">search</mat-icon>
-      <mat-label>Search area, street or landmark</mat-label>
-      <input #searchInput matInput type="search" [formControl]="query" cdkFocusInitial autocomplete="off" />
-    </mat-form-field>
-    @if (searching()) {
-      <mat-progress-bar mode="indeterminate" aria-label="Searching" />
-    }
+    <np-search-input
+      class="search"
+      placeholder="Search area, street or landmark"
+      [value]="query()"
+      [loading]="searching()"
+      (search)="query.set($event)"
+      cdkFocusInitial
+    />
     @if (searchError()) {
       <p class="error" role="alert">{{ searchError() }}</p>
     }

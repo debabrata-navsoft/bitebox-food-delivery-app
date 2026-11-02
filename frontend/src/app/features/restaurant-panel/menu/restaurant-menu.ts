@@ -3,12 +3,8 @@ import { RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, filter, of } from 'rxjs';
 import { CatalogService } from '../../../core/services/catalog.service';
@@ -25,17 +21,19 @@ import { FoodFormDialog, FoodFormData } from '../food-form-dialog/food-form-dial
 
 type AvailabilityFilter = 'all' | 'available' | 'unavailable';
 
+import { form } from '@angular/forms/signals';
+import { SelectOption, ToggleComponent } from 'nexprime';
+import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
+
 @Component({
   selector: 'bb-restaurant-menu',
   imports: [
+    ToggleComponent,
+    NP_FORM_FIELDS,
     RouterLink,
     MatButtonModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
     MatMenuModule,
-    MatSelectModule,
-    MatSlideToggleModule,
     EmptyState,
     PageHeader,
     VegBadge,
@@ -62,15 +60,23 @@ export class RestaurantMenu implements OnInit {
   /** Total on the server, to warn if the menu is larger than what was loaded. */
   protected readonly total = signal(0);
 
-  protected readonly search = signal('');
-  protected readonly categoryFilter = signal('');
-  protected readonly availabilityFilter = signal<AvailabilityFilter>('all');
+  /** Search box + dropdowns above the list (filtering happens locally). */
+  protected readonly filterModel = signal({ search: '', category: '', availability: 'all' as AvailabilityFilter });
+  protected readonly filters = form(this.filterModel);
+  protected readonly categoryOptions = computed<SelectOption[]>(() => [
+    { value: '', label: 'All categories' },
+    ...this.categories().map((c) => ({ value: c.id, label: c.name })),
+  ]);
+  protected readonly availabilityOptions: SelectOption[] = [
+    { value: 'all', label: 'All dishes' },
+    { value: 'available', label: 'Available' },
+    { value: 'unavailable', label: 'Unavailable' },
+  ];
 
   /** Filtering happens client-side: a single restaurant's menu is small (loaded up to 100 items). */
   protected readonly filtered = computed(() => {
-    const term = this.search().trim().toLowerCase();
-    const category = this.categoryFilter();
-    const availability = this.availabilityFilter();
+    const { search, category, availability } = this.filterModel();
+    const term = search.trim().toLowerCase();
     return this.items().filter(
       (i) =>
         (!term || i.name.toLowerCase().includes(term)) &&
@@ -84,7 +90,7 @@ export class RestaurantMenu implements OnInit {
   }
 
   ngOnInit(): void {
-    if (this.available() === 'true') this.availabilityFilter.set('available');
+    if (this.available() === 'true') this.filters.availability().value.set('available');
   }
 
   protected load(): void {
@@ -122,15 +128,15 @@ export class RestaurantMenu implements OnInit {
       });
   }
 
-  protected toggleAvailability(item: FoodItem, event: MatSlideToggleChange): void {
+  protected toggleAvailability(item: FoodItem, checked: boolean, toggle: ToggleComponent): void {
     this.busyId.set(item.id);
-    this.service.setFoodAvailability(item.id, event.checked).subscribe({
+    this.service.setFoodAvailability(item.id, checked).subscribe({
       next: (updated) => {
         this.items.update((list) => list.map((i) => (i.id === updated.id ? updated : i)));
         this.busyId.set(null);
       },
       error: (err: unknown) => {
-        event.source.checked = !event.checked;
+        toggle.checked.set(!checked); // back to what the server has
         this.notify.error(errorMessage(err));
         this.busyId.set(null);
       },

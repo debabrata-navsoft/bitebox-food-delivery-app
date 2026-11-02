@@ -1,12 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormRoot, form, maxLength, pattern } from '@angular/forms/signals';
 import { TitleCasePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
 import { filter } from 'rxjs';
@@ -38,15 +36,17 @@ function newIdempotencyKey(): string {
  * Cart + checkout on one page: items, coupon, delivery address, payment,
  * bill and the "Place order" action. Every number shown comes from the server.
  */
+import { shownError } from '../../shared/forms/form-errors';
+import { NP_FORM_FIELDS } from '../../shared/forms/np-form-fields';
+
 @Component({
   selector: 'bb-checkout',
   imports: [
-    ReactiveFormsModule,
+    FormRoot,
+    NP_FORM_FIELDS,
     RouterLink,
     MatButtonModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
     MatProgressSpinnerModule,
     MatRadioModule,
     BillSummary,
@@ -74,10 +74,19 @@ export class Checkout {
   protected readonly loadError = signal<string | null>(null);
   protected readonly savedAddresses = signal<DeliveryAddress[]>([]);
   protected readonly offers = signal<CouponOffer[]>([]);
-  protected readonly couponCode = new FormControl('', { nonNullable: true, validators: [Validators.pattern(/^[A-Za-z0-9_-]{3,30}$/)] });
+  protected readonly shownError = shownError;
+  protected readonly couponForm = form(
+    signal({ code: '' }),
+    (path) => {
+      pattern(path.code, /^\s*[A-Za-z0-9_-]{3,30}\s*$/, { message: 'Coupon codes are 3-30 letters or digits' });
+    },
+    { submission: { action: async () => this.applyCoupon() } },
+  );
   protected readonly couponError = signal<string | null>(null);
   protected readonly applyingCoupon = signal(false);
-  protected readonly note = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(300)] });
+  protected readonly noteForm = form(signal({ note: '' }), (path) => {
+    maxLength(path.note, 300, { message: 'Keep the note under 300 characters' });
+  });
   protected readonly placing = signal(false);
   protected readonly placeError = signal<string | null>(null);
 
@@ -110,7 +119,7 @@ export class Checkout {
     this.orders.availableCoupons(restaurantId).subscribe({ next: (list) => this.offers.set(list), error: () => this.offers.set([]) });
   }
 
-  protected applyCoupon(code = this.couponCode.value): void {
+  protected applyCoupon(code = this.couponForm.code().value()): void {
     const value = code.trim();
     if (!value) return;
     this.applyingCoupon.set(true);
@@ -118,7 +127,7 @@ export class Checkout {
     this.cart.applyCoupon(value).subscribe({
       next: (quote) => {
         this.applyingCoupon.set(false);
-        this.couponCode.reset();
+        this.couponForm().reset({ code: '' });
         this.notify.success(`${quote.coupon?.code} applied — you save ₹${(quote.pricing.discountPaise / 100).toFixed(0)}`);
       },
       error: (err: unknown) => {
@@ -154,13 +163,13 @@ export class Checkout {
   protected placeOrder(): void {
     const quote = this.quote();
     const addressId = this.selectedAddressId();
-    if (!quote?.canCheckout || !addressId || this.note.invalid) return;
+    if (!quote?.canCheckout || !addressId || this.noteForm().invalid()) return;
 
     this.placing.set(true);
     this.placeError.set(null);
     this.orders
       .place(
-        { addressId, paymentMethod: 'cod', note: this.note.value.trim() || undefined, expectedTotalPaise: quote.pricing.totalPaise },
+        { addressId, paymentMethod: 'cod', note: this.noteForm.note().value().trim() || undefined, expectedTotalPaise: quote.pricing.totalPaise },
         this.idempotencyKey,
       )
       .subscribe({
