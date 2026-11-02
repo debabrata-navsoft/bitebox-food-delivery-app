@@ -122,6 +122,12 @@ export class RestaurantDetail {
     return this.cartActions.canOrder();
   }
 
+  /** Open and accepting orders right now (the server re-checks at checkout). */
+  protected readonly takingOrders = computed(() => {
+    const r = this.restaurant();
+    return !!r && r.isOpenNow && r.isAcceptingOrders;
+  });
+
   protected quantityOf(foodItemId: string): number {
     return this.cartHere() ? this.cart.quantityOf(foodItemId) : 0;
   }

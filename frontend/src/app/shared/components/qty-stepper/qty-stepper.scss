@@ -49,3 +49,9 @@ button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+// ADD often sits over a dish photo: keep it solid when disabled, just muted.
+.add:disabled {
+  opacity: 1;
+  color: var(--bb-ink-muted);
+  background: var(--bb-surface-alt);
+}

@@ -68,6 +68,18 @@
     }
 
     <div class="menu">
+      @if (!takingOrders()) {
+        <div class="bb-alert info closed-note" role="status">
+          <mat-icon aria-hidden="true">schedule</mat-icon>
+          <span>
+            @if (!r.isOpenNow) {
+              {{ r.name }} is closed right now. You can browse the menu; ordering opens at {{ r.openingTime }}.
+            } @else {
+              {{ r.name }} is not taking orders right now. Please check back soon.
+            }
+          </span>
+        </div>
+      }
       <div class="menu-tools">
         <np-text-input
           class="menu-search"
@@ -120,7 +132,7 @@
                         [class.over-image]="!!item.imageUrl"
                         [quantity]="quantityOf(item.id)"
                         [label]="item.name"
-                        [disabled]="cart.busy()"
+                        [disabled]="cart.busy() || !takingOrders()"
                         (add)="addToCart(item)"
                         (changed)="cartActions.setQuantity(item.id, $event)"
                       />
