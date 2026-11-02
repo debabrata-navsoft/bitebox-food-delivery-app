@@ -67,10 +67,20 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--bb-space-2);
-  margin-bottom: var(--bb-space-2);
+  margin-bottom: var(--bb-space-3);
 
-  .place-search {
+  // The shared form spacing would push the field down relative to the button;
+  // this row handles its own spacing instead.
+  .place-search.mat-mdc-form-field {
     flex: 1 1 240px;
+    margin-bottom: 0;
+  }
+
+  // Same height as the outlined search field so both line up.
+  button {
+    --mat-button-outlined-container-height: 56px;
+    height: 56px;
+    flex-shrink: 0;
   }
 }
 
