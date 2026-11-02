@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, PLATFORM_ID, effect, inject, signal, untracked } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { FormRoot, form } from '@angular/forms/signals';
+import { FormRoot, form, validate } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -34,9 +34,12 @@ export class Home {
   private readonly dialog = inject(MatDialog);
   protected readonly deliveryLocation = inject(DeliveryLocationService).location;
 
-  protected readonly searchForm = form(signal({ search: '' }), {
-    submission: { action: async () => this.submitSearch() },
-  });
+  /** Hero search: needs some text (an empty search would just open the full list). */
+  protected readonly searchForm = form(
+    signal({ search: '' }),
+    (path) => validate(path.search, ({ value }) => (value().trim() ? undefined : { kind: 'required' })),
+    { submission: { action: async () => this.submitSearch() } },
+  );
   /** null = still loading. Fetched during server rendering too, so it is usually in the HTML. */
   protected readonly categories = signal<FoodCategory[] | null>(null);
   protected readonly restaurants = signal<Restaurant[]>([]);
@@ -80,9 +83,15 @@ export class Home {
     this.dialog.open(LocationPickerDialog, { width: '520px', maxWidth: '95vw', autoFocus: 'first-tabbable' });
   }
 
+  /** An empty search stays here (validation blocks it); put the cursor in the box instead. */
+  protected focusIfEmpty(event: Event): void {
+    if (this.searchForm().invalid()) {
+      (event.currentTarget as HTMLFormElement).querySelector('input')?.focus();
+    }
+  }
+
   private submitSearch(): void {
-    const search = this.searchForm.search().value().trim();
-    void this.router.navigate(['/restaurants'], { queryParams: search ? { search } : {} });
+    void this.router.navigate(['/restaurants'], { queryParams: { search: this.searchForm.search().value().trim() } });
   }
 
   protected readonly steps = [

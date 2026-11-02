@@ -10,7 +10,7 @@
         BiteBox connects you with the best local restaurants and riders nearby. Order in a few taps and
         follow your delivery live on the map.
       </p>
-      <form class="hero-search" role="search" [formRoot]="searchForm">
+      <form class="hero-search" role="search" [formRoot]="searchForm" (submit)="focusIfEmpty($event)">
         <np-text-input
           [formField]="searchForm.search"
           ariaLabel="Search restaurants, cuisines or dishes"
