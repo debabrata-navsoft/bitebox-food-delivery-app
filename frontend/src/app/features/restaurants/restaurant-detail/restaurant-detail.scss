@@ -108,8 +108,12 @@
   padding-block: var(--bb-space-5) var(--bb-space-7);
 
   @include bp.desktop-up {
-    grid-template-columns: 220px 1fr;
+    grid-template-columns: minmax(0, 1fr) 320px;
     align-items: start;
+
+    &.with-nav {
+      grid-template-columns: 200px minmax(0, 1fr) 320px;
+    }
   }
 }
 
@@ -289,17 +293,119 @@
   border-radius: 999px;
 }
 
+// Phones and tablets: a bar pinned above the bottom tab bar.
+// Desktop shows the cart panel beside the menu instead.
 .cart-bar {
   position: sticky;
-  bottom: 0;
+  bottom: calc(56px + env(safe-area-inset-bottom));
   z-index: 5;
   background: var(--bb-success);
   color: #fff;
   box-shadow: 0 -4px 16px rgb(0 0 0 / 12%);
 
-  // Sit above the bottom tab bar (phones and tablets).
-  @include bp.below-desktop {
-    bottom: calc(56px + env(safe-area-inset-bottom));
+  @include bp.desktop-up {
+    display: none;
+  }
+}
+
+.cart-panel {
+  display: none;
+
+  @include bp.desktop-up {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bb-space-3);
+    position: sticky;
+    top: 88px;
+    max-height: calc(100vh - 112px);
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+}
+
+.cart-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--bb-space-3);
+
+  li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'badge name name'
+      '. stepper total';
+    align-items: center;
+    gap: var(--bb-space-1) var(--bb-space-2);
+    padding-bottom: var(--bb-space-3);
+    border-bottom: 1px dashed var(--bb-border);
+
+    &.unavailable {
+      opacity: 0.55;
+    }
+  }
+
+  bb-veg-badge {
+    grid-area: badge;
+  }
+
+  bb-qty-stepper {
+    grid-area: stepper;
+    justify-self: start;
+  }
+}
+
+.line-name {
+  grid-area: name;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.line-total {
+  grid-area: total;
+  font-weight: 700;
+}
+
+.cart-subtotal {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1rem;
+}
+
+.cart-note {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.checkout {
+  width: 100%;
+}
+
+.cart-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--bb-space-2);
+  padding: var(--bb-space-5) 0;
+  text-align: center;
+  color: var(--bb-ink-muted);
+
+  mat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 40px;
+    color: var(--bb-amber-600);
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
   }
 }
 

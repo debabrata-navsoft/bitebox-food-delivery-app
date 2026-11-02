@@ -252,6 +252,8 @@ h1 {
     box-shadow: none;
     background: transparent;
     font-size: 1rem;
+    // The input inherits its colour; the hero's text is light, so set it explicitly.
+    color: var(--bb-ink);
   }
 
   &:focus-within {

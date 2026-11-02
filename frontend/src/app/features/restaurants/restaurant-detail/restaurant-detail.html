@@ -55,7 +55,7 @@
     </div>
   </header>
 
-  <section class="bb-container menu-layout">
+  <section class="bb-container menu-layout" [class.with-nav]="sections().length > 1">
     @if (sections().length > 1) {
       <nav class="section-nav" aria-label="Menu sections">
         <h2 class="bb-sr-only">Menu sections</h2>
@@ -133,6 +133,41 @@
         </section>
       }
     </div>
+
+    <!-- Desktop: the cart sits beside the menu. Phones/tablets use the bar below. -->
+    <aside class="cart-panel bb-card" aria-labelledby="cart-panel-title">
+      <h2 id="cart-panel-title">Your cart</h2>
+      @if (cartHere(); as c) {
+        <ul class="cart-lines">
+          @for (line of c.items; track line.foodItemId) {
+            <li [class.unavailable]="!line.isAvailable">
+              <bb-veg-badge [veg]="line.isVeg" />
+              <span class="line-name">{{ line.name }}</span>
+              <bb-qty-stepper
+                [quantity]="line.quantity"
+                [label]="line.name"
+                [disabled]="cart.busy()"
+                (changed)="cartActions.setQuantity(line.foodItemId, $event)"
+              />
+              <span class="line-total">{{ line.lineTotalPaise | inr }}</span>
+            </li>
+          }
+        </ul>
+        <div class="cart-subtotal">
+          <span>Subtotal</span>
+          <strong>{{ cartSubtotal() | inr }}</strong>
+        </div>
+        <p class="bb-muted cart-note">Delivery fee and taxes are added at checkout.</p>
+        <a mat-flat-button class="bb-btn-accent checkout" routerLink="/checkout">
+          Checkout <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+        </a>
+      } @else {
+        <div class="cart-empty">
+          <mat-icon aria-hidden="true">shopping_bag</mat-icon>
+          <p>Your cart is empty. Add dishes from the menu to get started.</p>
+        </div>
+      }
+    </aside>
   </section>
 
   @if (cartHere(); as c) {
