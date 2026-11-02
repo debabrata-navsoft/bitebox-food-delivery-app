@@ -25,10 +25,16 @@
 
 .media {
   position: relative;
+  flex-shrink: 0;
   aspect-ratio: 16 / 9;
+  overflow: hidden;
   background: var(--bb-plum-100);
 
+  // Out of the flow: otherwise a tall photo stretches the box past 16:9
+  // (aspect-ratio boxes still grow to fit their content).
   img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
