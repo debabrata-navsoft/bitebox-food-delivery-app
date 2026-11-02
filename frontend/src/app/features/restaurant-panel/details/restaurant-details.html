@@ -1,0 +1,177 @@
+<bb-page-header
+  [title]="restaurant() ? 'Restaurant details' : 'Add your restaurant'"
+  [subtitle]="restaurant() ? 'Keep your business information up to date.' : 'Tell customers about your restaurant. We will review it before it goes live.'"
+/>
+
+@if (loading()) {
+  <span class="bb-skeleton" style="height: 420px"></span>
+} @else {
+  @if (restaurant(); as r) {
+    <bb-status-banner [restaurant]="r" [showFixLink]="false" class="banner" />
+  }
+  @if (error()) {
+    <div class="bb-alert error" role="alert">
+      <mat-icon aria-hidden="true">error</mat-icon>
+      <span>{{ error() }}</span>
+    </div>
+  }
+
+  <form class="bb-form layout" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <div class="main">
+      <section class="bb-card" aria-labelledby="basics">
+        <h3 id="basics">Basics</h3>
+        <mat-form-field appearance="outline">
+          <mat-label>Restaurant name</mat-label>
+          <input matInput formControlName="name" autocomplete="organization" />
+          <mat-error>{{ controlError(form.controls.name, 'Name') }}</mat-error>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Description</mat-label>
+          <textarea matInput formControlName="description" rows="3" maxlength="1000"></textarea>
+          <mat-hint align="end">{{ form.controls.description.value.length }}/1000</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Cuisines</mat-label>
+          <mat-chip-grid #chipGrid aria-label="Cuisines">
+            @for (c of cuisines(); track c) {
+              <mat-chip-row (removed)="removeCuisine(c)">
+                {{ c }}
+                <button matChipRemove [attr.aria-label]="'Remove ' + c"><mat-icon>cancel</mat-icon></button>
+              </mat-chip-row>
+            }
+            <input
+              placeholder="Type a cuisine and press Enter"
+              [matChipInputFor]="chipGrid"
+              [matChipInputSeparatorKeyCodes]="separatorKeys"
+              (matChipInputTokenEnd)="addCuisine($event)"
+            />
+          </mat-chip-grid>
+          <mat-hint>e.g. Biryani, North Indian, Chinese</mat-hint>
+        </mat-form-field>
+        @if (cuisineError()) {
+          <p class="field-error" role="alert">{{ cuisineError() }}</p>
+        }
+
+        <div class="bb-form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Phone</mat-label>
+            <input matInput type="tel" formControlName="phone" inputmode="tel" />
+            <mat-error>{{ controlError(form.controls.phone, 'Phone number') }}</mat-error>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Email (optional)</mat-label>
+            <input matInput type="email" formControlName="email" />
+            <mat-error>{{ controlError(form.controls.email, 'Email') }}</mat-error>
+          </mat-form-field>
+        </div>
+        <mat-slide-toggle formControlName="isPureVeg">Pure vegetarian restaurant</mat-slide-toggle>
+      </section>
+
+      <section class="bb-card" aria-labelledby="address-title" formGroupName="address">
+        <h3 id="address-title">Address</h3>
+        <mat-form-field appearance="outline">
+          <mat-label>Street address</mat-label>
+          <input matInput formControlName="line1" autocomplete="address-line1" />
+          <mat-error>{{ controlError(form.controls.address.controls.line1, 'Street address') }}</mat-error>
+        </mat-form-field>
+        <div class="bb-form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Building / floor (optional)</mat-label>
+            <input matInput formControlName="line2" autocomplete="address-line2" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Area / locality</mat-label>
+            <input matInput formControlName="area" />
+          </mat-form-field>
+        </div>
+        <div class="row-3">
+          <mat-form-field appearance="outline">
+            <mat-label>City</mat-label>
+            <input matInput formControlName="city" autocomplete="address-level2" />
+            <mat-error>{{ controlError(form.controls.address.controls.city, 'City') }}</mat-error>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>State</mat-label>
+            <input matInput formControlName="state" autocomplete="address-level1" />
+            <mat-error>{{ controlError(form.controls.address.controls.state, 'State') }}</mat-error>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>PIN code</mat-label>
+            <input matInput formControlName="postalCode" autocomplete="postal-code" inputmode="numeric" />
+            <mat-error>{{ controlError(form.controls.address.controls.postalCode, 'PIN code') }}</mat-error>
+          </mat-form-field>
+        </div>
+
+        <div formGroupName="location" class="location">
+          <h4>Map location</h4>
+          <p class="bb-muted">Used to show you to nearby customers. A map picker arrives with live tracking; for now, use your current location or enter coordinates.</p>
+          <div class="bb-form-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Latitude</mat-label>
+              <input matInput type="number" step="any" formControlName="latitude" />
+              <mat-error>Latitude must be between -90 and 90</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Longitude</mat-label>
+              <input matInput type="number" step="any" formControlName="longitude" />
+              <mat-error>Longitude must be between -180 and 180</mat-error>
+            </mat-form-field>
+          </div>
+          @if (geo.supported) {
+            <button mat-stroked-button type="button" (click)="useCurrentLocation()" [disabled]="locating()">
+              <mat-icon>my_location</mat-icon>
+              {{ locating() ? 'Locating…' : 'Use my current location' }}
+            </button>
+          }
+        </div>
+      </section>
+    </div>
+
+    <aside class="side">
+      <section class="bb-card" aria-labelledby="photo-title">
+        <h3 id="photo-title">Cover photo</h3>
+        <bb-image-upload [(url)]="imageUrl" label="Add a cover photo" />
+      </section>
+
+      <section class="bb-card" aria-labelledby="hours-title">
+        <h3 id="hours-title">Hours & pricing</h3>
+        <div class="bb-form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Opens</mat-label>
+            <input matInput type="time" formControlName="openingTime" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Closes</mat-label>
+            <input matInput type="time" formControlName="closingTime" />
+          </mat-form-field>
+        </div>
+        <mat-form-field appearance="outline">
+          <mat-label>Average cost for two</mat-label>
+          <span matTextPrefix>₹&nbsp;</span>
+          <input matInput type="number" min="0" step="1" formControlName="costForTwo" />
+          <mat-error>{{ controlError(form.controls.costForTwo, 'Cost for two') }}</mat-error>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Minimum order value</mat-label>
+          <span matTextPrefix>₹&nbsp;</span>
+          <input matInput type="number" min="0" step="1" formControlName="minOrder" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Average preparation time</mat-label>
+          <input matInput type="number" min="5" max="180" formControlName="avgPrepTimeMinutes" />
+          <span matTextSuffix>&nbsp;min</span>
+          <mat-error>Between 5 and 180 minutes</mat-error>
+        </mat-form-field>
+      </section>
+
+      <button mat-flat-button type="submit" class="save" [disabled]="saving()">
+        @if (saving()) {
+          <mat-progress-spinner mode="indeterminate" diameter="20" aria-label="Saving" />
+        } @else {
+          {{ restaurant() ? 'Save changes' : 'Submit for approval' }}
+        }
+      </button>
+    </aside>
+  </form>
+}

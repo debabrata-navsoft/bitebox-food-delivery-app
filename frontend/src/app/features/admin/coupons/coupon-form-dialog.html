@@ -1,0 +1,78 @@
+<h2 mat-dialog-title>{{ data ? 'Edit coupon' : 'New coupon' }}</h2>
+<form [formGroup]="form" (ngSubmit)="save()" novalidate>
+  <mat-dialog-content class="bb-form">
+    @if (error()) {
+      <div class="bb-alert error" role="alert">
+        <mat-icon aria-hidden="true">error</mat-icon><span>{{ error() }}</span>
+      </div>
+    }
+    <div class="bb-form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Code</mat-label>
+        <input matInput formControlName="code" autocapitalize="characters" cdkFocusInitial />
+        <mat-error>3-30 letters, digits, - or _</mat-error>
+      </mat-form-field>
+      <mat-button-toggle-group
+        formControlName="discountType"
+        aria-label="Discount type"
+        class="type"
+      >
+        <mat-button-toggle value="percent">% off</mat-button-toggle>
+        <mat-button-toggle value="flat">₹ off</mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+    <mat-form-field appearance="outline">
+      <mat-label>Description shown to customers</mat-label>
+      <input matInput formControlName="description" maxlength="200" />
+    </mat-form-field>
+    <div class="bb-form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>{{
+          form.controls.discountType.value === 'percent' ? 'Discount %' : 'Discount (₹)'
+        }}</mat-label>
+        <input matInput type="number" min="1" formControlName="discount" />
+        <mat-error>{{
+          form.controls.discountType.value === 'percent' ? '1 to 100' : 'At least ₹1'
+        }}</mat-error>
+      </mat-form-field>
+      @if (form.controls.discountType.value === 'percent') {
+        <mat-form-field appearance="outline">
+          <mat-label>Max discount (₹, optional)</mat-label>
+          <input matInput type="number" min="0" formControlName="maxDiscount" />
+        </mat-form-field>
+      }
+    </div>
+    <div class="bb-form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Minimum order (₹)</mat-label>
+        <input matInput type="number" min="0" formControlName="minOrder" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Uses per customer</mat-label>
+        <input matInput type="number" min="1" max="100" formControlName="perUserLimit" />
+      </mat-form-field>
+    </div>
+    <div class="bb-form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Valid from</mat-label>
+        <input matInput type="date" formControlName="validFrom" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Valid until</mat-label>
+        <input matInput type="date" formControlName="validUntil" />
+        <mat-error>{{ controlError(form.controls.validUntil, 'End date') }}</mat-error>
+      </mat-form-field>
+    </div>
+    <mat-form-field appearance="outline">
+      <mat-label>Total uses allowed (blank = unlimited)</mat-label>
+      <input matInput type="number" min="1" formControlName="usageLimit" />
+    </mat-form-field>
+    <mat-slide-toggle formControlName="isActive">Active</mat-slide-toggle>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Cancel</button>
+    <button mat-flat-button type="submit" [disabled]="saving()">
+      {{ data ? 'Save' : 'Create' }}
+    </button>
+  </mat-dialog-actions>
+</form>

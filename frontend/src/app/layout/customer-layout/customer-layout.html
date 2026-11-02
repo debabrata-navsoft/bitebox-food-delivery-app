@@ -1,0 +1,150 @@
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="bb-container header-inner">
+    <a routerLink="/" class="logo" aria-label="BiteBox home">
+      <bb-brand-logo [height]="34" />
+    </a>
+
+    <button type="button" class="location-button" (click)="chooseLocation()" [attr.aria-label]="deliveryLocation() ? 'Delivering to ' + deliveryLocation()!.label + '. Change location' : 'Choose delivery location'">
+      <mat-icon aria-hidden="true">location_on</mat-icon>
+      <span class="location-text">
+        @if (deliveryLocation(); as loc) {
+          <strong>{{ loc.label }}</strong>
+        } @else {
+          <strong>Set location</strong>
+        }
+      </span>
+      <mat-icon class="caret" aria-hidden="true">expand_more</mat-icon>
+    </button>
+
+    <nav class="desktop-nav" aria-label="Main">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Home</a>
+      <a routerLink="/restaurants" routerLinkActive="active">Restaurants</a>
+      <a routerLink="/dishes" routerLinkActive="active">Dishes</a>
+      <a routerLink="/" fragment="partners">Partner with us</a>
+    </nav>
+
+    <div class="header-actions">
+      @if (!ready()) {
+        <span class="bb-skeleton action-skeleton" aria-hidden="true"></span>
+      } @else if (user(); as u) {
+        @if (panelLink(); as link) {
+          <a mat-stroked-button [routerLink]="link" class="hide-phone">
+            <mat-icon>space_dashboard</mat-icon>
+            My panel
+          </a>
+        }
+        @if (cart.enabled()) {
+          <a
+            mat-icon-button
+            routerLink="/checkout"
+            class="cart-button"
+            [attr.aria-label]="'Cart, ' + cart.itemCount() + ' items'"
+          >
+            <mat-icon [matBadge]="cart.itemCount() || null" matBadgeColor="accent" matBadgeSize="small" aria-hidden="true">shopping_bag</mat-icon>
+          </a>
+        }
+        <button mat-button [matMenuTriggerFor]="accountMenu" class="account-button" aria-label="Account menu">
+          <mat-icon>account_circle</mat-icon>
+          <span class="hide-phone">{{ firstName() }}</span>
+        </button>
+        <mat-menu #accountMenu="matMenu" xPosition="before">
+          <div class="menu-header" role="presentation">
+            <strong>{{ u.name }}</strong>
+            <span>{{ u.email }}</span>
+          </div>
+          <mat-divider />
+          @if (panelLink(); as link) {
+            <a mat-menu-item [routerLink]="link">
+              <mat-icon>space_dashboard</mat-icon>
+              <span>My panel</span>
+            </a>
+          } @else {
+            <a mat-menu-item routerLink="/orders">
+              <mat-icon>receipt_long</mat-icon>
+              <span>My orders</span>
+            </a>
+            <a mat-menu-item routerLink="/account/addresses">
+              <mat-icon>location_on</mat-icon>
+              <span>Saved addresses</span>
+            </a>
+            <a mat-menu-item routerLink="/account">
+              <mat-icon>manage_accounts</mat-icon>
+              <span>My account</span>
+            </a>
+          }
+          <button mat-menu-item (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            <span>Sign out</span>
+          </button>
+        </mat-menu>
+      } @else {
+        <a mat-button routerLink="/login">Sign in</a>
+        <a mat-flat-button routerLink="/register" class="bb-btn-accent hide-phone">Sign up</a>
+      }
+    </div>
+  </div>
+</header>
+
+<main id="main" class="site-main">
+  <router-outlet />
+</main>
+
+<footer class="site-footer">
+  <div class="bb-container footer-grid">
+    <div>
+      <bb-brand-logo variant="light" [height]="32" />
+      <p>Good food, boxed and delivered.</p>
+    </div>
+    <nav aria-label="Partners">
+      <h3>Partners</h3>
+      <a routerLink="/restaurant/register">Add your restaurant</a>
+      <a routerLink="/restaurant/login">Restaurant sign in</a>
+      <a routerLink="/delivery/register">Ride with BiteBox</a>
+      <a routerLink="/delivery/login">Rider sign in</a>
+    </nav>
+    <nav aria-label="Account">
+      <h3>Account</h3>
+      <a routerLink="/login">Sign in</a>
+      <a routerLink="/register">Create account</a>
+      <a routerLink="/forgot-password">Forgot password</a>
+      <a routerLink="/admin/login">Admin</a>
+    </nav>
+  </div>
+  <p class="bb-container copyright">&copy; {{ year }} BiteBox. All rights reserved.</p>
+</footer>
+
+<!-- Bottom tab bar on phones -->
+<nav class="tab-bar" aria-label="Quick navigation">
+  <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+    <mat-icon aria-hidden="true">home</mat-icon>
+    <span>Home</span>
+  </a>
+  <a routerLink="/restaurants" routerLinkActive="active">
+    <mat-icon aria-hidden="true">storefront</mat-icon>
+    <span>Restaurants</span>
+  </a>
+  @if (cart.enabled()) {
+    <a routerLink="/checkout" routerLinkActive="active">
+      <mat-icon aria-hidden="true" [matBadge]="cart.itemCount() || null" matBadgeColor="accent" matBadgeSize="small">shopping_bag</mat-icon>
+      <span>Cart</span>
+    </a>
+  } @else {
+    <a routerLink="/dishes" routerLinkActive="active">
+      <mat-icon aria-hidden="true">ramen_dining</mat-icon>
+      <span>Dishes</span>
+    </a>
+  }
+  @if (user()) {
+    <a [routerLink]="panelLink() ?? '/account'" routerLinkActive="active">
+      <mat-icon aria-hidden="true">person</mat-icon>
+      <span>{{ panelLink() ? 'Panel' : 'Account' }}</span>
+    </a>
+  } @else {
+    <a routerLink="/login" routerLinkActive="active">
+      <mat-icon aria-hidden="true">login</mat-icon>
+      <span>Sign in</span>
+    </a>
+  }
+</nav>

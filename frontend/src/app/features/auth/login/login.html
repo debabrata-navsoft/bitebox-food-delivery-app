@@ -1,0 +1,68 @@
+<header class="bb-form-heading">
+  @if (portal() !== 'customer') {
+    <span class="bb-eyebrow">{{ meta().label }}</span>
+  }
+  <h1>{{ heading() }}</h1>
+  <p>Welcome back! Enter your details to continue.</p>
+</header>
+
+@if (reason() === 'expired') {
+  <div class="bb-alert info" role="status">
+    <mat-icon aria-hidden="true">schedule</mat-icon>
+    <span>Your session expired. Please sign in again.</span>
+  </div>
+}
+@if (reason() === 'reset') {
+  <div class="bb-alert success" role="status">
+    <mat-icon aria-hidden="true">check_circle</mat-icon>
+    <span>Password updated. Sign in with your new password.</span>
+  </div>
+}
+@if (error()) {
+  <div class="bb-alert error" role="alert">
+    <mat-icon aria-hidden="true">error</mat-icon>
+    <span>{{ error() }}</span>
+  </div>
+}
+
+<form class="bb-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <mat-form-field appearance="outline">
+    <mat-label>Email</mat-label>
+    <input matInput type="email" formControlName="email" autocomplete="email" inputmode="email" />
+    <mat-icon matPrefix aria-hidden="true">mail</mat-icon>
+    <mat-error>{{ controlError(form.controls.email, 'Email') }}</mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Password</mat-label>
+    <input matInput #pw type="password" formControlName="password" autocomplete="current-password" />
+    <mat-icon matPrefix aria-hidden="true">lock</mat-icon>
+    <bb-password-toggle matSuffix [input]="pw" />
+    <mat-error>{{ controlError(form.controls.password, 'Password') }}</mat-error>
+  </mat-form-field>
+
+  <div class="bb-form-actions">
+    <button mat-flat-button type="submit" [disabled]="submitting()">
+      @if (submitting()) {
+        <mat-progress-spinner mode="indeterminate" diameter="20" aria-label="Signing in" />
+      } @else {
+        Sign in
+      }
+    </button>
+    <a routerLink="/forgot-password" class="forgot">Forgot password?</a>
+  </div>
+</form>
+
+<footer class="bb-form-footer">
+  @if (meta().register) {
+    <span>New to BiteBox? <a [routerLink]="meta().register">Create an account</a></span>
+  }
+  @if (portal() !== 'admin') {
+    <span>
+      Signing in as a
+      @for (other of otherPortals(); track other.link; let last = $last) {
+        <a [routerLink]="other.link">{{ other.label.toLowerCase() }}</a>{{ last ? '?' : ' or ' }}
+      }
+    </span>
+  }
+</footer>

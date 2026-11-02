@@ -1,23 +1,45 @@
-import "dotenv/config";
-import express from "express";
-import cors from "cors";
-import { connectDB } from "./config/db.js";
-// import authRoutes from "./routes/auth.route.js";
-// import { notFound, errorHandler } from "./middleware/error.middleware.js";
+import http from "node:http";
+import { createApp } from "./app.js";
+import { connectDB, disconnectDB } from "./config/db.js";
+import { env } from "./config/env.js";
+import { logger } from "./config/logger.js";
 
-const app = express();
+const app = createApp();
+// A plain http.Server so Socket.IO can attach to it in a later phase.
+const server = http.createServer(app);
 
-app.use(cors({ origin: process.env.CLIENT_URL }));
-app.use(express.json());
+async function start() {
+  try {
+    await connectDB(env.mongoUri);
+  } catch (error) {
+    logger.fatal({ err: error }, "Could not connect to MongoDB");
+    process.exit(1);
+  }
+  server.listen(env.port, () => logger.info(`BiteBox API listening on http://localhost:${env.port} (docs: /api/docs)`));
+}
 
-app.get("/", (req, res) => res.json({ message: "Auth API is running" }));
-// app.use("/api/auth", authRoutes);
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info(`${signal} received, shutting down gracefully`);
 
-// app.use(notFound);
-// app.use(errorHandler);
+  // Force exit if open connections do not drain in time.
+  const forceExit = setTimeout(() => {
+    logger.error("Forced shutdown after timeout");
+    process.exit(1);
+  }, 10_000);
+  forceExit.unref();
 
-const PORT = process.env.PORT || 5000;
+  server.close(async () => {
+    await disconnectDB().catch((error) => logger.error({ err: error }, "Error closing MongoDB"));
+    process.exit(0);
+  });
+  server.closeIdleConnections();
+}
 
-connectDB().then(() => {
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-});
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("unhandledRejection", (reason) => logger.error({ err: reason }, "Unhandled promise rejection"));
+
+start();

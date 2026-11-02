@@ -1,0 +1,72 @@
+@use 'breakpoints' as bp;
+
+.banner {
+  display: block;
+  margin-bottom: var(--bb-space-4);
+}
+
+.layout {
+  display: grid;
+  gap: var(--bb-space-4);
+  grid-template-columns: 1fr;
+
+  @include bp.desktop-up {
+    grid-template-columns: 1fr 340px;
+    align-items: start;
+  }
+}
+
+.main,
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bb-space-4);
+}
+
+.side {
+  @include bp.desktop-up {
+    position: sticky;
+    top: 88px;
+  }
+}
+
+.bb-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.row-3 {
+  display: grid;
+  gap: 0 var(--bb-space-3);
+  grid-template-columns: 1fr;
+
+  @include bp.tablet-up {
+    grid-template-columns: 2fr 2fr 1fr;
+  }
+}
+
+.location {
+  border-top: 1px solid var(--bb-border);
+  padding-top: var(--bb-space-4);
+  margin-top: var(--bb-space-2);
+
+  h4 {
+    margin: 0 0 4px;
+  }
+  p {
+    font-size: 0.88rem;
+  }
+  button {
+    align-self: flex-start;
+  }
+}
+
+.field-error {
+  color: var(--bb-danger);
+  font-size: 0.8rem;
+  margin: 0 0 var(--bb-space-2);
+}
+
+.save {
+  width: 100%;
+}

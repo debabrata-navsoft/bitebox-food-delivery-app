@@ -1,0 +1,113 @@
+<bb-page-header title="Profile" subtitle="Manage your personal details and password." />
+
+@if (user(); as u) {
+  <div class="layout">
+    <aside class="bb-card summary">
+      <div class="avatar" aria-hidden="true">{{ u.name.charAt(0).toUpperCase() }}</div>
+      <h2>{{ u.name }}</h2>
+      <span class="role-chip">{{ roleLabel() }}</span>
+      <dl>
+        <div>
+          <dt>Email</dt>
+          <dd>{{ u.email }}</dd>
+        </div>
+        <div>
+          <dt>Member since</dt>
+          <dd>{{ u.createdAt | date: 'mediumDate' }}</dd>
+        </div>
+        @if (u.lastLoginAt) {
+          <div>
+            <dt>Last sign-in</dt>
+            <dd>{{ u.lastLoginAt | date: 'medium' }}</dd>
+          </div>
+        }
+      </dl>
+    </aside>
+
+    <div class="forms">
+      <section class="bb-card" aria-labelledby="details-title">
+        <h3 id="details-title">Personal details</h3>
+        @if (profileError()) {
+          <div class="bb-alert error" role="alert">
+            <mat-icon aria-hidden="true">error</mat-icon><span>{{ profileError() }}</span>
+          </div>
+        }
+        <form class="bb-form" [formGroup]="profileForm" (ngSubmit)="saveProfile()" novalidate>
+          <div class="bb-form-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Full name</mat-label>
+              <input matInput formControlName="name" autocomplete="name" />
+              <mat-error>{{ controlError(profileForm.controls.name, 'Name') }}</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Mobile number</mat-label>
+              <input matInput type="tel" formControlName="phone" autocomplete="tel" inputmode="tel" />
+              <mat-hint>Leave empty to remove</mat-hint>
+              <mat-error>{{ controlError(profileForm.controls.phone, 'Phone number') }}</mat-error>
+            </mat-form-field>
+          </div>
+          <div class="actions">
+            <button
+              mat-flat-button
+              type="submit"
+              [disabled]="savingProfile() || profileForm.pristine"
+            >
+              @if (savingProfile()) {
+                <mat-progress-spinner mode="indeterminate" diameter="20" aria-label="Saving" />
+              } @else {
+                Save changes
+              }
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="bb-card" aria-labelledby="password-title">
+        <h3 id="password-title">Change password</h3>
+        <p class="bb-muted">You'll be signed out on all devices after changing your password.</p>
+        @if (passwordError()) {
+          <div class="bb-alert error" role="alert">
+            <mat-icon aria-hidden="true">error</mat-icon><span>{{ passwordError() }}</span>
+          </div>
+        }
+        <form class="bb-form" [formGroup]="passwordForm" (ngSubmit)="changePassword()" novalidate>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Current password</mat-label>
+            <input matInput #cur type="password" formControlName="currentPassword" autocomplete="current-password" />
+            <bb-password-toggle matSuffix [input]="cur" />
+            <mat-error>{{ controlError(passwordForm.controls.currentPassword, 'Current password') }}</mat-error>
+          </mat-form-field>
+          <div class="bb-form-row">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>New password</mat-label>
+              <input matInput #npw type="password" formControlName="newPassword" autocomplete="new-password" />
+              <bb-password-toggle matSuffix [input]="npw" />
+              <mat-hint>At least 8 characters, with a letter and a number</mat-hint>
+              <mat-error>{{ controlError(passwordForm.controls.newPassword, 'Password') }}</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Confirm new password</mat-label>
+              <input matInput #cnpw type="password" formControlName="confirmPassword" autocomplete="new-password" />
+              <bb-password-toggle matSuffix [input]="cnpw" />
+              <mat-error>{{ controlError(passwordForm.controls.confirmPassword, 'Confirmation') }}</mat-error>
+            </mat-form-field>
+          </div>
+          <div class="actions">
+            <button mat-stroked-button type="submit" [disabled]="savingPassword()">
+              @if (savingPassword()) {
+                <mat-progress-spinner mode="indeterminate" diameter="20" aria-label="Updating" />
+              } @else {
+                Update password
+              }
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+} @else {
+  <div class="layout" aria-busy="true">
+    <span class="bb-skeleton" style="height: 280px"></span>
+    <span class="bb-skeleton" style="height: 280px"></span>
+  </div>
+}

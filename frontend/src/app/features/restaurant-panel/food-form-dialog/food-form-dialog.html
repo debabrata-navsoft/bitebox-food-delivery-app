@@ -1,0 +1,67 @@
+<h2 mat-dialog-title>{{ data.item ? 'Edit dish' : 'Add a dish' }}</h2>
+<form [formGroup]="form" (ngSubmit)="save()" novalidate>
+  <mat-dialog-content class="bb-form">
+    @if (error()) {
+      <div class="bb-alert error" role="alert">
+        <mat-icon aria-hidden="true">error</mat-icon><span>{{ error() }}</span>
+      </div>
+    }
+    <mat-form-field appearance="outline">
+      <mat-label>Dish name</mat-label>
+      <input matInput formControlName="name" cdkFocusInitial />
+      <mat-error>{{ controlError(form.controls.name, 'Name') }}</mat-error>
+    </mat-form-field>
+    <div class="bb-form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Category</mat-label>
+        <mat-select formControlName="category">
+          @for (c of data.categories; track c.id) {
+            <mat-option [value]="c.id">{{ c.name }}</mat-option>
+          }
+        </mat-select>
+        <mat-error>{{ controlError(form.controls.category, 'Category') }}</mat-error>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Price</mat-label>
+        <span matTextPrefix>₹&nbsp;</span>
+        <input
+          matInput
+          type="number"
+          min="1"
+          step="0.01"
+          formControlName="price"
+          inputmode="decimal"
+        />
+        <mat-error>Enter a price of at least ₹1</mat-error>
+      </mat-form-field>
+    </div>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Description (optional)</mat-label>
+      <textarea matInput formControlName="description" rows="2" maxlength="500"></textarea>
+      <mat-hint align="end">{{ form.controls.description.value.length }}/500</mat-hint>
+    </mat-form-field>
+    <div class="row">
+      <mat-button-toggle-group formControlName="isVeg" aria-label="Veg or non-veg">
+        <mat-button-toggle [value]="true">Veg</mat-button-toggle>
+        <mat-button-toggle [value]="false">Non-veg</mat-button-toggle>
+      </mat-button-toggle-group>
+      <mat-form-field appearance="outline" class="prep" subscriptSizing="dynamic">
+        <mat-label>Prep time</mat-label>
+        <input matInput type="number" min="1" max="180" formControlName="prepTimeMinutes" />
+        <span matTextSuffix>&nbsp;min</span>
+      </mat-form-field>
+    </div>
+    <mat-slide-toggle formControlName="isAvailable">Available to order</mat-slide-toggle>
+    <bb-image-upload [(url)]="imageUrl" label="Add a dish photo" />
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Cancel</button>
+    <button mat-flat-button type="submit" [disabled]="saving()">
+      @if (saving()) {
+        <mat-progress-spinner mode="indeterminate" diameter="20" aria-label="Saving" />
+      } @else {
+        {{ data.item ? 'Save' : 'Add dish' }}
+      }
+    </button>
+  </mat-dialog-actions>
+</form>

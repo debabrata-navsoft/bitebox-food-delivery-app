@@ -1,0 +1,30 @@
+<div class="preview" [class.empty]="!url()">
+  @if (url()) {
+    <img [src]="url()" [alt]="label() + ' preview'" />
+  } @else {
+    <mat-icon aria-hidden="true">add_photo_alternate</mat-icon>
+    <span>{{ label() }}</span>
+  }
+</div>
+@if (uploading()) {
+  <mat-progress-bar mode="indeterminate" aria-label="Uploading image" />
+}
+<div class="actions">
+  <button mat-stroked-button type="button" (click)="picker.click()" [disabled]="uploading()">
+    <mat-icon>upload</mat-icon>
+    {{ url() ? 'Replace' : 'Upload' }}
+  </button>
+  @if (url()) {
+    <button mat-button type="button" (click)="url.set('')" [disabled]="uploading()">Remove</button>
+  }
+  <input
+    #picker
+    type="file"
+    accept="image/jpeg,image/png,image/webp"
+    hidden
+    (change)="onFile(picker)"
+  />
+</div>
+<small class="hint" [class.error]="!!error()">{{
+  error() ?? 'JPEG, PNG or WebP, up to 2 MB'
+}}</small>

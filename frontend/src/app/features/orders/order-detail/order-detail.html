@@ -1,0 +1,105 @@
+<section class="bb-container page">
+  @if (loading()) {
+    <span class="bb-skeleton" style="height: 420px"></span>
+  } @else if (notFound()) {
+    <bb-empty-state icon="receipt_long" title="Order not found">
+      <a mat-flat-button routerLink="/orders">My orders</a>
+    </bb-empty-state>
+  } @else if (error()) {
+    <bb-empty-state icon="cloud_off" title="Could not load this order" [message]="error()!">
+      <button mat-flat-button (click)="load()">Try again</button>
+    </bb-empty-state>
+  } @else if (order(); as o) {
+    @if (placed()) {
+      <div class="placed" role="status">
+        <mat-icon aria-hidden="true">check_circle</mat-icon>
+        <div>
+          <h1>Order placed!</h1>
+          <p>{{ o.restaurantSnapshot.name }} will confirm it shortly. Pay {{ o.pricing.totalPaise | inr }} on delivery.</p>
+        </div>
+      </div>
+    }
+
+    <header class="head">
+      <div>
+        <a routerLink="/orders" class="back"><mat-icon aria-hidden="true">arrow_back</mat-icon>My orders</a>
+        <h2>Order {{ o.orderNumber }}</h2>
+        <p class="bb-muted">Placed {{ o.createdAt | date: 'medium' }}</p>
+      </div>
+      <span class="status status-{{ o.status }}">{{ statusLabel[o.status] }}</span>
+    </header>
+
+    <div class="layout">
+      <div class="main">
+        <section class="bb-card" aria-labelledby="progress-title">
+          <h3 id="progress-title">Progress</h3>
+          @if (ended()) {
+            <div class="bb-alert error" role="status">
+              <mat-icon aria-hidden="true">cancel</mat-icon>
+              <span>This order was {{ o.status }}.</span>
+            </div>
+          } @else {
+            <ol class="journey">
+              @for (step of steps(); track step.status) {
+                <li class="{{ step.state }}">
+                  <span class="dot" aria-hidden="true">
+                    @if (step.state === 'done') {
+                      <mat-icon>check</mat-icon>
+                    }
+                  </span>
+                  <span class="label">{{ step.label }}</span>
+                  @if (step.at) {
+                    <time class="bb-muted">{{ step.at | date: 'shortTime' }}</time>
+                  }
+                  @if (step.state === 'current') {
+                    <span class="bb-sr-only">(current step)</span>
+                  }
+                </li>
+              }
+            </ol>
+            <p class="bb-muted small">Live status updates and rider tracking are being rolled out.</p>
+          }
+        </section>
+
+        <section class="bb-card" aria-labelledby="items-title">
+          <h3 id="items-title">{{ o.restaurantSnapshot.name }}</h3>
+          <ul class="items">
+            @for (item of o.items; track item.foodItem) {
+              <li>
+                <bb-veg-badge [veg]="item.isVeg" />
+                <span class="name">{{ item.name }} × {{ item.quantity }}</span>
+                <span>{{ item.lineTotalPaise | inr }}</span>
+              </li>
+            }
+          </ul>
+          @if (o.note) {
+            <p class="note"><strong>Note:</strong> {{ o.note }}</p>
+          }
+        </section>
+      </div>
+
+      <aside class="side">
+        <section class="bb-card" aria-labelledby="bill-title">
+          <h3 id="bill-title">Bill</h3>
+          <bb-bill-summary [pricing]="o.pricing" [couponCode]="o.coupon?.code" [distanceMeters]="o.distanceMeters" />
+          <p class="payment">
+            <mat-icon aria-hidden="true">payments</mat-icon>
+            Cash on delivery · <span class="pay-{{ o.paymentStatus }}">{{ o.paymentStatus | titlecase }}</span>
+          </p>
+        </section>
+        <section class="bb-card" aria-labelledby="deliver-title">
+          <h3 id="deliver-title">Delivering to</h3>
+          @let a = o.deliveryAddress;
+          <address>
+            <strong>{{ a.recipientName }}</strong> · {{ a.phone }}<br />
+            {{ a.line1 }}{{ a.line2 ? ', ' + a.line2 : '' }}<br />
+            {{ a.area ? a.area + ', ' : '' }}{{ a.city }} {{ a.postalCode }}
+            @if (a.landmark) {
+              <br /><span class="bb-muted">Near {{ a.landmark }}</span>
+            }
+          </address>
+        </section>
+      </aside>
+    </div>
+  }
+</section>

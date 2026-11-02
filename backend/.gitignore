@@ -44,3 +44,6 @@ __screenshots__/
 Thumbs.db
 
 .env
+
+# Uploaded images (local storage)
+/uploads

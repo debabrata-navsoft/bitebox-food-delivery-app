@@ -1,0 +1,75 @@
+<header class="bb-form-heading">
+  @if (role() !== 'customer') {
+    <span class="bb-eyebrow">{{ meta().label }}</span>
+  }
+  <h1>{{ heading() }}</h1>
+  <p>{{ intro() }}</p>
+</header>
+
+@if (error()) {
+  <div class="bb-alert error" role="alert">
+    <mat-icon aria-hidden="true">error</mat-icon>
+    <span>{{ error() }}</span>
+  </div>
+}
+
+<form class="bb-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <mat-form-field appearance="outline">
+    <mat-label>Full name</mat-label>
+    <input matInput formControlName="name" autocomplete="name" />
+    <mat-icon matPrefix aria-hidden="true">person</mat-icon>
+    <mat-error>{{ controlError(form.controls.name, 'Name') }}</mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Email</mat-label>
+    <input matInput type="email" formControlName="email" autocomplete="email" inputmode="email" />
+    <mat-icon matPrefix aria-hidden="true">mail</mat-icon>
+    <mat-error>{{ controlError(form.controls.email, 'Email') }}</mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Mobile number (optional)</mat-label>
+    <input matInput type="tel" formControlName="phone" autocomplete="tel" inputmode="tel" />
+    <mat-icon matPrefix aria-hidden="true">call</mat-icon>
+    <mat-hint>10-15 digits, e.g. +919876543210</mat-hint>
+    <mat-error>{{ controlError(form.controls.phone, 'Phone number') }}</mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Password</mat-label>
+    <input matInput #pw type="password" formControlName="password" autocomplete="new-password" />
+    <mat-icon matPrefix aria-hidden="true">lock</mat-icon>
+    <bb-password-toggle matSuffix [input]="pw" />
+    <mat-hint>At least 8 characters, with a letter and a number</mat-hint>
+    <mat-error>{{ controlError(form.controls.password, 'Password') }}</mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Confirm password</mat-label>
+    <input matInput #cpw type="password" formControlName="confirmPassword" autocomplete="new-password" />
+    <mat-icon matPrefix aria-hidden="true">lock</mat-icon>
+    <bb-password-toggle matSuffix [input]="cpw" />
+    <mat-error>{{ controlError(form.controls.confirmPassword, 'Confirmation') }}</mat-error>
+  </mat-form-field>
+
+  <div class="bb-form-actions">
+    <button mat-flat-button type="submit" [disabled]="submitting()">
+      @if (submitting()) {
+        <mat-progress-spinner mode="indeterminate" diameter="20" aria-label="Creating account" />
+      } @else {
+        Create account
+      }
+    </button>
+  </div>
+</form>
+
+<footer class="bb-form-footer">
+  <span>Already have an account? <a [routerLink]="meta().login">Sign in</a></span>
+  @if (role() === 'customer') {
+    <span>
+      Own a restaurant? <a routerLink="/restaurant/register">Partner with us</a> &middot; Want to ride?
+      <a routerLink="/delivery/register">Join as a rider</a>
+    </span>
+  }
+</footer>
