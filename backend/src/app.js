@@ -15,6 +15,8 @@ import adminUsersRoutes from "./routes/admin-users.routes.js";
 import { createAuthRouter } from "./routes/auth.routes.js";
 import { categoriesRouter, foodsRouter, restaurantsRouter } from "./routes/catalog.routes.js";
 import { addressesRouter, adminCouponsRouter, cartRouter, couponsRouter, ordersRouter } from "./routes/checkout.routes.js";
+import { adminDeliveryPartnersRouter, adminOrdersRouter } from "./routes/admin-orders.routes.js";
+import deliveryRoutes from "./routes/delivery.routes.js";
 import geoRoutes from "./routes/geo.routes.js";
 import healthRoutes from "./routes/health.routes.js";
 import myRestaurantRoutes from "./routes/my-restaurant.routes.js";
@@ -72,6 +74,8 @@ export function createApp(options = {}) {
   app.use("/api/v1/auth", createAuthRouter(options.rateLimits));
   app.use("/api/v1/admin/users", adminUsersRoutes);
   app.use("/api/v1/admin/coupons", adminCouponsRouter);
+  app.use("/api/v1/admin/orders", adminOrdersRouter);
+  app.use("/api/v1/admin/delivery-partners", adminDeliveryPartnersRouter);
   app.use("/api/v1/admin", adminCatalogRoutes);
   app.use("/api/v1/restaurants", restaurantsRouter);
   app.use("/api/v1/categories", categoriesRouter);
@@ -82,6 +86,7 @@ export function createApp(options = {}) {
   app.use("/api/v1/addresses", addressesRouter);
   app.use("/api/v1/orders", ordersRouter);
   app.use("/api/v1/coupons", couponsRouter);
+  app.use("/api/v1/delivery", deliveryRoutes);
   app.use("/api/v1/geo", geoRoutes);
 
   app.use(notFound);

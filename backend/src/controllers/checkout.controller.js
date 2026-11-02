@@ -89,11 +89,6 @@ export async function listMyOrders(req, res) {
   sendSuccess(res, { data: { ...data, items: data.items.map((o) => o.toJSON()) } });
 }
 
-export async function getMyOrder(req, res) {
-  const order = await orderService.getMine(req.user._id, req.params.id);
-  sendSuccess(res, { data: { order: order.toJSON() } });
-}
-
 // ---------------------------------------------------------------------------
 // Coupons
 // ---------------------------------------------------------------------------

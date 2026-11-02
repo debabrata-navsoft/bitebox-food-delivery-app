@@ -154,9 +154,30 @@ export interface Order {
   statusHistory: { status: OrderStatus; at: string; note?: string }[];
   paymentMethod: 'cod';
   paymentStatus: PaymentStatus;
+  /** Why it was rejected or cancelled, and by whom. */
+  cancellation?: { by: 'customer' | 'restaurant' | 'admin' | 'system'; reason?: string; at: string };
+  /** The rider, once one has accepted the delivery (customer and admin views). */
+  rider?: RiderCard | null;
   createdAt: string;
   updatedAt: string;
 }
+
+export interface RiderCard {
+  id: string;
+  name: string;
+  phone: string | null;
+  vehicleType: VehicleType | null;
+  vehicleNumber: string | null;
+}
+
+export type VehicleType = 'bicycle' | 'scooter' | 'motorbike' | 'car';
+
+export const VEHICLE_LABEL: Record<VehicleType, string> = {
+  bicycle: 'Bicycle',
+  scooter: 'Scooter',
+  motorbike: 'Motorbike',
+  car: 'Car',
+};
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   pending: 'Waiting for restaurant',

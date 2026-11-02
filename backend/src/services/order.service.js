@@ -192,10 +192,3 @@ export async function listMine(userId, pagination) {
   ]);
   return { items, pagination: paginationMeta(pagination, total) };
 }
-
-/** Customers can only read their own orders (404 otherwise, so ids are not revealed). */
-export async function getMine(userId, id) {
-  const order = await Order.findOne({ _id: id, customer: userId });
-  if (!order) throw ApiError.notFound("Order not found");
-  return order;
-}

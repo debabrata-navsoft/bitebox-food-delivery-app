@@ -38,11 +38,31 @@
           @if (ended()) {
             <div class="bb-alert error" role="status">
               <mat-icon aria-hidden="true">cancel</mat-icon>
-              <span>This order was {{ o.status }}.</span>
+              <span>
+                @switch (o.cancellation?.by) {
+                  @case ('customer') { You cancelled this order. }
+                  @case ('system') { The restaurant did not respond in time, so the order was cancelled. }
+                  @case ('admin') { BiteBox support cancelled this order. }
+                  @default { {{ o.restaurantSnapshot.name }} could not take this order. }
+                }
+                @if (o.cancellation; as c) {
+                  @if (c.reason && c.by !== 'customer' && c.by !== 'system') {
+                    <br /><strong>Reason:</strong> {{ c.reason }}
+                  }
+                }
+                You have not been charged.
+              </span>
             </div>
           } @else {
             <np-timeline [value]="timeline()" [activeIndex]="activeStep()" variant="default" class="journey" />
-            <p class="bb-muted small">Live status updates and rider tracking are being rolled out.</p>
+            @if (o.status === 'pending') {
+              <div class="pending-row">
+                <p class="bb-muted small">Waiting for {{ o.restaurantSnapshot.name }} to accept. You can cancel until then.</p>
+                <button mat-stroked-button class="cancel" [disabled]="cancelling()" (click)="cancel(o)">Cancel order</button>
+              </div>
+            } @else if (o.status !== 'delivered') {
+              <p class="bb-muted small">This page updates automatically. Live map tracking is coming soon.</p>
+            }
           }
         </section>
 
@@ -72,6 +92,23 @@
             Cash on delivery · <span class="pay-{{ o.paymentStatus }}">{{ o.paymentStatus | titlecase }}</span>
           </p>
         </section>
+        @if (o.rider; as r) {
+          <section class="bb-card rider" aria-labelledby="rider-title">
+            <h3 id="rider-title">Your rider</h3>
+            <div class="rider-row">
+              <span class="rider-avatar" aria-hidden="true">{{ r.name.charAt(0) }}</span>
+              <div>
+                <strong>{{ r.name }}</strong>
+                <span class="bb-muted">
+                  {{ r.vehicleType ? vehicleLabel[r.vehicleType] : '' }}{{ r.vehicleNumber ? ' · ' + r.vehicleNumber : '' }}
+                </span>
+              </div>
+              @if (r.phone && o.status !== 'delivered') {
+                <a mat-icon-button [href]="'tel:' + r.phone" [attr.aria-label]="'Call ' + r.name"><mat-icon>call</mat-icon></a>
+              }
+            </div>
+          </section>
+        }
         <section class="bb-card" aria-labelledby="deliver-title">
           <h3 id="deliver-title">Delivering to</h3>
           @let a = o.deliveryAddress;
@@ -80,7 +117,7 @@
             {{ a.line1 }}{{ a.line2 ? ', ' + a.line2 : '' }}<br />
             {{ a.area ? a.area + ', ' : '' }}{{ a.city }} {{ a.postalCode }}
             @if (a.landmark) {
-              <br /><span class="bb-muted">Near {{ a.landmark }}</span>
+              <br /><span class="bb-muted">Landmark: {{ a.landmark }}</span>
             }
           </address>
         </section>

@@ -8,7 +8,7 @@ BiteBox is a full-stack food delivery app with four role-based panels: **Custome
 | Backend  | Node.js + Express 5 (JavaScript ES modules), Mongoose 9, JWT, bcrypt, express-validator, pino, Swagger UI |
 | Database | MongoDB (local or Atlas) |
 
-> **Status: Phase 3 complete (cart and checkout).** Phases 1–2 delivered authentication, restaurants and menus. Order handling by restaurants and riders, maps and live tracking, online payments and reports arrive in later phases.
+> **Status: Phase 4 complete (order management and delivery).** Phases 1–3 delivered authentication, restaurants and menus, and cart and checkout. Maps with live tracking (Phase 5), online payments and reports (Phase 6) come next.
 
 ---
 
@@ -75,6 +75,7 @@ The seed also creates:
 
 - coupons `WELCOME50` (50% off up to ₹100, minimum order ₹199, once per customer) and `FLAT75` (₹75 off on ₹399 or more)
 - a default delivery address for the customer, about 4 km from the restaurant
+- a vehicle (motorbike) for the rider, who starts offline
 
 All seeded data is fictional. Rerunning the seed never creates duplicates.
 
@@ -218,6 +219,59 @@ The cart page shows anything that blocks checkout: unavailable dishes, a closed 
 - Files are stored under random names and served with `nosniff` and `Cross-Origin-Resource-Policy: cross-origin`.
 - Storage is local disk. Hosts with ephemeral disks need a cloud storage provider (see `src/services/upload.service.js`).
 
+### Phase 4 endpoints (`/api/v1`)
+
+| Who | Endpoints |
+|-----|-----------|
+| Customer | `GET /orders/{id}` (now includes the rider once assigned), `POST /orders/{id}/cancel` |
+| Restaurant | `GET /my/restaurant/orders?view=active\|history`, `GET /my/restaurant/orders/{id}`, `PATCH /my/restaurant/orders/{id}/status` |
+| Rider | `GET /delivery/me`, `PUT /delivery/me/vehicle`, `PATCH /delivery/me/availability`, `PUT /delivery/me/location`, `POST /delivery/offers/{id}/accept`, `POST /delivery/offers/{id}/decline`, `PATCH /delivery/orders/{id}/status`, `GET /delivery/orders/history` |
+| Admin | `GET /admin/orders`, `GET /admin/orders/{id}`, `POST /admin/orders/{id}/cancel`, `POST /admin/orders/{id}/unassign`, `GET /admin/delivery-partners`, `PATCH /admin/delivery-partners/{id}/status` |
+
+**Order statuses.** The backend enforces one transition table (`backend/src/services/order-workflow.service.js`); any other move returns `409 INVALID_TRANSITION`.
+
+| From | To | Who |
+|------|----|-----|
+| Pending | Confirmed / Rejected (reason required) | Restaurant (auto-rejected after 10 minutes without an answer) |
+| Pending | Cancelled | Customer, admin |
+| Confirmed | Preparing | Restaurant |
+| Preparing | Ready for pickup | Restaurant (starts rider dispatch) |
+| Ready for pickup | Assigned | Rider accepting an offer |
+| Assigned | Picked up | Rider |
+| Assigned | Ready for pickup | Admin ("unassign": the order goes to another rider) |
+| Picked up | On the way | Rider |
+| On the way | Delivered | Rider (cash on delivery is marked paid) |
+| Confirmed, Preparing, Ready, Assigned | Cancelled | Admin (reason required) |
+
+Nobody can cancel an order once it has been picked up. Rejected, cancelled and delivered orders are final.
+
+**How a rider is chosen (dispatch).** When an order is ready for pickup, the backend offers it to **one** rider at a time:
+1. **Eligible:** online, active account, not carrying or being offered another order, location reported in the last 15 minutes, within 10 km of the restaurant (straight line), and has not already declined this order.
+2. **Order:** nearest first, in 500 m bands; within a band, whoever was assigned least recently.
+3. **Offer:** the rider has 90 seconds to accept. Declining passes the order to the next rider straight away. Ignoring it does the same, and also sets that rider offline, since they are probably away.
+
+A background sweep runs every 15 seconds. It expires offers, retries orders that are waiting for a rider (for example, when someone comes online), and auto-rejects unanswered orders. These timings live in `backend/src/config/dispatch.js`.
+
+**Safety.**
+- **Atomic status changes:** each change is a conditional update ("only if it is still in status X"). Two people acting at once (say, the restaurant accepting while the customer cancels) cannot both win. The loser gets `409 ORDER_CHANGED`.
+- **Harmless repeats:** repeating a change the order has already made, such as a double click, returns it unchanged.
+- **One order per rider:** a rider is offered at most one order and carries at most one. Both are guarded by compare-and-set updates on their profile.
+- **Side effects:**
+  - Rejecting or cancelling returns the coupon use and cancels the pending cash payment.
+  - Delivering marks the payment paid and frees the rider.
+  - Each of these side effects is idempotent.
+- **Scoped access:** restaurants only see their own orders, riders only their own offers and deliveries, and customers only their own orders. Anything else returns 404.
+- **Privacy:** restaurants see the customer's name and area, never their phone number or exact address. Riders get the full drop-off address and phone number only after accepting.
+
+**Updates.** In Phase 4, the restaurant board, the rider dashboard, the admin pages and the customer's order page refresh by polling every 10–20 seconds. Polling pauses while the browser tab is hidden. Phase 5 replaces it with Socket.IO pushes. New orders trigger an on-screen alert and a short chime on the restaurant panel. Browsers only allow the sound after the page has been clicked once.
+
+**Try the whole flow locally** (four browser profiles, or normal plus private windows):
+1. Rider (`/delivery/login`): go online. This needs a **precise location**. On a desktop without GPS, set one in Chrome DevTools → More tools → Sensors → Location (for example latitude `12.9729`, longitude `77.6412`, next to the seeded restaurant).
+2. Customer: order from *Spice Route Kitchen*.
+3. Restaurant (`/restaurant/orders`): Accept → Start preparing → Ready for pickup.
+4. Rider: accept the request, then Picked up → Start delivery → Delivered.
+5. Customer: the order page shows each step and the rider's details. Admin: `/admin/orders` and `/admin/delivery-partners`.
+
 ### Folder layout
 
 ```
@@ -269,6 +323,9 @@ The layouts are built mobile-first, with breakpoints at **600px** (tablet) and *
 | `Missing required environment variable` / `JWT_SECRET must be at least 32 characters` | Fill in `backend/.env` from `.env.example`. |
 | `Could not connect to MongoDB` | Check `MONGO_URI`. On Atlas, add your IP under *Network Access*. |
 | The browser shows CORS errors | Add the exact origin (scheme, host, and port) to `CLIENT_URL` and restart the API. |
+| A rider gets no delivery requests | The rider must be online with a vehicle set and a location less than 15 minutes old, within 10 km of the restaurant. They may also have declined or ignored that order already (the rider who ignores an offer is set offline). Check `/admin/delivery-partners`. |
+| "Can't pinpoint where you are" when a rider goes online | The device reported a location vaguer than 1 km (common on desktops). Use a phone with GPS, or set a location in Chrome DevTools → Sensors. |
+| New orders disappear as "rejected" | Restaurants must accept or reject within 10 minutes (`DISPATCH.restaurantResponseMinutes` in `backend/src/config/dispatch.js`). |
 | You are signed out after every reload | The refresh cookie isn't being stored. Use `http://localhost:4200` rather than `127.0.0.1` (the API and app must be same-site). For different sites, see `COOKIE_SAMESITE` above. |
 | No password-reset email arrives | Without SMTP settings, the link is printed in the API console (development only). |
 | `npm test` (backend) fails with `Instance closed unexpectedly` | The in-memory `mongod` could not start (some sandboxes or containers block it). Use `TEST_MONGO_URI` with a `*_test` database. |

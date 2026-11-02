@@ -3,6 +3,7 @@ import { createApp } from "./app.js";
 import { connectDB, disconnectDB } from "./config/db.js";
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
+import { startDispatchLoop } from "./services/dispatch.service.js";
 
 const app = createApp();
 // A plain http.Server so Socket.IO can attach to it in a later phase.
@@ -16,13 +17,18 @@ async function start() {
     process.exit(1);
   }
   server.listen(env.port, () => logger.info(`BiteBox API listening on http://localhost:${env.port} (docs: /api/docs)`));
+  // Offer timeouts, re-dispatch of waiting orders, auto-reject of unanswered orders.
+  stopDispatch = startDispatchLoop();
 }
+
+let stopDispatch = () => {};
 
 let shuttingDown = false;
 async function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
   logger.info(`${signal} received, shutting down gracefully`);
+  stopDispatch();
 
   // Force exit if open connections do not drain in time.
   const forceExit = setTimeout(() => {

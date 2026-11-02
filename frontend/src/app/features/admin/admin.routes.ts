@@ -8,6 +8,16 @@ export const ADMIN_ROUTES: Routes = [
     loadComponent: () => import('./dashboard/admin-dashboard').then((m) => m.AdminDashboard),
   },
   {
+    path: 'orders',
+    title: 'Orders | BiteBox Admin',
+    loadComponent: () => import('./orders/admin-orders').then((m) => m.AdminOrders),
+  },
+  {
+    path: 'delivery-partners',
+    title: 'Delivery partners | BiteBox Admin',
+    loadComponent: () => import('./delivery-partners/admin-delivery-partners').then((m) => m.AdminDeliveryPartners),
+  },
+  {
     path: 'users',
     title: 'Users | BiteBox Admin',
     loadComponent: () => import('./users/admin-users').then((m) => m.AdminUsers),

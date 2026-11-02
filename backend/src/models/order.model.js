@@ -101,8 +101,21 @@ const orderSchema = new mongoose.Schema(
 
     // Client-supplied key so retries of the same checkout never create two orders.
     idempotencyKey: { type: String, maxlength: 100 },
-    // Delivery partner assignment (Phase 4).
+    // The rider (User) carrying this order, set when they accept an offer.
     deliveryPartner: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    // The rider currently being offered this order (while ready_for_pickup), and until when.
+    offer: {
+      partner: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      expiresAt: Date,
+    },
+    // Riders who declined or let an offer expire; they are not offered this order again.
+    declinedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    // Why an order was rejected or cancelled, and by whom.
+    cancellation: {
+      by: { type: String, enum: ["customer", "restaurant", "admin", "system"] },
+      reason: { type: String, trim: true, maxlength: 300 },
+      at: Date,
+    },
   },
   {
     timestamps: true,
@@ -112,6 +125,7 @@ const orderSchema = new mongoose.Schema(
         ret.id = String(ret._id);
         delete ret._id;
         delete ret.idempotencyKey;
+        delete ret.declinedBy;
         return ret;
       },
     },
@@ -122,6 +136,9 @@ orderSchema.index({ orderNumber: 1 }, { unique: true });
 orderSchema.index({ customer: 1, createdAt: -1 });
 orderSchema.index({ restaurant: 1, status: 1, createdAt: -1 });
 orderSchema.index({ status: 1, createdAt: -1 });
+orderSchema.index({ deliveryPartner: 1, status: 1, createdAt: -1 });
+// Dispatch sweep: expired offers and ready orders without one.
+orderSchema.index({ status: 1, "offer.expiresAt": 1 });
 orderSchema.index(
   { customer: 1, idempotencyKey: 1 },
   { unique: true, partialFilterExpression: { idempotencyKey: { $type: "string" } } },

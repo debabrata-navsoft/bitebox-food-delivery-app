@@ -10,6 +10,7 @@ import { NavItem, PanelShell } from '../panel-shell/panel-shell';
 export class DeliveryLayout {
   protected readonly nav: NavItem[] = [
     { label: 'Dashboard', icon: 'space_dashboard', link: '/delivery', exact: true },
+    { label: 'History', icon: 'history', link: '/delivery/history' },
     { label: 'Profile', icon: 'manage_accounts', link: '/delivery/profile' },
   ];
 }

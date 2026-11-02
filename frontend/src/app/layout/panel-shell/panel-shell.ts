@@ -1,5 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { ChangeDetectionStrategy, Component, computed, inject, input, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Signal, computed, inject, input, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,6 +19,8 @@ export interface NavItem {
   link: string;
   /** Match the link exactly (use for index routes such as the dashboard). */
   exact?: boolean;
+  /** Count shown next to the label (e.g. new orders); hidden when 0. */
+  badge?: Signal<number>;
 }
 
 /**

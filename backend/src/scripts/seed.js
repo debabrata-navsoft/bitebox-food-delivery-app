@@ -7,7 +7,7 @@
  *
  * Seeds one account per role, food categories, one approved restaurant
  * (owned by the restaurant account) and its menu, sample coupons and a
- * default delivery address for the customer.
+ * default delivery address for the customer, and the rider's vehicle profile.
  * All names and data are fictional.
  */
 import { pathToFileURL } from "node:url";
@@ -16,6 +16,7 @@ import { connectDB, disconnectDB } from "../config/db.js";
 import { env } from "../config/env.js";
 import { Address } from "../models/address.model.js";
 import { Coupon } from "../models/coupon.model.js";
+import { DeliveryPartner } from "../models/delivery-partner.model.js";
 import { FoodCategory } from "../models/food-category.model.js";
 import { FoodItem } from "../models/food-item.model.js";
 import { Restaurant } from "../models/restaurant.model.js";
@@ -164,6 +165,18 @@ export async function seedCheckoutData() {
   return { coupons: SEED_COUPONS.map((c) => c.code).join(", "), customerAddressCreated: addressCreated };
 }
 
+/** Idempotent: gives the seeded rider a vehicle so they can go online (offline until they do). */
+export async function seedDeliveryData() {
+  const rider = await User.findOne({ email: "rider@bitebox.test" });
+  if (!rider) return { riderProfileCreated: false };
+  const result = await DeliveryPartner.updateOne(
+    { user: rider._id },
+    { $setOnInsert: { user: rider._id, vehicleType: "motorbike", vehicleNumber: "KA 01 BB 0004", isOnline: false } },
+    { upsert: true },
+  );
+  return { riderProfileCreated: result.upsertedCount === 1 };
+}
+
 async function main() {
   if (env.isProduction) {
     console.error("Refusing to seed: NODE_ENV is production.");
@@ -181,6 +194,7 @@ async function main() {
     console.table(results);
     console.table([await seedCatalog()]);
     console.table([await seedCheckoutData()]);
+    console.table([await seedDeliveryData()]);
     console.log("Development-only accounts. All use the SEED_PASSWORD value. Never use these in production.");
   } finally {
     await disconnectDB();

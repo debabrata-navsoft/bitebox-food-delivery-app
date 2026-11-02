@@ -63,6 +63,13 @@ export class OrderService {
     return this.http.get<ApiResponse<{ order: Order }>>(`${this.api}/orders/${encodeURIComponent(id)}`).pipe(map((r) => r.data.order));
   }
 
+  /** Allowed only while the restaurant has not accepted the order yet. */
+  cancel(id: string, reason?: string): Observable<Order> {
+    return this.http
+      .post<ApiResponse<{ order: Order }>>(`${this.api}/orders/${encodeURIComponent(id)}/cancel`, { reason })
+      .pipe(map((r) => r.data.order));
+  }
+
   availableCoupons(restaurantId?: string): Observable<CouponOffer[]> {
     return this.http
       .get<ApiResponse<{ coupons: CouponOffer[] }>>(`${this.api}/coupons/available`, { params: toParams({ restaurantId }) })

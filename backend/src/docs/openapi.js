@@ -1,5 +1,6 @@
 import { catalogPaths, catalogSchemas, catalogTags } from "./openapi.catalog.js";
 import { checkoutPaths, checkoutSchemas, checkoutTags } from "./openapi.checkout.js";
+import { ordersPaths, ordersSchemas, ordersTags } from "./openapi.orders.js";
 
 /**
  * OpenAPI 3.1 contract for the implemented API. Keep this in sync with
@@ -38,12 +39,13 @@ export const openApiDocument = {
       "BiteBox food delivery REST API. Authenticate with `POST /auth/login`, then send the returned access token as `Authorization: Bearer <token>`. The refresh token is set as an HttpOnly cookie scoped to `/api/v1/auth`.",
   },
   servers: [{ url: "/api/v1" }],
-  tags: [{ name: "Health" }, { name: "Auth" }, { name: "Admin - Users" }, ...catalogTags, ...checkoutTags],
+  tags: [{ name: "Health" }, { name: "Auth" }, { name: "Admin - Users" }, ...catalogTags, ...checkoutTags, ...ordersTags],
   components: {
     securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" } },
     schemas: {
       ...catalogSchemas,
       ...checkoutSchemas,
+      ...ordersSchemas,
       Role: { type: "string", enum: ["customer", "admin", "restaurant", "delivery"] },
       User: {
         type: "object",
@@ -123,6 +125,7 @@ export const openApiDocument = {
   paths: {
     ...catalogPaths,
     ...checkoutPaths,
+    ...ordersPaths,
     "/health": {
       get: {
         tags: ["Health"],

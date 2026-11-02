@@ -26,6 +26,9 @@
         >
           <mat-icon matListItemIcon aria-hidden="true">{{ item.icon }}</mat-icon>
           <span matListItemTitle>{{ item.label }}</span>
+          @if (item.badge?.(); as count) {
+            <span matListItemMeta class="nav-badge" [attr.aria-label]="count + ' new'">{{ count }}</span>
+          }
         </a>
       }
     </mat-nav-list>

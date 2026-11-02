@@ -9,6 +9,11 @@ export const RESTAURANT_ROUTES: Routes = [
       import('./dashboard/restaurant-dashboard').then((m) => m.RestaurantDashboard),
   },
   {
+    path: 'orders',
+    title: 'Orders | BiteBox Restaurant',
+    loadComponent: () => import('./orders/restaurant-orders').then((m) => m.RestaurantOrders),
+  },
+  {
     path: 'details',
     title: 'Restaurant details | BiteBox Restaurant',
     loadComponent: () => import('./details/restaurant-details').then((m) => m.RestaurantDetails),

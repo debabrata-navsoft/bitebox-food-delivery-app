@@ -136,6 +136,16 @@ export const checkoutSchemas = {
       paymentMethod: { type: "string", enum: ["cod"] },
       paymentStatus: { type: "string", enum: ["pending", "paid", "failed", "refunded", "cancelled"] },
       statusHistory: { type: "array", items: { type: "object", properties: { status: { type: "string" }, at: { type: "string", format: "date-time" } } } },
+      cancellation: {
+        type: "object",
+        description: "Set when rejected or cancelled",
+        properties: { by: { type: "string", enum: ["customer", "restaurant", "admin", "system"] }, reason: { type: "string" }, at: { type: "string", format: "date-time" } },
+      },
+      rider: {
+        type: ["object", "null"],
+        description: "The assigned rider (customer and admin views)",
+        properties: { id: { type: "string" }, name: { type: "string" }, phone: { type: "string" }, vehicleType: { type: "string" }, vehicleNumber: { type: "string" } },
+      },
       createdAt: { type: "string", format: "date-time" },
     },
   },
@@ -241,7 +251,7 @@ export const checkoutPaths = {
     },
   },
   "/orders/{id}": {
-    get: { tags: T.orders, summary: "One of my orders", security: bearer, parameters: [idParam], responses: { 200: ok({ type: "object", properties: { order: ref("Order") } }), 404: err("Not found") } },
+    get: { tags: T.orders, summary: "One of my orders (with the rider once assigned)", security: bearer, parameters: [idParam], responses: { 200: ok({ type: "object", properties: { order: ref("Order") } }), 404: err("Not found") } },
   },
   "/coupons/available": {
     get: {
