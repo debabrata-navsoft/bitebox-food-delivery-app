@@ -28,21 +28,24 @@
     <div class="header-actions">
       @if (!ready()) {
         <span class="bb-skeleton action-skeleton" aria-hidden="true"></span>
-      } @else if (user(); as u) {
+      } @else if (shown(); as u) {
         @if (panelLink(); as link) {
           <a mat-stroked-button [routerLink]="link" class="hide-phone">
             <mat-icon>space_dashboard</mat-icon>
             My panel
           </a>
         }
-        @if (cart.enabled()) {
+        @if (showCart()) {
           <a
             mat-icon-button
             routerLink="/checkout"
             class="cart-button"
             [attr.aria-label]="'Cart, ' + cart.itemCount() + ' items'"
           >
-            <mat-icon [matBadge]="cart.itemCount() || null" matBadgeColor="accent" matBadgeSize="small" aria-hidden="true">shopping_bag</mat-icon>
+            <!-- The badge sits on a wrapper: Material warns about badges on aria-hidden icons. -->
+            <span class="badge-host" [matBadge]="cart.itemCount() || null" matBadgeColor="accent" matBadgeSize="small">
+              <mat-icon aria-hidden="true">shopping_bag</mat-icon>
+            </span>
           </a>
         }
         <button mat-button [matMenuTriggerFor]="accountMenu" class="account-button" aria-label="Account menu">
@@ -129,9 +132,17 @@
     <mat-icon aria-hidden="true">storefront</mat-icon>
     <span>Restaurants</span>
   </a>
-  @if (cart.enabled()) {
+  @if (showCart()) {
     <a routerLink="/checkout" routerLinkActive="active">
-      <mat-icon aria-hidden="true" [matBadge]="cart.itemCount() || null" matBadgeColor="accent" matBadgeSize="small">shopping_bag</mat-icon>
+      <span
+        class="badge-host"
+        [matBadge]="cart.itemCount() || null"
+        [matBadgeDescription]="cart.itemCount() ? cart.itemCount() + ' items' : ''"
+        matBadgeColor="accent"
+        matBadgeSize="small"
+      >
+        <mat-icon aria-hidden="true">shopping_bag</mat-icon>
+      </span>
       <span>Cart</span>
     </a>
   } @else {
@@ -140,7 +151,7 @@
       <span>Dishes</span>
     </a>
   }
-  @if (user()) {
+  @if (shown()) {
     <a [routerLink]="panelLink() ?? '/account'" routerLinkActive="active">
       <mat-icon aria-hidden="true">person</mat-icon>
       <span>{{ panelLink() ? 'Panel' : 'Account' }}</span>

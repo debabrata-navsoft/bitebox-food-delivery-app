@@ -20,10 +20,12 @@
         />
         <button mat-flat-button class="bb-btn-accent" type="submit">Search</button>
       </form>
+      <!-- Signed-in (or remembered) users get the greeting at once; guests' buttons wait for the
+           session check, so they never flash for someone who is signed in. Same height either way. -->
       <div class="hero-actions">
         @if (user(); as u) {
           <span class="greeting">Welcome back, {{ u.name.split(' ')[0] }}! 👋</span>
-        } @else {
+        } @else if (sessionChecked()) {
           <a mat-flat-button routerLink="/register" class="bb-btn-accent">Get started</a>
           <a mat-stroked-button routerLink="/login" class="ghost">I have an account</a>
         }
@@ -46,13 +48,13 @@
 
 <section class="bb-container section" aria-labelledby="cravings-title">
   <h2 id="cravings-title">What are you craving?</h2>
-  @if (loaded() === null) {
+  @if (categories() === null) {
     <ul class="cravings" aria-busy="true">
       @for (i of [1, 2, 3, 4, 5, 6]; track i) {
         <li><span class="bb-skeleton craving-skeleton"></span></li>
       }
     </ul>
-  } @else if (categories().length) {
+  } @else if (categories()!.length) {
     <ul class="cravings">
       @for (c of categories(); track c.id) {
         <li>

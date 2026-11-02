@@ -39,17 +39,21 @@ import { ROLE_META } from '../../shared/models/user.models';
 export class CustomerLayout {
   private readonly auth = inject(AuthService);
 
-  protected readonly user = this.auth.user;
   protected readonly cart = inject(CartService);
   protected readonly deliveryLocation = inject(DeliveryLocationService).location;
   private readonly dialog = inject(MatDialog);
-  protected readonly ready = this.auth.initialised;
+  /** Real user, or the remembered one while the session is restored (display only). */
+  protected readonly shown = this.auth.displayUser;
+  /** Known who to show: session checked, or a remembered user to show meanwhile. */
+  protected readonly ready = computed(() => this.auth.initialised() || this.shown() !== null);
   /** Signed-in partner/admin accounts get a shortcut to their own panel. */
   protected readonly panelLink = computed(() => {
-    const role = this.auth.role();
+    const role = this.shown()?.role;
     return role && role !== 'customer' ? ROLE_META[role].home : null;
   });
-  protected readonly firstName = computed(() => this.user()?.name.split(' ')[0] ?? '');
+  /** Customers see the cart (also while their session is being restored). */
+  protected readonly showCart = computed(() => this.cart.enabled() || this.shown()?.role === 'customer');
+  protected readonly firstName = computed(() => this.shown()?.name.split(' ')[0] ?? '');
   protected readonly year = new Date().getFullYear();
 
   protected chooseLocation(): void {

@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { AnimateOnScrollComponent } from 'nexprime';
-import { Subscription } from 'rxjs';
+import { Subscription, timeout } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { CatalogService } from '../../../core/services/catalog.service';
 import { DeliveryLocationService } from '../../../core/services/delivery-location.service';
@@ -25,7 +25,11 @@ import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 export class Home {
   private readonly catalog = inject(CatalogService);
   private readonly router = inject(Router);
-  protected readonly user = inject(AuthService).user;
+  private readonly auth = inject(AuthService);
+  /** Real user, or the remembered one while the session is restored (display only). */
+  protected readonly user = this.auth.displayUser;
+  /** False until the browser has checked for a saved session (always false on the server). */
+  protected readonly sessionChecked = this.auth.initialised;
 
   private readonly dialog = inject(MatDialog);
   protected readonly deliveryLocation = inject(DeliveryLocationService).location;
@@ -33,15 +37,24 @@ export class Home {
   protected readonly searchForm = form(signal({ search: '' }), {
     submission: { action: async () => this.submitSearch() },
   });
-  protected readonly categories = signal<FoodCategory[]>([]);
+  /** null = still loading. Fetched during server rendering too, so it is usually in the HTML. */
+  protected readonly categories = signal<FoodCategory[] | null>(null);
   protected readonly restaurants = signal<Restaurant[]>([]);
-  /** null = still loading; the page is prerendered, so data is fetched in the browser only. */
+  /** Popular restaurants: null = still loading. Browser only (they depend on the saved location). */
   protected readonly loaded = signal<boolean | null>(null);
   private restaurantsRequest?: Subscription;
 
   constructor() {
-    if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
-    this.catalog.categories().subscribe({ next: (c) => this.categories.set(c), error: () => this.categories.set([]) });
+    const browser = isPlatformBrowser(inject(PLATFORM_ID));
+    this.catalog
+      .categories()
+      // A slow API must not hold up the server render; the browser then fetches them itself.
+      .pipe(browser ? (source) => source : timeout(2000))
+      .subscribe({
+        next: (c) => this.categories.set(c),
+        error: () => browser && this.categories.set([]),
+      });
+    if (!browser) return;
 
     // Nearby restaurants when a delivery location is set, otherwise the most popular ones.
     effect(() => {

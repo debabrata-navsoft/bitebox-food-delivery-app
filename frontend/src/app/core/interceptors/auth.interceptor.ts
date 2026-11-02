@@ -1,4 +1,4 @@
-import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
+import { HttpContext, HttpContextToken, HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, switchMap, throwError } from 'rxjs';
@@ -12,6 +12,19 @@ const NO_RETRY = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logou
 const isApiRequest = (req: HttpRequest<unknown>) => req.url.startsWith(environment.apiUrl);
 
 /**
+ * Marks a request to a public endpoint (catalogue) that must not carry the access token.
+ * Without a token the response is the same for everyone, so Angular can reuse what the
+ * server fetched while rendering the page instead of fetching it again after a reload.
+ */
+const PUBLIC_REQUEST = new HttpContextToken<boolean>(() => false);
+export const publicRequest = () => new HttpContext().set(PUBLIC_REQUEST, true);
+
+// The refresh cookie is scoped to /api/v1/auth, so only those calls need cookies. Leaving
+// credentials off everything else also lets Angular reuse public data fetched during
+// server rendering (it never caches credentialed requests).
+const needsCookies = (req: HttpRequest<unknown>) => req.url.startsWith(`${environment.apiUrl}/auth/`);
+
+/**
  * For BiteBox API calls:
  * - sends cookies (needed for the refresh cookie) and the CSRF header,
  * - attaches the in-memory access token,
@@ -20,12 +33,16 @@ const isApiRequest = (req: HttpRequest<unknown>) => req.url.startsWith(environme
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   if (!isApiRequest(req)) return next(req);
 
+  if (req.context.get(PUBLIC_REQUEST)) {
+    return next(req.clone({ setHeaders: { 'X-Requested-With': 'BiteBox' } }));
+  }
+
   const auth = inject(AuthService);
   const router = inject(Router);
 
   const withAuth = (token: string | null) =>
     req.clone({
-      withCredentials: true,
+      withCredentials: needsCookies(req),
       setHeaders: {
         'X-Requested-With': 'BiteBox',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

@@ -61,8 +61,11 @@ h1 {
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--bb-space-3);
   margin-top: var(--bb-space-5);
+  // Same height whether empty, greeting or buttons: the hero never jumps.
+  min-height: 44px;
 
   a {
     flex: 1 1 160px;

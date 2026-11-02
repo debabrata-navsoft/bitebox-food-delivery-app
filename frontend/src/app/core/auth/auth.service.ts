@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { Injectable, Injector, PLATFORM_ID, afterNextRender, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { Observable, catchError, finalize, map, of, shareReplay, tap, throwError, timer, switchMap } from 'rxjs';
@@ -16,6 +16,19 @@ import {
   User,
 } from '../../shared/models/user.models';
 import { errorCode } from '../services/api-error';
+
+/**
+ * Name and role of the last signed-in user, kept in localStorage so a reload can
+ * show "Debabrata" straight away instead of blinking while the session is
+ * restored. Display only: never used for access decisions (guards and the API
+ * rely on the real session) and it holds no token or email.
+ */
+export interface SessionHint {
+  name: string;
+  role: Role;
+  email?: string;
+}
+const HINT_KEY = 'bb.session-hint';
 
 /**
  * Owns the signed-in user and access token.
@@ -39,10 +52,23 @@ export class AuthService {
   private readonly _initialised = signal(false);
   private refreshInFlight$: Observable<string> | null = null;
 
+  private readonly _hint = signal<SessionHint | null>(null);
+
   readonly user = this._user.asReadonly();
+  /**
+   * Who to show in the UI: the real user, or while the session is still being
+   * restored, the remembered hint. Use `user` for anything that grants access.
+   */
+  readonly displayUser = computed<SessionHint | null>(() => this._user() ?? (this._initialised() ? null : this._hint()));
   readonly initialised = this._initialised.asReadonly();
   readonly isAuthenticated = computed(() => this._user() !== null);
   readonly role = computed(() => this._user()?.role ?? null);
+
+  constructor() {
+    if (!this.isBrowser) return;
+    // After the first render, so the hydrated page still matches the server HTML.
+    afterNextRender(() => this._hint.set(readHint()), { injector: inject(Injector) });
+  }
 
   get accessToken(): string | null {
     return this._accessToken();
@@ -132,7 +158,10 @@ export class AuthService {
   updateProfile(request: UpdateProfileRequest): Observable<User> {
     return this.http.patch<ApiResponse<{ user: User }>>(`${this.baseUrl}/me`, request).pipe(
       map((res) => res.data.user),
-      tap((user) => this._user.set(user)),
+      tap((user) => {
+        this._user.set(user);
+        writeHint(user);
+      }),
     );
   }
 
@@ -161,11 +190,31 @@ export class AuthService {
   clearSession(): void {
     this._user.set(null);
     this._accessToken.set(null);
+    this._hint.set(null);
+    if (this.isBrowser) localStorage.removeItem(HINT_KEY);
   }
 
   private applySession(session: AuthSession): User {
     this._accessToken.set(session.accessToken);
     this._user.set(session.user);
+    if (this.isBrowser) writeHint(session.user);
     return session.user;
+  }
+}
+
+function readHint(): SessionHint | null {
+  try {
+    const hint = JSON.parse(localStorage.getItem(HINT_KEY) ?? 'null') as SessionHint | null;
+    return hint && typeof hint.name === 'string' && hint.role in ROLE_META ? { name: hint.name, role: hint.role } : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeHint({ name, role }: User): void {
+  try {
+    localStorage.setItem(HINT_KEY, JSON.stringify({ name, role } satisfies SessionHint));
+  } catch {
+    // Storage full or blocked: the hint is only a nicety.
   }
 }

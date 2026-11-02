@@ -124,6 +124,8 @@
 .action-skeleton {
   width: 96px;
   height: 36px;
+  // Holds the space while the session is restored (usually a blink), without a grey flash.
+  visibility: hidden;
 }
 
 .hide-phone {
@@ -243,4 +245,10 @@
     bottom: calc(76px + env(safe-area-inset-bottom));
     right: 16px;
   }
+}
+
+// Wrapper carrying the cart count badge; sized like the icon inside it.
+.badge-host {
+  display: inline-flex;
+  line-height: 0;
 }
