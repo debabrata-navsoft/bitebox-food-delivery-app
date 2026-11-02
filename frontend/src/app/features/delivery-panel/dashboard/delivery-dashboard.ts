@@ -7,12 +7,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { SelectOption, ToggleComponent } from 'nexprime';
-import { catchError, firstValueFrom, interval, of } from 'rxjs';
+import { catchError, debounceTime, firstValueFrom, interval, merge, of, switchMap } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
 import { GeolocationService, ImpreciseLocationError } from '../../../core/services/geolocation.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { RiderService } from '../../../core/services/order-management.service';
 import { pollWhileVisible } from '../../../core/services/poll';
+import { RealtimeService } from '../../../core/services/realtime.service';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { OrderStatusChip } from '../../../shared/components/order-status-chip/order-status-chip';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
@@ -22,7 +23,8 @@ import { VEHICLE_LABEL, VehicleType } from '../../../shared/models/checkout.mode
 import { RiderAction, RiderDashboard, RiderOrder } from '../../../shared/models/order-management.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 
-const POLL_MS = 10_000;
+/** Fallback refresh; offers and status changes normally arrive live over Socket.IO. */
+const POLL_MS = 30_000;
 const LOCATION_EVERY_MS = 60_000;
 
 /** The next step on an active delivery, and what the rider should do before pressing it. */
@@ -100,15 +102,17 @@ export class DeliveryDashboard {
   protected readonly shownError = shownError;
 
   constructor() {
-    pollWhileVisible(
-      () =>
-        this.rider.dashboard().pipe(
-          catchError((err: unknown) => {
-            this.loadError.set(errorMessage(err, 'Could not load your dashboard.'));
-            return of(null);
-          }),
-        ),
-      POLL_MS,
+    const reload = () =>
+      this.rider.dashboard().pipe(
+        catchError((err: unknown) => {
+          this.loadError.set(errorMessage(err, 'Could not load your dashboard.'));
+          return of(null);
+        }),
+      );
+    merge(
+      // A new offer, a withdrawn one, or a change to the order we carry.
+      inject(RealtimeService).orderUpdates$.pipe(debounceTime(200), switchMap(reload)),
+      pollWhileVisible(reload, POLL_MS),
     )
       .pipe(takeUntilDestroyed())
       .subscribe((d) => d && this.apply(d));

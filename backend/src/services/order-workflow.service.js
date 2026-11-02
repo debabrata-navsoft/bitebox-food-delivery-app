@@ -2,6 +2,7 @@ import { logger } from "../config/logger.js";
 import { Coupon, CouponRedemption } from "../models/coupon.model.js";
 import { DeliveryPartner } from "../models/delivery-partner.model.js";
 import { ORDER_STATUS, Order, PAYMENT_STATUS, Payment } from "../models/order.model.js";
+import { emitOrderUpdated } from "../sockets/events.js";
 import { ApiError } from "../utils/api-error.js";
 
 const S = ORDER_STATUS;
@@ -100,6 +101,7 @@ export async function transition(orderId, { to, actor, userId = null, scope = {}
   }
 
   await afterTransition(updated);
+  emitOrderUpdated(updated, { alsoNotify: [order.offer?.partner, order.deliveryPartner] });
   logger.info({ orderId: updated.id, from: order.status, to, actor }, "Order status changed");
   return { order: updated, changed: true };
 }

@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 import { RestaurantActiveOrders, RestaurantOrder } from '../../shared/models/order-management.models';
 import { NotificationService } from './notification.service';
+import { OrderEvent, RealtimeService } from './realtime.service';
 import { RestaurantOrdersService } from './order-management.service';
 import { RestaurantOrderBoard } from './restaurant-order-board';
 
@@ -17,6 +18,7 @@ describe('RestaurantOrderBoard', () => {
   let responses: Subject<RestaurantActiveOrders>;
   const api = { active: vi.fn() };
   const notify = { info: vi.fn() };
+  let live: Subject<OrderEvent>;
   let service: RestaurantOrderBoard;
 
   beforeEach(() => {
@@ -26,10 +28,12 @@ describe('RestaurantOrderBoard', () => {
       return responses;
     });
     notify.info.mockReset();
+    live = new Subject();
     TestBed.configureTestingModule({
       providers: [
         { provide: RestaurantOrdersService, useValue: api },
         { provide: NotificationService, useValue: notify },
+        { provide: RealtimeService, useValue: { orderUpdates$: live.asObservable() } },
       ],
     });
     service = TestBed.inject(RestaurantOrderBoard);
@@ -67,12 +71,27 @@ describe('RestaurantOrderBoard', () => {
     expect(api.active).toHaveBeenCalledTimes(1); // one poller, not two
 
     page.destroy();
-    vi.advanceTimersByTime(15_000);
-    expect(api.active).toHaveBeenCalledTimes(2); // still polling for the layout
+    vi.advanceTimersByTime(60_000);
+    expect(api.active).toHaveBeenCalledTimes(2); // still polling (slowly) for the layout
 
     layout.destroy();
-    vi.advanceTimersByTime(30_000);
+    vi.advanceTimersByTime(120_000);
     expect(api.active).toHaveBeenCalledTimes(2);
+  });
+
+  it('reloads straight away when a live order event arrives', () => {
+    const page = fakeDestroyRef();
+    service.connect(page.ref);
+    responses.next(board());
+    live.next({ id: '9', orderNumber: 'BB-9', status: 'pending', updatedAt: '' });
+    vi.advanceTimersByTime(300); // events are debounced briefly
+    expect(api.active).toHaveBeenCalledTimes(2);
+    responses.next(board(order('9')));
+    expect(notify.info).toHaveBeenCalledWith('New order BB-9');
+    page.destroy();
+    live.next({ id: '9', orderNumber: 'BB-9', status: 'confirmed', updatedAt: '' });
+    vi.advanceTimersByTime(300);
+    expect(api.active).toHaveBeenCalledTimes(2); // not listening once disconnected
   });
 
   it('remembers when the partner has no restaurant yet', async () => {

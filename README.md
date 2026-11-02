@@ -8,7 +8,7 @@ BiteBox is a full-stack food delivery app with four role-based panels: **Custome
 | Backend  | Node.js + Express 5 (JavaScript ES modules), Mongoose 9, JWT, bcrypt, express-validator, pino, Swagger UI |
 | Database | MongoDB (local or Atlas) |
 
-> **Status: Phase 4 complete (order management and delivery).** Phases 1–3 delivered authentication, restaurants and menus, and cart and checkout. Maps with live tracking (Phase 5), online payments and reports (Phase 6) come next.
+> **Status: Phase 4 complete (order management and delivery, with live Socket.IO order updates).** Phases 1–3 delivered authentication, restaurants and menus, and cart and checkout. Maps with live rider tracking (Phase 5), online payments and reports (Phase 6) come next.
 
 ---
 
@@ -263,7 +263,21 @@ A background sweep runs every 15 seconds. It expires offers, retries orders that
 - **Scoped access:** restaurants only see their own orders, riders only their own offers and deliveries, and customers only their own orders. Anything else returns 404.
 - **Privacy:** restaurants see the customer's name and area, never their phone number or exact address. Riders get the full drop-off address and phone number only after accepting.
 
-**Updates.** In Phase 4, the restaurant board, the rider dashboard, the admin pages and the customer's order page refresh by polling every 10–20 seconds. Polling pauses while the browser tab is hidden. Phase 5 replaces it with Socket.IO pushes. New orders trigger an on-screen alert and a short chime on the restaurant panel. Browsers only allow the sound after the page has been clicked once.
+**Live updates (Socket.IO).** Order changes reach every screen involved within about a second, with no refresh:
+- the restaurant board (new orders, with an alert and chime)
+- the rider dashboard (offers appearing and being withdrawn)
+- the customer's order page and order list
+- the admin pages
+
+How it works:
+- **Connection:** the browser connects to `/socket.io` on the API with its access token.
+- **Rooms:** the server checks the token and the account, then places the connection in rooms derived only from that identity: the user's own room, their restaurant, and `admins` for admins. There is no way for a client to join a room itself.
+- **Expiry:** the connection is closed when the access token expires, and the client reconnects with a fresh token.
+- **Events:** an `order:updated` event carries only the order id, number and status. Screens then reload through the normal REST API, so MongoDB stays the source of truth.
+- **Fallback:** every screen also refreshes every 30–60 seconds (paused while the tab is hidden), so a dropped connection delays updates but never loses them.
+- **Sound:** browsers only play the restaurant's new-order chime after the page has been clicked once.
+
+Live **map** tracking of the rider (GPS streaming, routes) is still Phase 5.
 
 **Try the whole flow locally** (four browser profiles, or normal plus private windows):
 1. Rider (`/delivery/login`): go online. This needs a **precise location**. On a desktop without GPS, set one in Chrome DevTools → More tools → Sensors → Location (for example latitude `12.9729`, longitude `77.6412`, next to the seeded restaurant).

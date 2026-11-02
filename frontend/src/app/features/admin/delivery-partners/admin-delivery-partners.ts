@@ -12,6 +12,7 @@ import { errorMessage } from '../../../core/services/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AdminOrdersService } from '../../../core/services/order-management.service';
 import { pollWhileVisible } from '../../../core/services/poll';
+import { RealtimeService } from '../../../core/services/realtime.service';
 import { ConfirmDialog, ConfirmDialogData } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { OrderStatusChip } from '../../../shared/components/order-status-chip/order-status-chip';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
@@ -21,7 +22,8 @@ import { VEHICLE_LABEL } from '../../../shared/models/checkout.models';
 import { AdminRider } from '../../../shared/models/order-management.models';
 import { AdminOrderDialog } from '../orders/admin-order-dialog';
 
-const POLL_MS = 30_000;
+/** Fallback refresh; live order events reload the list within a second. */
+const POLL_MS = 60_000;
 
 /** Riders: who is online, what they are carrying, suspend/reactivate. */
 @Component({
@@ -50,6 +52,9 @@ export class AdminDeliveryPartners {
     pollWhileVisible(() => this.request(), POLL_MS)
       .pipe(takeUntilDestroyed())
       .subscribe((d) => d && this.data.set(d));
+    inject(RealtimeService)
+      .orderUpdates$.pipe(debounceTime(1000), takeUntilDestroyed())
+      .subscribe(() => this.load(this.page));
     toObservable(computed(() => `${this.filterModel().onlineOnly}|${this.filterModel().search.trim()}`))
       .pipe(skip(1), debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
       .subscribe(() => this.load(1));

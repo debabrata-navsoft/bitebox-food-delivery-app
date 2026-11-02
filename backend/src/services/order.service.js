@@ -5,6 +5,7 @@ import { Coupon, CouponRedemption } from "../models/coupon.model.js";
 import { FoodItem } from "../models/food-item.model.js";
 import { ORDER_STATUS, Order, PAYMENT_METHODS, PAYMENT_STATUS, Payment } from "../models/order.model.js";
 import { Restaurant } from "../models/restaurant.model.js";
+import { emitOrderUpdated } from "../sockets/events.js";
 import { ApiError } from "../utils/api-error.js";
 import { paginationMeta } from "../utils/pagination.js";
 import { withTransaction } from "../utils/transaction.js";
@@ -106,6 +107,7 @@ export async function placeOrder(userId, { addressId, paymentMethod, note, expec
   try {
     const order = await withTransaction((session) => commitOrder({ userId, quote, orderDoc, paymentMethod }, session));
     logger.info({ orderId: order.id, orderNumber, userId: String(userId) }, "Order placed");
+    emitOrderUpdated(order); // the restaurant's board lights up
     return { order, created: true };
   } catch (error) {
     // A concurrent retry with the same idempotency key won the race: return its order.

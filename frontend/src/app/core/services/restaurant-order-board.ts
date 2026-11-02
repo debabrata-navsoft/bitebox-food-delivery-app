@@ -1,25 +1,28 @@
 import { DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
-import { Subscription, catchError, of, tap } from 'rxjs';
+import { Subscription, catchError, debounceTime, of, tap } from 'rxjs';
 import { RestaurantActiveOrders, RestaurantOrder } from '../../shared/models/order-management.models';
 import { errorMessage } from './api-error';
 import { NotificationService } from './notification.service';
 import { RestaurantOrdersService } from './order-management.service';
 import { pollWhileVisible } from './poll';
+import { RealtimeService } from './realtime.service';
 
-const POLL_MS = 15_000;
+/** Fallback refresh; live Socket.IO events normally update the board within a second. */
+const POLL_MS = 60_000;
 
 /**
  * The restaurant's live order board, shared by the panel layout (nav badge,
- * new-order alerts on any page) and the Orders page. Polls while anything is
- * connected; Phase 5 replaces polling with Socket.IO pushes.
+ * new-order alerts on any page) and the Orders page. Reloads on live Socket.IO
+ * events while anything is connected, with a slow poll as a fallback.
  */
 @Injectable({ providedIn: 'root' })
 export class RestaurantOrderBoard {
   private readonly api = inject(RestaurantOrdersService);
   private readonly notify = inject(NotificationService);
   private readonly document = inject(DOCUMENT);
+  private readonly realtime = inject(RealtimeService);
 
   readonly board = signal<RestaurantActiveOrders | null>(null);
   readonly error = signal<string | null>(null);
@@ -38,6 +41,8 @@ export class RestaurantOrderBoard {
   connect(destroyRef: DestroyRef): void {
     if (this.connections++ === 0) {
       this.polling = pollWhileVisible(() => this.fetch(), POLL_MS, this.document).subscribe();
+      // Any change to one of our orders (new, cancelled, rider assigned...) reloads the board.
+      this.polling.add(this.realtime.orderUpdates$.pipe(debounceTime(250)).subscribe(() => this.refresh()));
     }
     destroyRef.onDestroy(() => {
       if (--this.connections === 0) {

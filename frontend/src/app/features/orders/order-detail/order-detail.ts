@@ -7,11 +7,12 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { EMPTY, catchError, filter, skip } from 'rxjs';
+import { EMPTY, catchError, filter, merge, switchMap } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
 import { OrderService } from '../../../core/services/checkout-api.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { pollWhileVisible } from '../../../core/services/poll';
+import { RealtimeService } from '../../../core/services/realtime.service';
 import { ConfirmDialog, ConfirmDialogData } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { BillSummary } from '../../../shared/components/bill-summary/bill-summary';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
@@ -103,12 +104,17 @@ export class OrderDetail {
       untracked(() => this.load(id));
     });
 
-    // Keep the status fresh while the order is in progress (live socket updates come in Phase 5).
-    pollWhileVisible(
-      () => (this.inProgress() ? this.orders.get(this.id()).pipe(catchError(() => EMPTY)) : EMPTY),
-      15_000,
+    // Live: reload as soon as the server says this order changed; a slow poll covers dropped connections.
+    const reload = () => this.orders.get(this.id()).pipe(catchError(() => EMPTY));
+    merge(
+      inject(RealtimeService).orderUpdates$.pipe(
+        filter((e) => e.id === this.id()),
+        switchMap(reload),
+      ),
+      // (The first tick yields nothing because the order is not loaded yet.)
+      pollWhileVisible(() => (this.inProgress() ? reload() : EMPTY), 60_000),
     )
-      .pipe(skip(1), takeUntilDestroyed())
+      .pipe(takeUntilDestroyed())
       .subscribe((order) => {
         const before = this.order()?.status;
         this.order.set(order);

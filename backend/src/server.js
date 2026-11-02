@@ -4,10 +4,12 @@ import { connectDB, disconnectDB } from "./config/db.js";
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
 import { startDispatchLoop } from "./services/dispatch.service.js";
+import { attachRealtime } from "./sockets/index.js";
 
 const app = createApp();
-// A plain http.Server so Socket.IO can attach to it in a later phase.
+// A plain http.Server shared by Express and Socket.IO.
 const server = http.createServer(app);
+const io = attachRealtime(server);
 
 async function start() {
   try {
@@ -29,6 +31,7 @@ async function shutdown(signal) {
   shuttingDown = true;
   logger.info(`${signal} received, shutting down gracefully`);
   stopDispatch();
+  io.close();
 
   // Force exit if open connections do not drain in time.
   const forceExit = setTimeout(() => {

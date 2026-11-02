@@ -3,6 +3,7 @@ import { logger } from "../config/logger.js";
 import { DeliveryPartner } from "../models/delivery-partner.model.js";
 import { ORDER_STATUS, Order } from "../models/order.model.js";
 import { USER_STATUS } from "../models/user.model.js";
+import { emitOrderUpdated } from "../sockets/events.js";
 import { ApiError } from "../utils/api-error.js";
 import { ACTORS, transition } from "./order-workflow.service.js";
 
@@ -60,6 +61,7 @@ export async function dispatch(orderId, now = new Date()) {
     const offered = await Order.findOneAndUpdate(
       { _id: order._id, status: S.READY_FOR_PICKUP, "offer.partner": null },
       { $set: { offer: { partner: candidate.user, expiresAt } } },
+      { returnDocument: "after" },
     );
     if (!offered) {
       // The order changed meanwhile (cancelled, or offered by a concurrent sweep): free the rider.
@@ -67,6 +69,7 @@ export async function dispatch(orderId, now = new Date()) {
       return null;
     }
     logger.info({ orderId: order.id, rider: String(candidate.user), distanceMeters: Math.round(candidate.distanceMeters) }, "Delivery offered");
+    emitOrderUpdated(offered);
     return candidate.user;
   }
   return null;
@@ -119,7 +122,8 @@ export async function declineOffer(userId, orderId) {
   );
   if (!order) throw offerGone();
   await DeliveryPartner.updateOne({ user: userId, currentOffer: order._id }, { $set: { currentOffer: null } });
-  await dispatchSafely(order._id);
+  // Next rider (emits if offered); otherwise tell everyone the offer is gone.
+  if (!(await dispatchSafely(order._id))) emitOrderUpdated(order, { alsoNotify: [userId] });
 }
 
 /**
@@ -141,6 +145,7 @@ export async function sweep(now = new Date()) {
     if (!cleared.modifiedCount) continue;
     await DeliveryPartner.updateOne({ user: rider, currentOffer: order._id }, { $set: { currentOffer: null, isOnline: false } });
     summary.expiredOffers++;
+    emitOrderUpdated(await Order.findById(order._id), { alsoNotify: [rider] });
   }
 
   const waiting = await Order.find({ status: S.READY_FOR_PICKUP, "offer.partner": null }).sort({ updatedAt: 1 }).select("_id").limit(50);

@@ -11,6 +11,7 @@ import { catchError, debounceTime, distinctUntilChanged, filter, map, of, skip }
 import { errorMessage } from '../../../core/services/api-error';
 import { AdminOrdersService } from '../../../core/services/order-management.service';
 import { pollWhileVisible } from '../../../core/services/poll';
+import { RealtimeService } from '../../../core/services/realtime.service';
 import { OrderStatusChip } from '../../../shared/components/order-status-chip/order-status-chip';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
@@ -19,7 +20,8 @@ import { AdminOrderList } from '../../../shared/models/order-management.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { AdminOrderDialog } from './admin-order-dialog';
 
-const POLL_MS = 20_000;
+/** Fallback refresh; live order events reload the list within a second. */
+const POLL_MS = 60_000;
 
 /** Every order on the platform: filter, search by number, open one to act on it. */
 @Component({
@@ -58,6 +60,9 @@ export class AdminOrders {
     pollWhileVisible(() => this.request(), POLL_MS)
       .pipe(takeUntilDestroyed())
       .subscribe((d) => d && this.data.set(d));
+    inject(RealtimeService)
+      .orderUpdates$.pipe(debounceTime(1000), takeUntilDestroyed())
+      .subscribe(() => this.load(this.page));
 
     // New filters start again from page 1 (search is debounced while typing).
     toObservable(computed(() => `${this.filterModel().status}|${this.filterModel().search.trim()}`))
