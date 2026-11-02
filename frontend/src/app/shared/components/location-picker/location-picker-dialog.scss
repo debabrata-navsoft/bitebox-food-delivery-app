@@ -2,9 +2,6 @@
   width: 100%;
   margin-bottom: var(--bb-space-3);
 }
-.search {
-  width: 100%;
-}
 h3 {
   font-size: 0.9rem;
   text-transform: uppercase;
@@ -49,13 +46,6 @@ h3 {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-}
-.error {
-  color: var(--bb-danger);
-  font-size: 0.9rem;
-}
-.hint {
-  margin-top: var(--bb-space-3);
 }
 .attribution {
   font-size: 0.72rem;

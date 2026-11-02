@@ -19,9 +19,8 @@
         <header>
           <strong class="code">{{ c.code }}</strong>
           <np-toggle
-            #active
             [checked]="c.isActive"
-            (checkedChange)="toggle(c, $event, active)"
+            (checkedChange)="toggle(c, $event)"
             class="bb-label-hidden"
             [label]="'Active: ' + c.code"
           />

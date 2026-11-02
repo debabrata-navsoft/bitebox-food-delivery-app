@@ -1,3 +1,4 @@
+import { DISPATCH } from "../config/dispatch.js";
 import { DeliveryPartner } from "../models/delivery-partner.model.js";
 import { ORDER_STATUS, Order } from "../models/order.model.js";
 import { Restaurant } from "../models/restaurant.model.js";
@@ -41,6 +42,8 @@ export function presentForRestaurant(order) {
   const a = json.deliveryAddress;
   json.deliveryAddress = { recipientName: a.recipientName, area: a.area, city: a.city };
   json.riderAssigned = Boolean(order.deliveryPartner);
+  // Unanswered new orders are auto-rejected at this time (the sweep's rule; shown as a countdown).
+  if (order.status === S.PENDING) json.respondBy = new Date(order.createdAt.getTime() + DISPATCH.restaurantResponseMinutes * 60_000);
   delete json.offer;
   return json;
 }
@@ -54,6 +57,7 @@ export function presentForRider(order, userId) {
     json.deliveryAddress = { area: a.area, city: a.city, location: a.location };
   }
   json.offerExpiresAt = order.offer?.expiresAt ?? null;
+  json.offerWindowSeconds = DISPATCH.offerTimeoutSeconds;
   delete json.offer;
   delete json.cancellation;
   return json;
@@ -138,8 +142,11 @@ export async function restaurantSetStatus(ownerId, orderId, { status, reason }) 
     scope: { restaurant },
     reason: status === S.REJECTED ? reason : undefined,
   });
-  if (changed && status === S.READY_FOR_PICKUP) await dispatchSafely(order._id);
-  return presentForRestaurant(await Order.findById(order._id));
+  // Dispatch may have changed the order (an offer was made); otherwise the returned document is current.
+  if (changed && status === S.READY_FOR_PICKUP && (await dispatchSafely(order._id))) {
+    return presentForRestaurant(await Order.findById(order._id));
+  }
+  return presentForRestaurant(order);
 }
 
 // ---------------------------------------------------------------------------
@@ -211,13 +218,12 @@ export async function adminUnassign(adminId, orderId, reason) {
     to: S.READY_FOR_PICKUP,
     actor: ACTORS.ADMIN,
     userId: adminId,
-    update: { $set: { deliveryPartner: null } },
+    // ...and do not offer it straight back to the same rider.
+    update: { $set: { deliveryPartner: null }, ...(before?.deliveryPartner ? { $addToSet: { declinedBy: before.deliveryPartner } } : {}) },
     note: reason || "Rider unassigned by admin",
   });
   if (changed) {
     await releaseRider(order);
-    // Do not offer it straight back to the same rider.
-    if (before?.deliveryPartner) await Order.updateOne({ _id: order._id }, { $addToSet: { declinedBy: before.deliveryPartner } });
     await dispatchSafely(order._id);
   }
   return adminGet(order._id);

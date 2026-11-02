@@ -1,22 +1,40 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { FormRoot, TreeValidationResult, applyEach, email, form, maxLength, pattern, required, validate } from '@angular/forms/signals';
-import { catchError, debounceTime, distinctUntilChanged, filter, firstValueFrom, of, switchMap, tap } from 'rxjs';
+import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
+import {
+  FormRoot,
+  TreeValidationResult,
+  applyEach,
+  email,
+  form,
+  maxLength,
+  pattern,
+  required,
+  validate,
+} from '@angular/forms/signals';
+import { firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { ChipComponent, SearchInputComponent, ToggleComponent } from 'nexprime';
+import { ChipComponent, ToggleComponent } from 'nexprime';
 import { errorMessage, fieldErrors } from '../../../core/services/api-error';
 import { DeliveryLocationService, Place } from '../../../core/services/delivery-location.service';
-import { GeolocationService, ImpreciseLocationError } from '../../../core/services/geolocation.service';
+import { PlaceSearch } from '../../../shared/components/place-search/place-search';
+import {
+  GeolocationService,
+  ImpreciseLocationError,
+} from '../../../core/services/geolocation.service';
 import { MyRestaurantService } from '../../../core/services/my-restaurant.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { ImageUpload } from '../../../shared/components/image-upload/image-upload';
 import { LatLng, MapPicker } from '../../../shared/components/map-picker/map-picker';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { serverErrors, shownError } from '../../../shared/forms/form-errors';
-import { POSTAL_CODE_PATTERN, numberRange, phoneRules, requiredText } from '../../../shared/forms/form-rules';
+import {
+  POSTAL_CODE_PATTERN,
+  numberRange,
+  phoneRules,
+  requiredText,
+} from '../../../shared/forms/form-rules';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { Restaurant, RestaurantInput } from '../../../shared/models/catalog.models';
 import { rupeesToPaise } from '../../../shared/pipes/money.pipes';
@@ -29,7 +47,8 @@ function timeToDate(time: string): Date {
   date.setHours(h, m, 0, 0);
   return date;
 }
-const dateToTime = (date: Date) => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+const dateToTime = (date: Date) =>
+  `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
 function emptyModel() {
   return {
@@ -53,6 +72,7 @@ function emptyModel() {
 @Component({
   selector: 'bb-restaurant-details',
   imports: [
+    PlaceSearch,
     ToggleComponent,
     FormRoot,
     NP_FORM_FIELDS,
@@ -89,11 +109,9 @@ export class RestaurantDetails {
   protected readonly cuisineError = signal<string | null>(null);
 
   // Map location (search / current location / drag the pin)
-  protected readonly placeQuery = signal('');
-  protected readonly placeResults = signal<Place[]>([]);
   protected readonly locationError = signal<string | null>(null);
   protected readonly showCoordinates = signal(false);
-  private readonly placeSearch = viewChild(SearchInputComponent, { read: ElementRef });
+  private readonly placeSearch = viewChild(PlaceSearch);
 
   protected readonly model = signal(emptyModel());
   protected readonly form = form(
@@ -130,24 +148,6 @@ export class RestaurantDetails {
   );
 
   constructor() {
-    toObservable(this.placeQuery)
-      .pipe(
-        debounceTime(500),
-        distinctUntilChanged(),
-        tap((q) => q.trim().length < 3 && this.placeResults.set([])),
-        filter((q) => q.trim().length >= 3),
-        switchMap((q) =>
-          this.places.search(q.trim()).pipe(
-            catchError((err: unknown) => {
-              this.locationError.set(errorMessage(err, 'Place search failed.'));
-              return of([] as Place[]);
-            }),
-          ),
-        ),
-        takeUntilDestroyed(),
-      )
-      .subscribe((results) => this.placeResults.set(results));
-
     this.service.get().subscribe({
       next: ({ restaurant }) => {
         if (restaurant) this.fill(restaurant);
@@ -169,7 +169,14 @@ export class RestaurantDetails {
       cuisines: [...r.cuisines],
       phone: r.phone,
       email: r.email ?? '',
-      address: { line1: r.address.line1, line2: r.address.line2 ?? '', area: r.address.area ?? '', city: r.address.city, state: r.address.state, postalCode: r.address.postalCode },
+      address: {
+        line1: r.address.line1,
+        line2: r.address.line2 ?? '',
+        area: r.address.area ?? '',
+        city: r.address.city,
+        state: r.address.state,
+        postalCode: r.address.postalCode,
+      },
       location: { latitude: r.location.coordinates[1], longitude: r.location.coordinates[0] },
       isPureVeg: r.isPureVeg,
       costForTwo: r.costForTwoPaise / 100,
@@ -220,22 +227,24 @@ export class RestaurantDetails {
       await this.setPin(point);
     } catch (err) {
       // A vague reading would put the restaurant in the wrong place; ask for a search instead.
-      this.locationError.set(err instanceof ImpreciseLocationError ? err.message : (err as Error).message);
-      this.placeSearch()?.nativeElement.querySelector('input')?.focus();
+      this.locationError.set(
+        err instanceof ImpreciseLocationError ? err.message : (err as Error).message,
+      );
+      this.placeSearch()?.focus();
     } finally {
       this.locating.set(false);
     }
   }
 
   protected async pickPlace(place: Place): Promise<void> {
-    this.placeResults.set([]);
-    this.placeQuery.set('');
     await this.setPin(place);
   }
 
   /** Sets the pin and fills empty address fields from it (never overwrites typed values). */
   protected async setPin({ latitude, longitude }: LatLng): Promise<void> {
-    this.form.location().value.set({ latitude: +latitude.toFixed(6), longitude: +longitude.toFixed(6) });
+    this.form
+      .location()
+      .value.set({ latitude: +latitude.toFixed(6), longitude: +longitude.toFixed(6) });
     this.form.location().markAsTouched();
     try {
       const place = await firstValueFrom(this.places.reverse(latitude, longitude));
@@ -280,9 +289,13 @@ export class RestaurantDetails {
     const creating = this.restaurant() === null;
     this.error.set(null);
     try {
-      const restaurant = await firstValueFrom(creating ? this.service.create(input) : this.service.update(input));
+      const restaurant = await firstValueFrom(
+        creating ? this.service.create(input) : this.service.update(input),
+      );
       this.fill(restaurant);
-      this.notify.success(creating ? 'Restaurant submitted for approval' : 'Restaurant details saved');
+      this.notify.success(
+        creating ? 'Restaurant submitted for approval' : 'Restaurant details saved',
+      );
       if (creating) void this.router.navigateByUrl('/restaurant');
       return undefined;
     } catch (err) {

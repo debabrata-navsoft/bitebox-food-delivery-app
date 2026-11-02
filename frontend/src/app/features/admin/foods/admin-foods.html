@@ -44,9 +44,8 @@
             </span>
           </div>
           <np-toggle
-            #availability
             [checked]="item.isAvailable"
-            (checkedChange)="toggle(item, $event, availability)"
+            (checkedChange)="toggle(item, $event)"
             class="bb-toggle-success bb-label-hidden"
             [label]="'Available: ' + item.name"
           />

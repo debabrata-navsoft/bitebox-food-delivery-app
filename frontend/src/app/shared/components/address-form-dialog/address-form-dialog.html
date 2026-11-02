@@ -2,11 +2,16 @@
 <form [formRoot]="form">
   <mat-dialog-content class="bb-form">
     @if (error()) {
-      <div class="bb-alert error" role="alert"><mat-icon aria-hidden="true">error</mat-icon><span>{{ error() }}</span></div>
+      <div class="bb-alert error" role="alert">
+        <mat-icon aria-hidden="true">error</mat-icon><span>{{ error() }}</span>
+      </div>
     } @else if (pinMissing()) {
       <div class="bb-alert error" role="alert">
         <mat-icon aria-hidden="true">error</mat-icon>
-        <span>Pin your delivery location first (use your current location, search, or tap the map).</span>
+        <span
+          >Pin your delivery location first (use your current location, search, or tap the
+          map).</span
+        >
       </div>
     }
 
@@ -14,35 +19,21 @@
     <section class="block" aria-labelledby="pin-title">
       <h3 id="pin-title">Delivery location</h3>
 
-      <div class="find">
-        <np-search-input
-          class="place-search"
-          placeholder="Search area, street or landmark"
-          [value]="placeQuery()"
-          [loading]="searching()"
-          (search)="placeQuery.set($event)"
-        />
+      <bb-place-search (picked)="pickPlace($event)">
         @if (geo.supported) {
-          <button mat-stroked-button type="button" class="gps" (click)="useCurrentLocation()" [disabled]="locating()">
+          <button
+            mat-stroked-button
+            type="button"
+            (click)="useCurrentLocation()"
+            [disabled]="locating()"
+          >
             <mat-icon>my_location</mat-icon>
             {{ locating() ? 'Finding you…' : 'Current location' }}
           </button>
         }
-      </div>
-      @if (searching() || locating()) {
+      </bb-place-search>
+      @if (locating()) {
         <mat-progress-bar mode="indeterminate" aria-label="Looking up location" />
-      }
-      @if (placeResults().length) {
-        <ul class="results" aria-label="Matching places">
-          @for (p of placeResults(); track p.latitude + ',' + p.longitude) {
-            <li>
-              <button type="button" (click)="pickPlace(p)">
-                <mat-icon aria-hidden="true">place</mat-icon>
-                <span><strong>{{ p.label }}</strong><small>{{ p.displayName }}</small></span>
-              </button>
-            </li>
-          }
-        </ul>
       }
       @if (locationError()) {
         <div class="bb-alert info" role="status">
@@ -61,7 +52,7 @@
           <mat-icon aria-hidden="true">where_to_vote</mat-icon>
           <div class="pin-text">
             <strong>Delivering here</strong>
-            <span>{{ pinLabel() || (model().latitude + ', ' + model().longitude) }}</span>
+            <span>{{ pinLabel() || model().latitude + ', ' + model().longitude }}</span>
           </div>
         </div>
       } @else {
@@ -74,17 +65,32 @@
         </div>
       }
 
-      <button type="button" class="bb-link-button manual-toggle" (click)="showCoordinates.set(!showCoordinates())" [attr.aria-expanded]="showCoordinates()">
+      <button
+        type="button"
+        class="bb-link-button manual-toggle"
+        (click)="showCoordinates.set(!showCoordinates())"
+        [attr.aria-expanded]="showCoordinates()"
+      >
         {{ showCoordinates() ? 'Hide coordinates' : 'Enter coordinates manually' }}
       </button>
       @if (showCoordinates()) {
         <div class="bb-form-row coords">
           <div class="bb-field">
-            <np-input-number [formField]="form.latitude" label="Latitude" [maxFractionDigits]="6" [useGrouping]="false" />
+            <np-input-number
+              [formField]="form.latitude"
+              label="Latitude"
+              [maxFractionDigits]="6"
+              [useGrouping]="false"
+            />
             <bb-field-error [field]="form.latitude" />
           </div>
           <div class="bb-field">
-            <np-input-number [formField]="form.longitude" label="Longitude" [maxFractionDigits]="6" [useGrouping]="false" />
+            <np-input-number
+              [formField]="form.longitude"
+              label="Longitude"
+              [maxFractionDigits]="6"
+              [useGrouping]="false"
+            />
             <bb-field-error [field]="form.longitude" />
           </div>
         </div>
@@ -164,7 +170,11 @@
       </div>
 
       <span class="label-title" id="label-title">Save as</span>
-      <mat-button-toggle-group [formField]="form.label" aria-labelledby="label-title" class="labels">
+      <mat-button-toggle-group
+        [formField]="form.label"
+        aria-labelledby="label-title"
+        class="labels"
+      >
         <mat-button-toggle value="home"><mat-icon>home</mat-icon> Home</mat-button-toggle>
         <mat-button-toggle value="work"><mat-icon>work</mat-icon> Work</mat-button-toggle>
         <mat-button-toggle value="other"><mat-icon>place</mat-icon> Other</mat-button-toggle>
@@ -174,8 +184,12 @@
   </mat-dialog-content>
   <mat-dialog-actions align="end">
     <button mat-button type="button" mat-dialog-close>Cancel</button>
-    <button mat-flat-button type="submit" [disabled]="form().submitting() || locating()"
-      (click)="onSaveClick()">
+    <button
+      mat-flat-button
+      type="submit"
+      [disabled]="form().submitting() || locating()"
+      (click)="onSaveClick()"
+    >
       @if (form().submitting()) {
         <mat-progress-spinner mode="indeterminate" diameter="20" aria-label="Saving" />
       } @else {

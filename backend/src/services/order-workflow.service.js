@@ -1,7 +1,7 @@
 import { logger } from "../config/logger.js";
 import { Coupon, CouponRedemption } from "../models/coupon.model.js";
 import { DeliveryPartner } from "../models/delivery-partner.model.js";
-import { ORDER_STATUS, Order, PAYMENT_STATUS, Payment } from "../models/order.model.js";
+import { ACTIVE_STATUSES, FINAL_STATUSES, ORDER_STATUS, Order, PAYMENT_STATUS, Payment } from "../models/order.model.js";
 import { emitOrderUpdated } from "../sockets/events.js";
 import { ApiError } from "../utils/api-error.js";
 
@@ -38,8 +38,7 @@ export const TRANSITIONS = Object.freeze({
   [S.CANCELLED]: {},
 });
 
-export const ACTIVE_STATUSES = [S.PENDING, S.CONFIRMED, S.PREPARING, S.READY_FOR_PICKUP, S.ASSIGNED, S.PICKED_UP, S.ON_THE_WAY];
-export const FINAL_STATUSES = [S.DELIVERED, S.REJECTED, S.CANCELLED];
+export { ACTIVE_STATUSES, FINAL_STATUSES };
 
 export const canTransition = (from, to, actor) => Boolean(TRANSITIONS[from]?.[to]?.includes(actor));
 
@@ -66,7 +65,7 @@ const conflict = (message, code) => new ApiError(409, message, { code });
  *   the loser gets 409 ORDER_CHANGED and the order is left as the winner set it.
  * - Repeating a move the order has already made (double click, retry) returns it unchanged.
  * - `where` adds extra conditions to the write (e.g. "this rider holds an unexpired offer");
- *   `update` adds extra $set/$unset fields.
+ *   `update` adds extra $set/$unset/$addToSet fields.
  */
 export async function transition(orderId, { to, actor, userId = null, scope = {}, where = {}, update = {}, note, reason }) {
   const order = await Order.findOne({ _id: orderId, ...scope });
@@ -90,6 +89,7 @@ export async function transition(orderId, { to, actor, userId = null, scope = {}
     {
       $set: set,
       ...(update.$unset ? { $unset: update.$unset } : {}),
+      ...(update.$addToSet ? { $addToSet: update.$addToSet } : {}),
       $push: { statusHistory: { status: to, at: now, by: userId, note: note || reason || undefined } },
     },
     { returnDocument: "after" },

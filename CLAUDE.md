@@ -71,7 +71,8 @@ npx ng build --configuration development   # fast type/template check (prefix NG
   - **Rider positions:** `rider:location` is validated, rate-limited and checked for implausible speed, then broadcast to the active order's room.
   - **Tests:** when no server is attached, emits are no-ops.
 - **External geo services:**
-  - `services/geocoding.service.js` (Nominatim) and `services/routing.service.js` (OSRM, swappable via `useProvider`) both cache, serialise about 1 request per second, and fail with a 503 that the UI degrades on.
+  - `services/geocoding.service.js` (Nominatim) and `services/routing.service.js` (OSRM, swappable via `useProvider`) share `utils/upstream.js#createUpstream`. It caches, merges identical in-flight requests and serialises about 1 request per second. Both fail with a 503 that the UI degrades on.
+  - GeoJSON helpers (`toPoint`, `fromPoint`, `haversineMeters`) are in `utils/geo.js`. Order status groups (`ACTIVE_STATUSES`, `FINAL_STATUSES`, `TRACKED_STATUSES`) live next to `ORDER_STATUS` in `models/order.model.js`.
   - Distances are labelled as straight-line (fees and dispatch), road estimate (routing) or live GPS. Keep those distinctions.
 - **API docs:** OpenAPI fragments in `docs/openapi.*.js`, merged in `docs/openapi.js`. Update them when routes change.
 
@@ -91,7 +92,10 @@ npx ng build --configuration development   # fast type/template check (prefix NG
   - Pass `context: publicRequest()` on public catalogue calls so the SSR HTTP transfer cache can reuse them.
 - **Live data:**
   - `core/services/realtime.service.ts` owns the socket: it connects while signed in, refreshes the token on handshake failure, and exposes `orderUpdates$`, `track(orderId)` and `sendRiderLocation()`.
-  - Screens react to events, with a slow fallback poll from `core/services/poll.ts#pollWhileVisible` that pauses on hidden tabs. A request passed to it must catch its own errors.
+  - Screens react to events with a slow fallback poll that pauses on hidden tabs. Use `core/services/poll.ts#liveRefresh(request, { pollMs, when })`, which wraps `pollWhileVisible`. A request passed to either must catch its own errors.
+  - Paginated admin-style lists use `shared/list/paged-list.ts#pagedList(fetch, opts)`, which gives data, loading and error state, live refresh, and a reset to page 1 when the filters change.
+  - Confirm-then-act flows use `confirmed(dialog, data)` from `shared/components/confirm-dialog/confirm-dialog.ts`.
+  - **Toggles:** bind `np-toggle [checked]` to the source state and update that state optimistically, restoring it on failure. Never call `toggle.checked.set()`: it re-emits `checkedChange`.
   - `core/services/restaurant-order-board.ts` is a shared ref-counted store for the restaurant panel.
 - **Forms:**
   - Use `form(model, schema, { submission: { action } })` with `<form [formRoot]>` and `[formField]`.

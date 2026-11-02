@@ -16,8 +16,16 @@ import { environment } from '../../../../environments/environment';
 import { Point, isValidPoint } from '../../../core/services/routing.service';
 
 type MarkerKind = 'restaurant' | 'home' | 'rider';
-const ICON: Record<MarkerKind, string> = { restaurant: 'storefront', home: 'home', rider: 'two_wheeler' };
-const LABEL: Record<MarkerKind, string> = { restaurant: 'Restaurant', home: 'Delivery address', rider: 'Rider' };
+const ICON: Record<MarkerKind, string> = {
+  restaurant: 'storefront',
+  home: 'home',
+  rider: 'two_wheeler',
+};
+const LABEL: Record<MarkerKind, string> = {
+  restaurant: 'Restaurant',
+  home: 'Delivery address',
+  rider: 'Rider',
+};
 /** Rider marker glides to each new position over this long. */
 const GLIDE_MS = 900;
 
@@ -62,11 +70,12 @@ export class TrackingMap {
   private glide?: number;
   private resizeObserver?: ResizeObserver;
 
-  private readonly points = computed(() => ({
+  // Separate so the route line (which depends on the fixed stops) is not rebuilt on every rider move.
+  private readonly stops = computed(() => ({
     restaurant: isValidPoint(this.restaurant()) ? this.restaurant() : null,
     home: isValidPoint(this.destination()) ? this.destination() : null,
-    rider: isValidPoint(this.rider()) ? this.rider() : null,
   }));
+  private readonly riderPoint = computed(() => (isValidPoint(this.rider()) ? this.rider() : null));
 
   constructor() {
     afterNextRender(() => void this.init());
@@ -77,7 +86,7 @@ export class TrackingMap {
     });
 
     effect(() => {
-      const points = this.points();
+      const points = { ...this.stops(), rider: this.riderPoint() };
       const stale = this.riderStale();
       if (!this.ready()) return;
       this.place('restaurant', points.restaurant);
@@ -87,11 +96,13 @@ export class TrackingMap {
     });
 
     effect(() => {
-      const route = (this.route() ?? []).filter(isValidPoint);
-      const from = isValidPoint(this.lineFrom()) ? this.lineFrom() : this.points().restaurant;
-      const to = this.points().home;
       if (!this.ready()) return;
-      this.drawLine(route.length > 1 ? route : from && to ? [from, to] : [], route.length > 1);
+      const route = (this.route() ?? []).filter(isValidPoint);
+      if (route.length > 1) return this.drawLine(route, true);
+      // No road route: dashed straight line. Only this branch reads lineFrom (often the moving rider).
+      const from = isValidPoint(this.lineFrom()) ? this.lineFrom() : this.stops().restaurant;
+      const to = this.stops().home;
+      this.drawLine(from && to ? [from, to] : [], false);
     });
   }
 
@@ -99,16 +110,29 @@ export class TrackingMap {
     try {
       const mod = await import('leaflet');
       const L = (this.L = ((mod as { default?: typeof Leaflet }).default ?? mod) as typeof Leaflet);
-      this.map = L.map(this.container().nativeElement, { zoomControl: true, attributionControl: true, scrollWheelZoom: false });
+      this.map = L.map(this.container().nativeElement, {
+        zoomControl: true,
+        attributionControl: true,
+        scrollWheelZoom: false,
+      });
       this.map.setView([22.35, 78.67], 5);
-      L.tileLayer(environment.map.tileUrl, { maxZoom: environment.map.maxZoom, attribution: environment.map.attribution })
-        .on('tileerror', () => this.loadError.set('Some map tiles could not be loaded. Positions below are still accurate.'))
+      L.tileLayer(environment.map.tileUrl, {
+        maxZoom: environment.map.maxZoom,
+        attribution: environment.map.attribution,
+      })
+        .on('tileerror', () =>
+          this.loadError.set(
+            'Some map tiles could not be loaded. Positions below are still accurate.',
+          ),
+        )
         .addTo(this.map);
       this.resizeObserver = new ResizeObserver(() => this.map?.invalidateSize());
       this.resizeObserver.observe(this.container().nativeElement);
       this.ready.set(true);
     } catch {
-      this.loadError.set('The map could not be loaded. Order details and updates below still work.');
+      this.loadError.set(
+        'The map could not be loaded. Order details and updates below still work.',
+      );
     }
   }
 
@@ -128,7 +152,12 @@ export class TrackingMap {
         iconSize: [36, 36],
         iconAnchor: [18, 18],
       });
-      this.markers[kind] = L.marker(target, { icon, title: LABEL[kind], keyboard: false, zIndexOffset: kind === 'rider' ? 1000 : 0 }).addTo(this.map!);
+      this.markers[kind] = L.marker(target, {
+        icon,
+        title: LABEL[kind],
+        keyboard: false,
+        zIndexOffset: kind === 'rider' ? 1000 : 0,
+      }).addTo(this.map!);
     } else if (kind === 'rider') {
       this.glideTo(existing, target);
     } else if (!existing.getLatLng().equals(target, 1e-7)) {
@@ -144,7 +173,10 @@ export class TrackingMap {
     const began = performance.now();
     const step = (now: number) => {
       const t = Math.min(1, (now - began) / GLIDE_MS);
-      marker.setLatLng([start.lat + (target.lat - start.lat) * t, start.lng + (target.lng - start.lng) * t]);
+      marker.setLatLng([
+        start.lat + (target.lat - start.lat) * t,
+        start.lng + (target.lng - start.lng) * t,
+      ]);
       this.glide = t < 1 ? requestAnimationFrame(step) : undefined;
     };
     this.glide = requestAnimationFrame(step);
@@ -156,23 +188,36 @@ export class TrackingMap {
     if (path.length < 2) return;
     this.line = this.L!.polyline(
       path.map((p) => [p.latitude, p.longitude] as [number, number]),
-      isRoad ? { color: '#2e1a3d', weight: 5, opacity: 0.8 } : { color: '#6b5a78', weight: 3, opacity: 0.7, dashArray: '6 8' },
+      isRoad
+        ? { color: '#2e1a3d', weight: 5, opacity: 0.8 }
+        : { color: '#6b5a78', weight: 3, opacity: 0.7, dashArray: '6 8' },
     ).addTo(this.map!);
     this.line.bringToBack();
   }
 
   /** Fit everything once; afterwards only pan if the rider drives out of view. */
-  private keepInView(points: { restaurant: Point | null; home: Point | null; rider: Point | null }): void {
+  private keepInView(points: {
+    restaurant: Point | null;
+    home: Point | null;
+    rider: Point | null;
+  }): void {
     const L = this.L!;
     const all = [points.restaurant, points.home, points.rider].filter((p): p is Point => !!p);
     if (all.length === 0) return;
     if (!this.fitted) {
       this.fitted = true;
       if (all.length === 1) this.map!.setView([all[0].latitude, all[0].longitude], 15);
-      else this.map!.fitBounds(L.latLngBounds(all.map((p) => [p.latitude, p.longitude])), { padding: [36, 36], maxZoom: 16 });
+      else
+        this.map!.fitBounds(L.latLngBounds(all.map((p) => [p.latitude, p.longitude])), {
+          padding: [36, 36],
+          maxZoom: 16,
+        });
       return;
     }
-    if (points.rider && !this.map!.getBounds().pad(-0.1).contains([points.rider.latitude, points.rider.longitude])) {
+    if (
+      points.rider &&
+      !this.map!.getBounds().pad(-0.1).contains([points.rider.latitude, points.rider.longitude])
+    ) {
       this.map!.panTo([points.rider.latitude, points.rider.longitude]);
     }
   }

@@ -3,6 +3,7 @@ import { FoodItem } from "../models/food-item.model.js";
 import { ADMIN_STATUS_TRANSITIONS, RESTAURANT_STATUS, Restaurant } from "../models/restaurant.model.js";
 import { ApiError } from "../utils/api-error.js";
 import { escapeRegex, paginationMeta } from "../utils/pagination.js";
+import { toPoint } from "../utils/geo.js";
 import { uniqueSlug } from "../utils/slug.js";
 
 /** Fields a restaurant owner may set. Status, rating and owner are never client-controlled. */
@@ -24,7 +25,6 @@ const OWNER_FIELDS = [
 
 const pick = (source, keys) => Object.fromEntries(keys.filter((k) => source[k] !== undefined).map((k) => [k, source[k]]));
 
-const toPoint = ({ latitude, longitude }) => ({ type: "Point", coordinates: [longitude, latitude] });
 
 // ---------------------------------------------------------------------------
 // Owner (restaurant partner)

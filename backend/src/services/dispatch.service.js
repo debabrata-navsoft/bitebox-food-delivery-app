@@ -33,13 +33,7 @@ export async function dispatch(orderId, now = new Date()) {
         distanceField: "distanceMeters",
         maxDistance: DISPATCH.maxPickupDistanceKm * 1000,
         spherical: true,
-        query: {
-          isOnline: true,
-          activeOrder: null,
-          currentOffer: null,
-          locationUpdatedAt: { $gte: new Date(now.getTime() - DISPATCH.locationFreshMinutes * 60_000) },
-          user: { $nin: order.declinedBy ?? [] },
-        },
+        query: { ...freeRiderFilter(now), user: { $nin: order.declinedBy ?? [] } },
       },
     },
     { $lookup: { from: "users", localField: "user", foreignField: "_id", as: "account", pipeline: [{ $project: { status: 1 } }] } },
@@ -74,6 +68,18 @@ export async function dispatch(orderId, now = new Date()) {
   }
   return null;
 }
+
+/** Riders who could be offered an order right now (dispatch adds distance and declined-by checks). */
+const freeRiderFilter = (now) => ({
+  isOnline: true,
+  activeOrder: null,
+  currentOffer: null,
+  locationUpdatedAt: { $gte: new Date(now.getTime() - DISPATCH.locationFreshMinutes * 60_000) },
+});
+
+/** Ready orders nobody is being offered, longest-waiting first. */
+export const findWaitingOrders = (limit) =>
+  Order.find({ status: S.READY_FOR_PICKUP, "offer.partner": null }).sort({ updatedAt: 1 }).select("_id").limit(limit);
 
 /** Dispatch without letting a failure break the caller (e.g. the restaurant's "ready" request). */
 export async function dispatchSafely(orderId) {
@@ -138,19 +144,22 @@ export async function sweep(now = new Date()) {
   const expired = await Order.find({ status: S.READY_FOR_PICKUP, "offer.expiresAt": { $lte: now } }).select("_id offer").limit(100);
   for (const order of expired) {
     const rider = order.offer.partner;
-    const cleared = await Order.updateOne(
+    const cleared = await Order.findOneAndUpdate(
       { _id: order._id, status: S.READY_FOR_PICKUP, "offer.partner": rider, "offer.expiresAt": { $lte: now } },
       { $unset: { offer: 1 }, $addToSet: { declinedBy: rider } },
+      { returnDocument: "after" },
     );
-    if (!cleared.modifiedCount) continue;
+    if (!cleared) continue;
     await DeliveryPartner.updateOne({ user: rider, currentOffer: order._id }, { $set: { currentOffer: null, isOnline: false } });
     summary.expiredOffers++;
-    emitOrderUpdated(await Order.findById(order._id), { alsoNotify: [rider] });
+    emitOrderUpdated(cleared, { alsoNotify: [rider] });
   }
 
-  const waiting = await Order.find({ status: S.READY_FOR_PICKUP, "offer.partner": null }).sort({ updatedAt: 1 }).select("_id").limit(50);
-  for (const order of waiting) {
-    if (await dispatchSafely(order._id)) summary.dispatched++;
+  // Re-dispatch waiting orders, but only if some rider could take one (orders pile up exactly when nobody can).
+  if (await DeliveryPartner.exists(freeRiderFilter(now))) {
+    for (const order of await findWaitingOrders(50)) {
+      if (await dispatchSafely(order._id)) summary.dispatched++;
+    }
   }
 
   const stale = await Order.find({

@@ -13,6 +13,14 @@ export const ORDER_STATUS = Object.freeze({
   CANCELLED: "cancelled",
 });
 
+const S = ORDER_STATUS;
+/** Still in progress (restaurant board, admin "active" filter). */
+export const ACTIVE_STATUSES = Object.freeze([S.PENDING, S.CONFIRMED, S.PREPARING, S.READY_FOR_PICKUP, S.ASSIGNED, S.PICKED_UP, S.ON_THE_WAY]);
+/** Finished: no further changes, nothing to track. */
+export const FINAL_STATUSES = Object.freeze([S.DELIVERED, S.REJECTED, S.CANCELLED]);
+/** A rider carries the order: their position is shared with its viewers. */
+export const TRACKED_STATUSES = Object.freeze([S.ASSIGNED, S.PICKED_UP, S.ON_THE_WAY]);
+
 export const PAYMENT_METHODS = Object.freeze({ COD: "cod" });
 export const PAYMENT_STATUS = Object.freeze({
   PENDING: "pending",

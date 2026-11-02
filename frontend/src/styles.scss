@@ -251,7 +251,15 @@ img {
 
 // NexPrime inputs fill their container. Their own (emulated) host styles size
 // them to 200-400px or max-content and outrank a plain element selector.
-:is(np-text-input, np-textarea, np-input-number, np-select, np-search-input, np-calendar, np-time-picker) {
+:is(
+  np-text-input,
+  np-textarea,
+  np-input-number,
+  np-select,
+  np-search-input,
+  np-calendar,
+  np-time-picker
+) {
   display: block !important;
   width: 100% !important;
   min-width: 0 !important;
@@ -261,6 +269,17 @@ img {
 // Availability switches are green when on (NexPrime fills the track with --ui-gradient).
 np-toggle.bb-toggle-success {
   --ui-gradient: var(--bb-success);
+}
+
+// A switch whose label changes with its state ("Off" / "Available"): fixed label width so the
+// switch does not jump sideways, and the "on" label in the success colour.
+np-toggle.bb-toggle-stable .toggle-label {
+  display: inline-block;
+  min-width: 9ch;
+}
+np-toggle.bb-toggle-stable:has(input:checked) .toggle-label {
+  color: var(--bb-success);
+  font-weight: 600;
 }
 
 // np-toggle whose label only names it for screen readers (lists of switches).
@@ -282,7 +301,8 @@ np-toggle.bb-label-hidden-phone .toggle-label {
 }
 
 // Same height as the app's 44px buttons, so a field and a button side by side line up.
-:is(np-text-input, np-search-input, np-input-number, np-select, np-calendar, np-time-picker) .ui-control {
+:is(np-text-input, np-search-input, np-input-number, np-select, np-calendar, np-time-picker)
+  .ui-control {
   min-height: 44px;
 }
 
@@ -356,10 +376,19 @@ np-time-picker .time-picker-field {
   }
 
   // NexPrime fields (and .bb-field wrappers: a control plus its <bb-field-error>).
-  :is(np-text-input, np-textarea, np-input-number, np-select, np-calendar, np-time-picker, .bb-field) {
+  :is(
+    np-text-input,
+    np-textarea,
+    np-input-number,
+    np-select,
+    np-calendar,
+    np-time-picker,
+    .bb-field
+  ) {
     margin-bottom: var(--bb-space-4);
   }
-  .bb-field > :is(np-text-input, np-textarea, np-input-number, np-select, np-calendar, np-time-picker) {
+  .bb-field
+    > :is(np-text-input, np-textarea, np-input-number, np-select, np-calendar, np-time-picker) {
     margin-bottom: 0;
   }
 
