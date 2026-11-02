@@ -361,6 +361,40 @@ export const catalogPaths = {
       responses: { 200: ok({ type: "object", properties: { place: placeSchema } }), 404: err("No address here"), 503: err("Geocoder unavailable") },
     },
   },
+  "/geo/route": {
+    get: {
+      tags: ["Location"],
+      summary: "Road route between two points (signed-in users)",
+      description:
+        "Estimated road distance and travel time plus the path to draw (OSRM by default; cached and throttled). " +
+        "straightLineMeters is reported separately. These are estimates without live traffic, not the rider's actual progress. " +
+        "503 ROUTING_UNAVAILABLE means the client should draw a straight line instead.",
+      security: [{ bearerAuth: [] }],
+      parameters: [q("fromLat", { type: "number" }), q("fromLng", { type: "number" }), q("toLat", { type: "number" }), q("toLng", { type: "number" })],
+      responses: {
+        200: ok({
+          type: "object",
+          properties: {
+            route: {
+              type: "object",
+              properties: {
+                distanceMeters: { type: "integer" },
+                durationSeconds: { type: "integer" },
+                straightLineMeters: { type: "integer" },
+                path: { type: "array", items: { type: "object", properties: { latitude: { type: "number" }, longitude: { type: "number" } } } },
+                provider: { type: "string" },
+                attribution: { type: "string" },
+                estimate: { const: true },
+              },
+            },
+          },
+        }),
+        400: err("Points more than 100 km apart"),
+        401: err("Not signed in"),
+        503: err("Routing unavailable"),
+      },
+    },
+  },
   "/uploads/images": {
     post: {
       tags: ["Uploads"],

@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { FormRoot, form, required } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
@@ -7,13 +7,16 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { SelectOption, ToggleComponent } from 'nexprime';
-import { catchError, debounceTime, firstValueFrom, interval, merge, of, switchMap } from 'rxjs';
+import { EMPTY, catchError, debounceTime, firstValueFrom, interval, merge, of, switchMap } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
 import { GeolocationService, ImpreciseLocationError } from '../../../core/services/geolocation.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { RiderService } from '../../../core/services/order-management.service';
 import { pollWhileVisible } from '../../../core/services/poll';
 import { RealtimeService } from '../../../core/services/realtime.service';
+import { RiderGps } from '../../../core/services/rider-gps.service';
+import { Point, RoadRoute, RoutingService, fromCoordinates } from '../../../core/services/routing.service';
+import { TrackingMap } from '../../../shared/components/tracking-map/tracking-map';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { OrderStatusChip } from '../../../shared/components/order-status-chip/order-status-chip';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
@@ -25,7 +28,6 @@ import { InrPipe } from '../../../shared/pipes/money.pipes';
 
 /** Fallback refresh; offers and status changes normally arrive live over Socket.IO. */
 const POLL_MS = 30_000;
-const LOCATION_EVERY_MS = 60_000;
 
 /** The next step on an active delivery, and what the rider should do before pressing it. */
 const NEXT_STEP: Partial<Record<RiderOrder['status'], { action: RiderAction; label: string; hint: string; icon: string }>> = {
@@ -50,6 +52,7 @@ const NEXT_STEP: Partial<Record<RiderOrder['status'], { action: RiderAction; lab
     OrderStatusChip,
     PageHeader,
     InrPipe,
+    TrackingMap,
   ],
   templateUrl: './delivery-dashboard.html',
   styleUrl: './delivery-dashboard.scss',
@@ -59,13 +62,15 @@ export class DeliveryDashboard {
   private readonly rider = inject(RiderService);
   private readonly geo = inject(GeolocationService);
   private readonly notify = inject(NotificationService);
+  private readonly routing = inject(RoutingService);
+  /** Device GPS, shared with the server while online (frequently during a delivery). */
+  protected readonly gps = inject(RiderGps);
 
   protected readonly data = signal<RiderDashboard | null>(null);
   protected readonly loadError = signal<string | null>(null);
   protected readonly switching = signal(false);
   protected readonly acting = signal(false);
   protected readonly availabilityError = signal<string | null>(null);
-  protected readonly lastLocationAt = signal<Date | null>(null);
   /** Ticks every second for the offer countdown. */
   protected readonly now = signal(Date.now());
 
@@ -78,6 +83,22 @@ export class DeliveryDashboard {
     return status ? (NEXT_STEP[status] ?? null) : null;
   });
   protected readonly vehicleLabel = VEHICLE_LABEL;
+
+  // Map of the active delivery: our position and the road route to the next stop.
+  protected readonly stops = computed(() => {
+    const o = this.active();
+    if (!o) return null;
+    const restaurant = fromCoordinates(o.restaurantSnapshot.location?.coordinates);
+    const destination = fromCoordinates(o.deliveryAddress.location?.coordinates);
+    return { restaurant, destination, target: o.status === 'assigned' ? restaurant : destination, toRestaurant: o.status === 'assigned' };
+  });
+  protected readonly myPosition = computed<Point | null>(() => {
+    const fix = this.gps.fix();
+    return fix && fix.accuracy <= 1000 ? { latitude: fix.latitude, longitude: fix.longitude } : null;
+  });
+  protected readonly routeToStop = signal<RoadRoute | null>(null);
+  private routedFrom: { point: Point; at: number; target: string } | null = null;
+  protected readonly minutes = (seconds: number) => Math.max(1, Math.round(seconds / 60));
 
   /** Seconds left on the offer, and as a share of the full window (for the bar). */
   protected readonly offerSecondsLeft = computed(() => {
@@ -121,12 +142,40 @@ export class DeliveryDashboard {
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.now.set(Date.now()));
 
-    // While online, keep our position fresh so nearby orders are offered to us.
-    interval(LOCATION_EVERY_MS)
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => {
-        if (this.online()) void this.reportLocation();
+    // GPS: watch while online; share often during a delivery, rarely when idle.
+    effect(() => {
+      const online = this.online();
+      const delivering = !!this.active();
+      untracked(() => {
+        if (online) {
+          this.gps.start(delivering);
+          this.gps.setDelivering(delivering);
+        } else {
+          this.gps.stop();
+        }
       });
+    });
+
+    // Re-estimate the road route to the next stop after moving ~250 m, a minute passing, or the stop changing.
+    toObservable(computed(() => ({ from: this.myPosition(), to: this.stops()?.target ?? null })))
+      .pipe(
+        switchMap(({ from, to }) => {
+          if (!from || !to) {
+            this.routeToStop.set(null);
+            this.routedFrom = null;
+            return EMPTY;
+          }
+          const key = `${to.latitude},${to.longitude}`;
+          const r = this.routedFrom;
+          if (r && r.target === key && Date.now() - r.at < 60_000 && distance(r.point, from) < 250) return EMPTY;
+          this.routedFrom = { point: from, at: Date.now(), target: key };
+          return this.routing.route(from, to);
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe((route) => this.routeToStop.set(route));
+
+    inject(DestroyRef).onDestroy(() => this.gps.stop());
   }
 
   private apply(d: RiderDashboard): void {
@@ -160,14 +209,15 @@ export class DeliveryDashboard {
   }
 
   /** Online needs a precise location (requests are offered by distance). */
-  protected async setOnline(online: boolean): Promise<void> {
+  protected async setOnline(online: boolean, toggle: ToggleComponent): Promise<void> {
+    // Putting the switch back after a failure also emits a change; that is not a request.
+    if (online === this.online()) return;
     this.switching.set(true);
     this.availabilityError.set(null);
     try {
       if (online) {
         const { latitude, longitude } = await this.geo.currentPrecise();
         this.apply(await firstValueFrom(this.rider.goOnline(latitude, longitude)));
-        this.lastLocationAt.set(new Date());
         this.notify.success('You are online. Requests near you will appear here.');
       } else {
         this.apply(await firstValueFrom(this.rider.goOffline()));
@@ -175,25 +225,17 @@ export class DeliveryDashboard {
     } catch (err) {
       this.availabilityError.set(
         err instanceof ImpreciseLocationError
-          ? "This device can't pinpoint where you are. Turn on GPS (or use your phone) to go online."
+          ? `This device only knows your location to within about ${formatDistance(err.accuracyMeters)}, ` +
+            'which is too vague to offer you nearby orders. Turn on GPS / precise location, or use your phone.'
           : err instanceof Error // browser location errors carry a readable message
             ? err.message
             : errorMessage(err),
       );
-      // Re-read the real state so the switch shows the truth.
+      // The switch flipped itself when tapped; put it back to the real state.
+      toggle.checked.set(this.online());
       this.rider.dashboard().subscribe({ next: (d) => this.data.set(d), error: () => undefined });
     } finally {
       this.switching.set(false);
-    }
-  }
-
-  private async reportLocation(): Promise<void> {
-    try {
-      const { latitude, longitude } = await this.geo.currentPrecise();
-      await firstValueFrom(this.rider.reportLocation(latitude, longitude));
-      this.lastLocationAt.set(new Date());
-    } catch {
-      // A missed update is fine; the next one will try again.
     }
   }
 
@@ -238,4 +280,16 @@ export class DeliveryDashboard {
     const target = order.status === 'assigned' ? from : to;
     return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=;${target[1]},${target[0]}`;
   }
+}
+
+/** Straight-line metres between two points (only used to decide when to re-route). */
+function distance(a: Point, b: Point): number {
+  const r = (d: number) => (d * Math.PI) / 180;
+  const h = Math.sin(r(b.latitude - a.latitude) / 2) ** 2 + Math.cos(r(a.latitude)) * Math.cos(r(b.latitude)) * Math.sin(r(b.longitude - a.longitude) / 2) ** 2;
+  return 2 * 6_371_000 * Math.asin(Math.sqrt(h));
+}
+
+/** "800 m" / "12 km", for the imprecise-location message. */
+function formatDistance(meters: number): string {
+  return meters < 1000 ? `${Math.round(meters)} m` : `${Math.round(meters / 1000)} km`;
 }

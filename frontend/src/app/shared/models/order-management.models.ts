@@ -47,7 +47,6 @@ export interface RiderProfile {
  */
 export interface RiderOrder extends Omit<Order, 'deliveryAddress' | 'rider' | 'cancellation'> {
   deliveryAddress: Partial<Order['deliveryAddress']> & { location: { type: 'Point'; coordinates: [number, number] } };
-  restaurantSnapshot: Order['restaurantSnapshot'] & { location?: { type: 'Point'; coordinates: [number, number] } };
   offerExpiresAt: string | null;
 }
 

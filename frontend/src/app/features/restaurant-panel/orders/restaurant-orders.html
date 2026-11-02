@@ -50,7 +50,7 @@
             <li>
               <div class="h-main">
                 <strong>{{ o.orderNumber }}</strong>
-                <span class="bb-muted">{{ o.createdAt | date: 'd MMM, h:mm a' }} · {{ itemCount(o) }} items · {{ o.deliveryAddress.recipientName }}</span>
+                <span class="bb-muted">{{ o.createdAt | date: 'd MMM, h:mm a' }} · {{ itemCount(o) }} {{ itemCount(o) === 1 ? 'item' : 'items' }} · {{ o.deliveryAddress.recipientName }}</span>
                 @if (o.cancellation?.reason) {
                   <span class="reason">{{ o.cancellation!.reason }}</span>
                 }
@@ -126,7 +126,7 @@
           }
 
           <div class="total">
-            <span>{{ itemCount(o) }} items · Cash on delivery</span>
+            <span>{{ itemCount(o) }} {{ itemCount(o) === 1 ? 'item' : 'items' }} · Cash on delivery</span>
             <strong>{{ o.pricing.totalPaise | inr }}</strong>
           </div>
 

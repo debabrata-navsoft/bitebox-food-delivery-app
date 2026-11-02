@@ -1,6 +1,6 @@
 import { Injectable, PLATFORM_ID, effect, inject, signal, untracked } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Observable, Subject } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, switchMap } from 'rxjs';
 import { Socket, io } from 'socket.io-client';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../auth/auth.service';
@@ -12,6 +12,21 @@ export interface OrderEvent {
   orderNumber: string;
   status: OrderStatus;
   updatedAt: string;
+}
+
+/** A rider position pushed while an order is being delivered. `at` is server time. */
+export interface RiderLocation {
+  orderId: string;
+  latitude: number;
+  longitude: number;
+  accuracy: number | null;
+  at: string;
+}
+
+/** Server's answer to a rider position update. */
+export interface LocationAck {
+  ok: boolean;
+  error?: 'RATE_LIMITED' | 'INVALID_LOCATION' | 'IMPRECISE' | 'IMPLAUSIBLE' | 'OFFLINE' | 'SERVER_ERROR' | 'NOT_CONNECTED';
 }
 
 /**
@@ -27,6 +42,8 @@ export class RealtimeService {
   private readonly auth = inject(AuthService);
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
   private socket?: Socket;
+  /** The current socket (null while signed out), so listeners can attach whenever it appears. */
+  private readonly socket$ = new BehaviorSubject<Socket | null>(null);
   private readonly orders = new Subject<OrderEvent>();
   private retries = 0;
 
@@ -53,6 +70,7 @@ export class RealtimeService {
       transports: ['websocket', 'polling'],
     });
     this.socket = socket;
+    this.socket$.next(socket);
 
     socket.on('connect', () => {
       this.retries = 0;
@@ -84,6 +102,53 @@ export class RealtimeService {
   private disconnect(): void {
     this.socket?.disconnect();
     this.socket = undefined;
+    this.socket$.next(null);
     this.connected.set(false);
+  }
+
+  /**
+   * Live rider positions for one order. The server checks that this account may
+   * watch it; the first value (if any) is the last known position, with its time.
+   * Re-joins after reconnects; leaves when unsubscribed.
+   */
+  track(orderId: string): Observable<RiderLocation> {
+    return this.socket$.pipe(
+      switchMap(
+        (socket) =>
+          new Observable<RiderLocation>((subscriber) => {
+            if (!socket) return;
+            const join = () =>
+              socket
+                .timeout(5000)
+                .emitWithAck('track:join', { orderId })
+                .then((ack: { ok: boolean; location?: RiderLocation | null }) => {
+                  if (ack.ok && ack.location) subscriber.next(ack.location);
+                })
+                .catch(() => undefined);
+            const onLocation = (location: RiderLocation) => {
+              if (location.orderId === orderId) subscriber.next(location);
+            };
+            socket.on('order:location', onLocation);
+            socket.on('connect', join);
+            if (socket.connected) void join();
+            return () => {
+              socket.off('order:location', onLocation);
+              socket.off('connect', join);
+              if (socket.connected) socket.emit('track:leave', { orderId });
+            };
+          }),
+      ),
+    );
+  }
+
+  /** Riders: report the device position (the server shares it only with their active order's viewers). */
+  async sendRiderLocation(point: { latitude: number; longitude: number; accuracy?: number }): Promise<LocationAck> {
+    const socket = this.socket;
+    if (!socket?.connected) return { ok: false, error: 'NOT_CONNECTED' };
+    try {
+      return (await socket.timeout(5000).emitWithAck('rider:location', point)) as LocationAck;
+    } catch {
+      return { ok: false, error: 'NOT_CONNECTED' };
+    }
   }
 }

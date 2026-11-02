@@ -143,7 +143,7 @@ export interface Order {
   id: string;
   orderNumber: string;
   restaurant: string;
-  restaurantSnapshot: { name: string; slug?: string; phone?: string; address?: string };
+  restaurantSnapshot: { name: string; slug?: string; phone?: string; address?: string; location?: { type: 'Point'; coordinates: [number, number] } };
   items: OrderItem[];
   deliveryAddress: Omit<DeliveryAddress, 'id' | 'isDefault'>;
   pricing: Pricing;

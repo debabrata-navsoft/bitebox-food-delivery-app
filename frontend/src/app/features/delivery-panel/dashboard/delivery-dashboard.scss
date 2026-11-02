@@ -225,3 +225,19 @@ h2 {
     max-width: 360px;
   }
 }
+
+.route-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.9rem;
+
+  mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+    color: var(--bb-plum-500);
+  }
+}

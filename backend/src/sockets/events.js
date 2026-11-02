@@ -4,6 +4,8 @@ import { logger } from "../config/logger.js";
 export const rooms = Object.freeze({
   user: (id) => `user:${id}`,
   restaurant: (id) => `restaurant:${id}`,
+  /** Live tracking of one order; joined only after a server-side permission check. */
+  order: (id) => `order:${id}`,
   admins: "admins",
 });
 
@@ -34,6 +36,8 @@ export function emitOrderUpdated(order, { alsoNotify = [] } = {}) {
       if (rider) targets.add(rooms.user(rider));
     }
     io.to([...targets]).emit("order:updated", payload);
+    // A finished order is no longer tracked: stop sharing the rider's location with its viewers.
+    if (["delivered", "cancelled", "rejected"].includes(order.status)) io.in(rooms.order(order._id)).socketsLeave(rooms.order(order._id));
   } catch (error) {
     // Live updates are best-effort; clients also refresh on their own.
     logger.error({ err: error }, "Realtime emit failed");

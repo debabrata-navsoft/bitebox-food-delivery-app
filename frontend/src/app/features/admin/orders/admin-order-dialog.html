@@ -41,6 +41,27 @@
       </section>
     </div>
 
+    @if (onTheRoad(o)) {
+      <section>
+        <h3>Live position</h3>
+        <bb-tracking-map
+          [restaurant]="tracking.restaurant()"
+          [destination]="tracking.destination()"
+          [rider]="tracking.rider()"
+          [riderStale]="tracking.riderStale()"
+          [route]="tracking.plannedRoute()?.path ?? null"
+          [label]="'Live map for order ' + o.orderNumber"
+        />
+        <p class="map-note">
+          @if (tracking.riderSeenSeconds(); as s) {
+            Rider location updated {{ s < 120 ? s + 's' : (s / 60 | number: '1.0-0') + ' min' }} ago{{ tracking.riderStale() ? ' (stale)' : '' }}.
+          } @else {
+            No live location from the rider yet.
+          }
+        </p>
+      </section>
+    }
+
     <section>
       <h3>Items</h3>
       <ul class="items">

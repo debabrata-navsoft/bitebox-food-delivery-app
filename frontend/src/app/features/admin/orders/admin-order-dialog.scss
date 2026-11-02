@@ -89,3 +89,9 @@ p {
 .danger {
   --mat-button-outlined-label-text-color: var(--bb-danger);
 }
+
+.map-note {
+  margin-top: var(--bb-space-1);
+  font-size: 0.82rem;
+  color: var(--bb-ink-muted);
+}

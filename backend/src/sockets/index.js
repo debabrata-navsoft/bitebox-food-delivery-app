@@ -5,6 +5,7 @@ import { Restaurant } from "../models/restaurant.model.js";
 import { ROLES, User, USER_STATUS } from "../models/user.model.js";
 import { verifyAccessToken } from "../utils/tokens.js";
 import { rooms, setRealtimeServer } from "./events.js";
+import { registerTracking } from "./tracking.js";
 
 /**
  * Socket.IO for live order updates.
@@ -13,7 +14,8 @@ import { rooms, setRealtimeServer } from "./events.js";
  * - Every connection must present a valid access token (handshake `auth.token`); the user is
  *   re-loaded so suspended accounts and revoked tokens (tokenVersion) are refused.
  * - Rooms are derived on the server from that identity only (own user room, own restaurant,
- *   admins). There is no client "join room" event, so nobody can listen to others' orders.
+ *   admins). The only client-requested room is an order's tracking room (track:join), granted
+ *   after a database permission check (see tracking.js), so nobody can listen to others' orders.
  * - The connection is closed when the access token expires; the client reconnects with a fresh one.
  * - Events carry only ids and statuses. Clients re-read details through the authorised REST API,
  *   and MongoDB stays the source of truth (a missed event is caught by the client's fallback refresh).
@@ -45,6 +47,8 @@ export function attachRealtime(httpServer) {
 
   io.on("connection", async (socket) => {
     const { id, role } = socket.data.user;
+    // Register handlers first so events sent right after connecting are not missed.
+    registerTracking(io, socket);
     const joined = [rooms.user(id)];
     if (role === ROLES.ADMIN) joined.push(rooms.admins);
     if (role === ROLES.RESTAURANT) {

@@ -36,7 +36,7 @@
           <button type="button" class="row" (click)="open(o)" [attr.aria-label]="'Open order ' + o.orderNumber">
             <div class="main">
               <strong>{{ o.orderNumber }}</strong>
-              <span class="bb-muted">{{ o.restaurantSnapshot.name }} · {{ itemCount(o) }} items · {{ o.createdAt | date: 'd MMM, h:mm a' }}</span>
+              <span class="bb-muted">{{ o.restaurantSnapshot.name }} · {{ itemCount(o) }} {{ itemCount(o) === 1 ? 'item' : 'items' }} · {{ o.createdAt | date: 'd MMM, h:mm a' }}</span>
             </div>
             <span class="amount">{{ o.pricing.totalPaise | inr }}</span>
             <bb-order-status-chip [status]="o.status" />

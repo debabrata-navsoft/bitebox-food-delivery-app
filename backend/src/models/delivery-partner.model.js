@@ -25,6 +25,8 @@ const deliveryPartnerSchema = new mongoose.Schema(
     // Last reported position, for "nearest rider" dispatch. Live tracking comes in Phase 5.
     location: { type: pointSchema, default: undefined },
     locationUpdatedAt: { type: Date },
+    // Reported GPS accuracy (metres) of that position.
+    locationAccuracy: { type: Number, min: 0 },
 
     currentOffer: { type: mongoose.Schema.Types.ObjectId, ref: "Order", default: null },
     activeOrder: { type: mongoose.Schema.Types.ObjectId, ref: "Order", default: null },

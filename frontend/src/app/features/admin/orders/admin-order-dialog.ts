@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,6 +10,8 @@ import { AdminOrdersService } from '../../../core/services/order-management.serv
 import { BillSummary } from '../../../shared/components/bill-summary/bill-summary';
 import { ConfirmDialog, ConfirmDialogData } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { OrderStatusChip } from '../../../shared/components/order-status-chip/order-status-chip';
+import { deliveryTracking } from '../../../shared/components/tracking-map/delivery-tracking';
+import { TrackingMap } from '../../../shared/components/tracking-map/tracking-map';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
 import { ORDER_STATUS_LABEL, OrderStatus, VEHICLE_LABEL } from '../../../shared/models/checkout.models';
 import { AdminOrder } from '../../../shared/models/order-management.models';
@@ -20,7 +22,7 @@ const CANCELLABLE: OrderStatus[] = ['pending', 'confirmed', 'preparing', 'ready_
 /** One order in full, for admins. Closes with `true` when something was changed. */
 @Component({
   selector: 'bb-admin-order-dialog',
-  imports: [DatePipe, MatDialogModule, MatButtonModule, MatIconModule, BillSummary, OrderStatusChip, VegBadge],
+  imports: [DatePipe, DecimalPipe, MatDialogModule, MatButtonModule, MatIconModule, BillSummary, OrderStatusChip, TrackingMap, VegBadge],
   templateUrl: './admin-order-dialog.html',
   styleUrl: './admin-order-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,6 +39,9 @@ export class AdminOrderDialog {
   protected readonly changed = signal(false);
   protected readonly statusLabel = ORDER_STATUS_LABEL;
   protected readonly vehicleLabel = VEHICLE_LABEL;
+  /** Live rider position for orders on the road. */
+  protected readonly tracking = deliveryTracking(this.order);
+  protected readonly onTheRoad = (o: AdminOrder) => ['assigned', 'picked_up', 'on_the_way'].includes(o.status);
 
   constructor() {
     this.load();

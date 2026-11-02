@@ -86,5 +86,13 @@ export const env = Object.freeze({
     countryCodes: process.env.GEOCODER_COUNTRY_CODES ?? "in",
   },
 
+  // Road routes and travel-time estimates (OSRM by default; see routing.service.js).
+  routing: {
+    url: process.env.ROUTING_URL || "https://router.project-osrm.org",
+    // OSRM profile: "driving" suits motorbikes and scooters well enough for estimates.
+    profile: process.env.ROUTING_PROFILE || "driving",
+    userAgent: process.env.GEOCODER_USER_AGENT || "BiteBox/1.0 (development)",
+  },
+
   logLevel: process.env.LOG_LEVEL || (isTest ? "silent" : isProduction ? "info" : "debug"),
 });

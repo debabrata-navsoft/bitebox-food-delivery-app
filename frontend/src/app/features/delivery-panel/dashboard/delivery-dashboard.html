@@ -23,22 +23,26 @@
               @if (active()) {
                 Finish your current delivery before going offline.
               } @else if (online()) {
-                Waiting for requests near you{{ lastLocationAt() ? ' · location shared' : '' }}.
+                Waiting for requests near you{{ gps.lastSharedAt() ? ' · location shared' : '' }}.
               } @else {
                 Go online to start receiving delivery requests.
               }
             </p>
           </div>
           <np-toggle
+            #onlineSwitch
             class="bb-toggle-success"
             [label]="online() ? 'Online' : 'Offline'"
             [checked]="online()"
             [disabled]="switching() || !profile()?.vehicleType || (online() && !!active())"
-            (checkedChange)="setOnline($event)"
+            (checkedChange)="setOnline($event, onlineSwitch)"
           />
         </div>
         @if (switching()) {
           <mat-progress-bar mode="indeterminate" aria-label="Updating availability" />
+        }
+        @if (online() && gps.problem(); as problem) {
+          <div class="bb-alert info" role="status"><mat-icon aria-hidden="true">gps_off</mat-icon><span>{{ problem }}</span></div>
         }
         @if (availabilityError(); as message) {
           <div class="bb-alert error" role="alert"><mat-icon aria-hidden="true">location_off</mat-icon><span>{{ message }}</span></div>
@@ -100,7 +104,7 @@
             <h2 id="active-title">Current delivery</h2>
             <bb-order-status-chip [status]="o.status" />
           </header>
-          <p class="order-no">{{ o.orderNumber }} · {{ itemCount(o) }} items</p>
+          <p class="order-no">{{ o.orderNumber }} · {{ itemCount(o) }} {{ itemCount(o) === 1 ? 'item' : 'items' }}</p>
 
           <ol class="stops">
             <li [class.done]="o.status !== 'assigned'">
@@ -135,6 +139,28 @@
 
           @if (o.note) {
             <p class="note"><mat-icon aria-hidden="true">sticky_note_2</mat-icon>{{ o.note }}</p>
+          }
+
+          @if (stops(); as s) {
+            <bb-tracking-map
+              [restaurant]="s.restaurant"
+              [destination]="s.destination"
+              [rider]="myPosition()"
+              [route]="routeToStop()?.path ?? null"
+              [lineFrom]="myPosition() ?? s.restaurant"
+              [label]="'Map: route to ' + (s.toRestaurant ? 'the restaurant' : 'the customer')"
+            />
+            <p class="route-line">
+              @if (routeToStop(); as r) {
+                <mat-icon aria-hidden="true">route</mat-icon>
+                {{ r.distanceMeters / 1000 | number: '1.1-1' }} km · about {{ minutes(r.durationSeconds) }} min by road to
+                {{ s.toRestaurant ? 'the restaurant' : 'the customer' }}
+                <span class="bb-muted">(estimate, no live traffic)</span>
+              } @else if (!myPosition()) {
+                <mat-icon aria-hidden="true">gps_not_fixed</mat-icon>
+                Waiting for your GPS position…
+              }
+            </p>
           }
 
           <div class="cash">

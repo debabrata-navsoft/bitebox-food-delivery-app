@@ -8,7 +8,7 @@ BiteBox is a full-stack food delivery app with four role-based panels: **Custome
 | Backend  | Node.js + Express 5 (JavaScript ES modules), Mongoose 9, JWT, bcrypt, express-validator, pino, Swagger UI |
 | Database | MongoDB (local or Atlas) |
 
-> **Status: Phase 4 complete (order management and delivery, with live Socket.IO order updates).** Phases 1–3 delivered authentication, restaurants and menus, and cart and checkout. Maps with live rider tracking (Phase 5), online payments and reports (Phase 6) come next.
+> **Status: Phase 5 complete (maps and live tracking).** Phases 1–4 delivered authentication, restaurants and menus, cart and checkout, and order management and delivery. Payments, notifications and reports (Phase 6) come next.
 
 ---
 
@@ -277,7 +277,6 @@ How it works:
 - **Fallback:** every screen also refreshes every 30–60 seconds (paused while the tab is hidden), so a dropped connection delays updates but never loses them.
 - **Sound:** browsers only play the restaurant's new-order chime after the page has been clicked once.
 
-Live **map** tracking of the rider (GPS streaming, routes) is still Phase 5.
 
 **Try the whole flow locally** (four browser profiles, or normal plus private windows):
 1. Rider (`/delivery/login`): go online. This needs a **precise location**. On a desktop without GPS, set one in Chrome DevTools → More tools → Sensors → Location (for example latitude `12.9729`, longitude `77.6412`, next to the seeded restaurant).
@@ -285,6 +284,48 @@ Live **map** tracking of the rider (GPS streaming, routes) is still Phase 5.
 3. Restaurant (`/restaurant/orders`): Accept → Start preparing → Ready for pickup.
 4. Rider: accept the request, then Picked up → Start delivery → Delivered.
 5. Customer: the order page shows each step and the rider's details. Admin: `/admin/orders` and `/admin/delivery-partners`.
+
+### Phase 5: maps and live tracking
+
+**What you see.**
+- **Customer order page:** a **Live tracking** map with the restaurant, the drop-off and the rider moving in real time. It shows "Arriving in about N min · X km by road", and "last location update … ago" when the rider's position is older than 90 seconds.
+- **Rider dashboard:** a map of the active delivery with the road route from the rider's own GPS position to the next stop (restaurant, then customer).
+- **Admin order dialog:** the same live map for orders on the road.
+
+**Routing** (`GET /api/v1/geo/route`, signed-in users only):
+- **Provider:** road distance, estimated travel time and the path come from OSRM (`ROUTING_URL`, `ROUTING_PROFILE`), behind a provider interface in `backend/src/services/routing.service.js`, so another provider can be plugged in.
+- **Load:** results are cached for 10 minutes, and upstream calls are serialised at about 1 per second.
+- **Production:** the default public OSRM demo server is for light testing only; use a self-hosted OSRM or a commercial router in production.
+- **Fallbacks:** when routing is unavailable the API returns `503 ROUTING_UNAVAILABLE`, and maps draw a dashed straight line instead. If the map itself cannot load, the page still shows status and estimates as text.
+
+**Distances are labelled honestly:**
+- **Straight-line distance:** used for delivery fees and dispatch.
+- **Road distance and time:** an *estimate* from the routing provider, without live traffic.
+- **Actual progress:** the rider's live GPS position, with its age.
+
+**Live location (Socket.IO).**
+- **Sharing:** the rider's device shares GPS while they are online:
+  - about every 4 seconds while moving during a delivery, and at least every 15 seconds
+  - about once a minute when idle, which keeps dispatch distances fresh
+- **Server checks** on every `rider:location`:
+  - it must come from a rider's own authenticated connection
+  - coordinates must be valid
+  - accuracy must be within 1 km
+  - no jumps faster than about 250 km/h
+  - at most about one update per second, in short bursts of five
+- **Who sees it:** positions are saved for dispatch, and broadcast only to the room of the order the rider is carrying, and only while it is assigned, picked up or on the way.
+- **Watching:** customers, the order's restaurant, its rider and admins watch with `track:join { orderId }`. The server checks permission against the database before joining the room, and replies with the last known position and its time.
+- **When an order finishes:** everyone is removed from its room, so the rider's location is no longer shared.
+- **Reconnects:** the app rejoins automatically after a reconnect.
+
+**Problems the app explains instead of failing silently:**
+- location permission denied
+- no GPS
+- an imprecise (desktop/IP) location
+- a dropped connection
+- a stale rider position
+
+**Testing GPS on a desktop:** Chrome DevTools → More tools → **Sensors** → Location. To watch the customer's map move, change the rider's location in small steps (for example 0.0007° of latitude, about 75 m, every few seconds). Large jumps are rejected as impossible.
 
 ### Folder layout
 
@@ -339,6 +380,8 @@ The layouts are built mobile-first, with breakpoints at **600px** (tablet) and *
 | The browser shows CORS errors | Add the exact origin (scheme, host, and port) to `CLIENT_URL` and restart the API. |
 | A rider gets no delivery requests | The rider must be online with a vehicle set and a location less than 15 minutes old, within 10 km of the restaurant. They may also have declined or ignored that order already (the rider who ignores an offer is set offline). Check `/admin/delivery-partners`. |
 | "Can't pinpoint where you are" when a rider goes online | The device reported a location vaguer than 1 km (common on desktops). Use a phone with GPS, or set a location in Chrome DevTools → Sensors. |
+| The customer's map shows a dashed straight line instead of a road route | The routing provider is unreachable or rate-limited (`503 ROUTING_UNAVAILABLE`). Check `ROUTING_URL`; the public OSRM demo server is best-effort only. |
+| The rider marker does not move | The rider must be online with location permission and an accurate fix (within 1 km). Simulated jumps faster than ~250 km/h are rejected. The rider dashboard shows the reason. |
 | New orders disappear as "rejected" | Restaurants must accept or reject within 10 minutes (`DISPATCH.restaurantResponseMinutes` in `backend/src/config/dispatch.js`). |
 | You are signed out after every reload | The refresh cookie isn't being stored. Use `http://localhost:4200` rather than `127.0.0.1` (the API and app must be same-site). For different sites, see `COOKIE_SAMESITE` above. |
 | No password-reset email arrives | Without SMTP settings, the link is printed in the API console (development only). |

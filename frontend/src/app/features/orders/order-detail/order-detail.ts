@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, LOCALE_ID, computed, effect, inject, input, signal, untracked, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DatePipe, TitleCasePipe, formatDate } from '@angular/common';
+import { DatePipe, DecimalPipe, TitleCasePipe, formatDate } from '@angular/common';
 import { ConfettiComponent, TimelineComponent, type TimelineEvent } from 'nexprime';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -16,6 +16,8 @@ import { RealtimeService } from '../../../core/services/realtime.service';
 import { ConfirmDialog, ConfirmDialogData } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { BillSummary } from '../../../shared/components/bill-summary/bill-summary';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
+import { deliveryTracking } from '../../../shared/components/tracking-map/delivery-tracking';
+import { TrackingMap } from '../../../shared/components/tracking-map/tracking-map';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
 import { ORDER_STATUS_LABEL, Order, OrderStatus, VEHICLE_LABEL } from '../../../shared/models/checkout.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
@@ -45,6 +47,8 @@ const JOURNEY: { status: OrderStatus; icon: string }[] = [
     InrPipe,
     TimelineComponent,
     ConfettiComponent,
+    TrackingMap,
+    DecimalPipe,
   ],
   templateUrl: './order-detail.html',
   styleUrl: './order-detail.scss',
@@ -66,6 +70,9 @@ export class OrderDetail {
   protected readonly statusLabel = ORDER_STATUS_LABEL;
   protected readonly vehicleLabel = VEHICLE_LABEL;
   protected readonly cancelling = signal(false);
+  /** Rider position, routes and estimates for the live map. */
+  protected readonly tracking = deliveryTracking(this.order);
+  protected readonly minutes = (seconds: number) => Math.max(1, Math.round(seconds / 60));
 
   private readonly locale = inject(LOCALE_ID);
   private readonly confetti = viewChild(ConfettiComponent);
