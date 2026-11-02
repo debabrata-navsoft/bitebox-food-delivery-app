@@ -112,6 +112,7 @@
 </section>
 
 <section class="bb-container section" aria-labelledby="how-title">
+  <np-animate-on-scroll animation="fade-up" [stagger]="90">
   <h2 id="how-title">How BiteBox works</h2>
   <ol class="steps">
     @for (step of steps; track step.icon; let i = $index) {
@@ -123,9 +124,11 @@
       </li>
     }
   </ol>
+  </np-animate-on-scroll>
 </section>
 
 <section id="partners" class="bb-container section" aria-labelledby="partners-title">
+  <np-animate-on-scroll animation="fade-up" [stagger]="90">
   <h2 id="partners-title">Grow with BiteBox</h2>
   <div class="partners">
     <article class="partner restaurant">
@@ -147,4 +150,5 @@
       </div>
     </article>
   </div>
+  </np-animate-on-scroll>
 </section>

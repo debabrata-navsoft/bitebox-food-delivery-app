@@ -68,8 +68,10 @@
         <mat-slide-toggle formControlName="isPureVeg">Pure vegetarian restaurant</mat-slide-toggle>
       </section>
 
-      <section class="bb-card" aria-labelledby="address-title" formGroupName="address">
+      <section class="bb-card" aria-labelledby="address-title">
         <h3 id="address-title">Address</h3>
+        <!-- Address fields belong to the "address" group; the map location is a separate "location" group. -->
+        <div formGroupName="address" class="address-fields">
         <mat-form-field appearance="outline">
           <mat-label>Street address</mat-label>
           <input matInput formControlName="line1" autocomplete="address-line1" />
@@ -102,27 +104,66 @@
             <mat-error>{{ controlError(form.controls.address.controls.postalCode, 'PIN code') }}</mat-error>
           </mat-form-field>
         </div>
+        </div>
 
         <div formGroupName="location" class="location">
           <h4>Map location</h4>
-          <p class="bb-muted">Used to show you to nearby customers. A map picker arrives with live tracking; for now, use your current location or enter coordinates.</p>
-          <div class="bb-form-row">
-            <mat-form-field appearance="outline">
-              <mat-label>Latitude</mat-label>
-              <input matInput type="number" step="any" formControlName="latitude" />
-              <mat-error>Latitude must be between -90 and 90</mat-error>
+          <p class="bb-muted">Customers nearby find you by this pin. Search for your street, then drag the pin onto your entrance.</p>
+          <div class="find">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="place-search">
+              <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+              <mat-label>Search area, street or landmark</mat-label>
+              <input #placeSearchInput matInput type="search" [formControl]="placeQuery" autocomplete="off" />
             </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Longitude</mat-label>
-              <input matInput type="number" step="any" formControlName="longitude" />
-              <mat-error>Longitude must be between -180 and 180</mat-error>
-            </mat-form-field>
+            @if (geo.supported) {
+              <button mat-stroked-button type="button" (click)="useCurrentLocation()" [disabled]="locating()">
+                <mat-icon>my_location</mat-icon>
+                {{ locating() ? 'Locating…' : 'Current location' }}
+              </button>
+            }
           </div>
-          @if (geo.supported) {
-            <button mat-stroked-button type="button" (click)="useCurrentLocation()" [disabled]="locating()">
-              <mat-icon>my_location</mat-icon>
-              {{ locating() ? 'Locating…' : 'Use my current location' }}
-            </button>
+          @if (placeResults().length) {
+            <ul class="results" aria-label="Matching places">
+              @for (p of placeResults(); track p.latitude + ',' + p.longitude) {
+                <li>
+                  <button type="button" (click)="pickPlace(p)">
+                    <mat-icon aria-hidden="true">place</mat-icon>
+                    <span><strong>{{ p.label }}</strong><small>{{ p.displayName }}</small></span>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+          @if (locationError()) {
+            <div class="bb-alert info" role="status">
+              <mat-icon aria-hidden="true">location_off</mat-icon>
+              <span>{{ locationError() }}</span>
+            </div>
+          }
+          <bb-map-picker
+            [latitude]="form.controls.location.controls.latitude.value"
+            [longitude]="form.controls.location.controls.longitude.value"
+            (moved)="setPin($event)"
+          />
+          @if (form.controls.location.invalid && form.controls.location.touched) {
+            <p class="field-error" role="alert">Pin your restaurant on the map.</p>
+          }
+          <button type="button" class="bb-link-button manual-toggle" (click)="showCoordinates.set(!showCoordinates())" [attr.aria-expanded]="showCoordinates()">
+            {{ showCoordinates() ? 'Hide coordinates' : 'Enter coordinates manually' }}
+          </button>
+          @if (showCoordinates()) {
+            <div class="bb-form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Latitude</mat-label>
+                <input matInput type="number" step="any" formControlName="latitude" />
+                <mat-error>Latitude must be between -90 and 90</mat-error>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Longitude</mat-label>
+                <input matInput type="number" step="any" formControlName="longitude" />
+                <mat-error>Longitude must be between -180 and 180</mat-error>
+              </mat-form-field>
+            </div>
           }
         </div>
       </section>

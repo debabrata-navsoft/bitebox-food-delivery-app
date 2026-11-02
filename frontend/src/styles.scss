@@ -47,6 +47,23 @@
 
   --bb-font: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
+  // NexPrime components read these --ui-* tokens; point them at the BiteBox brand
+  // so np-* components match Angular Material and the rest of the app.
+  --ui-font: var(--bb-font);
+  --ui-primary: var(--bb-plum);
+  --ui-primary-hover: var(--bb-plum-700);
+  --ui-accent: var(--bb-amber);
+  --ui-text: var(--bb-ink);
+  --ui-text-muted: var(--bb-ink-muted);
+  --ui-border: var(--bb-border);
+  --ui-surface: var(--bb-surface);
+  --ui-surface-muted: var(--bb-surface-alt);
+  --ui-success: var(--bb-success);
+  --ui-warning: var(--bb-warning);
+  --ui-danger: var(--bb-danger);
+  --ui-radius: var(--bb-radius-sm);
+  --ui-radius-lg: var(--bb-radius);
+
   @include bp.tablet-up {
     --bb-page-gutter: 24px;
   }
@@ -281,15 +298,18 @@ img {
   flex-direction: column;
   gap: var(--bb-space-1);
 
-  // Fields always fill their column (otherwise they shrink to Material's default ~180px).
+  // Fields always fill their column (otherwise they shrink to Material's default ~180px),
+  // and keep room below for an error/hint line plus the next field's floating label.
+  // A margin (not the container gap) also works for fields nested in cards and groups.
   .mat-mdc-form-field {
     width: 100%;
+    margin-bottom: var(--bb-space-4);
   }
 
   // Fields with a dynamic subscript (multi-line hints) reserve no space below
-  // themselves, so add it here to keep spacing consistent with other fields.
+  // themselves, so give them a little more.
   .mat-mdc-form-field:has(.mat-mdc-form-field-subscript-dynamic-size) {
-    margin-bottom: var(--bb-space-3);
+    margin-bottom: var(--bb-space-5);
   }
 
   .bb-form-row {
@@ -413,5 +433,15 @@ img {
   &.role-delivery {
     background: #e3f1ff;
     color: #12457a;
+  }
+}
+
+// Text prefixes/suffixes (₹, "min") only make sense next to a value. While the
+// label is sitting inside an empty field they would clash with it, so show them
+// only once the label has floated up (field focused or filled).
+.mat-mdc-form-field:has(.mdc-floating-label):not(:has(.mdc-floating-label--float-above)) {
+  .mat-mdc-form-field-text-prefix,
+  .mat-mdc-form-field-text-suffix {
+    visibility: hidden;
   }
 }

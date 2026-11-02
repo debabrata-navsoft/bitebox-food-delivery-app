@@ -46,6 +46,8 @@
 }
 
 .location {
+  display: flex;
+  flex-direction: column;
   border-top: 1px solid var(--bb-border);
   padding-top: var(--bb-space-4);
   margin-top: var(--bb-space-2);
@@ -69,4 +71,79 @@
 
 .save {
   width: 100%;
+}
+
+.address-fields {
+  display: flex;
+  flex-direction: column;
+}
+
+.find {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--bb-space-2);
+  margin-bottom: var(--bb-space-2);
+
+  .place-search {
+    flex: 1 1 240px;
+  }
+}
+
+.results {
+  list-style: none;
+  margin: 0 0 var(--bb-space-2);
+  padding: 0;
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius-sm);
+  max-height: 220px;
+  overflow-y: auto;
+
+  button {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--bb-space-2);
+    padding: var(--bb-space-2) var(--bb-space-3);
+    border: 0;
+    border-bottom: 1px solid var(--bb-border);
+    background: none;
+    font: inherit;
+    text-align: left;
+    color: inherit;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--bb-surface-alt);
+    }
+  }
+
+  span {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  small {
+    color: var(--bb-ink-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+bb-map-picker {
+  margin-bottom: var(--bb-space-2);
+}
+
+.manual-toggle {
+  align-self: flex-start;
+  font-size: 0.85rem;
+  margin: var(--bb-space-2) 0;
+}
+
+// Leave room for the first field's floating label under each card heading.
+.bb-card > h3 {
+  margin-bottom: var(--bb-space-4);
 }

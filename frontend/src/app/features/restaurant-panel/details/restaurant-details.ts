@@ -1,6 +1,8 @@
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { catchError, debounceTime, distinctUntilChanged, filter, firstValueFrom, of, switchMap, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
@@ -10,10 +12,12 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { errorMessage, fieldErrors } from '../../../core/services/api-error';
-import { GeolocationService } from '../../../core/services/geolocation.service';
+import { DeliveryLocationService, Place } from '../../../core/services/delivery-location.service';
+import { GeolocationService, ImpreciseLocationError } from '../../../core/services/geolocation.service';
 import { MyRestaurantService } from '../../../core/services/my-restaurant.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { ImageUpload } from '../../../shared/components/image-upload/image-upload';
+import { LatLng, MapPicker } from '../../../shared/components/map-picker/map-picker';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { Restaurant, RestaurantInput } from '../../../shared/models/catalog.models';
 import { rupeesToPaise } from '../../../shared/pipes/money.pipes';
@@ -35,6 +39,7 @@ const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
     MatProgressSpinnerModule,
     MatSlideToggleModule,
     ImageUpload,
+    MapPicker,
     PageHeader,
     StatusBanner,
   ],
@@ -47,6 +52,7 @@ export class RestaurantDetails {
   private readonly notify = inject(NotificationService);
   private readonly router = inject(Router);
   protected readonly geo = inject(GeolocationService);
+  private readonly places = inject(DeliveryLocationService);
   private readonly fb = inject(FormBuilder).nonNullable;
 
   protected readonly separatorKeys = [ENTER, COMMA] as const;
@@ -60,6 +66,13 @@ export class RestaurantDetails {
   protected readonly cuisines = signal<string[]>([]);
   protected readonly cuisineError = signal<string | null>(null);
   protected readonly imageUrl = signal('');
+
+  // Map location (search / current location / drag the pin)
+  protected readonly placeQuery = new FormControl('', { nonNullable: true });
+  protected readonly placeResults = signal<Place[]>([]);
+  protected readonly locationError = signal<string | null>(null);
+  protected readonly showCoordinates = signal(false);
+  private readonly placeSearchInput = viewChild<ElementRef<HTMLInputElement>>('placeSearchInput');
 
   protected readonly form = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
@@ -87,6 +100,24 @@ export class RestaurantDetails {
   });
 
   constructor() {
+    this.placeQuery.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged(),
+        tap((q) => q.trim().length < 3 && this.placeResults.set([])),
+        filter((q) => q.trim().length >= 3),
+        switchMap((q) =>
+          this.places.search(q.trim()).pipe(
+            catchError((err: unknown) => {
+              this.locationError.set(errorMessage(err, 'Place search failed.'));
+              return of([] as Place[]);
+            }),
+          ),
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe((results) => this.placeResults.set(results));
+
     this.service.get().subscribe({
       next: ({ restaurant }) => {
         if (restaurant) this.fill(restaurant);
@@ -143,14 +174,43 @@ export class RestaurantDetails {
 
   protected async useCurrentLocation(): Promise<void> {
     this.locating.set(true);
+    this.locationError.set(null);
     try {
-      const { latitude, longitude } = await this.geo.current();
-      this.form.controls.location.setValue({ latitude: +latitude.toFixed(6), longitude: +longitude.toFixed(6) });
-      this.form.controls.location.markAsDirty();
+      const point = await this.geo.currentPrecise();
+      await this.setPin(point);
     } catch (err) {
-      this.notify.error((err as Error).message);
+      // A vague reading would put the restaurant in the wrong place; ask for a search instead.
+      this.locationError.set(err instanceof ImpreciseLocationError ? err.message : (err as Error).message);
+      this.placeSearchInput()?.nativeElement.focus();
     } finally {
       this.locating.set(false);
+    }
+  }
+
+  protected async pickPlace(place: Place): Promise<void> {
+    this.placeResults.set([]);
+    this.placeQuery.setValue('', { emitEvent: false });
+    await this.setPin(place);
+  }
+
+  /** Sets the pin and fills empty address fields from it (never overwrites typed values). */
+  protected async setPin({ latitude, longitude }: LatLng): Promise<void> {
+    const location = this.form.controls.location;
+    location.setValue({ latitude: +latitude.toFixed(6), longitude: +longitude.toFixed(6) });
+    location.markAsDirty();
+    location.markAsTouched();
+    try {
+      const place = await firstValueFrom(this.places.reverse(latitude, longitude));
+      const address = this.form.controls.address.controls;
+      const fill = (name: 'area' | 'city' | 'state' | 'postalCode', value?: string | null) => {
+        if (value && !address[name].value.trim()) address[name].setValue(value);
+      };
+      fill('area', place.area);
+      fill('city', place.city);
+      fill('state', place.state);
+      fill('postalCode', place.postalCode);
+    } catch {
+      // Naming the place is a convenience; the pin is what matters.
     }
   }
 

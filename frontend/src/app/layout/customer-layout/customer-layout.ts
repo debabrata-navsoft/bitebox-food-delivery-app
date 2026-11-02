@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
+import { ScrollTopComponent } from 'nexprime';
 import { AuthService } from '../../core/auth/auth.service';
 import { CartService } from '../../core/services/cart.service';
 import { DeliveryLocationService } from '../../core/services/delivery-location.service';
@@ -29,6 +30,7 @@ import { ROLE_META } from '../../shared/models/user.models';
     MatIconModule,
     MatMenuModule,
     BrandLogo,
+    ScrollTopComponent,
   ],
   templateUrl: './customer-layout.html',
   styleUrl: './customer-layout.scss',

@@ -27,10 +27,16 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "**/*.svg",
+                "input": "node_modules/nexprime/icons",
+                "output": "icons"
               }
             ],
             "styles": [
               "node_modules/leaflet/dist/leaflet.css",
+              "node_modules/nexprime/styles/theme.css",
               "src/styles.scss"
             ],
             "server": "src/main.server.ts",
@@ -50,7 +56,9 @@
               ]
             },
             "allowedCommonJsDependencies": [
-              "leaflet"
+              "leaflet",
+              "lottie-web",
+              "quill-delta"
             ]
           },
           "configurations": {

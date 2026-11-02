@@ -50,7 +50,8 @@
           <span class="hide-phone">{{ firstName() }}</span>
         </button>
         <mat-menu #accountMenu="matMenu" xPosition="before">
-          <div class="menu-header" role="presentation">
+          <!-- Clicking the name/email area keeps the menu open (it is not a menu item). -->
+          <div class="menu-header" (click)="$event.stopPropagation()" role="presentation">
             <strong>{{ u.name }}</strong>
             <span>{{ u.email }}</span>
           </div>
@@ -114,6 +115,9 @@
   </div>
   <p class="bb-container copyright">&copy; {{ year }} BiteBox. All rights reserved.</p>
 </footer>
+
+<!-- Back-to-top button with a scroll-progress ring (NexPrime) -->
+<np-scroll-top class="scroll-top" [threshold]="600" [progress]="true" variant="soft" ariaLabel="Back to top" />
 
 <!-- Bottom tab bar on phones -->
 <nav class="tab-bar" aria-label="Quick navigation">

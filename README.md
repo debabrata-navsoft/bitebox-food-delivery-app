@@ -4,7 +4,7 @@ BiteBox is a full-stack food delivery app with four role-based panels: **Custome
 
 | Part     | Stack |
 |----------|-------|
-| Frontend | Angular 22 (standalone components, Signals, SSR/prerender), Angular Material 22, SCSS |
+| Frontend | Angular 22 (standalone components, Signals, SSR/prerender), Angular Material 22, NexPrime UI, Leaflet + OpenStreetMap, SCSS |
 | Backend  | Node.js + Express 5 (JavaScript ES modules), Mongoose 9, JWT, bcrypt, express-validator, pino, Swagger UI |
 | Database | MongoDB (local or Atlas) |
 
@@ -238,6 +238,18 @@ frontend/src/app
   features/         auth pages, customer, admin, restaurant-panel, delivery-panel, profile, errors
 frontend/src/styles design tokens, breakpoints, generated Material palette
 ```
+
+### UI libraries
+
+- **Angular Material** provides form fields, dialogs, menus, tables and other core controls.
+- **NexPrime** (`nexprime`) is used where it adds something Material lacks:
+  - `np-timeline`: the order progress tracker
+  - `np-confetti`: the "Order placed!" celebration
+  - `np-scroll-top`: the back-to-top button on customer pages
+  - `np-animate-on-scroll`: home page sections
+
+  Its theme (`node_modules/nexprime/styles/theme.css`) loads before `src/styles.scss`, which maps NexPrime's `--ui-*` colour and font variables to the BiteBox brand. Its icons are served from `/icons`.
+- **NexPrime 0.1.5 declares Angular 21** as an optional peer dependency. The library is compiled for Angular 17+ and builds and runs with Angular 22. `package.json` contains an npm `overrides` entry that points only NexPrime's Angular peers at the project's own Angular version. This avoids disabling peer-dependency checks for every package with `--legacy-peer-deps`. Remove the override once NexPrime publishes Angular 22 support.
 
 ### Responsive design
 

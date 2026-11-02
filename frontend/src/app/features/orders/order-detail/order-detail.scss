@@ -12,7 +12,6 @@
   color: var(--bb-success);
   border-radius: var(--bb-radius-lg);
   padding: var(--bb-space-4) var(--bb-space-5);
-  margin-bottom: var(--bb-space-5);
 
   mat-icon {
     width: 48px;
@@ -96,63 +95,32 @@
 }
 
 .journey {
-  list-style: none;
-  margin: 0 0 var(--bb-space-3);
-  padding: 0;
+  display: block;
+  margin-bottom: var(--bb-space-3);
+}
 
-  li {
-    position: relative;
-    display: grid;
-    grid-template-columns: 24px 1fr auto;
-    align-items: center;
-    gap: var(--bb-space-3);
-    padding: var(--bb-space-2) 0;
+.placed-confetti {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--bb-radius-lg);
+  margin-bottom: var(--bb-space-5);
 
-    // Connector line between dots
-    &:not(:last-child)::after {
-      content: '';
+  // Self-contained positioning for NexPrime's confetti canvas. NexPrime's global
+  // theme.css sets the same rules, but if it ever fails to load an unpositioned
+  // canvas grows with every resize (ResizeObserver loop) and freezes the page.
+  ::ng-deep {
+    .np-effect__canvas {
       position: absolute;
-      left: 11px;
-      top: calc(50% + 12px);
-      height: calc(100% - 24px);
-      width: 2px;
-      background: var(--bb-border);
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
     }
-    &.done:not(:last-child)::after {
-      background: var(--bb-success);
+    .np-effect__content {
+      position: relative;
     }
-  }
-
-  .dot {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 2px solid var(--bb-border);
-    display: grid;
-    place-items: center;
-    background: var(--bb-surface);
-
-    mat-icon {
-      width: 16px;
-      height: 16px;
-      font-size: 16px;
-      color: #fff;
-    }
-  }
-
-  .done .dot {
-    background: var(--bb-success);
-    border-color: var(--bb-success);
-  }
-  .current .dot {
-    border-color: var(--bb-amber-600);
-    box-shadow: 0 0 0 4px var(--bb-amber-100);
-  }
-  .current .label {
-    font-weight: 800;
-  }
-  .todo .label {
-    color: var(--bb-ink-muted);
   }
 }
 

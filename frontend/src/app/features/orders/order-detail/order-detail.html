@@ -11,13 +11,15 @@
     </bb-empty-state>
   } @else if (order(); as o) {
     @if (placed()) {
-      <div class="placed" role="status">
-        <mat-icon aria-hidden="true">check_circle</mat-icon>
-        <div>
-          <h1>Order placed!</h1>
-          <p>{{ o.restaurantSnapshot.name }} will confirm it shortly. Pay {{ o.pricing.totalPaise | inr }} on delivery.</p>
+      <np-confetti trigger="manual" [count]="140" class="placed-confetti">
+        <div class="placed" role="status">
+          <mat-icon aria-hidden="true">check_circle</mat-icon>
+          <div>
+            <h1>Order placed!</h1>
+            <p>{{ o.restaurantSnapshot.name }} will confirm it shortly. Pay {{ o.pricing.totalPaise | inr }} on delivery.</p>
+          </div>
         </div>
-      </div>
+      </np-confetti>
     }
 
     <header class="head">
@@ -39,24 +41,7 @@
               <span>This order was {{ o.status }}.</span>
             </div>
           } @else {
-            <ol class="journey">
-              @for (step of steps(); track step.status) {
-                <li class="{{ step.state }}">
-                  <span class="dot" aria-hidden="true">
-                    @if (step.state === 'done') {
-                      <mat-icon>check</mat-icon>
-                    }
-                  </span>
-                  <span class="label">{{ step.label }}</span>
-                  @if (step.at) {
-                    <time class="bb-muted">{{ step.at | date: 'shortTime' }}</time>
-                  }
-                  @if (step.state === 'current') {
-                    <span class="bb-sr-only">(current step)</span>
-                  }
-                </li>
-              }
-            </ol>
+            <np-timeline [value]="timeline()" [activeIndex]="activeStep()" variant="default" class="journey" />
             <p class="bb-muted small">Live status updates and rider tracking are being rolled out.</p>
           }
         </section>

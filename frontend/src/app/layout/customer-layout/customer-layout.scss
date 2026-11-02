@@ -236,3 +236,11 @@
     }
   }
 }
+
+// Keep the back-to-top button above the bottom tab bar on phones/tablets.
+.scroll-top {
+  @include bp.below-desktop {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    right: 16px;
+  }
+}

@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
+import { AnimateOnScrollComponent } from 'nexprime';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { CatalogService } from '../../../core/services/catalog.service';
@@ -15,7 +16,7 @@ import { FoodCategory, Restaurant } from '../../../shared/models/catalog.models'
 
 @Component({
   selector: 'bb-home',
-  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatIconModule, RestaurantCard],
+  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatIconModule, RestaurantCard, AnimateOnScrollComponent],
   templateUrl: './home.html',
   styleUrl: './home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
