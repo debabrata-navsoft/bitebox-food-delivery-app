@@ -46,6 +46,7 @@
     label="Password"
     type="password"
     icon="lock"
+    placeholder="••••••••"
     autocomplete="new-password"
     hint="At least 8 characters, with a letter and a number"
     [error]="shownError(form.password)"
@@ -55,6 +56,7 @@
     label="Confirm password"
     type="password"
     icon="lock"
+    placeholder="••••••••"
     autocomplete="new-password"
     [error]="shownError(form.confirmPassword)"
   />
@@ -72,10 +74,4 @@
 
 <footer class="bb-form-footer">
   <span>Already have an account? <a [routerLink]="meta().login">Sign in</a></span>
-  @if (role() === 'customer') {
-    <span>
-      Own a restaurant? <a routerLink="/restaurant/register">Partner with us</a> &middot; Want to ride?
-      <a routerLink="/delivery/register">Join as a rider</a>
-    </span>
-  }
 </footer>

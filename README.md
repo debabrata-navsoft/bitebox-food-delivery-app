@@ -59,12 +59,14 @@ SEED_PASSWORD='Choose-a-dev-pass1' npm run seed
 # rerun safely any time; add `-- --reset-passwords` to reset the seed users' passwords
 ```
 
-| Role | Email | Sign-in page |
-|------|-------|--------------|
-| Admin | `admin@bitebox.test` | `/admin/login` |
-| Customer | `customer@bitebox.test` | `/login` |
-| Restaurant | `restaurant@bitebox.test` | `/restaurant/login` |
-| Delivery | `rider@bitebox.test` | `/delivery/login` |
+| Role | Email |
+|------|-------|
+| Admin | `admin@bitebox.test` |
+| Customer | `customer@bitebox.test` |
+| Restaurant | `restaurant@bitebox.test` |
+| Delivery | `rider@bitebox.test` |
+
+Every role signs in on the same page, **`/login`**, and lands in its own panel (`/admin`, `/restaurant`, `/delivery`, or the customer site). The old addresses `/admin/login`, `/restaurant/login` and `/delivery/login` redirect there. Sign-up stays separate: `/register` for customers, `/restaurant/register` for restaurants, `/delivery/register` for riders.
 
 All four accounts use your `SEED_PASSWORD`. **They are for development only.** The script refuses to run when `NODE_ENV=production`.
 
@@ -279,9 +281,9 @@ How it works:
 
 
 **Try the whole flow locally** (four browser profiles, or normal plus private windows):
-1. Rider (`/delivery/login`): go online. This needs a **precise location**. On a desktop without GPS, set one in Chrome DevTools → More tools → Sensors → Location (for example latitude `12.9729`, longitude `77.6412`, next to the seeded restaurant).
+1. Rider (sign in at `/login`): go online. This needs a **precise location**. On a desktop without GPS, set one in Chrome DevTools → More tools → Sensors → Location (for example latitude `12.9729`, longitude `77.6412`, next to the seeded restaurant).
 2. Customer: order from *Spice Route Kitchen*.
-3. Restaurant (`/restaurant/orders`): Accept → Start preparing → Ready for pickup.
+3. Restaurant (sign in at `/login`, then Orders): Accept → Start preparing → Ready for pickup.
 4. Rider: accept the request, then Picked up → Start delivery → Delivered.
 5. Customer: the order page shows each step and the rider's details. Admin: `/admin/orders` and `/admin/delivery-partners`.
 

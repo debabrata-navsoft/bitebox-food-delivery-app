@@ -4,7 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { User } from '../../../shared/models/user.models';
-import { Login, safeReturnUrl } from './login';
+import { Login, landingFor, safeReturnUrl } from './login';
 
 const admin: User = {
   id: 'a1',
@@ -29,8 +29,7 @@ describe('Login', () => {
     }).compileComponents();
     navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     fixture = TestBed.createComponent(Login);
-    fixture.componentRef.setInput('portal', 'admin');
-    fixture.componentRef.setInput('heading', 'Admin sign in');
+    fixture.componentRef.setInput('heading', 'Sign in');
     await fixture.whenStable();
   });
 
@@ -47,8 +46,8 @@ describe('Login', () => {
     await fixture.whenStable();
   };
 
-  it('renders the portal heading', () => {
-    expect(el().querySelector('h1')?.textContent).toContain('Admin sign in');
+  it('renders the heading', () => {
+    expect(el().querySelector('h1')?.textContent).toContain('Sign in');
   });
 
   it('does not call the API when the form is invalid', async () => {
@@ -57,11 +56,11 @@ describe('Login', () => {
     expect(el().textContent).toContain('Email is required');
   });
 
-  it('signs in with the portal role and redirects to the role home', async () => {
+  it("signs in any role (no portal) and lands on that role's home", async () => {
     login.mockReturnValue(of(admin));
     fill('admin@bitebox.test', 'Secret123');
     await submit();
-    expect(login).toHaveBeenCalledWith({ email: 'admin@bitebox.test', password: 'Secret123', portal: 'admin' });
+    expect(login).toHaveBeenCalledWith({ email: 'admin@bitebox.test', password: 'Secret123' });
     expect(navigate).toHaveBeenCalledWith('/admin');
   });
 
@@ -83,4 +82,18 @@ describe('safeReturnUrl', () => {
     'rejects %s',
     (url) => expect(safeReturnUrl(url)).toBeNull(),
   );
+});
+
+describe('landingFor', () => {
+  it("follows a return URL inside the account's own area", () => {
+    expect(landingFor('admin', '/admin/users')).toBe('/admin/users');
+    expect(landingFor('restaurant', '/restaurant/orders')).toBe('/restaurant/orders');
+    expect(landingFor('customer', '/orders/abc')).toBe('/orders/abc');
+  });
+  it('ignores return URLs for another panel and goes home instead', () => {
+    expect(landingFor('customer', '/admin/users')).toBe('/');
+    expect(landingFor('delivery', '/restaurant/orders')).toBe('/delivery');
+    expect(landingFor('restaurant', '/checkout')).toBe('/restaurant');
+    expect(landingFor('admin', 'https://evil.example')).toBe('/admin');
+  });
 });

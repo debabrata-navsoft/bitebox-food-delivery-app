@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
@@ -35,10 +35,14 @@ describe('app routes', () => {
     expect(el.textContent).toContain('How BiteBox works');
   });
 
-  it('renders the shared login page for each portal', async () => {
+  it('has one sign-in page; the old per-role addresses redirect to it', async () => {
     expect((await visit('/login')).textContent).toContain('Sign in');
-    expect((await visit('/admin/login')).textContent).toContain('Admin sign in');
-    expect((await visit('/delivery/login')).textContent).toContain('Delivery partner sign in');
+    for (const old of ['/admin/login', '/restaurant/login', '/delivery/login']) {
+      await visit(old);
+      expect(TestBed.inject(Router).url).toBe('/login');
+    }
+    await visit('/restaurant/login?returnUrl=%2Frestaurant%2Forders');
+    expect(TestBed.inject(Router).url).toBe('/login?returnUrl=%2Frestaurant%2Forders');
   });
 
   it('falls back to the 404 page for unknown URLs', async () => {

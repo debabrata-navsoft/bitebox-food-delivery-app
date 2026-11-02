@@ -44,19 +44,20 @@ export interface ChangePasswordRequest {
 }
 
 /** Per-role metadata used by routing, layouts and auth pages. */
+/** Every role signs in on the same page (/login); sign-up stays separate per role. */
 export const ROLE_META: Record<Role, { label: string; home: string; login: string; register?: string }> = {
   customer: { label: 'Customer', home: '/', login: '/login', register: '/register' },
-  admin: { label: 'Admin', home: '/admin', login: '/admin/login' },
+  admin: { label: 'Admin', home: '/admin', login: '/login' },
   restaurant: {
     label: 'Restaurant partner',
     home: '/restaurant',
-    login: '/restaurant/login',
+    login: '/login',
     register: '/restaurant/register',
   },
   delivery: {
     label: 'Delivery partner',
     home: '/delivery',
-    login: '/delivery/login',
+    login: '/login',
     register: '/delivery/register',
   },
 };

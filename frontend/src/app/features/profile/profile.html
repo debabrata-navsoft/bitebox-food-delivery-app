@@ -79,6 +79,7 @@
             [formField]="passwordForm.currentPassword"
             label="Current password"
             type="password"
+            placeholder="••••••••"
             autocomplete="current-password"
             [error]="shownError(passwordForm.currentPassword)"
           />
@@ -87,6 +88,7 @@
               [formField]="passwordForm.newPassword"
               label="New password"
               type="password"
+              placeholder="••••••••"
               hint="At least 8 characters, with a letter and a number"
               autocomplete="new-password"
               [error]="shownError(passwordForm.newPassword)"
@@ -95,6 +97,7 @@
               [formField]="passwordForm.confirmPassword"
               label="Confirm new password"
               type="password"
+              placeholder="••••••••"
               autocomplete="new-password"
               [error]="shownError(passwordForm.confirmPassword)"
             />

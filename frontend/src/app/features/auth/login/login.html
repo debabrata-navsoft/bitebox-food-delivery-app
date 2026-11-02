@@ -1,9 +1,6 @@
 <header class="bb-form-heading">
-  @if (portal() !== 'customer') {
-    <span class="bb-eyebrow">{{ meta().label }}</span>
-  }
   <h1>{{ heading() }}</h1>
-  <p>Welcome back! Enter your details to continue.</p>
+  <p>Welcome back! Customers, restaurant partners and riders all sign in here.</p>
 </header>
 
 @if (reason() === 'expired') {
@@ -41,6 +38,7 @@
     label="Password"
     type="password"
     icon="lock"
+    placeholder="••••••••"
     autocomplete="current-password"
     [error]="shownError(form.password)"
   />
@@ -58,15 +56,5 @@
 </form>
 
 <footer class="bb-form-footer">
-  @if (meta().register) {
-    <span>New to BiteBox? <a [routerLink]="meta().register">Create an account</a></span>
-  }
-  @if (portal() !== 'admin') {
-    <span>
-      Signing in as a
-      @for (other of otherPortals(); track other.link; let last = $last) {
-        <a [routerLink]="other.link">{{ other.label.toLowerCase() }}</a>{{ last ? '?' : ' or ' }}
-      }
-    </span>
-  }
+  <span>New to BiteBox? <a routerLink="/register">Create an account</a></span>
 </footer>

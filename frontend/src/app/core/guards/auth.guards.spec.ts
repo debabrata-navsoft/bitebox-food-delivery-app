@@ -41,7 +41,7 @@ describe('auth guards', () => {
 
   describe('roleGuard', () => {
     it('sends signed-out users to that role’s login page with a returnUrl', async () => {
-      expect(serialize(await run(roleGuard('admin')))).toBe('/admin/login?returnUrl=%2Fadmin%2Fusers');
+      expect(serialize(await run(roleGuard('admin')))).toBe('/login?returnUrl=%2Fadmin%2Fusers');
     });
 
     it('allows a user with a permitted role', async () => {
