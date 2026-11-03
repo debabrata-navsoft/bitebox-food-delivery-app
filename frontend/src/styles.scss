@@ -260,10 +260,22 @@ img {
   overflow: hidden;
 }
 
-// Dialog actions: "Cancel" (a text button) matches the 44px primary action beside it.
+// Dialog actions: "Cancel" (a text button) is outlined and as tall as the primary action beside it.
 .mat-mdc-dialog-actions .mat-mdc-button-base {
   --mat-button-text-container-height: 44px;
-  --mat-button-text-horizontal-padding: 16px;
+  --mat-button-text-horizontal-padding: 18px;
+
+  &.mat-mdc-button {
+    border: 1px solid var(--bb-border);
+  }
+}
+
+// A textarea with a character counter: its error shares the counter's line (error left, "0 / 500" right).
+np-textarea:has(.count) + bb-field-error {
+  display: block;
+  margin-top: -20px;
+  padding-right: 72px;
+  min-height: 20px;
 }
 
 .mat-mdc-form-field {
