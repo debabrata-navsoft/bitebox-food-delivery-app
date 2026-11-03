@@ -3,6 +3,7 @@ import { createApp } from "./app.js";
 import { connectDB, disconnectDB } from "./config/db.js";
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
+import { Order } from "./models/order.model.js";
 import { startDispatchLoop } from "./services/dispatch.service.js";
 import { attachRealtime } from "./sockets/index.js";
 
@@ -17,6 +18,12 @@ async function start() {
   } catch (error) {
     logger.fatal({ err: error }, "Could not connect to MongoDB");
     process.exit(1);
+  }
+  // Orders from before online payments went to the restaurant when placed (idempotent; new orders always have the field).
+  try {
+    await Order.updateMany({ submittedAt: { $exists: false } }, [{ $set: { submittedAt: "$createdAt" } }], { updatePipeline: true });
+  } catch (err) {
+    logger.error({ err }, "Could not backfill order submittedAt");
   }
   server.listen(env.port, () => logger.info(`BiteBox API listening on http://localhost:${env.port} (docs: /api/docs)`));
   // Offer timeouts, re-dispatch of waiting orders, auto-reject of unanswered orders.

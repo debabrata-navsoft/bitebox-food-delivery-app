@@ -10,7 +10,7 @@ import { OrderService } from '../../../core/services/checkout-api.service';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { Pagination } from '../../../shared/models/api.models';
-import { ORDER_STATUS_LABEL, Order } from '../../../shared/models/checkout.models';
+import { Order, customerStatusLabel } from '../../../shared/models/checkout.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 
 @Component({
@@ -22,7 +22,7 @@ import { InrPipe } from '../../../shared/pipes/money.pipes';
 })
 export class OrderList {
   private readonly service = inject(OrderService);
-  protected readonly statusLabel = ORDER_STATUS_LABEL;
+  protected readonly statusLabel = customerStatusLabel;
   protected readonly orders = signal<Order[]>([]);
   protected readonly pagination = signal<Pagination | null>(null);
   protected readonly loading = signal(true);

@@ -47,7 +47,7 @@
               >
             </div>
             <span class="amount">{{ o.pricing.totalPaise | inr }}</span>
-            <bb-order-status-chip [status]="o.status" />
+            <bb-order-status-chip [status]="o.status" [label]="statusLabel(o)" />
             <mat-icon class="chev" aria-hidden="true">chevron_right</mat-icon>
           </button>
         </li>

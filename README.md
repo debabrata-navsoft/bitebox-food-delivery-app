@@ -8,7 +8,7 @@ BiteBox is a full-stack food delivery app with four role-based panels: **Custome
 | Backend  | Node.js + Express 5 (JavaScript ES modules), Mongoose 9, JWT, bcrypt, express-validator, pino, Swagger UI |
 | Database | MongoDB (local or Atlas) |
 
-> **Status: Phase 5 complete (maps and live tracking).** Phases 1–4 delivered authentication, restaurants and menus, cart and checkout, and order management and delivery. Payments, notifications and reports (Phase 6) come next.
+> **Status: Phase 6 complete (payments, notifications and reports).** Phases 1–5 delivered authentication, restaurants and menus, cart and checkout, order management and delivery, and maps with live tracking.
 
 ---
 
@@ -41,6 +41,10 @@ npm install
 | `SMTP_*`, `EMAIL_FROM` | Sends password-reset emails. **If left empty in development, the reset link is printed to the backend console.** |
 | `SEED_PASSWORD` | Development-only password for the seeded sample accounts |
 | `UPLOAD_DIR`, `PUBLIC_BASE_URL` | Where uploaded images are stored (default `uploads/`, git-ignored) and the API origin used in their URLs |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | Optional. When both are set, checkout offers real online payment through Razorpay (use test-mode keys in development). |
+| `RAZORPAY_WEBHOOK_SECRET` | Optional. Secret of the Razorpay webhook pointed at `/api/v1/payments/webhooks/razorpay`. |
+| `PAYMENTS_MOCK` | `true` (default outside production) offers the **simulated test payment** when Razorpay is not configured. It is never available in production. |
+| `REPORT_TIMEZONE` | Time zone used to group reports and earnings by day (default `Asia/Kolkata`) |
 
 `.env` is git-ignored. Never commit real credentials.
 
@@ -202,7 +206,7 @@ The cart page shows anything that blocks checkout: unavailable dishes, a closed 
 - **Coupon limits:** coupon use is reserved with an atomic conditional increment, which enforces the total usage limit. A redemption record enforces the per-customer limit.
 - **All-or-nothing writes:** everything runs in a MongoDB transaction when the server supports it (Atlas, replica sets). On a single local `mongod`, each completed step is undone if a later step fails. Both paths are covered by tests.
 - **Snapshots:** orders store copies of item names and prices, the delivery address, and the restaurant details, so later menu edits never change a past order.
-- **Payment:** Cash on Delivery creates a `Payment` record with status `pending`. Online payment arrives in Phase 6.
+- **Payment:** every order gets a `Payment` record. Cash on delivery is marked paid on delivery; online payment is described in Phase 6 below.
 
 **Delivery location.**
 - The header has a **location picker**: use your current GPS location, search for a place, or pick a saved address.
@@ -328,6 +332,40 @@ How it works:
 - a stale rider position
 
 **Testing GPS on a desktop:** Chrome DevTools → More tools → **Sensors** → Location. To watch the customer's map move, change the rider's location in small steps (for example 0.0007° of latitude, about 75 m, every few seconds). Large jumps are rejected as impossible.
+
+### Phase 6: payments, notifications and reports
+
+**Payment methods** (`GET /api/v1/payments/methods` lists what checkout offers):
+- **Cash on delivery:** always available. The restaurant receives the order at once; it is marked paid when delivered.
+- **Razorpay:** offered when `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` are set.
+- **Test payment (simulated):** offered in development when Razorpay is not configured. It is clearly labelled, moves no money, and lets you choose success or failure. It is disabled in production.
+
+**Online payment flow.**
+1. `POST /orders` with `paymentMethod: "online"` creates the order in *awaiting payment* and returns `checkout` (the gateway order id, amount and public key id).
+2. The browser opens the gateway. For Razorpay it then calls `POST /payments/orders/:id/confirm`. The server verifies the HMAC signature, then fetches the payment from Razorpay and checks its status, order id and amount before marking it paid.
+3. The webhook (`POST /payments/webhooks/razorpay`, verified by `X-Razorpay-Signature` over the raw body) is the backstop when the browser closes early. Each event id is applied once.
+4. Only once paid does the restaurant see the order and get notified. Its response timer starts then.
+- **Closing or failing the payment page** at checkout cancels the attempt at once (`POST /payments/orders/:id/abandon`), puts the dishes back in the cart and keeps the customer on checkout. Nothing is ordered, and the attempt is not listed in "My orders".
+- **Retry:** if the browser closed mid-payment, the order page offers "Pay ₹…" (`POST /payments/orders/:id/start`).
+- **Expiry (backstop):** unpaid online orders that were never abandoned are cancelled after 15 minutes (`paymentWindowMinutes` in `config/dispatch.js`).
+- **Refunds:** cancelling or rejecting a paid online order refunds it through the gateway. A payment that arrives after the order expired is refunded too. If a refund fails, the admin **Payments** page flags it with **Retry refund** (`POST /admin/payments/:id/refund`).
+
+**Notifications** (`/api/v1/notifications`, every role):
+- Stored per user, kept for 90 days, and pushed live over Socket.IO (`notification:new`).
+- The bell in every header shows the unread count. Opening an item marks it read and follows its link; **Mark all read** clears the count.
+- Customers hear about confirmation, rejection, rider assignment, pickup, delivery and cancellation. Restaurants hear about new (paid or cash) orders and cancellations. Riders hear when an order they carry is cancelled.
+
+**Earnings and settlement.**
+- When an order is delivered, its split is fixed in `order.settlement` (`config/earnings.js`):
+  - restaurant: food value after discounts, minus a 15% commission
+  - rider: ₹20 per delivery plus ₹6 per started kilometre (straight-line)
+  - platform: the rest of the order total
+- **Restaurant panel → Earnings** (`GET /my/restaurant/earnings?days=`) and **Delivery panel → Earnings** (`GET /delivery/earnings?days=`) show totals, a daily chart and recent orders for 7, 30 or 90 days.
+
+**Admin reports** (`GET /admin/reports?days=`):
+- **Reports page:** delivered value (GMV), platform revenue, delivered and cancelled orders, average order, refunds and new customers; daily charts of value and of orders placed vs delivered; payment mix; order outcomes; top restaurants.
+- **Dashboard:** shows the last 30 days at a glance.
+- **Scope:** figures cover orders *placed* in the period; values count delivered orders only. Every chart has a "Show as table" view.
 
 ### Folder layout
 

@@ -1,0 +1,8 @@
+@if (icon(); as i) {
+  <mat-icon class="icon" aria-hidden="true">{{ i }}</mat-icon>
+}
+<span class="label">{{ label() }}</span>
+<strong class="value">{{ value() }}</strong>
+@if (hint()) {
+  <span class="hint">{{ hint() }}</span>
+}

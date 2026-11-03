@@ -24,6 +24,12 @@ export const RESTAURANT_ROUTES: Routes = [
     loadComponent: () => import('./menu/restaurant-menu').then((m) => m.RestaurantMenu),
   },
   {
+    path: 'earnings',
+    title: 'Earnings | BiteBox Restaurant',
+    data: { scope: 'restaurant' },
+    loadComponent: () => import('../earnings/earnings-page').then((m) => m.EarningsPage),
+  },
+  {
     path: 'profile',
     title: 'Profile | BiteBox Restaurant',
     loadComponent: () => import('../profile/profile').then((m) => m.Profile),

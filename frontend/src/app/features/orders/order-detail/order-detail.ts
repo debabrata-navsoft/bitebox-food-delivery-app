@@ -18,9 +18,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { EMPTY, catchError } from 'rxjs';
+import { EMPTY, catchError, firstValueFrom } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
 import { OrderService } from '../../../core/services/checkout-api.service';
+import { PaymentService } from '../../../core/services/payment.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { etaMinutes } from '../../../core/services/routing.service';
 import { liveRefresh } from '../../../core/services/poll';
@@ -35,7 +36,10 @@ import {
   Order,
   OrderStatus,
   VEHICLE_LABEL,
+  awaitingPayment,
+  customerStatusLabel,
 } from '../../../shared/models/checkout.models';
+import { PAYMENT_STATUS_LABEL, PROVIDER_LABEL } from '../../../shared/models/payment.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 
 /** The happy-path journey shown as a progress tracker, with a NexPrime icon per step. */
@@ -74,6 +78,7 @@ export class OrderDetail {
   private readonly orders = inject(OrderService);
   private readonly dialog = inject(MatDialog);
   private readonly notify = inject(NotificationService);
+  private readonly payments = inject(PaymentService);
 
   readonly id = input.required<string>();
   /** ?placed=1 right after checkout. */
@@ -83,7 +88,15 @@ export class OrderDetail {
   protected readonly loading = signal(true);
   protected readonly notFound = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly statusLabel = ORDER_STATUS_LABEL;
+  protected readonly statusLabel = customerStatusLabel;
+  protected readonly paymentLabel = PAYMENT_STATUS_LABEL;
+  protected readonly providerLabel = PROVIDER_LABEL;
+  protected readonly paying = signal(false);
+  /** Online order not paid yet: the restaurant has not received it. */
+  protected readonly awaitingPayment = computed(() => {
+    const o = this.order();
+    return !!o && awaitingPayment(o);
+  });
   protected readonly vehicleLabel = VEHICLE_LABEL;
   protected readonly cancelling = signal(false);
   /** Rider position, routes and estimates for the live map. */
@@ -141,7 +154,8 @@ export class OrderDetail {
       {
         pollMs: 60_000,
         debounceMs: 0,
-        when: (e) => e.id === this.id() && e.status !== this.order()?.status,
+        // While unpaid, the payment confirmation arrives as an event with the same status.
+        when: (e) => e.id === this.id() && (e.status !== this.order()?.status || this.awaitingPayment()),
       },
     )
       .pipe(takeUntilDestroyed())
@@ -181,6 +195,22 @@ export class OrderDetail {
     });
   }
 
+  /** Opens the gateway again for an unpaid online order. */
+  protected async payNow(order: Order): Promise<void> {
+    this.paying.set(true);
+    try {
+      const session = await firstValueFrom(this.payments.start(order.id));
+      const payment = await this.payments.pay(order.id, session);
+      if (payment?.status === 'paid') this.notify.success(`Paid. ${order.restaurantSnapshot.name} has your order.`);
+      else if (payment?.status === 'failed') this.notify.error(payment.failureReason ?? 'The payment failed. You can try again.');
+    } catch (err: unknown) {
+      this.notify.error(errorMessage(err, 'Payment could not be completed.'));
+    } finally {
+      this.paying.set(false);
+      this.load(order.id, true);
+    }
+  }
+
   /** Confetti burst once, right after checkout (?placed=1). */
   private celebrate(): void {
     if (!this.placed() || this.celebrated) return;
@@ -189,8 +219,9 @@ export class OrderDetail {
     setTimeout(() => this.confetti()?.fire(), 150);
   }
 
-  protected load(id = this.id()): void {
-    this.loading.set(true);
+  /** `quiet` keeps the page on screen while re-reading (after a payment). */
+  protected load(id = this.id(), quiet = false): void {
+    if (!quiet) this.loading.set(true);
     this.error.set(null);
     this.orders.get(id).subscribe({
       next: (order) => {

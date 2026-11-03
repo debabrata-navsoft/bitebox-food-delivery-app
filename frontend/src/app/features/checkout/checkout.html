@@ -97,12 +97,27 @@
         <!-- Payment -->
         <section class="bb-card" aria-labelledby="payment-title">
           <h2 id="payment-title">Payment</h2>
-          <mat-radio-group value="cod" aria-labelledby="payment-title">
+          <mat-radio-group class="pay-methods" [value]="paymentMethod()" (change)="paymentMethod.set($event.value)" aria-labelledby="payment-title">
             <mat-radio-button value="cod">
               <span class="pay-option"><mat-icon aria-hidden="true">payments</mat-icon> Cash on delivery</span>
             </mat-radio-button>
+            @if (onlineAvailable()) {
+              <mat-radio-button value="online">
+                <span class="pay-option">
+                  <mat-icon aria-hidden="true">credit_card</mat-icon>
+                  <span class="pay-text">
+                    <span>Pay online</span>
+                    <span class="pay-hint">UPI, cards, netbanking & wallets</span>
+                  </span>
+                </span>
+              </mat-radio-button>
+            }
           </mat-radio-group>
-          <p class="bb-muted small">Pay the rider in cash or by UPI at your door. Online payment is coming soon.</p>
+          @if (paymentMethod() === 'online') {
+            <p class="bb-muted small">You'll pay securely on the next screen. The restaurant receives your order once payment succeeds.</p>
+          } @else {
+            <p class="bb-muted small">Pay the rider in cash or by UPI at your door.</p>
+          }
         </section>
       </div>
 
@@ -184,7 +199,7 @@
           @if (placing()) {
             <mat-progress-spinner mode="indeterminate" diameter="20" aria-label="Placing order" />
           } @else {
-            Place order · {{ q.pricing.totalPaise | inr }}
+            {{ paymentMethod() === 'online' ? 'Place order & pay' : 'Place order' }} · {{ q.pricing.totalPaise | inr }}
           }
         </button>
         @if (!selectedAddressId()) {

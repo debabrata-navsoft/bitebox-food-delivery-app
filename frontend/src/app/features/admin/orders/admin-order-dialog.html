@@ -1,7 +1,7 @@
 @if (order(); as o) {
   <h2 mat-dialog-title class="title">
     <span>{{ o.orderNumber }}</span>
-    <bb-order-status-chip [status]="o.status" />
+    <bb-order-status-chip [status]="o.status" [label]="customerLabel(o)" />
   </h2>
   <mat-dialog-content class="content">
     @if (o.cancellation; as c) {
@@ -79,7 +79,14 @@
 
     <div class="cols two">
       <section>
-        <h3>Bill · Cash on delivery ({{ o.paymentStatus }})</h3>
+        <h3>
+          Bill ·
+          @if (o.payment; as p) {
+            {{ providerLabel[p.provider] }} ({{ paymentLabel[p.status] }}){{ p.failureReason ? ' · ' + p.failureReason : '' }}
+          } @else {
+            Cash on delivery ({{ o.paymentStatus }})
+          }
+        </h3>
         <bb-bill-summary [pricing]="o.pricing" [couponCode]="o.coupon?.code" [distanceMeters]="o.distanceMeters" />
       </section>
       <section>

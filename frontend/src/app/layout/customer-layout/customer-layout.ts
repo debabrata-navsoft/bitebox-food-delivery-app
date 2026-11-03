@@ -11,6 +11,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { CartService } from '../../core/services/cart.service';
 import { DeliveryLocationService } from '../../core/services/delivery-location.service';
 import { LocationPickerDialog } from '../../shared/components/location-picker/location-picker-dialog';
+import { NotificationBell } from '../../shared/components/notification-bell/notification-bell';
 import { BrandLogo } from '../../shared/components/brand-logo/brand-logo';
 import { ROLE_META } from '../../shared/models/user.models';
 
@@ -31,6 +32,7 @@ import { ROLE_META } from '../../shared/models/user.models';
     MatMenuModule,
     BrandLogo,
     ScrollTopComponent,
+    NotificationBell,
   ],
   templateUrl: './customer-layout.html',
   styleUrl: './customer-layout.scss',

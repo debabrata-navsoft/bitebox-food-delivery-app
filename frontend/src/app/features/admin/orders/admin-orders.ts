@@ -12,7 +12,7 @@ import { OrderStatusChip } from '../../../shared/components/order-status-chip/or
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { pagedList } from '../../../shared/list/paged-list';
-import { ORDER_STATUS_LABEL, OrderStatus } from '../../../shared/models/checkout.models';
+import { ORDER_STATUS_LABEL, OrderStatus, customerStatusLabel } from '../../../shared/models/checkout.models';
 import { ACTIVE_STATUSES } from '../../../shared/models/order-management.models';
 import { ItemCountPipe } from '../../../shared/pipes/item-count.pipe';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
@@ -40,6 +40,8 @@ import { openAdminOrder } from './admin-order-dialog';
 export class AdminOrders {
   private readonly api = inject(AdminOrdersService);
   private readonly dialog = inject(MatDialog);
+  /** "Awaiting payment" for unpaid online orders. */
+  protected readonly statusLabel = customerStatusLabel;
 
   protected readonly filterModel = signal({ status: 'active', search: '' });
   protected readonly filters = form(this.filterModel);

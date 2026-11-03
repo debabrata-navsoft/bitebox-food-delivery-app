@@ -11,6 +11,7 @@ import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { filter, map } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { NotificationBell } from '../../shared/components/notification-bell/notification-bell';
 import { BrandLogo } from '../../shared/components/brand-logo/brand-logo';
 
 export interface NavItem {
@@ -42,6 +43,7 @@ export interface NavItem {
     MatSidenavModule,
     MatToolbarModule,
     BrandLogo,
+    NotificationBell,
   ],
   templateUrl: './panel-shell.html',
   styleUrl: './panel-shell.scss',

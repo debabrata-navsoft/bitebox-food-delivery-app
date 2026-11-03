@@ -2,6 +2,7 @@ import * as addressService from "../services/address.service.js";
 import * as cartService from "../services/cart.service.js";
 import * as couponService from "../services/coupon.service.js";
 import * as orderService from "../services/order.service.js";
+import * as payments from "../services/payments/payment.service.js";
 import { respond, sendSuccess } from "../utils/api-response.js";
 import { parsePagination } from "../utils/pagination.js";
 
@@ -35,7 +36,12 @@ export const deleteAddress = respond(async (req) => {
 // Orders
 export async function placeOrder(req, res) {
   const { order, created } = await orderService.placeOrder(req.user._id, req.body, req.get("idempotency-key"));
-  sendSuccess(res, { statusCode: created ? 201 : 200, message: created ? "Order placed" : "Order already placed", data: { order } });
+  // Online: hand back the gateway checkout details right away (the order page can retry with "Pay now").
+  const checkout =
+    order.paymentMethod === "online" && order.paymentStatus !== "paid"
+      ? await payments.startPayment(req.user._id, order._id).catch(() => null)
+      : null;
+  sendSuccess(res, { statusCode: created ? 201 : 200, message: created ? "Order placed" : "Order already placed", data: { order, checkout } });
 }
 export const listMyOrders = respond((req) => orderService.listMine(req.user._id, parsePagination(req.validatedQuery, { defaultLimit: 10 })));
 

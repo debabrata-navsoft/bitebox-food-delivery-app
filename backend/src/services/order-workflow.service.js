@@ -1,9 +1,12 @@
 import { logger } from "../config/logger.js";
 import { Coupon, CouponRedemption } from "../models/coupon.model.js";
 import { DeliveryPartner } from "../models/delivery-partner.model.js";
-import { ACTIVE_STATUSES, FINAL_STATUSES, ORDER_STATUS, Order, PAYMENT_STATUS, Payment } from "../models/order.model.js";
+import { ACTIVE_STATUSES, FINAL_STATUSES, ORDER_STATUS, Order, PAYMENT_METHODS, PAYMENT_STATUS, Payment } from "../models/order.model.js";
 import { emitOrderUpdated } from "../sockets/events.js";
 import { ApiError } from "../utils/api-error.js";
+import { settlementFor } from "./earnings.service.js";
+import { notifyStatusChange } from "./order-notifications.js";
+import { settleCancelledPayment } from "./payments/payment.service.js";
 
 const S = ORDER_STATUS;
 
@@ -26,7 +29,7 @@ const A = ACTORS;
  * - an admin can take a stuck order back from its rider (assigned -> ready_for_pickup).
  */
 export const TRANSITIONS = Object.freeze({
-  [S.PENDING]: { [S.CONFIRMED]: [A.RESTAURANT], [S.REJECTED]: [A.RESTAURANT, A.SYSTEM], [S.CANCELLED]: [A.CUSTOMER, A.ADMIN] },
+  [S.PENDING]: { [S.CONFIRMED]: [A.RESTAURANT], [S.REJECTED]: [A.RESTAURANT, A.SYSTEM], [S.CANCELLED]: [A.CUSTOMER, A.ADMIN, A.SYSTEM] },
   [S.CONFIRMED]: { [S.PREPARING]: [A.RESTAURANT], [S.CANCELLED]: [A.ADMIN] },
   [S.PREPARING]: { [S.READY_FOR_PICKUP]: [A.RESTAURANT], [S.CANCELLED]: [A.ADMIN] },
   [S.READY_FOR_PICKUP]: { [S.ASSIGNED]: [A.DELIVERY], [S.CANCELLED]: [A.ADMIN] },
@@ -79,10 +82,13 @@ export async function transition(orderId, { to, actor, userId = null, scope = {}
   const now = new Date();
   const set = { status: to, ...update.$set };
   if (to === S.REJECTED || to === S.CANCELLED) {
+    // Payment is closed or refunded afterwards (settleCancelledPayment).
     set.cancellation = { by: actor, reason: reason || undefined, at: now };
-    set.paymentStatus = PAYMENT_STATUS.CANCELLED;
   }
-  if (to === S.DELIVERED) set.paymentStatus = PAYMENT_STATUS.PAID; // cash collected on delivery
+  if (to === S.DELIVERED) {
+    set.paymentStatus = PAYMENT_STATUS.PAID; // cash collected on delivery (online orders are already paid)
+    set.settlement = { ...settlementFor(order), at: now };
+  }
 
   const updated = await Order.findOneAndUpdate(
     { _id: order._id, status: order.status, ...scope, ...where },
@@ -102,6 +108,7 @@ export async function transition(orderId, { to, actor, userId = null, scope = {}
 
   await afterTransition(updated);
   emitOrderUpdated(updated, { alsoNotify: [order.offer?.partner, order.deliveryPartner] });
+  await notifyStatusChange(updated, actor, order);
   logger.info({ orderId: updated.id, from: order.status, to, actor }, "Order status changed");
   return { order: updated, changed: true };
 }
@@ -113,11 +120,14 @@ export async function transition(orderId, { to, actor, userId = null, scope = {}
 async function afterTransition(order) {
   const tasks = [];
   if (order.status === S.REJECTED || order.status === S.CANCELLED) {
-    tasks.push(releaseCoupon(order), settlePayment(order, PAYMENT_STATUS.CANCELLED), releaseRider(order));
+    tasks.push(releaseCoupon(order), settleCancelledPayment(order), releaseRider(order));
   }
   if (order.status === S.DELIVERED) {
     tasks.push(
-      settlePayment(order, PAYMENT_STATUS.PAID),
+      Payment.updateOne(
+        { order: order._id, method: PAYMENT_METHODS.COD, status: PAYMENT_STATUS.PENDING },
+        { $set: { status: PAYMENT_STATUS.PAID, paidAt: new Date() } },
+      ),
       DeliveryPartner.updateOne(
         { user: order.deliveryPartner, activeOrder: order._id },
         { $set: { activeOrder: null }, $inc: { completedDeliveries: 1 } },
@@ -135,11 +145,6 @@ async function releaseCoupon(order) {
   if (!order.coupon?.code) return;
   const redemption = await CouponRedemption.findOneAndDelete({ order: order._id });
   if (redemption) await Coupon.updateOne({ _id: redemption.coupon, usedCount: { $gt: 0 } }, { $inc: { usedCount: -1 } });
-}
-
-/** Cash on delivery: pending until delivered (paid) or cancelled. Never overwrites a final state. */
-function settlePayment(order, status) {
-  return Payment.updateOne({ order: order._id, status: PAYMENT_STATUS.PENDING }, { $set: { status } });
 }
 
 /** Frees whichever rider was offered or carrying this order. */

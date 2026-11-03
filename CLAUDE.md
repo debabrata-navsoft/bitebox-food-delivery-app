@@ -63,6 +63,12 @@ npx ng build --configuration development   # fast type/template check (prefix NG
   - **Locks:** `DeliveryPartner.currentOffer` and `activeOrder` are compare-and-set locks.
   - **Sweep:** `sweep()` runs on an interval started in `server.js`. It expires offers, re-dispatches waiting orders and auto-rejects unanswered ones. Tests call `sweep(now)` directly.
   - **Tunables:** in `config/dispatch.js`.
+- **Payments:** `services/payments/`. `payment.service.js` owns every payment state change (start, confirm, webhook, mark paid/failed, refunds).
+  - **Providers:** COD, Razorpay (`razorpay.provider.js`, only when both keys are set) or the simulated `mock.provider.js` (never in production). Swap in tests with `useOnlineProvider`.
+  - **Visibility:** online orders have `submittedAt: null` until paid. Restaurant queries require `submittedAt`, and the response timer starts from it. The sweep cancels unpaid orders after `paymentWindowMinutes`.
+  - **Settlement:** on delivery the workflow stores `order.settlement` from `earnings.service.js#settlementFor` (`config/earnings.js`). Earnings and admin reports (`reports.service.js`) aggregate it, grouping days in `env.reportTimezone`.
+  - **Webhook:** mounted in `app.js` *before* `express.json`, because the signature covers the raw body.
+- **Notifications:** `notification.service.js#notify(userIds, {...})` stores the notification and emits `notification:new`; it is best-effort and never throws. Status-change messages live in `order-notifications.js`, called from the workflow.
 - **What each role sees:** `services/order-management.service.js` defines `presentForRestaurant` (no customer phone or exact address), `presentForRider` (full address only once carrying the order) and `presentWithRider` (customer and admin).
 - **Realtime (Socket.IO):** `sockets/`, attached to the HTTP server in `server.js`.
   - **Handshake:** the client sends `auth.token` (the access token).
@@ -97,6 +103,9 @@ npx ng build --configuration development   # fast type/template check (prefix NG
   - Confirm-then-act flows use `confirmed(dialog, data)` from `shared/components/confirm-dialog/confirm-dialog.ts`.
   - **Toggles:** bind `np-toggle [checked]` to the source state and update that state optimistically, restoring it on failure. Never call `toggle.checked.set()`: it re-emits `checkedChange`.
   - `core/services/restaurant-order-board.ts` is a shared ref-counted store for the restaurant panel.
+  - `core/services/inbox.service.ts` backs the header bell (`shared/components/notification-bell`). `NotificationService` is the snackbar helper, not this.
+  - **Payments:** `core/services/payment.service.ts#pay(orderId, session)` opens Razorpay checkout.js or the `MockPaymentDialog` and reports the result. Use `awaitingPayment()` / `customerStatusLabel()` from `checkout.models.ts` for unpaid online orders.
+  - **Charts:** `shared/components/daily-chart` (np-chart plus a "Show as table" view, palette in `SERIES_COLORS`) and `shared/components/stat-tile`.
 - **Forms:**
   - Use `form(model, schema, { submission: { action } })` with `<form [formRoot]>` and `[formField]`.
   - Reusable rules are in `shared/forms/form-rules.ts`. `shownError()` shows an error once the field is touched, and `serverErrors()` maps the API's 422 `{ field: 'a.b' }` errors onto fields.

@@ -1,0 +1,75 @@
+:host {
+  display: inline-flex;
+}
+
+.badge-host {
+  display: inline-flex;
+  line-height: 0;
+}
+
+// The menu panel renders in an overlay outside this host, so it is scoped by its panel class.
+::ng-deep .bb-inbox-menu {
+  width: min(360px, 92vw);
+  max-width: none !important;
+  max-height: min(70vh, 520px);
+
+  .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px 4px 16px;
+    min-height: 44px;
+  }
+
+  .item {
+    height: auto;
+    min-height: 56px;
+    padding-block: 8px;
+    white-space: normal;
+    line-height: 1.35;
+
+    .mat-mdc-menu-item-text {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      width: 100%;
+    }
+  }
+
+  .text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .title {
+    font-weight: 600;
+  }
+
+  .unread .title {
+    font-weight: 700;
+  }
+
+  .body,
+  .time {
+    font-size: 0.82rem;
+    color: var(--bb-ink-muted);
+  }
+
+  .dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    margin-top: 6px;
+    border-radius: 50%;
+    background: var(--bb-danger);
+  }
+
+  .empty {
+    margin: 0;
+    padding: 16px;
+    color: var(--bb-ink-muted);
+  }
+}

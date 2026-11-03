@@ -68,6 +68,7 @@ export function confirmed(
     .open<ConfirmDialog, ConfirmDialogData, true | string>(ConfirmDialog, { data, width })
     .afterClosed()
     .pipe(
-      filter((result): result is true | string => result === true || typeof result === 'string'),
+      // Only an explicit confirmation counts: a bare `mat-dialog-close` closes with '' (not undefined).
+      filter((result): result is true | string => result === true || (typeof result === 'string' && result.length > 0)),
     );
 }

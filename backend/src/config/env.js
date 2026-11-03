@@ -86,6 +86,18 @@ export const env = Object.freeze({
     countryCodes: process.env.GEOCODER_COUNTRY_CODES ?? "in",
   },
 
+  // Online payments (see services/payments). Razorpay is used only when both keys are set;
+  // otherwise the clearly-labelled mock provider is offered outside production.
+  payments: {
+    razorpayKeyId: process.env.RAZORPAY_KEY_ID || "",
+    razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || "",
+    razorpayWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || "",
+    mockEnabled: !isProduction && process.env.PAYMENTS_MOCK !== "false",
+  },
+
+  // Days in reports and earnings are counted in this time zone.
+  reportTimezone: process.env.REPORT_TIMEZONE || "Asia/Kolkata",
+
   // Road routes and travel-time estimates (OSRM by default; see routing.service.js).
   routing: {
     url: process.env.ROUTING_URL || "https://router.project-osrm.org",

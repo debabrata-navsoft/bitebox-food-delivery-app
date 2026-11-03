@@ -215,6 +215,16 @@ img {
   }
 }
 
+// Report pages: the period picker beside the title, and dimmed numbers while a new period loads.
+.bb-period {
+  width: 180px !important; // beats the 100% NexPrime field rule below
+}
+
+.bb-dim {
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
 .bb-full-width {
   width: 100%;
 }
@@ -243,6 +253,17 @@ img {
   --mat-button-text-container-shape: 12px;
   --mat-button-filled-container-height: 44px;
   --mat-button-outlined-container-height: 44px;
+}
+
+// The simulated payment page: edge-to-edge header, clipped to the dialog's rounded corners.
+.bb-gateway-dialog .mat-mdc-dialog-surface {
+  overflow: hidden;
+}
+
+// Dialog actions: "Cancel" (a text button) matches the 44px primary action beside it.
+.mat-mdc-dialog-actions .mat-mdc-button-base {
+  --mat-button-text-container-height: 44px;
+  --mat-button-text-horizontal-padding: 16px;
 }
 
 .mat-mdc-form-field {

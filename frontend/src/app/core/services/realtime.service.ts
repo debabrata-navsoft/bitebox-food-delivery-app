@@ -5,6 +5,7 @@ import { Socket, io } from 'socket.io-client';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../auth/auth.service';
 import { OrderStatus } from '../../shared/models/checkout.models';
+import { AppNotification } from '../../shared/models/payment.models';
 
 /** What the server pushes when an order changes. Details are re-read over the REST API. */
 export interface OrderEvent {
@@ -51,11 +52,14 @@ export class RealtimeService {
   /** The current socket (null while signed out), so listeners can attach whenever it appears. */
   private readonly socket$ = new BehaviorSubject<Socket | null>(null);
   private readonly orders = new Subject<OrderEvent>();
+  private readonly inbox = new Subject<AppNotification>();
   private retries = 0;
 
   /** True while the live connection is up. */
   readonly connected = signal(false);
   readonly orderUpdates$: Observable<OrderEvent> = this.orders.asObservable();
+  /** New in-app notifications for this account. */
+  readonly notifications$: Observable<AppNotification> = this.inbox.asObservable();
 
   constructor() {
     if (!this.browser) return;
@@ -82,6 +86,7 @@ export class RealtimeService {
       this.connected.set(true);
     });
     socket.on('order:updated', (event: OrderEvent) => this.orders.next(event));
+    socket.on('notification:new', (n: AppNotification) => this.inbox.next(n));
     // The server closes the connection when the access token expires: get a new one and come back.
     socket.on('disconnect', (reason) => {
       this.connected.set(false);

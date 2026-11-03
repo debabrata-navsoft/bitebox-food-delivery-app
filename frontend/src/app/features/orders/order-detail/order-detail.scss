@@ -158,9 +158,21 @@
   .pay-pending {
     color: #7a4b00;
   }
-  .pay-paid {
+  .pay-paid,
+  .pay-refunded {
     color: var(--bb-success);
   }
+  .pay-failed {
+    color: var(--bb-danger);
+  }
+}
+
+.simulated {
+  margin: 4px 0 0;
+}
+
+.pay-due {
+  margin-bottom: var(--bb-space-3);
 }
 
 address {

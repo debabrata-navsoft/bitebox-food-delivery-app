@@ -16,7 +16,15 @@
           <mat-icon aria-hidden="true">check_circle</mat-icon>
           <div>
             <h1>Order placed!</h1>
-            <p>{{ o.restaurantSnapshot.name }} will confirm it shortly. Pay {{ o.pricing.totalPaise | inr }} on delivery.</p>
+            <p>
+              @if (awaitingPayment()) {
+                Complete the payment of {{ o.pricing.totalPaise | inr }} to send it to {{ o.restaurantSnapshot.name }}.
+              } @else if (o.paymentMethod === 'online') {
+                Paid {{ o.pricing.totalPaise | inr }} online. {{ o.restaurantSnapshot.name }} will confirm it shortly.
+              } @else {
+                {{ o.restaurantSnapshot.name }} will confirm it shortly. Pay {{ o.pricing.totalPaise | inr }} on delivery.
+              }
+            </p>
           </div>
         </div>
       </np-confetti>
@@ -28,12 +36,12 @@
         <h2>Order {{ o.orderNumber }}</h2>
         <p class="bb-muted">Placed {{ o.createdAt | date: 'medium' }}</p>
       </div>
-      <span class="status status-{{ o.status }}">{{ statusLabel[o.status] }}</span>
+      <span class="status status-{{ o.status }}">{{ statusLabel(o) }}</span>
     </header>
 
     <div class="layout">
       <div class="main">
-        @if (!ended() && o.status !== 'delivered') {
+        @if (!ended() && o.status !== 'delivered' && !awaitingPayment()) {
           @let t = tracking;
           <section class="bb-card" aria-labelledby="track-title">
             <h3 id="track-title">Live tracking</h3>
@@ -94,7 +102,10 @@
               <span>
                 @switch (o.cancellation?.by) {
                   @case ('customer') { You cancelled this order. }
-                  @case ('system') { The restaurant did not respond in time, so the order was cancelled. }
+                  @case ('system') {
+                    @if (o.submittedAt) { The restaurant did not respond in time, so the order was cancelled. }
+                    @else { The payment was not completed in time, so the order was cancelled. }
+                  }
                   @case ('admin') { BiteBox support cancelled this order. }
                   @default { {{ o.restaurantSnapshot.name }} could not take this order. }
                 }
@@ -103,8 +114,31 @@
                     <br /><strong>Reason:</strong> {{ c.reason }}
                   }
                 }
-                You have not been charged.
+                @switch (o.payment?.status) {
+                  @case ('refunded') { Your payment of {{ o.pricing.totalPaise | inr }} has been refunded. }
+                  @case ('paid') { Your refund of {{ o.pricing.totalPaise | inr }} is being processed. }
+                  @default { You have not been charged. }
+                }
               </span>
+            </div>
+          } @else if (awaitingPayment()) {
+            <div class="bb-alert info pay-due" role="status">
+              <mat-icon aria-hidden="true">{{ o.paymentStatus === 'failed' ? 'error' : 'schedule' }}</mat-icon>
+              <span>
+                @if (o.paymentStatus === 'failed') {
+                  The payment did not go through{{ o.payment?.failureReason ? ': ' + o.payment.failureReason : '' }}. Try again to place the order.
+                } @else {
+                  Waiting for your payment. {{ o.restaurantSnapshot.name }} receives the order once it succeeds.
+                }
+                Unpaid orders are cancelled after 15 minutes.
+              </span>
+            </div>
+            <div class="pending-row">
+              <button mat-flat-button class="bb-btn-accent" [disabled]="paying() || cancelling()" (click)="payNow(o)">
+                <mat-icon>{{ o.payment?.simulated ? 'science' : 'lock' }}</mat-icon>
+                {{ paying() ? 'Opening payment…' : 'Pay ' + (o.pricing.totalPaise | inr) }}
+              </button>
+              <button mat-stroked-button class="cancel" [disabled]="paying() || cancelling()" (click)="cancel(o)">Cancel order</button>
             </div>
           } @else {
             <np-timeline [value]="timeline()" [activeIndex]="activeStep()" variant="default" class="journey" />
@@ -142,8 +176,15 @@
           <bb-bill-summary [pricing]="o.pricing" [couponCode]="o.coupon?.code" [distanceMeters]="o.distanceMeters" />
           <p class="payment">
             <mat-icon aria-hidden="true">payments</mat-icon>
-            Cash on delivery · <span class="pay-{{ o.paymentStatus }}">{{ o.paymentStatus | titlecase }}</span>
+            @if (o.payment; as p) {
+              {{ providerLabel[p.provider] }} · <span class="pay-{{ p.status }}">{{ paymentLabel[p.status] }}</span>
+            } @else {
+              Cash on delivery · <span class="pay-{{ o.paymentStatus }}">{{ o.paymentStatus | titlecase }}</span>
+            }
           </p>
+          @if (o.payment?.simulated) {
+            <p class="bb-muted small simulated">Test payment: no real money was charged.</p>
+          }
         </section>
         @if (o.rider; as r) {
           <section class="bb-card rider" aria-labelledby="rider-title">

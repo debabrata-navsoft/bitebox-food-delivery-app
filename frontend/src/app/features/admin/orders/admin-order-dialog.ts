@@ -25,8 +25,10 @@ import {
   ORDER_STATUS_LABEL,
   OrderStatus,
   VEHICLE_LABEL,
+  customerStatusLabel,
 } from '../../../shared/models/checkout.models';
 import { AdminOrder, TRACKED_STATUSES } from '../../../shared/models/order-management.models';
+import { PAYMENT_STATUS_LABEL, PROVIDER_LABEL } from '../../../shared/models/payment.models';
 
 /** Statuses from which an admin may cancel (mirrors the backend transition table). */
 const CANCELLABLE: OrderStatus[] = [
@@ -67,6 +69,9 @@ export class AdminOrderDialog {
   protected readonly changed = signal(false);
   protected readonly statusLabel = ORDER_STATUS_LABEL;
   protected readonly vehicleLabel = VEHICLE_LABEL;
+  protected readonly paymentLabel = PAYMENT_STATUS_LABEL;
+  protected readonly customerLabel = customerStatusLabel;
+  protected readonly providerLabel = PROVIDER_LABEL;
   /** Live rider position for orders on the road. */
   protected readonly tracking = deliveryTracking(this.order);
   protected readonly onTheRoad = (o: AdminOrder) => TRACKED_STATUSES.includes(o.status);

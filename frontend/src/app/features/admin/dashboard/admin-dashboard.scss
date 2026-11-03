@@ -142,3 +142,19 @@
   background: var(--bb-amber);
   color: var(--bb-plum);
 }
+
+.business {
+  margin-bottom: var(--bb-space-5);
+}
+
+.business-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--bb-space-2);
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+}

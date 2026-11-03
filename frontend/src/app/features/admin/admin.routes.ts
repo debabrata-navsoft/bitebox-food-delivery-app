@@ -13,6 +13,16 @@ export const ADMIN_ROUTES: Routes = [
     loadComponent: () => import('./orders/admin-orders').then((m) => m.AdminOrders),
   },
   {
+    path: 'reports',
+    title: 'Reports | BiteBox Admin',
+    loadComponent: () => import('./reports/admin-reports').then((m) => m.AdminReports),
+  },
+  {
+    path: 'payments',
+    title: 'Payments | BiteBox Admin',
+    loadComponent: () => import('./payments/admin-payments').then((m) => m.AdminPayments),
+  },
+  {
     path: 'delivery-partners',
     title: 'Delivery partners | BiteBox Admin',
     loadComponent: () => import('./delivery-partners/admin-delivery-partners').then((m) => m.AdminDeliveryPartners),

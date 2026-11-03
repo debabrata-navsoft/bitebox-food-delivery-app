@@ -44,3 +44,10 @@ export function emitOrderUpdated(order, { alsoNotify = [] } = {}) {
     logger.error({ err: error }, "Realtime emit failed");
   }
 }
+
+/** Pushes an event to specific users' rooms (e.g. a new in-app notification). */
+export function emitToUsers(userIds, event, payload) {
+  if (!io) return;
+  const targets = [...new Set(userIds.filter(Boolean).map((id) => rooms.user(id)))];
+  if (targets.length) io.to(targets).emit(event, payload);
+}
