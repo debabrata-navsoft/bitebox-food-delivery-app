@@ -28,6 +28,7 @@ import {
   customerStatusLabel,
 } from '../../../shared/models/checkout.models';
 import { AdminOrder, TRACKED_STATUSES } from '../../../shared/models/order-management.models';
+import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { PAYMENT_STATUS_LABEL, PROVIDER_LABEL } from '../../../shared/models/payment.models';
 
 /** Statuses from which an admin may cancel (mirrors the backend transition table). */
@@ -52,6 +53,7 @@ const CANCELLABLE: OrderStatus[] = [
     OrderStatusChip,
     TrackingMap,
     VegBadge,
+    InrPipe,
   ],
   templateUrl: './admin-order-dialog.html',
   styleUrl: './admin-order-dialog.scss',
@@ -149,7 +151,7 @@ export class AdminOrderDialog {
 export function openAdminOrder(dialog: MatDialog, orderId: string): Observable<true> {
   const config: MatDialogConfig<string> = {
     data: orderId,
-    width: '720px',
+    width: '820px',
     maxWidth: '95vw',
     autoFocus: 'dialog',
   };
