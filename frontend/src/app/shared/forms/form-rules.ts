@@ -18,6 +18,11 @@ import {
 
 export const PHONE_PATTERN = /^\+?[0-9]{10,15}$/;
 export const POSTAL_CODE_PATTERN = /^[A-Za-z0-9 -]{3,10}$/;
+/**
+ * name@domain.tld: Angular's email() accepts "me@in" (no dot in the domain), which the
+ * server rejects. This also needs a real top-level domain such as .com or .in.
+ */
+export const EMAIL_PATTERN = /^[^\s@]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/;
 
 /** Required text with a length range, e.g. names. */
 export function requiredText(
@@ -37,6 +42,7 @@ export function emailRules(
 ): void {
   if (!optional) required(path, { message: 'Email is required' });
   email(path, { message: 'Enter a valid email address' });
+  pattern(path, EMAIL_PATTERN, { message: 'Enter a valid email address, e.g. name@gmail.com' });
   maxLength(path, 254, { message: 'Email is too long' });
 }
 

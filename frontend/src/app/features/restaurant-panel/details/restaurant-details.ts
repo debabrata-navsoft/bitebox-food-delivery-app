@@ -3,7 +3,6 @@ import {
   FormRoot,
   TreeValidationResult,
   applyEach,
-  email,
   form,
   maxLength,
   pattern,
@@ -31,6 +30,7 @@ import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { serverErrors, shownError } from '../../../shared/forms/form-errors';
 import {
   POSTAL_CODE_PATTERN,
+  emailRules,
   numberRange,
   phoneRules,
   requiredText,
@@ -128,7 +128,7 @@ export class RestaurantDetails {
       );
       applyEach(path.cuisines, (cuisine) => requiredText(cuisine, 'Cuisine', { min: 2, max: 40 }));
       phoneRules(path.phone);
-      email(path.email, { message: 'Enter a valid email address' });
+      emailRules(path.email, { optional: true });
       requiredText(path.address.line1, 'Street address', { min: 3, max: 120 });
       maxLength(path.address.line2, 120, { message: 'Keep it under 120 characters' });
       maxLength(path.address.area, 80, { message: 'Keep it under 80 characters' });
