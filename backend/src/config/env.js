@@ -12,6 +12,8 @@ if (process.env.NODE_ENV !== "test") dotenv.config({ quiet: true });
 const nodeEnv = process.env.NODE_ENV || "development";
 const isTest = nodeEnv === "test";
 const isProduction = nodeEnv === "production";
+/** Cloudinary keys are ignored in tests, so a test run never uploads anywhere. */
+const cloudKey = (name) => (isTest ? "" : process.env[name] || "");
 
 function required(name, fallbackForTest) {
   const value = process.env[name];
@@ -73,7 +75,15 @@ export const env = Object.freeze({
     from: process.env.EMAIL_FROM || "BiteBox <no-reply@bitebox.local>",
   },
 
-  // Where uploaded images are stored, and the public origin used in their URLs.
+  // Image hosting: Cloudinary when all three keys are set (never in tests), otherwise local disk.
+  cloudinary: {
+    cloudName: cloudKey("CLOUDINARY_CLOUD_NAME"),
+    apiKey: cloudKey("CLOUDINARY_API_KEY"),
+    apiSecret: cloudKey("CLOUDINARY_API_SECRET"),
+    folder: process.env.CLOUDINARY_FOLDER || "bitebox",
+  },
+
+  // Local-disk fallback: where uploaded images are stored, and the public origin used in their URLs.
   uploadDir: process.env.UPLOAD_DIR || (isTest ? "tmp/test-uploads" : "uploads"),
   publicBaseUrl: (process.env.PUBLIC_BASE_URL || `http://localhost:${integer("PORT", 5000)}`).replace(/\/$/, ""),
 

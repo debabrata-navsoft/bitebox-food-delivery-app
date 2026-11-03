@@ -1,6 +1,7 @@
 import http from "node:http";
 import { createApp } from "./app.js";
 import { connectDB, disconnectDB } from "./config/db.js";
+import { cloudinaryEnabled } from "./config/cloudinary.js";
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
 import { Order } from "./models/order.model.js";
@@ -26,6 +27,7 @@ async function start() {
     logger.error({ err }, "Could not backfill order submittedAt");
   }
   server.listen(env.port, () => logger.info(`BiteBox API listening on http://localhost:${env.port} (docs: /api/docs)`));
+  logger.info(`Images are stored ${cloudinaryEnabled ? "in Cloudinary" : "on local disk (set CLOUDINARY_* to use Cloudinary)"}`);
   // Offer timeouts, re-dispatch of waiting orders, auto-reject of unanswered orders.
   stopDispatch = startDispatchLoop();
 }

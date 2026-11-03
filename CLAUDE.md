@@ -80,6 +80,7 @@ npx ng build --configuration development   # fast type/template check (prefix NG
   - `services/geocoding.service.js` (Nominatim) and `services/routing.service.js` (OSRM, swappable via `useProvider`) share `utils/upstream.js#createUpstream`. It caches, merges identical in-flight requests and serialises about 1 request per second. Both fail with a 503 that the UI degrades on.
   - GeoJSON helpers (`toPoint`, `fromPoint`, `haversineMeters`) are in `utils/geo.js`. Order status groups (`ACTIVE_STATUSES`, `FINAL_STATUSES`, `TRACKED_STATUSES`) live next to `ORDER_STATUS` in `models/order.model.js`.
   - Distances are labelled as straight-line (fees and dispatch), road estimate (routing) or live GPS. Keep those distinctions.
+- **Images:** `services/upload.service.js#saveImage` checks the real file type from its bytes, then stores it in Cloudinary (`config/cloudinary.js`, when the `CLOUDINARY_*` keys are set) or on local disk. Tests always use local disk; swap storage with `useImageStorage`.
 - **API docs:** OpenAPI fragments in `docs/openapi.*.js`, merged in `docs/openapi.js`. Update them when routes change.
 
 ## Frontend architecture (`frontend/src/app`)

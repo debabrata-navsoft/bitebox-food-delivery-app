@@ -411,6 +411,38 @@ describe("Restaurants, categories and food", () => {
       assert.equal(served.headers["x-content-type-options"], "nosniff");
     });
 
+    it("uploads to Cloudinary when it is configured", async () => {
+      const { default: cloudinary } = await import("../src/config/cloudinary.js");
+      const { cloudinaryStorage, useImageStorage } = await import("../src/services/upload.service.js");
+      const sent = [];
+      const realStream = cloudinary.uploader.upload_stream;
+      cloudinary.config({ cloud_name: "demo-cloud" });
+      cloudinary.uploader.upload_stream = (options, done) => ({
+        end: (buffer) => {
+          sent.push({ options, bytes: buffer.length });
+          done(null, { public_id: "bitebox/abc123", version: 1700000000 });
+        },
+      });
+      const restore = useImageStorage(cloudinaryStorage);
+      try {
+        const { token } = await createAndLogin(app, "restaurant");
+        const res = await request(app).post("/api/v1/uploads/images").set(auth(token)).attach("image", PNG, "photo.png");
+        assert.equal(res.status, 201, JSON.stringify(res.body));
+        assert.equal(res.body.data.url, "https://res.cloudinary.com/demo-cloud/image/upload/f_auto,q_auto/v1700000000/bitebox/abc123");
+        assert.equal(sent.length, 1);
+        assert.equal(sent[0].options.folder, env.cloudinary.folder);
+        assert.equal(sent[0].bytes, PNG.length, "the checked bytes are what gets uploaded");
+
+        cloudinary.uploader.upload_stream = (_options, done) => ({ end: () => done(new Error("network down")) });
+        const failed = await request(app).post("/api/v1/uploads/images").set(auth(token)).attach("image", PNG, "photo.png");
+        assert.equal(failed.status, 503);
+        assert.equal(failed.body.error.code, "UPLOAD_FAILED");
+      } finally {
+        restore();
+        cloudinary.uploader.upload_stream = realStream;
+      }
+    });
+
     it("rejects files whose bytes are not an image, whatever their name", async () => {
       const { token } = await createAndLogin(app, "admin");
       const res = await request(app)

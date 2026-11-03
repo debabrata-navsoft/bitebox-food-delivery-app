@@ -40,7 +40,8 @@ npm install
 | `JWT_EXPIRES_IN` | Access-token lifetime. Keep it short (default `15m`); the refresh cookie renews it. |
 | `SMTP_*`, `EMAIL_FROM` | Sends password-reset emails. **If left empty in development, the reset link is printed to the backend console.** |
 | `SEED_PASSWORD` | Development-only password for the seeded sample accounts |
-| `UPLOAD_DIR`, `PUBLIC_BASE_URL` | Where uploaded images are stored (default `uploads/`, git-ignored) and the API origin used in their URLs |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | When all three are set, uploaded images are stored in **Cloudinary** (folder `CLOUDINARY_FOLDER`, default `bitebox`) and served with automatic format and quality. Recommended for production. |
+| `UPLOAD_DIR`, `PUBLIC_BASE_URL` | Fallback without Cloudinary: images are saved on local disk (default `uploads/`, git-ignored) and the API origin used in their URLs |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | Optional. When both are set, checkout offers real online payment through Razorpay (use test-mode keys in development). |
 | `RAZORPAY_WEBHOOK_SECRET` | Optional. Secret of the Razorpay webhook pointed at `/api/v1/payments/webhooks/razorpay`. |
 | `PAYMENTS_MOCK` | `true` (default outside production) offers the **simulated test payment** when Razorpay is not configured. It is never available in production. |

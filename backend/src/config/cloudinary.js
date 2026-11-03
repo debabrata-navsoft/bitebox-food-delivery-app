@@ -1,12 +1,11 @@
 import { v2 as cloudinary } from "cloudinary";
-import dotenv from "dotenv";
+import { env } from "./env.js";
 
-dotenv.config();
+const { cloudName, apiKey, apiSecret } = env.cloudinary;
 
-cloudinary.config({
-	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-	api_key: process.env.CLOUDINARY_API_KEY,
-	api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+/** True when all Cloudinary keys are set: uploaded images are then stored there. */
+export const cloudinaryEnabled = Boolean(cloudName && apiKey && apiSecret);
+
+if (cloudinaryEnabled) cloudinary.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret, secure: true });
 
 export default cloudinary;
