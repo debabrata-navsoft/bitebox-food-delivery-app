@@ -149,6 +149,33 @@ describe("Restaurants, categories and food", () => {
       assert.equal(pub.body.data.restaurant.owner, undefined, "owner id is not exposed publicly");
     });
 
+    it("notifies admins of applications and owners of the decision", async () => {
+      const { Notification } = await import("../src/models/notification.model.js");
+      const admin = await createAndLogin(app, "admin");
+      const owner = await registerUser(app, { role: "restaurant" });
+      const inbox = async (token) => (await request(app).get("/api/v1/notifications").set(auth(token))).body.data.items;
+
+      const created = await request(app).post("/api/v1/my/restaurant").set(auth(owner.token)).send(restaurantPayload());
+      const id = created.body.data.restaurant.id;
+      const [applied] = await inbox(admin.token);
+      assert.match(applied.title, /New restaurant application: Tandoor Tales/);
+      assert.equal(applied.link, `/admin/restaurants/${id}`);
+
+      await request(app).patch(`/api/v1/admin/restaurants/${id}/status`).set(auth(admin.token)).send({ status: "rejected", reason: "Blurry photos" });
+      const [rejected] = await inbox(owner.token);
+      assert.equal(rejected.type, "restaurant.rejected");
+      assert.match(rejected.body, /Reason: Blurry photos/);
+
+      await request(app).patch("/api/v1/my/restaurant").set(auth(owner.token)).send({ description: "New photos uploaded" });
+      assert.match((await inbox(admin.token))[0].title, /Restaurant resubmitted/);
+
+      await request(app).patch(`/api/v1/admin/restaurants/${id}/status`).set(auth(admin.token)).send({ status: "approved" });
+      const [approved] = await inbox(owner.token);
+      assert.equal(approved.title, "Your restaurant is live");
+      assert.equal(approved.link, "/restaurant");
+      assert.equal(await Notification.countDocuments({ type: "restaurant.review" }), 2, "admins: application + resubmission");
+    });
+
     it("requires a reason to reject and enforces the transition table", async () => {
       const id = await pendingRestaurant();
       const { token } = await createAndLogin(app, "admin");

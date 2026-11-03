@@ -6,6 +6,7 @@ import { USER_STATUS } from "../models/user.model.js";
 import { emitOrderUpdated } from "../sockets/events.js";
 import { ApiError } from "../utils/api-error.js";
 import { ACTORS, transition } from "./order-workflow.service.js";
+import { notifyOffer } from "./order-notifications.js";
 
 const S = ORDER_STATUS;
 // Riders this close to each other count as equally near; the longest-waiting one goes first.
@@ -64,6 +65,7 @@ export async function dispatch(orderId, now = new Date()) {
     }
     logger.info({ orderId: order.id, rider: String(candidate.user), distanceMeters: Math.round(candidate.distanceMeters) }, "Delivery offered");
     emitOrderUpdated(offered);
+    await notifyOffer(offered, candidate.user);
     return candidate.user;
   }
   return null;

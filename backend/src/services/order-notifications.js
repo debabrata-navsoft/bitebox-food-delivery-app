@@ -1,60 +1,96 @@
 import { ORDER_STATUS } from "../models/order.model.js";
 import { emitOrderUpdated } from "../sockets/events.js";
-import { notify, restaurantOwner } from "./notification.service.js";
+import { notify, notifyAdmins, restaurantOwner } from "./notification.service.js";
+
+/**
+ * Who hears about what, for every order event. Each role gets what concerns it;
+ * admins see all platform activity. Best-effort (see notify): never throws.
+ */
 
 const S = ORDER_STATUS;
+const ref = (order) => `Order ${order.orderNumber}`;
+const rupees = (paise) => `₹${(paise / 100).toFixed(2).replace(/\.00$/, "")}`;
+const dishes = (order) => `${order.items.length} dish${order.items.length === 1 ? "" : "es"}`;
+
+const toCustomer = (order, title, body, type = `order.${order.status}`) =>
+  notify(order.customer, { type, title, body, link: `/orders/${order._id}`, order: order._id });
+const toRestaurant = async (order, title, body, type = `order.${order.status}`) =>
+  notify(await restaurantOwner(order.restaurant), { type, title, body, link: "/restaurant/orders", order: order._id });
+const toRider = (riderId, order, title, body, type = `order.${order.status}`) =>
+  notify(riderId, { type, title, body, link: "/delivery", order: order._id });
+const toAdmins = (order, title, body, { type = `order.${order.status}`, link = "/admin/orders" } = {}) =>
+  notifyAdmins({ type, title, body, link, order: order._id });
 
 /** The order has just reached the restaurant (cash: when placed; online: once paid). */
 export async function notifyNewOrder(order, how) {
   emitOrderUpdated(order); // the restaurant's board lights up
-  await notify(await restaurantOwner(order.restaurant), {
-    type: "order.new",
-    title: `New order ${order.orderNumber}`,
-    body: `${order.items.length} dish${order.items.length === 1 ? "" : "es"} · ${how}`,
-    link: "/restaurant/orders",
-    order: order._id,
-  });
+  const summary = `${dishes(order)} · ${rupees(order.pricing.totalPaise)} · ${how}`;
+  await Promise.all([
+    toRestaurant(order, `New order ${order.orderNumber}`, summary, "order.new"),
+    toCustomer(order, `${ref(order)} placed`, `${order.restaurantSnapshot.name} will confirm it shortly.`, "order.placed"),
+    toAdmins(order, `New order ${order.orderNumber}`, `${order.restaurantSnapshot.name} · ${summary}`, { type: "order.new" }),
+  ]);
 }
 
-/**
- * In-app notifications for an order status change: the customer hears about
- * progress, the restaurant about cancellations, the rider about withdrawn jobs.
- * Best-effort (see notify).
- */
+/** A rider has been offered a delivery (they have a short time to accept). */
+export const notifyOffer = (order, riderId) =>
+  toRider(riderId, order, "New delivery request", `${order.restaurantSnapshot.name} → ${order.deliveryAddress.area || order.deliveryAddress.city}. Accept it soon.`, "order.offer");
+
+/** A paid online order was refunded (or the refund failed and needs an admin). */
+export async function notifyRefund(order, amountPaise, ok) {
+  if (!ok) {
+    return toAdmins(order, `Refund failed for ${order.orderNumber}`, `${rupees(amountPaise)} could not be refunded. Retry it from Payments.`, {
+      type: "payment.refund_failed",
+      link: "/admin/payments",
+    });
+  }
+  await Promise.all([
+    toCustomer(order, `Refund of ${rupees(amountPaise)} processed`, `For ${ref(order)}. It reaches your account in a few working days.`, "payment.refunded"),
+    toAdmins(order, `Refunded ${order.orderNumber}`, rupees(amountPaise), { type: "payment.refunded", link: "/admin/payments" }),
+  ]);
+}
+
+/** In-app notifications for an order status change (`previous` is the order before it). */
 export async function notifyStatusChange(order, actor, previous) {
-  const ref = `Order ${order.orderNumber}`;
-  const customer = (title, body) =>
-    notify(order.customer, { type: `order.${order.status}`, title, body, link: `/orders/${order._id}`, order: order._id });
+  const r = ref(order);
   const reason = order.cancellation?.reason;
+  const restaurantName = order.restaurantSnapshot.name;
 
   switch (order.status) {
     case S.CONFIRMED:
-      return customer(`${ref} accepted`, `${order.restaurantSnapshot.name} is getting your food ready.`);
+      return toCustomer(order, `${r} accepted`, `${restaurantName} is getting your food ready.`);
     case S.REJECTED:
-      return customer(`${ref} could not be accepted`, reason || `${order.restaurantSnapshot.name} could not take this order.`);
+      return Promise.all([
+        toCustomer(order, `${r} could not be accepted`, reason || `${restaurantName} could not take this order.`),
+        toAdmins(order, `${r} rejected`, `${restaurantName}: ${reason || "no reason given"}`),
+      ]);
+    case S.READY_FOR_PICKUP:
+      // An admin took the order back from its rider (it is offered to someone else next).
+      return previous?.deliveryPartner ? toRider(previous.deliveryPartner, order, `${r} reassigned`, "BiteBox support gave it to another rider.") : undefined;
     case S.ASSIGNED:
-      return customer("A rider is on the way to the restaurant", `${ref} has a delivery partner.`);
+      return Promise.all([
+        toCustomer(order, "A rider is on the way to the restaurant", `${r} has a delivery partner.`),
+        toRestaurant(order, `Rider assigned to ${r}`, "Keep the order ready for pickup."),
+      ]);
     case S.PICKED_UP:
-      return customer(`${ref} is on its way`, "Track your rider live on the order page.");
+      return Promise.all([
+        toCustomer(order, `${r} is on its way`, "Track your rider live on the order page."),
+        toRestaurant(order, `${r} picked up`, "The rider has collected it."),
+      ]);
     case S.DELIVERED:
-      return customer(`${ref} delivered`, "Enjoy your meal!");
+      return Promise.all([
+        toCustomer(order, `${r} delivered`, "Enjoy your meal!"),
+        toRestaurant(order, `${r} delivered`, "Earnings are updated."),
+        toAdmins(order, `${r} delivered`, `${restaurantName} · ${rupees(order.pricing.totalPaise)}`),
+      ]);
     case S.CANCELLED: {
-      const tasks = [];
-      if (actor !== "customer") tasks.push(customer(`${ref} cancelled`, reason || "This order was cancelled."));
+      // Unpaid checkout attempts never reached the restaurant: not worth an admin's attention.
+      const tasks = order.submittedAt ? [toAdmins(order, `${r} cancelled`, `By ${actor}${reason ? `: ${reason}` : ""}`)] : [];
+      if (actor !== "customer") tasks.push(toCustomer(order, `${r} cancelled`, reason || "This order was cancelled."));
       if (order.submittedAt && actor !== "restaurant") {
-        tasks.push(
-          notify(await restaurantOwner(order.restaurant), {
-            type: "order.cancelled",
-            title: `${ref} cancelled`,
-            body: actor === "customer" ? "The customer cancelled before you accepted it." : reason,
-            link: "/restaurant/orders",
-            order: order._id,
-          }),
-        );
+        tasks.push(toRestaurant(order, `${r} cancelled`, actor === "customer" ? "The customer cancelled before you accepted it." : reason));
       }
-      if (previous?.deliveryPartner) {
-        tasks.push(notify(previous.deliveryPartner, { type: "order.cancelled", title: `${ref} cancelled`, body: "You no longer need to deliver it.", link: "/delivery", order: order._id }));
-      }
+      if (previous?.deliveryPartner) tasks.push(toRider(previous.deliveryPartner, order, `${r} cancelled`, "You no longer need to deliver it."));
       return Promise.all(tasks);
     }
     default:

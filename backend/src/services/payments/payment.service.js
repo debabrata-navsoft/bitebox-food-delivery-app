@@ -3,7 +3,7 @@ import { logger } from "../../config/logger.js";
 import { ORDER_STATUS, Order, PAYMENT_METHODS, PAYMENT_STATUS, Payment } from "../../models/order.model.js";
 import { ApiError } from "../../utils/api-error.js";
 import { paginationMeta } from "../../utils/pagination.js";
-import { notifyNewOrder } from "../order-notifications.js";
+import { notifyNewOrder, notifyRefund } from "../order-notifications.js";
 import { mockProvider } from "./mock.provider.js";
 import { razorpayFromEnv } from "./razorpay.provider.js";
 
@@ -219,10 +219,12 @@ async function refundIfPaid(order) {
     await Payment.updateOne({ _id: payment._id }, { $set: { status: P.REFUNDED, providerRefundId } });
     await Order.updateOne({ _id: order._id }, { $set: { paymentStatus: P.REFUNDED } });
     logger.info({ orderId: String(order._id) }, "Payment refunded");
+    await notifyRefund(order, payment.amountPaise, true);
   } catch (error) {
     // Leave it paid with the claim released, so an admin (or a retry) can refund it.
     await Payment.updateOne({ _id: payment._id }, { $set: { refundedAt: null, failureReason: "Refund failed; retry from the admin panel" } });
     logger.error({ err: error, orderId: String(order._id) }, "Refund failed");
+    await notifyRefund(order, payment.amountPaise, false);
   }
 }
 
@@ -271,7 +273,7 @@ export async function adminList({ status, method, provider }, pagination) {
 
 /** Retry a refund that failed earlier (paid online, order closed). */
 export async function adminRetryRefund(paymentId) {
-  const payment = await Payment.findById(paymentId).populate("order", "status paymentMethod paymentStatus");
+  const payment = await Payment.findById(paymentId).populate("order", "orderNumber customer status paymentMethod paymentStatus");
   if (!payment) throw ApiError.notFound("Payment not found");
   const closed = [ORDER_STATUS.CANCELLED, ORDER_STATUS.REJECTED].includes(payment.order?.status);
   if (payment.status !== P.PAID || !closed) throw conflict("Only paid payments of cancelled or rejected orders can be refunded", "NOT_REFUNDABLE");

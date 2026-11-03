@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { ToggleComponent } from 'nexprime';
@@ -10,6 +12,7 @@ import {
   MyRestaurantState,
 } from '../../../core/services/my-restaurant.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { RealtimeService } from '../../../core/services/realtime.service';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { StatusBanner } from '../status-banner/status-banner';
 
@@ -31,6 +34,13 @@ export class RestaurantDashboard {
 
   constructor() {
     this.load();
+    // An admin approved, rejected or suspended the restaurant: show the new status at once.
+    inject(RealtimeService)
+      .notifications$.pipe(
+        filter((n) => n.type.startsWith('restaurant.')),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.load());
   }
 
   protected load(): void {

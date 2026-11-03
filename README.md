@@ -355,7 +355,11 @@ How it works:
 **Notifications** (`/api/v1/notifications`, every role):
 - Stored per user, kept for 90 days, and pushed live over Socket.IO (`notification:new`).
 - The bell in every header shows the unread count. Opening an item marks it read and follows its link; **Mark all read** clears the count.
-- Customers hear about confirmation, rejection, rider assignment, pickup, delivery and cancellation. Restaurants hear about new (paid or cash) orders and cancellations. Riders hear when an order they carry is cancelled.
+- **Customers:** order placed, accepted or rejected, rider assigned, picked up, delivered, cancelled, refund processed.
+- **Restaurants:** new orders (cash or paid online), rider assigned, picked up, delivered, cancelled; their restaurant approved, rejected or suspended.
+- **Riders:** new delivery requests, an order they carry cancelled or reassigned.
+- **Admins:** every new order, rejection, cancellation and delivery; refunds and failed refunds; new restaurant applications and resubmissions; new restaurant and delivery partner sign-ups.
+- Defined in `services/order-notifications.js` (orders and payments), `restaurant.service.js` and `auth.service.js`.
 
 **Earnings and settlement.**
 - When an order is delivered, its split is fixed in `order.settlement` (`config/earnings.js`):

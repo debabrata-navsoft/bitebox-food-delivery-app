@@ -1,6 +1,7 @@
 import { logger } from "../config/logger.js";
 import { Notification } from "../models/notification.model.js";
 import { Restaurant } from "../models/restaurant.model.js";
+import { ROLES, USER_STATUS, User } from "../models/user.model.js";
 import { emitToUsers } from "../sockets/events.js";
 import { ApiError } from "../utils/api-error.js";
 import { paginationMeta } from "../utils/pagination.js";
@@ -18,6 +19,12 @@ export async function notify(userIds, { type, title, body, link, order }) {
   } catch (error) {
     logger.error({ err: error, type }, "Could not store notification");
   }
+}
+
+/** Every active admin gets the notification (e.g. a restaurant waiting for review). */
+export async function notifyAdmins(payload) {
+  const admins = await User.find({ role: ROLES.ADMIN, status: USER_STATUS.ACTIVE }).select("_id");
+  await notify(admins.map((a) => a._id), payload);
 }
 
 /** The owner (User id) of a restaurant, for restaurant-facing notifications. */

@@ -269,6 +269,7 @@ describe("payments, notifications and earnings", () => {
   });
 
   it("records the settlement on delivery and reports earnings", async () => {
+    const admin = await createAndLogin(app, "admin");
     const { order } = await placeOrder("cod");
     for (const status of ["confirmed", "preparing", "ready_for_pickup"]) {
       await request(app).patch(`/api/v1/my/restaurant/orders/${order.id}/status`).set(auth(owner.token)).send({ status });
@@ -296,7 +297,6 @@ describe("payments, notifications and earnings", () => {
     const riderEarnings = await request(app).get("/api/v1/delivery/earnings").set(auth(rider.token));
     assert.equal(riderEarnings.body.data.totals.earningsPaise, expected.riderPaise);
 
-    const admin = await createAndLogin(app, "admin");
     const report = await request(app).get("/api/v1/admin/reports?days=7").set(auth(admin.token));
     assert.equal(report.body.data.totals.delivered, 1);
     assert.equal(report.body.data.totals.gmvPaise, saved.pricing.totalPaise);
@@ -309,9 +309,14 @@ describe("payments, notifications and earnings", () => {
     const inbox = await request(app).get("/api/v1/notifications").set(auth(customer.token));
     assert.deepEqual(
       inbox.body.data.items.map((n) => n.type).reverse(),
-      ["order.confirmed", "order.assigned", "order.picked_up", "order.delivered"],
+      ["order.placed", "order.confirmed", "order.assigned", "order.picked_up", "order.delivered"],
     );
-    assert.equal(inbox.body.data.unread, 4);
+    assert.equal(inbox.body.data.unread, 5);
+    // Every other role heard about its part of the order.
+    const types = async (token) => (await request(app).get("/api/v1/notifications").set(auth(token))).body.data.items.map((n) => n.type).reverse();
+    assert.deepEqual(await types(owner.token), ["order.new", "order.assigned", "order.picked_up", "order.delivered"]);
+    assert.deepEqual(await types(rider.token), ["order.offer"]);
+    assert.deepEqual(await types(admin.token), ["order.new", "order.delivered"]);
     await request(app).post("/api/v1/notifications/read-all").set(auth(customer.token));
     assert.equal((await request(app).get("/api/v1/notifications").set(auth(customer.token))).body.data.unread, 0);
     const others = await request(app).patch(`/api/v1/notifications/${inbox.body.data.items[0].id}/read`).set(auth(owner.token));
