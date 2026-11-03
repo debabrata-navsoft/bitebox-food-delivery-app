@@ -24,7 +24,7 @@
   --bb-bg: #f6f3f9;
 
   // Feedback
-  --bb-success: #1f8a4c;
+  --bb-success: #1a7a43; // 5.4:1 on white, 4.8:1 on the pale success tint (WCAG AA)
   --bb-warning: #b26a00;
   --bb-danger: #c62839;
   --bb-info: #2563eb;
@@ -144,6 +144,17 @@ h2 {
   font-weight: 750;
 }
 h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+// The look of a heading level on another level, so headings can follow the page outline
+// (h1 → h2 → h3, for screen readers) without changing how they look.
+.bb-h2 {
+  font-size: clamp(1.3rem, 1.1rem + 0.9vw, 1.75rem);
+  font-weight: 750;
+}
+.bb-h3 {
   font-size: 1.125rem;
   font-weight: 700;
 }
@@ -323,6 +334,23 @@ np-icon[matChipAvatar] {
 .bb-dim {
   opacity: 0.6;
   transition: opacity 0.2s;
+}
+
+// "Skip to content": first thing a keyboard user reaches, shown only when focused.
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background: var(--bb-amber);
+  color: var(--bb-plum);
+  padding: var(--bb-space-2) var(--bb-space-4);
+  font-weight: 700;
+
+  &:focus {
+    left: var(--bb-space-2);
+    top: var(--bb-space-2);
+  }
 }
 
 .bb-full-width {

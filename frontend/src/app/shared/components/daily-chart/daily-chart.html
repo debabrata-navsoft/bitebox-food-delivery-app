@@ -1,6 +1,6 @@
 <figure class="bb-card chart-card">
   <figcaption>
-    <h3>{{ title() }}</h3>
+    <h2 class="bb-h3">{{ title() }}</h2>
     @if (series().length > 1) {
       <ul class="legend" aria-label="Legend">
         @for (d of datasets(); track d.label) {

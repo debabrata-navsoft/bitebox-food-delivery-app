@@ -1,4 +1,5 @@
 import path from "node:path";
+import compression from "compression";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
@@ -37,6 +38,8 @@ export function createApp(options = {}) {
 
   app.use(pinoHttp({ logger, autoLogging: !env.isTest }));
   app.use(helmet());
+  // gzip/brotli for JSON and docs (a reverse proxy may also do this; doing both is harmless).
+  app.use(compression());
   app.use(
     cors({
       origin: (origin, callback) => callback(null, !origin || env.clientUrls.includes(origin)),

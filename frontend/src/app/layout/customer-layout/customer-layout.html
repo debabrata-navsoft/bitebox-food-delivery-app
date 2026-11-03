@@ -12,8 +12,8 @@
       (click)="chooseLocation()"
       [attr.aria-label]="
         deliveryLocation()
-          ? 'Delivering to ' + deliveryLocation()!.label + '. Change location'
-          : 'Choose delivery location'
+          ? deliveryLocation()!.label + ': delivery location, change'
+          : 'Set location for delivery'
       "
     >
       <np-icon name="map-pin" class="mat-icon" matButtonIcon />
@@ -64,10 +64,10 @@
           mat-button
           [matMenuTriggerFor]="accountMenu"
           class="account-button"
-          aria-label="Account menu"
         >
           <span class="bb-avatar avatar" aria-hidden="true">{{ initials() }}</span>
           <span class="hide-phone">{{ firstName() }}</span>
+          <span class="bb-sr-only">account menu</span>
         </button>
         <mat-menu #accountMenu="matMenu" xPosition="before">
           <!-- Clicking the name/email area keeps the menu open (it is not a menu item). -->
@@ -119,13 +119,13 @@
       <p>Good food, boxed and delivered.</p>
     </div>
     <nav aria-label="Partners">
-      <h3>Partners</h3>
+      <h2 class="bb-h3">Partners</h2>
       <a routerLink="/restaurant/register">Add your restaurant</a>
       <a routerLink="/delivery/register">Ride with BiteBox</a>
       <a routerLink="/login">Partner &amp; rider sign in</a>
     </nav>
     <nav aria-label="Account">
-      <h3>Account</h3>
+      <h2 class="bb-h3">Account</h2>
       <a routerLink="/login">Sign in</a>
       <a routerLink="/register">Create account</a>
       <a routerLink="/forgot-password">Forgot password</a>

@@ -40,6 +40,8 @@ npm test -- --watch=false --include src/app/core/services/rider-gps.service.spec
 npx ng build --configuration development   # fast type/template check (prefix NG_BUILD_SASS_EMBEDDED=0 if it hangs)
 ```
 
+Production: `docker compose --env-file deploy/.env up -d --build` (see README §6). CI is `.github/workflows/ci.yml`. Problems and fixes: `docs/TROUBLESHOOTING.md`.
+
 ## Backend architecture (`backend/src`)
 
 - **Layering:** routes → `validate(...)` (express-validator) → controllers → services → Mongoose models.

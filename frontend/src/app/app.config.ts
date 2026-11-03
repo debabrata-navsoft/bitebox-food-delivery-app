@@ -9,6 +9,7 @@ import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from 
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { serverApiInterceptor } from './core/interceptors/server-api.interceptor';
 import { AuthService } from './core/auth/auth.service';
 
 export const appConfig: ApplicationConfig = {
@@ -20,7 +21,7 @@ export const appConfig: ApplicationConfig = {
       withInMemoryScrolling({ scrollPositionRestoration: 'top', anchorScrolling: 'enabled' }),
     ),
     provideClientHydration(withEventReplay()),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([serverApiInterceptor, authInterceptor])),
     // Restore the session from the refresh cookie without blocking first render.
     provideAppInitializer(() => {
       inject(AuthService).restoreSession().subscribe();

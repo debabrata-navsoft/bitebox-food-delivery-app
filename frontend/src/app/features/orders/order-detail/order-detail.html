@@ -15,7 +15,7 @@
         <div class="placed" role="status">
           <np-icon name="circle-check" class="mat-icon" matButtonIcon />
           <div>
-            <h1>Order placed!</h1>
+            <h2>Order placed!</h2>
             <p>
               @if (awaitingPayment()) {
                 Complete the payment of {{ o.pricing.totalPaise | inr }} to send it to
@@ -38,7 +38,7 @@
         <a routerLink="/orders" class="back"
           ><np-icon name="arrow-left" class="mat-icon" matButtonIcon />My orders</a
         >
-        <h2>Order {{ o.orderNumber }}</h2>
+        <h1 class="bb-h2">Order {{ o.orderNumber }}</h1>
         <p class="bb-muted">Placed {{ o.createdAt | date: 'medium' }}</p>
       </div>
       <span class="status status-{{ o.status }}">{{ statusLabel(o) }}</span>
@@ -49,7 +49,7 @@
         @if (!ended() && o.status !== 'delivered' && !awaitingPayment()) {
           @let t = tracking;
           <section class="bb-card" aria-labelledby="track-title">
-            <h3 id="track-title">Live tracking</h3>
+            <h2 class="bb-h3" id="track-title">Live tracking</h2>
             <p class="track-status" aria-live="polite">
               @if (o.status === 'assigned') {
                 @if (t.remaining(); as r) {
@@ -111,7 +111,7 @@
         }
 
         <section class="bb-card" aria-labelledby="progress-title">
-          <h3 id="progress-title">Progress</h3>
+          <h2 class="bb-h3" id="progress-title">Progress</h2>
           @if (ended()) {
             <div class="bb-alert error" role="status">
               <np-icon name="circle-x" class="mat-icon" matButtonIcon />
@@ -211,7 +211,7 @@
         </section>
 
         <section class="bb-card" aria-labelledby="items-title">
-          <h3 id="items-title">{{ o.restaurantSnapshot.name }}</h3>
+          <h2 class="bb-h3" id="items-title">{{ o.restaurantSnapshot.name }}</h2>
           <ul class="items">
             @for (item of o.items; track item.foodItem) {
               <li>
@@ -229,7 +229,7 @@
 
       <aside class="side">
         <section class="bb-card" aria-labelledby="bill-title">
-          <h3 id="bill-title">Bill</h3>
+          <h2 class="bb-h3" id="bill-title">Bill</h2>
           <bb-bill-summary
             [pricing]="o.pricing"
             [couponCode]="o.coupon?.code"
@@ -251,7 +251,7 @@
         </section>
         @if (o.rider; as r) {
           <section class="bb-card rider" aria-labelledby="rider-title">
-            <h3 id="rider-title">Your rider</h3>
+            <h2 class="bb-h3" id="rider-title">Your rider</h2>
             <div class="rider-row">
               <span class="rider-avatar" aria-hidden="true">{{ r.name.charAt(0) }}</span>
               <div>
@@ -270,7 +270,7 @@
           </section>
         }
         <section class="bb-card" aria-labelledby="deliver-title">
-          <h3 id="deliver-title">Delivering to</h3>
+          <h2 class="bb-h3" id="deliver-title">Delivering to</h2>
           @let a = o.deliveryAddress;
           <address>
             <strong>{{ a.recipientName }}</strong> · {{ a.phone }}<br />

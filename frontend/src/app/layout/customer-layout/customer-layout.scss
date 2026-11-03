@@ -6,21 +6,6 @@
   min-height: 100dvh;
 }
 
-.skip-link {
-  position: absolute;
-  left: -9999px;
-  top: 0;
-  z-index: 100;
-  background: var(--bb-amber);
-  color: var(--bb-plum);
-  padding: var(--bb-space-2) var(--bb-space-4);
-  font-weight: 700;
-
-  &:focus {
-    left: var(--bb-space-2);
-    top: var(--bb-space-2);
-  }
-}
 
 .site-header {
   position: sticky;
@@ -166,7 +151,7 @@
     padding-bottom: var(--bb-space-5);
   }
 
-  h3 {
+  h2 {
     color: var(--bb-amber);
     font-size: 0.85rem;
     letter-spacing: 0.08em;

@@ -23,7 +23,7 @@
   <form class="bb-form layout" [formRoot]="form">
     <div class="main">
       <section class="bb-card" aria-labelledby="basics">
-        <h3 id="basics">Basics</h3>
+        <h2 class="bb-h3" id="basics">Basics</h2>
         <np-text-input
           [formField]="form.name"
           label="Restaurant name"
@@ -71,7 +71,7 @@
       </section>
 
       <section class="bb-card" aria-labelledby="address-title">
-        <h3 id="address-title">Address</h3>
+        <h2 class="bb-h3" id="address-title">Address</h2>
         <div class="address-fields">
           <np-text-input
             [formField]="form.address.line1"
@@ -116,7 +116,7 @@
         </div>
 
         <div class="location">
-          <h4>Map location</h4>
+          <h3>Map location</h3>
           <p class="bb-muted">
             Customers nearby find you by this pin. Search for your street, then drag the pin onto
             your entrance.
@@ -184,12 +184,12 @@
 
     <aside class="side">
       <section class="bb-card" aria-labelledby="photo-title">
-        <h3 id="photo-title">Cover photo</h3>
+        <h2 class="bb-h3" id="photo-title">Cover photo</h2>
         <bb-image-upload [(url)]="imageUrl" label="Add a cover photo" />
       </section>
 
       <section class="bb-card" aria-labelledby="hours-title">
-        <h3 id="hours-title">Hours & pricing</h3>
+        <h2 class="bb-h3" id="hours-title">Hours & pricing</h2>
         <div class="bb-form-row">
           <div class="bb-field">
             <np-time-picker

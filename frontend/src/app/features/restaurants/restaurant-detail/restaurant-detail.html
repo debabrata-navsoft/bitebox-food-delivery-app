@@ -112,7 +112,7 @@
             @for (item of s.items; track item.id) {
               <li>
                 <div class="dish" [class.unavailable]="!item.isAvailable">
-                  <button type="button" class="dish-text" (click)="openItem(item)" [attr.aria-label]="'Details for ' + item.name">
+                  <button type="button" class="dish-text" (click)="openItem(item)">
                     <span class="dish-name"><bb-veg-badge [veg]="item.isVeg" /> {{ item.name }}</span>
                     <span class="dish-price">{{ item.pricePaise | inr }}</span>
                     @if (item.description) {

@@ -1,5 +1,5 @@
 @let r = restaurant();
-<a class="card" [routerLink]="['/restaurants', r.slug]" [attr.aria-label]="r.name + ', ' + r.cuisines.join(', ')">
+<a class="card" [routerLink]="['/restaurants', r.slug]">
   <div class="media">
     @if (r.imageUrl) {
       <img [src]="r.imageUrl" [alt]="''" loading="lazy" />

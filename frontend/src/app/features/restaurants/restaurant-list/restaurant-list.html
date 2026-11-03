@@ -96,6 +96,7 @@
       }
     </bb-empty-state>
   } @else {
+    <h2 class="bb-sr-only">Results</h2>
     <div class="grid">
       @for (r of restaurants(); track r.id) {
         <bb-restaurant-card [restaurant]="r" />

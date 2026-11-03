@@ -56,7 +56,7 @@
   padding-top: var(--bb-space-4);
   margin-top: var(--bb-space-2);
 
-  h4 {
+  h3 {
     margin: 0 0 4px;
   }
   p {
@@ -93,7 +93,7 @@ bb-map-picker {
 }
 
 // Leave room for the first field's floating label under each card heading.
-.bb-card > h3 {
+.bb-card > h2 {
   margin-bottom: var(--bb-space-4);
 }
 

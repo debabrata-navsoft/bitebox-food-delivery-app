@@ -1,3 +1,4 @@
+<a class="skip-link" href="#main">Skip to content</a>
 <mat-sidenav-container class="shell" autosize>
   <mat-sidenav
     #drawer
@@ -52,9 +53,10 @@
       <span class="spacer"></span>
       <bb-notification-bell />
 
-      <button mat-button class="user-button" [matMenuTriggerFor]="userMenu" aria-label="Account menu">
+      <button mat-button class="user-button" [matMenuTriggerFor]="userMenu">
         <span class="bb-avatar avatar" aria-hidden="true">{{ initials() }}</span>
         <span class="user-name">{{ user()?.name }}</span>
+        <span class="bb-sr-only">account menu</span>
         <np-icon name="chevron-down" class="mat-icon" iconPositionEnd matButtonIcon />
       </button>
       <mat-menu #userMenu="matMenu" xPosition="before">
@@ -74,7 +76,7 @@
       </mat-menu>
     </mat-toolbar>
 
-    <main class="page">
+    <main id="main" class="page" tabindex="-1">
       <router-outlet />
     </main>
   </mat-sidenav-content>

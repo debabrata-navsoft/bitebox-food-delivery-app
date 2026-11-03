@@ -8,13 +8,13 @@ BiteBox is a full-stack food delivery app with four role-based panels: **Custome
 | Backend  | Node.js + Express 5 (JavaScript ES modules), Mongoose 9, JWT, bcrypt, express-validator, pino, Swagger UI |
 | Database | MongoDB (local or Atlas) |
 
-> **Status: Phase 6 complete (payments, notifications and reports).** Phases 1–5 delivered authentication, restaurants and menus, cart and checkout, order management and delivery, and maps with live tracking.
+> **Status: Phase 7 complete — production ready.** All seven phases are done: authentication; restaurants and menus; cart and checkout; order management and delivery; maps and live tracking; payments, notifications and reports; and final quality and deployment (tests, security, performance, accessibility, Docker, CI, docs).
 
 ---
 
 ## 1. Prerequisites
 
-- Node.js **20.19+** (developed on Node 26) and npm 10+
+- Node.js **24 LTS** (or 22.22+ / 26+, as required by Angular 22) and npm 10+
 - MongoDB **7+**: a local `mongod`, Docker (`docker run -d -p 27017:27017 mongo:8`), or a free MongoDB Atlas cluster
 
 ## 2. Setup
@@ -103,14 +103,19 @@ cd frontend && npm start
 
 ```bash
 cd backend
-npm test        # Node test runner + supertest against an in-memory MongoDB (downloads mongod on first run)
+npm test        # 171 tests: Node test runner + supertest against an in-memory MongoDB
 npm run lint
 
 cd ../frontend
-npm test -- --watch=false   # Vitest unit tests
+npm test -- --watch=false   # 104 Vitest unit tests
 npm run build               # production build (SSR + prerendered public pages) into dist/frontend
 npm run serve:ssr:frontend  # serve the production build on :4000
 ```
+
+- **Coverage:** backend ≈95% of lines (`NODE_ENV=test node --test --experimental-test-coverage --test-coverage-include='src/**' "tests/**/*.test.js"`).
+- **What the backend tests cover:** auth and sessions, every role's permissions, catalogue, cart and checkout (with and without transactions), order workflow and dispatch timeouts, live tracking sockets, payments (simulated and Razorpay with a fake gateway, webhooks, refunds), notifications, earnings and reports, uploads, admin tools.
+- **`tests/docs.test.js`** fails if any API route is missing from the OpenAPI docs (or the docs list a route that doesn't exist).
+- **CI:** `.github/workflows/ci.yml` runs lint, both test suites and the production build on every push and pull request.
 
 To run the backend tests against a real MongoDB instead of the in-memory one, set `TEST_MONGO_URI`. The database name **must end in `_test`**, because the tests wipe its collections:
 
@@ -118,7 +123,51 @@ To run the backend tests against a real MongoDB instead of the in-memory one, se
 TEST_MONGO_URI='mongodb://127.0.0.1:27017/bitebox_test' npm test
 ```
 
----
+## 6. Production deployment
+
+The production setup is one public origin: a reverse proxy sends `/api`, `/socket.io` and `/uploads` to the API, and everything else to the Angular SSR server.
+
+```
+browser ──► nginx (:8080)
+              ├── /api/  /socket.io/  /uploads/ ──► api   (Node/Express, :5000) ──► MongoDB
+              └── everything else                ──► web   (Angular SSR, :4000) ──► api (API_INTERNAL_URL)
+```
+
+### With Docker (recommended)
+
+```bash
+cp deploy/.env.example deploy/.env     # set JWT_SECRET, PUBLIC_URL, PUBLIC_HOST (+ optional keys)
+docker compose --env-file deploy/.env up -d --build
+# open http://localhost:8080
+```
+
+`docker-compose.yml` starts:
+- **MongoDB 8** as a single-node replica set (so multi-document transactions are used)
+- the **API** image (`backend/Dockerfile`: production dependencies only, non-root user)
+- the **web** image (`frontend/Dockerfile`: multi-stage build, runs only the built output)
+- **nginx** with `deploy/nginx.conf` (WebSocket upgrade for live updates, 3 MB upload limit)
+
+Data lives in the `mongo-data` and `uploads` volumes. Each service has a health check (`/api/v1/health`, `/healthz`).
+
+### Without Docker
+
+1. **API:** `cd backend && npm ci --omit=dev && NODE_ENV=production node src/server.js`, with the variables below.
+2. **Web:** `cd frontend && npm ci && npm run build`, then `node dist/frontend/server/server.mjs` (`PORT`, default 4000). The `dist/frontend` folder is self-contained.
+3. **Proxy:** put both behind one domain with **HTTPS** (`deploy/nginx.conf` is a working starting point).
+
+### Production settings
+
+| Where | Variable | Notes |
+|---|---|---|
+| API | `NODE_ENV=production` | Turns off the test payment, debug error details and dev logging; cookies become `Secure`. |
+| API | `MONGO_URI`, `JWT_SECRET` | Required. Atlas is a replica set already. |
+| API | `CLIENT_URL`, `PUBLIC_BASE_URL` | Your public URL (CORS, emails, locally stored image URLs). |
+| API | `TRUST_PROXY=1` | Behind a proxy, so rate limits see real client IPs. |
+| API | `RAZORPAY_*`, `CLOUDINARY_*`, `SMTP_*` | Payments, image hosting and email (see section 2). |
+| Web | `API_INTERNAL_URL` | How the SSR server reaches the API (e.g. `http://api:5000`); calls from the browser stay same-origin. |
+| Web | `NG_ALLOWED_HOSTS` | Your domain (Angular's SSRF protection rejects other hosts). |
+
+**Checklist:** HTTPS in front; a strong `JWT_SECRET`; Cloudinary (or a persistent `uploads` volume); Razorpay **live** keys and the webhook (`/api/v1/payments/webhooks/razorpay`); a production map tile provider and routing server (the public OpenStreetMap/OSRM servers are for light use only); MongoDB backups; never run the seed in production (it refuses to).
 
 ## Architecture
 
@@ -374,25 +423,56 @@ How it works:
 - **Dashboard:** shows the last 30 days at a glance.
 - **Scope:** figures cover orders *placed* in the period; values count delivered orders only. Every chart has a "Show as table" view.
 
+### Quality: security, performance and accessibility
+
+**Security**
+- Every route is checked for its role (`authenticate` + `authorize`); partner and rider endpoints take their scope from the signed-in user, never from ids sent by the client. Customers can only reach their own orders, addresses, payments and notifications.
+- Input is validated and stripped of unknown fields (express-validator), MongoDB operators are removed from input (`mongoSanitize`), and uploads are checked by their real bytes (JPEG/PNG/WebP, 2 MB).
+- Short-lived JWTs in memory; rotating refresh token in an HttpOnly, SameSite=Strict cookie (Secure in production); password changes and suspensions apply at once.
+- Rate limits on sign-in, coupons, uploads and geo lookups; Helmet headers on the API; `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy` and `Permissions-Policy` on the web server.
+- Payments: Razorpay signatures and amounts are verified server-side; webhooks are HMAC-checked and applied once; the test payment can't run in production.
+- `npm audit`: no backend vulnerabilities; the frontend's only report is a low-severity `quill` issue in a NexPrime editor BiteBox doesn't use.
+
+**Performance**
+- gzip/brotli on the API and web server; fingerprinted assets cached for a year, the HTML shell never cached.
+- Lazy-loaded feature routes; first load ≈118 KB transferred; the home page is server-rendered with its data, and hydration reuses it (no second request).
+- Indexes for every list and report query; reports use single aggregation passes; external geo services are cached, de-duplicated and throttled.
+- Images from Cloudinary use automatic format and quality (`f_auto,q_auto`).
+
+**Accessibility** (checked with axe-core on 14 key pages across all four panels, WCAG 2.1 AA)
+- Colour contrast meets AA (the brand green was darkened slightly for this).
+- One `h1` per page and a logical heading order; buttons and links are named by their visible text.
+- "Skip to content" links in the customer site and the panels; focus-visible styles; live regions for order status; the map is a labelled region and its information is also given as text.
+- The only remaining finding is a minor empty table header inside NexPrime's chart component.
+
 ### Folder layout
 
 ```
 backend/src
   app.js            Express app factory (middleware, routes, error handling)
-  server.js         HTTP server, DB connection, graceful shutdown
-  config/           env validation, logger, MongoDB connection
-  controllers/      HTTP layer
-  services/         business logic (auth, mail)
-  models/           Mongoose models (User, Session)
-  routes/ validators/ middleware/ utils/ docs/ scripts/
-backend/tests       API integration tests
+  server.js         HTTP server + Socket.IO, DB connection, dispatch sweep, graceful shutdown
+  config/           env validation, logger, MongoDB, Cloudinary, pricing/dispatch/earnings rules
+  routes/ validators/ controllers/   HTTP layer (validate → controller → service)
+  services/         business logic: auth, catalogue, cart, orders (workflow, dispatch), payments/, notifications, reports
+  models/           Mongoose models
+  sockets/          realtime: auth handshake, rooms, rider tracking
+  docs/             OpenAPI fragments (Swagger UI at /api/docs)
+  middleware/ utils/ scripts/ (seed)
+backend/tests       API integration tests (one file per area, plus docs.test.js)
+backend/Dockerfile  production API image
 
 frontend/src/app
-  core/             auth service, guards, HTTP interceptor, API services
-  shared/           models, validators, reusable components
-  layout/           auth, customer, and panel shell (admin/restaurant/delivery) layouts
-  features/         auth pages, customer, admin, restaurant-panel, delivery-panel, profile, errors
-frontend/src/styles design tokens, breakpoints, generated Material palette
+  core/             auth, guards, interceptors, API and realtime services
+  shared/           models, form rules, icons, reusable components (maps, charts, phone input, bell…)
+  layout/           auth, customer and panel shell (admin/restaurant/delivery) layouts
+  features/         customer, checkout, orders, admin, restaurant-panel, delivery-panel, notifications, earnings, auth, profile, errors
+frontend/src/server.ts   SSR server (security headers, compression, /healthz)
+frontend/Dockerfile production web image
+
+deploy/             nginx reverse proxy config and docker-compose settings template
+docker-compose.yml  full production-like stack
+.github/workflows/  CI (lint, tests, build)
+docs/               troubleshooting guide
 ```
 
 ### UI libraries
@@ -420,21 +500,9 @@ The layouts are built mobile-first, with breakpoints at **600px** (tablet) and *
 
 ## Troubleshooting
 
-| Problem | Fix |
-|---------|-----|
-| `Missing required environment variable` / `JWT_SECRET must be at least 32 characters` | Fill in `backend/.env` from `.env.example`. |
-| `Could not connect to MongoDB` | Check `MONGO_URI`. On Atlas, add your IP under *Network Access*. |
-| The browser shows CORS errors | Add the exact origin (scheme, host, and port) to `CLIENT_URL` and restart the API. |
-| A rider gets no delivery requests | The rider must be online with a vehicle set and a location less than 15 minutes old, within 10 km of the restaurant. They may also have declined or ignored that order already (the rider who ignores an offer is set offline). Check `/admin/delivery-partners`. |
-| "Can't pinpoint where you are" when a rider goes online | The device reported a location vaguer than 1 km (common on desktops). Use a phone with GPS, or set a location in Chrome DevTools → Sensors. |
-| The customer's map shows a dashed straight line instead of a road route | The routing provider is unreachable or rate-limited (`503 ROUTING_UNAVAILABLE`). Check `ROUTING_URL`; the public OSRM demo server is best-effort only. |
-| The rider marker does not move | The rider must be online with location permission and an accurate fix (within 1 km). Simulated jumps faster than ~250 km/h are rejected. The rider dashboard shows the reason. |
-| New orders disappear as "rejected" | Restaurants must accept or reject within 10 minutes (`DISPATCH.restaurantResponseMinutes` in `backend/src/config/dispatch.js`). |
-| You are signed out after every reload | The refresh cookie isn't being stored. Use `http://localhost:4200` rather than `127.0.0.1` (the API and app must be same-site). For different sites, see `COOKIE_SAMESITE` above. |
-| No password-reset email arrives | Without SMTP settings, the link is printed in the API console (development only). |
-| `npm test` (backend) fails with `Instance closed unexpectedly` | The in-memory `mongod` could not start (some sandboxes or containers block it). Use `TEST_MONGO_URI` with a `*_test` database. |
-| `ng serve` / `ng s` stays on **"Building..."** forever (or fails with `Tried writing to closed dispatcher`) | On some machines the native Dart Sass compiler is killed by the system after its first compile, and Angular then waits forever. The npm scripts already set `NG_BUILD_SASS_EMBEDDED=0` to use the pure-JS Sass compiler, so **use `npm start` / `npm run build` instead of `ng s` / `ng build`**. To make plain `ng` commands work too, add `export NG_BUILD_SASS_EMBEDDED=0` to your `~/.bashrc`. |
-| The SSR server returns `400 Header "host" ... is not allowed` | Angular's SSRF protection only allows `localhost` (`angular.json` → `security.allowedHosts`). For a real domain, add it there or set `NG_ALLOWED_HOSTS=bitebox.example.com` when running the server. |
-| The map shows no pin or zoom buttons, or tiles fill only part of the box | Leaflet's stylesheet isn't loaded. The dev server reads `angular.json` only at start-up, so stop it and run `npm start` again after pulling changes. |
-| "Current location" is kilometres off (or the warning mentions hundreds of km) | Laptops and desktops have no GPS; the browser guesses from Wi-Fi or IP. On Linux this guess can be country-level. Search for your area or drag the pin; nothing is saved until you confirm it. |
-| `429 Too many attempts` | Auth endpoints are rate-limited (20 per 15 min per IP). Wait, or restart the API in development. |
+See **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** for symptoms, causes and fixes, grouped by setup, frontend development, tests, orders and maps, payments and images, and production deployment.
+
+The three most common:
+- **`ng serve` stuck on "Building..."**: use `npm start` (it sets `NG_BUILD_SASS_EMBEDDED=0`).
+- **Signed out after every reload**: use `http://localhost:4200` (not `127.0.0.1`), and HTTPS in production.
+- **Backend tests can't start MongoDB**: run with `TEST_MONGO_URI` pointing at a `*_test` database.
