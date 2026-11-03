@@ -233,6 +233,15 @@ np-icon.np-icon.mat-icon svg {
   height: 100% !important;
 }
 
+// Chip icons (category filters): small and light, like Material's chip avatars.
+np-icon[matChipAvatar] {
+  --bb-icon-size: 18px;
+
+  svg {
+    stroke-width: 1.75;
+  }
+}
+
 // Icon-only buttons centre their icon (so the hover circle sits around it).
 .mat-mdc-icon-button {
   display: inline-flex !important;

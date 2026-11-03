@@ -12,7 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DatePipe, DecimalPipe, TitleCasePipe, formatDate } from '@angular/common';
+import { DatePipe, DecimalPipe, formatDate } from '@angular/common';
 import { ConfettiComponent, IconComponent, TimelineComponent, type TimelineEvent } from 'nexprime';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -57,7 +57,6 @@ const JOURNEY: { status: OrderStatus; icon: string }[] = [
   selector: 'bb-order-detail',
   imports: [
     DatePipe,
-    TitleCasePipe,
     RouterLink,
     MatButtonModule,
     IconComponent, NpIconPipe,

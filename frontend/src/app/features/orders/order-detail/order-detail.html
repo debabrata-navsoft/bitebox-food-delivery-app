@@ -235,15 +235,15 @@
             [couponCode]="o.coupon?.code"
             [distanceMeters]="o.distanceMeters"
           />
+          @let status = o.payment?.status ?? o.paymentStatus;
           <p class="payment">
-            <np-icon name="banknote" class="mat-icon" matButtonIcon />
-            @if (o.payment; as p) {
-              {{ providerLabel[p.provider] }} ·
-              <span class="pay-{{ p.status }}">{{ paymentLabel[p.status] }}</span>
-            } @else {
-              Cash on delivery ·
-              <span class="pay-{{ o.paymentStatus }}">{{ o.paymentStatus | titlecase }}</span>
-            }
+            <span class="method">
+              <np-icon [name]="o.paymentMethod === 'cod' ? 'banknote' : 'credit-card'" class="mat-icon" matButtonIcon />
+              {{ o.payment ? providerLabel[o.payment.provider] : 'Cash on delivery' }}
+            </span>
+            <span class="pay-chip pay-{{ status }}">
+              {{ o.paymentMethod === 'cod' && status === 'pending' ? 'Pay on delivery' : paymentLabel[status] }}
+            </span>
           </p>
           @if (o.payment?.simulated) {
             <p class="bb-muted small simulated">Test payment: no real money was charged.</p>
