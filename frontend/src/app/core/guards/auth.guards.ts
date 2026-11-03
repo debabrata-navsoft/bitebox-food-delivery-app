@@ -52,3 +52,20 @@ export const guestGuard: CanActivateFn = () => {
     return role ? router.createUrlTree([ROLE_META[role].home]) : true;
   });
 };
+
+/** Pages every visitor may see, even staff: error pages. */
+const OPEN_TO_ALL = new Set(['forbidden', '**']);
+
+/**
+ * The customer site (home, restaurants, checkout, orders…) is for guests and
+ * customers. Admins, restaurant partners and riders are sent to their own panel.
+ */
+export const customerSiteGuard: CanActivateFn = (route) => {
+  if (OPEN_TO_ALL.has(route.routeConfig?.path ?? '')) return true;
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return whenReady(() => {
+    const role = auth.role();
+    return !role || role === 'customer' ? true : router.createUrlTree([ROLE_META[role].home]);
+  });
+};
