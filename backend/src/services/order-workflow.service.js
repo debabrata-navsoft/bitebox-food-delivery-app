@@ -26,14 +26,15 @@ const A = ACTORS;
  * - customers may cancel only until the restaurant accepts;
  * - nobody cancels once the food has been picked up;
  * - "assigned" means a rider has accepted the delivery (offers happen while ready_for_pickup);
- * - an admin can take a stuck order back from its rider (assigned -> ready_for_pickup).
+ * - an admin can take a stuck order back from its rider (assigned -> ready_for_pickup);
+ * - the system cancels an order no rider picks up in time (DISPATCH.pickupWindowMinutes).
  */
 export const TRANSITIONS = Object.freeze({
   [S.PENDING]: { [S.CONFIRMED]: [A.RESTAURANT], [S.REJECTED]: [A.RESTAURANT, A.SYSTEM], [S.CANCELLED]: [A.CUSTOMER, A.ADMIN, A.SYSTEM] },
   [S.CONFIRMED]: { [S.PREPARING]: [A.RESTAURANT], [S.CANCELLED]: [A.ADMIN] },
   [S.PREPARING]: { [S.READY_FOR_PICKUP]: [A.RESTAURANT], [S.CANCELLED]: [A.ADMIN] },
-  [S.READY_FOR_PICKUP]: { [S.ASSIGNED]: [A.DELIVERY], [S.CANCELLED]: [A.ADMIN] },
-  [S.ASSIGNED]: { [S.PICKED_UP]: [A.DELIVERY], [S.READY_FOR_PICKUP]: [A.ADMIN], [S.CANCELLED]: [A.ADMIN] },
+  [S.READY_FOR_PICKUP]: { [S.ASSIGNED]: [A.DELIVERY], [S.CANCELLED]: [A.ADMIN, A.SYSTEM] },
+  [S.ASSIGNED]: { [S.PICKED_UP]: [A.DELIVERY], [S.READY_FOR_PICKUP]: [A.ADMIN], [S.CANCELLED]: [A.ADMIN, A.SYSTEM] },
   [S.PICKED_UP]: { [S.ON_THE_WAY]: [A.DELIVERY] },
   [S.ON_THE_WAY]: { [S.DELIVERED]: [A.DELIVERY] },
   [S.DELIVERED]: {},

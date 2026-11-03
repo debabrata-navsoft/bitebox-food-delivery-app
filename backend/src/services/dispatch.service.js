@@ -140,7 +140,7 @@ export async function declineOffer(userId, orderId) {
  * - online orders never paid within the payment window are cancelled.
  */
 export async function sweep(now = new Date()) {
-  const summary = { expiredOffers: 0, dispatched: 0, autoRejected: 0, unpaidCancelled: 0 };
+  const summary = { expiredOffers: 0, dispatched: 0, autoRejected: 0, unpaidCancelled: 0, pickupExpired: 0 };
 
   const expired = await Order.find({ status: S.READY_FOR_PICKUP, "offer.expiresAt": { $lte: now } }).select("_id offer").limit(100);
   for (const order of expired) {
@@ -166,12 +166,27 @@ export async function sweep(now = new Date()) {
   const minutesAgo = (m) => new Date(now.getTime() - m * 60_000);
   const timeouts = [
     // Restaurant never answered (counted from when it received the order).
-    { filter: { submittedAt: { $ne: null, $lte: minutesAgo(DISPATCH.restaurantResponseMinutes) } }, to: S.REJECTED, reason: "The restaurant did not respond in time", key: "autoRejected" },
+    { filter: { status: S.PENDING, submittedAt: { $ne: null, $lte: minutesAgo(DISPATCH.restaurantResponseMinutes) } }, to: S.REJECTED, reason: "The restaurant did not respond in time", key: "autoRejected" },
     // Online payment never completed.
-    { filter: { paymentMethod: PAYMENT_METHODS.ONLINE, submittedAt: null, createdAt: { $lte: minutesAgo(DISPATCH.paymentWindowMinutes) } }, to: S.CANCELLED, reason: "Payment was not completed in time", key: "unpaidCancelled" },
+    {
+      filter: { status: S.PENDING, paymentMethod: PAYMENT_METHODS.ONLINE, submittedAt: null, createdAt: { $lte: minutesAgo(DISPATCH.paymentWindowMinutes) } },
+      to: S.CANCELLED,
+      reason: "Payment was not completed in time",
+      key: "unpaidCancelled",
+    },
+    // Ready, but no rider picked it up in time (none found, or the assigned rider never came).
+    {
+      filter: {
+        status: { $in: [S.READY_FOR_PICKUP, S.ASSIGNED] },
+        statusHistory: { $elemMatch: { status: S.READY_FOR_PICKUP, at: { $lte: minutesAgo(DISPATCH.pickupWindowMinutes) } } },
+      },
+      to: S.CANCELLED,
+      reason: "No delivery partner picked up the order in time",
+      key: "pickupExpired",
+    },
   ];
   for (const { filter, to, reason, key } of timeouts) {
-    for (const order of await Order.find({ status: S.PENDING, ...filter }).select("_id").limit(100)) {
+    for (const order of await Order.find(filter).select("_id").limit(100)) {
       try {
         const { changed } = await transition(order._id, { to, actor: ACTORS.SYSTEM, reason });
         if (changed) summary[key]++;

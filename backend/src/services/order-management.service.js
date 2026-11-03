@@ -11,6 +11,7 @@ import { paymentView } from "./payments/payment.service.js";
 import { ACTIVE_STATUSES, ACTORS, FINAL_STATUSES, releaseRider, transition } from "./order-workflow.service.js";
 
 const S = ORDER_STATUS;
+const plusMinutes = (date, minutes) => new Date(date.getTime() + minutes * 60_000);
 
 // ---------------------------------------------------------------------------
 // What each role sees of an order
@@ -47,7 +48,10 @@ export function presentForRestaurant(order) {
   json.deliveryAddress = { recipientName: a.recipientName, area: a.area, city: a.city };
   json.riderAssigned = Boolean(order.deliveryPartner);
   // Unanswered new orders are auto-rejected at this time (the sweep's rule; shown as a countdown).
-  if (order.status === S.PENDING && order.submittedAt) json.respondBy = new Date(order.submittedAt.getTime() + DISPATCH.restaurantResponseMinutes * 60_000);
+  if (order.status === S.PENDING && order.submittedAt) json.respondBy = plusMinutes(order.submittedAt, DISPATCH.restaurantResponseMinutes);
+  // Ready orders no rider collects are cancelled at this time (same sweep).
+  const readyAt = [S.READY_FOR_PICKUP, S.ASSIGNED].includes(order.status) && order.statusHistory.find((h) => h.status === S.READY_FOR_PICKUP)?.at;
+  if (readyAt) json.pickupBy = plusMinutes(readyAt, DISPATCH.pickupWindowMinutes);
   delete json.offer;
   return json;
 }

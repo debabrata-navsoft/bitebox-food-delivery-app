@@ -54,12 +54,18 @@ export class CustomerLayout {
     return role && role !== 'customer' ? ROLE_META[role].home : null;
   });
   /** Customers see the cart (also while their session is being restored). */
-  protected readonly showCart = computed(() => this.cart.enabled() || this.shown()?.role === 'customer');
+  protected readonly showCart = computed(
+    () => this.cart.enabled() || this.shown()?.role === 'customer',
+  );
   protected readonly firstName = computed(() => this.shown()?.name.split(' ')[0] ?? '');
   protected readonly year = new Date().getFullYear();
 
   protected chooseLocation(): void {
-    this.dialog.open(LocationPickerDialog, { width: '520px', maxWidth: '95vw', autoFocus: 'first-tabbable' });
+    this.dialog.open(LocationPickerDialog, {
+      width: '520px',
+      maxWidth: '95vw',
+      autoFocus: 'first-tabbable',
+    });
   }
 
   protected logout(): void {

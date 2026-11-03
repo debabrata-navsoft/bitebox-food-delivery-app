@@ -216,6 +216,9 @@
                 }
               }
             </p>
+            @if (o.pickupBy) {
+              <p class="bb-muted pickup-by">Cancelled automatically at {{ o.pickupBy | date: 'h:mm a' }} if no rider picks it up.</p>
+            }
           }
         </article>
       }

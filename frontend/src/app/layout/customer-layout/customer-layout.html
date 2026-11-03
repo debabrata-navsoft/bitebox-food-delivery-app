@@ -6,7 +6,16 @@
       <bb-brand-logo [height]="34" />
     </a>
 
-    <button type="button" class="location-button" (click)="chooseLocation()" [attr.aria-label]="deliveryLocation() ? 'Delivering to ' + deliveryLocation()!.label + '. Change location' : 'Choose delivery location'">
+    <button
+      type="button"
+      class="location-button"
+      (click)="chooseLocation()"
+      [attr.aria-label]="
+        deliveryLocation()
+          ? 'Delivering to ' + deliveryLocation()!.label + '. Change location'
+          : 'Choose delivery location'
+      "
+    >
       <mat-icon aria-hidden="true">location_on</mat-icon>
       <span class="location-text">
         @if (deliveryLocation(); as loc) {
@@ -19,7 +28,9 @@
     </button>
 
     <nav class="desktop-nav" aria-label="Main">
-      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Home</a>
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"
+        >Home</a
+      >
       <a routerLink="/restaurants" routerLinkActive="active">Restaurants</a>
       <a routerLink="/dishes" routerLinkActive="active">Dishes</a>
       <a routerLink="/" fragment="partners">Partner with us</a>
@@ -44,12 +55,22 @@
             [attr.aria-label]="'Cart, ' + cart.itemCount() + ' items'"
           >
             <!-- The badge sits on a wrapper: Material warns about badges on aria-hidden icons. -->
-            <span class="badge-host" [matBadge]="cart.itemCount() || null" matBadgeColor="accent" matBadgeSize="small">
+            <span
+              class="badge-host"
+              [matBadge]="cart.itemCount() || null"
+              matBadgeColor="accent"
+              matBadgeSize="small"
+            >
               <mat-icon aria-hidden="true">shopping_bag</mat-icon>
             </span>
           </a>
         }
-        <button mat-button [matMenuTriggerFor]="accountMenu" class="account-button" aria-label="Account menu">
+        <button
+          mat-button
+          [matMenuTriggerFor]="accountMenu"
+          class="account-button"
+          aria-label="Account menu"
+        >
           <mat-icon>account_circle</mat-icon>
           <span class="hide-phone">{{ firstName() }}</span>
         </button>
@@ -119,7 +140,13 @@
 </footer>
 
 <!-- Back-to-top button with a scroll-progress ring (NexPrime) -->
-<np-scroll-top class="scroll-top" [threshold]="600" [progress]="true" variant="soft" ariaLabel="Back to top" />
+<np-scroll-top
+  class="scroll-top"
+  [threshold]="600"
+  [progress]="true"
+  variant="soft"
+  ariaLabel="Back to top"
+/>
 
 <!-- Bottom tab bar on phones -->
 <nav class="tab-bar" aria-label="Quick navigation">

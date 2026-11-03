@@ -155,7 +155,8 @@ export class OrderDetail {
         pollMs: 60_000,
         debounceMs: 0,
         // While unpaid, the payment confirmation arrives as an event with the same status.
-        when: (e) => e.id === this.id() && (e.status !== this.order()?.status || this.awaitingPayment()),
+        when: (e) =>
+          e.id === this.id() && (e.status !== this.order()?.status || this.awaitingPayment()),
       },
     )
       .pipe(takeUntilDestroyed())
@@ -201,8 +202,10 @@ export class OrderDetail {
     try {
       const session = await firstValueFrom(this.payments.start(order.id));
       const payment = await this.payments.pay(order.id, session);
-      if (payment?.status === 'paid') this.notify.success(`Paid. ${order.restaurantSnapshot.name} has your order.`);
-      else if (payment?.status === 'failed') this.notify.error(payment.failureReason ?? 'The payment failed. You can try again.');
+      if (payment?.status === 'paid')
+        this.notify.success(`Paid. ${order.restaurantSnapshot.name} has your order.`);
+      else if (payment?.status === 'failed')
+        this.notify.error(payment.failureReason ?? 'The payment failed. You can try again.');
     } catch (err: unknown) {
       this.notify.error(errorMessage(err, 'Payment could not be completed.'));
     } finally {

@@ -347,6 +347,7 @@ How it works:
 4. Only once paid does the restaurant see the order and get notified. Its response timer starts then.
 - **Closing or failing the payment page** at checkout cancels the attempt at once (`POST /payments/orders/:id/abandon`), puts the dishes back in the cart and keeps the customer on checkout. Nothing is ordered, and the attempt is not listed in "My orders".
 - **Retry:** if the browser closed mid-payment, the order page offers "Pay ₹…" (`POST /payments/orders/:id/start`).
+- **Pickup deadline:** an order that no rider has picked up within 30 minutes of being ready (no rider found, or the assigned rider never arrived) is cancelled automatically, refunded if paid online, and the rider is freed (`pickupWindowMinutes`). The restaurant's order card shows the deadline.
 - **Expiry (backstop):** unpaid online orders that were never abandoned are cancelled after 15 minutes (`paymentWindowMinutes` in `config/dispatch.js`).
 - **Refunds:** cancelling or rejecting a paid online order refunds it through the gateway. A payment that arrives after the order expired is refunded too. If a refund fails, the admin **Payments** page flags it with **Retry refund** (`POST /admin/payments/:id/refund`).
 

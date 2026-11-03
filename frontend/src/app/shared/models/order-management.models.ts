@@ -26,6 +26,8 @@ export interface RestaurantOrder extends Omit<Order, 'deliveryAddress' | 'rider'
   riderAssigned: boolean;
   /** New orders only: when it will be auto-rejected if not accepted. */
   respondBy?: string;
+  /** Ready orders only: when it will be cancelled if no rider has picked it up. */
+  pickupBy?: string;
 }
 
 export interface RestaurantActiveOrders {

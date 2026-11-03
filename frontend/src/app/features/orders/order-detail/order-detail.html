@@ -18,11 +18,14 @@
             <h1>Order placed!</h1>
             <p>
               @if (awaitingPayment()) {
-                Complete the payment of {{ o.pricing.totalPaise | inr }} to send it to {{ o.restaurantSnapshot.name }}.
+                Complete the payment of {{ o.pricing.totalPaise | inr }} to send it to
+                {{ o.restaurantSnapshot.name }}.
               } @else if (o.paymentMethod === 'online') {
-                Paid {{ o.pricing.totalPaise | inr }} online. {{ o.restaurantSnapshot.name }} will confirm it shortly.
+                Paid {{ o.pricing.totalPaise | inr }} online. {{ o.restaurantSnapshot.name }} will
+                confirm it shortly.
               } @else {
-                {{ o.restaurantSnapshot.name }} will confirm it shortly. Pay {{ o.pricing.totalPaise | inr }} on delivery.
+                {{ o.restaurantSnapshot.name }} will confirm it shortly. Pay
+                {{ o.pricing.totalPaise | inr }} on delivery.
               }
             </p>
           </div>
@@ -32,7 +35,9 @@
 
     <header class="head">
       <div>
-        <a routerLink="/orders" class="back"><mat-icon aria-hidden="true">arrow_back</mat-icon>My orders</a>
+        <a routerLink="/orders" class="back"
+          ><mat-icon aria-hidden="true">arrow_back</mat-icon>My orders</a
+        >
         <h2>Order {{ o.orderNumber }}</h2>
         <p class="bb-muted">Placed {{ o.createdAt | date: 'medium' }}</p>
       </div>
@@ -48,7 +53,8 @@
             <p class="track-status" aria-live="polite">
               @if (o.status === 'assigned') {
                 @if (t.remaining(); as r) {
-                  <strong>{{ o.rider?.name ?? 'Your rider' }}</strong> is heading to the restaurant, about {{ minutes(r.durationSeconds) }} min away.
+                  <strong>{{ o.rider?.name ?? 'Your rider' }}</strong> is heading to the restaurant,
+                  about {{ minutes(r.durationSeconds) }} min away.
                 } @else if (t.rider()) {
                   <strong>{{ o.rider?.name ?? 'Your rider' }}</strong> is heading to the restaurant.
                 } @else {
@@ -56,9 +62,11 @@
                 }
               } @else if (o.status === 'picked_up' || o.status === 'on_the_way') {
                 @if (t.remaining(); as r) {
-                  Arriving in about <strong>{{ minutes(r.durationSeconds) }} min</strong> · {{ r.distanceMeters / 1000 | number: '1.1-1' }} km by road
+                  Arriving in about <strong>{{ minutes(r.durationSeconds) }} min</strong> ·
+                  {{ r.distanceMeters / 1000 | number: '1.1-1' }} km by road
                 } @else if (t.straightLineToTarget(); as m) {
-                  Your order is on its way, about {{ m / 1000 | number: '1.1-1' }} km away (straight line).
+                  Your order is on its way, about {{ m / 1000 | number: '1.1-1' }} km away (straight
+                  line).
                 } @else {
                   Your order is on its way. Waiting for the rider's location…
                 }
@@ -69,7 +77,8 @@
             @if (t.riderStale()) {
               <p class="stale" role="status">
                 <mat-icon aria-hidden="true">signal_cellular_connected_no_internet_0_bar</mat-icon>
-                Last location update {{ minutes(t.riderSeenSeconds() ?? 0) }} min ago. The rider may have a weak signal.
+                Last location update {{ minutes(t.riderSeenSeconds() ?? 0) }} min ago. The rider may
+                have a weak signal.
               </p>
             }
             <bb-tracking-map
@@ -79,13 +88,20 @@
               [riderStale]="t.riderStale()"
               [route]="t.remaining()?.path ?? t.plannedRoute()?.path ?? null"
               [lineFrom]="t.rider() ?? t.restaurant()"
-              [label]="'Map of your delivery from ' + o.restaurantSnapshot.name + ' to ' + (o.deliveryAddress.area || o.deliveryAddress.city)"
+              [label]="
+                'Map of your delivery from ' +
+                o.restaurantSnapshot.name +
+                ' to ' +
+                (o.deliveryAddress.area || o.deliveryAddress.city)
+              "
             />
             <p class="bb-muted small estimate-note">
               Times and distances are estimates from road routes without live traffic.
               @if (t.plannedRoute(); as p) {
-                Restaurant to you: {{ p.distanceMeters / 1000 | number: '1.1-1' }} km by road
-                ({{ p.straightLineMeters / 1000 | number: '1.1-1' }} km straight line).
+                Restaurant to you: {{ p.distanceMeters / 1000 | number: '1.1-1' }} km by road ({{
+                  p.straightLineMeters / 1000 | number: '1.1-1'
+                }}
+                km straight line).
               }
               @if (t.rider() && !t.riderStale() && t.riderSeenSeconds() !== null) {
                 Rider location updated {{ t.riderSeenSeconds() }}s ago.
@@ -101,13 +117,19 @@
               <mat-icon aria-hidden="true">cancel</mat-icon>
               <span>
                 @switch (o.cancellation?.by) {
-                  @case ('customer') { You cancelled this order. }
-                  @case ('system') {
-                    @if (o.submittedAt) { The restaurant did not respond in time, so the order was cancelled. }
-                    @else { The payment was not completed in time, so the order was cancelled. }
+                  @case ('customer') {
+                    You cancelled this order.
                   }
-                  @case ('admin') { BiteBox support cancelled this order. }
-                  @default { {{ o.restaurantSnapshot.name }} could not take this order. }
+                  @case ('system') {
+                    {{ o.cancellation.reason ?? 'The order was cancelled automatically' }}, so it
+                    was cancelled.
+                  }
+                  @case ('admin') {
+                    BiteBox support cancelled this order.
+                  }
+                  @default {
+                    {{ o.restaurantSnapshot.name }} could not take this order.
+                  }
                 }
                 @if (o.cancellation; as c) {
                   @if (c.reason && c.by !== 'customer' && c.by !== 'system') {
@@ -115,37 +137,74 @@
                   }
                 }
                 @switch (o.payment?.status) {
-                  @case ('refunded') { Your payment of {{ o.pricing.totalPaise | inr }} has been refunded. }
-                  @case ('paid') { Your refund of {{ o.pricing.totalPaise | inr }} is being processed. }
-                  @default { You have not been charged. }
+                  @case ('refunded') {
+                    Your payment of {{ o.pricing.totalPaise | inr }} has been refunded.
+                  }
+                  @case ('paid') {
+                    Your refund of {{ o.pricing.totalPaise | inr }} is being processed.
+                  }
+                  @default {
+                    You have not been charged.
+                  }
                 }
               </span>
             </div>
           } @else if (awaitingPayment()) {
             <div class="bb-alert info pay-due" role="status">
-              <mat-icon aria-hidden="true">{{ o.paymentStatus === 'failed' ? 'error' : 'schedule' }}</mat-icon>
+              <mat-icon aria-hidden="true">{{
+                o.paymentStatus === 'failed' ? 'error' : 'schedule'
+              }}</mat-icon>
               <span>
                 @if (o.paymentStatus === 'failed') {
-                  The payment did not go through{{ o.payment?.failureReason ? ': ' + o.payment.failureReason : '' }}. Try again to place the order.
+                  The payment did not go through{{
+                    o.payment?.failureReason ? ': ' + o.payment.failureReason : ''
+                  }}. Try again to place the order.
                 } @else {
-                  Waiting for your payment. {{ o.restaurantSnapshot.name }} receives the order once it succeeds.
+                  Waiting for your payment. {{ o.restaurantSnapshot.name }} receives the order once
+                  it succeeds.
                 }
                 Unpaid orders are cancelled after 15 minutes.
               </span>
             </div>
             <div class="pending-row">
-              <button mat-flat-button class="bb-btn-accent" [disabled]="paying() || cancelling()" (click)="payNow(o)">
+              <button
+                mat-flat-button
+                class="bb-btn-accent"
+                [disabled]="paying() || cancelling()"
+                (click)="payNow(o)"
+              >
                 <mat-icon>{{ o.payment?.simulated ? 'science' : 'lock' }}</mat-icon>
                 {{ paying() ? 'Opening payment…' : 'Pay ' + (o.pricing.totalPaise | inr) }}
               </button>
-              <button mat-stroked-button class="cancel" [disabled]="paying() || cancelling()" (click)="cancel(o)">Cancel order</button>
+              <button
+                mat-stroked-button
+                class="cancel"
+                [disabled]="paying() || cancelling()"
+                (click)="cancel(o)"
+              >
+                Cancel order
+              </button>
             </div>
           } @else {
-            <np-timeline [value]="timeline()" [activeIndex]="activeStep()" variant="default" class="journey" />
+            <np-timeline
+              [value]="timeline()"
+              [activeIndex]="activeStep()"
+              variant="default"
+              class="journey"
+            />
             @if (o.status === 'pending') {
               <div class="pending-row">
-                <p class="bb-muted small">Waiting for {{ o.restaurantSnapshot.name }} to accept. You can cancel until then.</p>
-                <button mat-stroked-button class="cancel" [disabled]="cancelling()" (click)="cancel(o)">Cancel order</button>
+                <p class="bb-muted small">
+                  Waiting for {{ o.restaurantSnapshot.name }} to accept. You can cancel until then.
+                </p>
+                <button
+                  mat-stroked-button
+                  class="cancel"
+                  [disabled]="cancelling()"
+                  (click)="cancel(o)"
+                >
+                  Cancel order
+                </button>
               </div>
             } @else if (o.status !== 'delivered') {
               <p class="bb-muted small">Status updates live.</p>
@@ -173,13 +232,19 @@
       <aside class="side">
         <section class="bb-card" aria-labelledby="bill-title">
           <h3 id="bill-title">Bill</h3>
-          <bb-bill-summary [pricing]="o.pricing" [couponCode]="o.coupon?.code" [distanceMeters]="o.distanceMeters" />
+          <bb-bill-summary
+            [pricing]="o.pricing"
+            [couponCode]="o.coupon?.code"
+            [distanceMeters]="o.distanceMeters"
+          />
           <p class="payment">
             <mat-icon aria-hidden="true">payments</mat-icon>
             @if (o.payment; as p) {
-              {{ providerLabel[p.provider] }} · <span class="pay-{{ p.status }}">{{ paymentLabel[p.status] }}</span>
+              {{ providerLabel[p.provider] }} ·
+              <span class="pay-{{ p.status }}">{{ paymentLabel[p.status] }}</span>
             } @else {
-              Cash on delivery · <span class="pay-{{ o.paymentStatus }}">{{ o.paymentStatus | titlecase }}</span>
+              Cash on delivery ·
+              <span class="pay-{{ o.paymentStatus }}">{{ o.paymentStatus | titlecase }}</span>
             }
           </p>
           @if (o.payment?.simulated) {
@@ -194,11 +259,14 @@
               <div>
                 <strong>{{ r.name }}</strong>
                 <span class="bb-muted">
-                  {{ r.vehicleType ? vehicleLabel[r.vehicleType] : '' }}{{ r.vehicleNumber ? ' · ' + r.vehicleNumber : '' }}
+                  {{ r.vehicleType ? vehicleLabel[r.vehicleType] : ''
+                  }}{{ r.vehicleNumber ? ' · ' + r.vehicleNumber : '' }}
                 </span>
               </div>
               @if (r.phone && o.status !== 'delivered') {
-                <a mat-icon-button [href]="'tel:' + r.phone" [attr.aria-label]="'Call ' + r.name"><mat-icon>call</mat-icon></a>
+                <a mat-icon-button [href]="'tel:' + r.phone" [attr.aria-label]="'Call ' + r.name"
+                  ><mat-icon>call</mat-icon></a
+                >
               }
             </div>
           </section>

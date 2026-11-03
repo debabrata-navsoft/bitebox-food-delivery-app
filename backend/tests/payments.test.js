@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
-import { after, before, beforeEach, describe, it } from "node:test";
+import { after, afterEach, before, beforeEach, describe, it } from "node:test";
 import { DISPATCH } from "../src/config/dispatch.js";
 import { EARNINGS } from "../src/config/earnings.js";
 import { Address } from "../src/models/address.model.js";
@@ -160,7 +160,7 @@ describe("payments, notifications and earnings", () => {
       };
       restore = useOnlineProvider(createRazorpayProvider({ keyId: "rzp_test_key", keySecret: KEY_SECRET, webhookSecret: WEBHOOK_SECRET }, client));
     });
-    after(() => restore?.());
+    afterEach(() => restore?.()); // one swap per test, so each restore puts the simulated provider back
 
     const confirm = (id, body) => request(app).post(`/api/v1/payments/orders/${id}/confirm`).set(auth(customer.token)).send(body);
 
@@ -234,6 +234,38 @@ describe("payments, notifications and earnings", () => {
       assert.deepEqual(gateway.refunds, [{ id: "pay_TEST3", amount: checkout.amountPaise }]);
       assert.equal((await Payment.findOne({ order: order.id })).status, "refunded");
     });
+  });
+
+  it("cancels orders no rider picks up in time, refunding and freeing the rider", async () => {
+    const ready = async (paymentMethod) => {
+      const { order } = await placeOrder(paymentMethod);
+      if (paymentMethod === "online") await mockPay(order.id, "success");
+      for (const status of ["confirmed", "preparing", "ready_for_pickup"]) {
+        await request(app).patch(`/api/v1/my/restaurant/orders/${order.id}/status`).set(auth(owner.token)).send({ status });
+      }
+      return order.id;
+    };
+    await request(app).patch("/api/v1/delivery/me/availability").set(auth(rider.token)).send({ isOnline: true, ...NEAR });
+    const accepted = await ready("online"); // the only rider takes it, then never picks it up
+    const acceptRes = await request(app).post(`/api/v1/delivery/offers/${accepted}/accept`).set(auth(rider.token));
+    assert.equal(acceptRes.status, 200, JSON.stringify(acceptRes.body));
+    const unclaimed = await ready("cod"); // no free rider: nobody is ever offered it
+
+    const early = await sweep(new Date(Date.now() + (DISPATCH.pickupWindowMinutes - 1) * 60_000));
+    assert.equal(early.pickupExpired, 0, "still inside the pickup window");
+
+    const summary = await sweep(new Date(Date.now() + (DISPATCH.pickupWindowMinutes + 1) * 60_000));
+    assert.equal(summary.pickupExpired, 2);
+    for (const id of [unclaimed, accepted]) {
+      const saved = await Order.findById(id);
+      assert.equal(saved.status, "cancelled");
+      assert.equal(saved.cancellation.by, "system");
+      assert.match(saved.cancellation.reason, /No delivery partner/);
+    }
+    assert.equal((await Payment.findOne({ order: accepted })).status, "refunded", "paid online: refunded");
+    const me = await request(app).get("/api/v1/delivery/me").set(auth(rider.token));
+    assert.equal(me.body.data.activeOrder ?? null, null, "the rider is free again");
+    assert.equal(await Notification.countDocuments({ user: customer.user.id, type: "order.cancelled" }), 2, "customer told");
   });
 
   it("records the settlement on delivery and reports earnings", async () => {
