@@ -32,15 +32,9 @@
     inputmode="email"
     [error]="shownError(form.email)"
   />
-  <np-text-input
+  <bb-phone-input
     [formField]="form.phone"
     label="Mobile number (optional)"
-    type="tel"
-    icon="phone"
-    placeholder="Enter your mobile number"
-    autocomplete="tel"
-    inputmode="tel"
-    hint="10-15 digits, e.g. +919876543210"
     [error]="shownError(form.phone)"
   />
   <np-text-input

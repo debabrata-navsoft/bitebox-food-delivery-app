@@ -39,6 +39,7 @@ import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { Restaurant, RestaurantInput } from '../../../shared/models/catalog.models';
 import { rupeesToPaise } from '../../../shared/pipes/money.pipes';
 import { StatusBanner } from '../status-banner/status-banner';
+import { PhoneInput } from '../../../shared/components/phone-input/phone-input';
 
 /** "HH:mm" <-> a Date today at that time (what the NexPrime time picker edits). */
 function timeToDate(time: string): Date {
@@ -72,6 +73,7 @@ function emptyModel() {
 @Component({
   selector: 'bb-restaurant-details',
   imports: [
+    PhoneInput,
     PlaceSearch,
     ToggleComponent,
     FormRoot,

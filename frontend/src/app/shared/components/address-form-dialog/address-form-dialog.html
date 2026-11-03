@@ -159,12 +159,9 @@
           autocomplete="name"
           [error]="shownError(form.recipientName)"
         />
-        <np-text-input
+        <bb-phone-input
           [formField]="form.phone"
           label="Phone"
-          type="tel"
-          autocomplete="tel"
-          inputmode="tel"
           [error]="shownError(form.phone)"
         />
       </div>

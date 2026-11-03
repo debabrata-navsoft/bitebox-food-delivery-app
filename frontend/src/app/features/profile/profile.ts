@@ -13,11 +13,13 @@ import { ROLE_META } from '../../shared/models/user.models';
 import { serverErrors, shownError } from '../../shared/forms/form-errors';
 import { NP_FORM_FIELDS } from '../../shared/forms/np-form-fields';
 import { matchesField, passwordRules, phoneRules, requiredText } from '../../shared/forms/form-rules';
+import { PhoneInput } from '../../shared/components/phone-input/phone-input';
 
 /** Profile details + change password. Shared by every panel. */
 @Component({
   selector: 'bb-profile',
   imports: [
+    PhoneInput,
     NP_FORM_FIELDS,
     DatePipe,
     FormRoot,

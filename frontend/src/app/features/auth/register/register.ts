@@ -12,6 +12,7 @@ import { ROLE_META, SelfRegisterRole } from '../../../shared/models/user.models'
 import { serverErrors, shownError } from '../../../shared/forms/form-errors';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { emailRules, matchesField, passwordRules, phoneRules, requiredText } from '../../../shared/forms/form-rules';
+import { PhoneInput } from '../../../shared/components/phone-input/phone-input';
 
 const INTRO: Record<SelfRegisterRole, string> = {
   customer: 'Join BiteBox to order from great local restaurants.',
@@ -22,6 +23,7 @@ const INTRO: Record<SelfRegisterRole, string> = {
 @Component({
   selector: 'bb-register',
   imports: [
+    PhoneInput,
     FormRoot,
     NP_FORM_FIELDS,
     RouterLink,

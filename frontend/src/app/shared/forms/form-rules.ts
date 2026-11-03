@@ -9,6 +9,7 @@ import {
   required,
   validate,
 } from '@angular/forms/signals';
+import { parsePhoneNumberFromString } from 'libphonenumber-js/mobile';
 
 /**
  * Reusable Signal Forms schema rules. Each mirrors the backend validation so
@@ -16,7 +17,6 @@ import {
  * re-validates everything.
  */
 
-export const PHONE_PATTERN = /^\+?[0-9]{10,15}$/;
 export const POSTAL_CODE_PATTERN = /^[A-Za-z0-9 -]{3,10}$/;
 /**
  * name@domain.tld: Angular's email() accepts "me@in" (no dot in the domain), which the
@@ -76,7 +76,12 @@ export function phoneRules(
   { optional = false }: { optional?: boolean } = {},
 ): void {
   if (!optional) required(path, { message: 'Phone number is required' });
-  pattern(path, PHONE_PATTERN, { message: 'Enter a valid phone number (10-15 digits)' });
+  // Checked against the chosen country's numbering plan (legacy numbers without a code are Indian).
+  validate(path, ({ value }) =>
+    value() && !parsePhoneNumberFromString(value(), 'IN')?.isValid()
+      ? { kind: 'phone', message: 'Enter a valid mobile number for the selected country' }
+      : undefined,
+  );
 }
 
 /** Number between bounds; `null` (empty input) fails when required. */

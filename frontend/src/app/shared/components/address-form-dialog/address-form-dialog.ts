@@ -36,6 +36,7 @@ import { AddressInput, AddressLabel, DeliveryAddress } from '../../models/checko
 import { serverErrors, shownError } from '../../forms/form-errors';
 import { POSTAL_CODE_PATTERN, numberRange, phoneRules, requiredText } from '../../forms/form-rules';
 import { NP_FORM_FIELDS } from '../../forms/np-form-fields';
+import { PhoneInput } from '../phone-input/phone-input';
 
 type AutoField = 'area' | 'city' | 'state' | 'postalCode';
 
@@ -48,6 +49,7 @@ type AutoField = 'area' | 'city' | 'state' | 'postalCode';
 @Component({
   selector: 'bb-address-form-dialog',
   imports: [
+    PhoneInput,
     PlaceSearch,
     CheckboxComponent,
     FormRoot,

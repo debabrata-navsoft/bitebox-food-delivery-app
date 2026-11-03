@@ -40,13 +40,10 @@
               autocomplete="name"
               [error]="shownError(profileForm.name)"
             />
-            <np-text-input
+            <bb-phone-input
               [formField]="profileForm.phone"
               label="Mobile number"
-              type="tel"
               hint="Leave empty to remove"
-              autocomplete="tel"
-              inputmode="tel"
               [error]="shownError(profileForm.phone)"
             />
           </div>
