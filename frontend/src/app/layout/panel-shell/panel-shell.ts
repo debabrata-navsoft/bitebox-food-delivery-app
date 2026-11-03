@@ -29,6 +29,8 @@ export interface NavItem {
  * Desktop (>= 1024px): persistent sidebar. Tablet/phone: overlay drawer
  * opened from the toolbar and closed automatically after navigation.
  */
+import { initialsOf } from '../../shared/models/user.models';
+
 @Component({
   selector: 'bb-panel-shell',
   imports: [
@@ -60,13 +62,7 @@ export class PanelShell {
   private readonly sidenav = viewChild.required(MatSidenav);
 
   protected readonly user = this.auth.user;
-  protected readonly initials = computed(() =>
-    (this.user()?.name ?? '?')
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? '')
-      .join(''),
-  );
+  protected readonly initials = computed(() => initialsOf(this.user()?.name) || '?');
 
   protected readonly isDesktop = toSignal(
     inject(BreakpointObserver)

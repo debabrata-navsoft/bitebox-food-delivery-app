@@ -125,7 +125,14 @@ export const paymentsPaths = {
     },
   },
   "/notifications": {
-    get: { tags: ["Notifications"], summary: "My notifications (newest first) with the unread count", security: bearer, parameters: paging, responses: { 200: ok({ type: "object" }) } },
+    get: {
+      tags: ["Notifications"],
+      summary: "My notifications (newest first) with the unread count",
+      security: bearer,
+      parameters: [...paging, { in: "query", name: "unread", schema: { type: "boolean" }, description: "Only unread ones" }],
+      responses: { 200: ok({ type: "object" }) },
+    },
+    delete: { tags: ["Notifications"], summary: "Clear all: delete all my notifications", security: bearer, responses: { 200: ok({ type: "object" }) } },
   },
   "/notifications/read-all": {
     post: { tags: ["Notifications"], summary: "Mark all my notifications read", security: bearer, responses: { 200: ok({ type: "object" }) } },

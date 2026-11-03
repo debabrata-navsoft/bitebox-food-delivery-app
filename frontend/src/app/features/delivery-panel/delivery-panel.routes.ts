@@ -19,6 +19,11 @@ export const DELIVERY_ROUTES: Routes = [
     loadComponent: () => import('../earnings/earnings-page').then((m) => m.EarningsPage),
   },
   {
+    path: 'notifications',
+    title: 'Notifications | BiteBox Delivery',
+    loadComponent: () => import('../notifications/notifications-page').then((m) => m.NotificationsPage),
+  },
+  {
     path: 'profile',
     title: 'Profile | BiteBox Delivery',
     loadComponent: () => import('../profile/profile').then((m) => m.Profile),

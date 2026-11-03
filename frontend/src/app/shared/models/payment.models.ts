@@ -115,3 +115,20 @@ export const PROVIDER_LABEL: Record<PaymentProvider, string> = {
   razorpay: 'Razorpay',
   mock: 'Test payment',
 };
+
+/** Icon per notification type (most specific first). */
+const ICONS: [prefix: string, icon: string][] = [
+  ['order.cancelled', 'cancel'],
+  ['order.rejected', 'block'],
+  ['order.delivered', 'task_alt'],
+  ['order.offer', 'two_wheeler'],
+  ['order.assigned', 'two_wheeler'],
+  ['order.picked_up', 'local_shipping'],
+  ['order.', 'receipt_long'],
+  ['payment.', 'payments'],
+  ['restaurant.', 'storefront'],
+  ['user.', 'person_add'],
+];
+
+export const notificationIcon = (type: string): string =>
+  ICONS.find(([prefix]) => type.startsWith(prefix))?.[1] ?? 'notifications';

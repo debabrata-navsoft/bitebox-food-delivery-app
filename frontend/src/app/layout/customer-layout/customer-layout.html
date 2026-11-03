@@ -51,18 +51,13 @@
           <a
             mat-icon-button
             routerLink="/checkout"
-            class="cart-button"
+            class="cart-button bb-icon-circle bb-badge-anchor"
             [attr.aria-label]="'Cart, ' + cart.itemCount() + ' items'"
           >
-            <!-- The badge sits on a wrapper: Material warns about badges on aria-hidden icons. -->
-            <span
-              class="badge-host"
-              [matBadge]="cart.itemCount() || null"
-              matBadgeColor="accent"
-              matBadgeSize="small"
-            >
-              <mat-icon aria-hidden="true">shopping_bag</mat-icon>
-            </span>
+            <mat-icon aria-hidden="true">shopping_bag</mat-icon>
+            @if (cart.itemCount(); as n) {
+              <span class="bb-count-badge" aria-hidden="true">{{ n > 99 ? '99+' : n }}</span>
+            }
           </a>
         }
         <button
@@ -71,7 +66,7 @@
           class="account-button"
           aria-label="Account menu"
         >
-          <mat-icon>account_circle</mat-icon>
+          <span class="bb-avatar avatar" aria-hidden="true">{{ initials() }}</span>
           <span class="hide-phone">{{ firstName() }}</span>
         </button>
         <mat-menu #accountMenu="matMenu" xPosition="before">
@@ -160,14 +155,11 @@
   </a>
   @if (showCart()) {
     <a routerLink="/checkout" routerLinkActive="active">
-      <span
-        class="badge-host"
-        [matBadge]="cart.itemCount() || null"
-        [matBadgeDescription]="cart.itemCount() ? cart.itemCount() + ' items' : ''"
-        matBadgeColor="accent"
-        matBadgeSize="small"
-      >
+      <span class="badge-host bb-badge-anchor">
         <mat-icon aria-hidden="true">shopping_bag</mat-icon>
+        @if (cart.itemCount(); as n) {
+          <span class="bb-count-badge" [attr.aria-label]="n + ' items'">{{ n > 99 ? '99+' : n }}</span>
+        }
       </span>
       <span>Cart</span>
     </a>

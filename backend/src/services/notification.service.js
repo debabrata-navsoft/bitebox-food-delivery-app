@@ -32,8 +32,9 @@ export async function restaurantOwner(restaurantId) {
   return (await Restaurant.findById(restaurantId).select("owner"))?.owner ?? null;
 }
 
-export async function list(userId, pagination) {
-  const filter = { user: userId };
+/** Newest first; `unreadOnly` for the "Unread" tab. `unread` is always the full unread count. */
+export async function list(userId, pagination, { unreadOnly = false } = {}) {
+  const filter = { user: userId, ...(unreadOnly && { readAt: null }) };
   const [items, total, unread] = await Promise.all([
     Notification.find(filter).sort({ createdAt: -1 }).skip(pagination.skip).limit(pagination.limit),
     Notification.countDocuments(filter),
@@ -51,4 +52,10 @@ export async function markRead(userId, id) {
 export async function markAllRead(userId) {
   const { modifiedCount } = await Notification.updateMany({ user: userId, readAt: null }, { $set: { readAt: new Date() } });
   return { updated: modifiedCount };
+}
+
+/** "Clear all": deletes every notification of this user. */
+export async function clearAll(userId) {
+  const { deletedCount } = await Notification.deleteMany({ user: userId });
+  return { deleted: deletedCount };
 }

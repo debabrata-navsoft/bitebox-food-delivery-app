@@ -3,7 +3,6 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
-import { MatBadgeModule } from '@angular/material/badge';
 import { MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { ScrollTopComponent } from 'nexprime';
@@ -19,13 +18,14 @@ import { ROLE_META } from '../../shared/models/user.models';
  * Public / customer site chrome: sticky header, footer, and a bottom tab bar
  * on phones for thumb-friendly navigation.
  */
+import { initialsOf } from '../../shared/models/user.models';
+
 @Component({
   selector: 'bb-customer-layout',
   imports: [
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
-    MatBadgeModule,
     MatButtonModule,
     MatDividerModule,
     MatIconModule,
@@ -58,6 +58,8 @@ export class CustomerLayout {
     () => this.cart.enabled() || this.shown()?.role === 'customer',
   );
   protected readonly firstName = computed(() => this.shown()?.name.split(' ')[0] ?? '');
+  /** "Asha Customer" -> "AC", shown in the round account button. */
+  protected readonly initials = computed(() => initialsOf(this.shown()?.name));
   protected readonly year = new Date().getFullYear();
 
   protected chooseLocation(): void {

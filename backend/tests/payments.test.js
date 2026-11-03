@@ -317,9 +317,17 @@ describe("payments, notifications and earnings", () => {
     assert.deepEqual(await types(owner.token), ["order.new", "order.assigned", "order.picked_up", "order.delivered"]);
     assert.deepEqual(await types(rider.token), ["order.offer"]);
     assert.deepEqual(await types(admin.token), ["order.new", "order.delivered"]);
+    await request(app).patch(`/api/v1/notifications/${inbox.body.data.items[0].id}/read`).set(auth(customer.token));
+    const unreadOnly = await request(app).get("/api/v1/notifications?unread=true").set(auth(customer.token));
+    assert.equal(unreadOnly.body.data.items.length, 4, "the Unread tab leaves out the one just read");
+    assert.ok(unreadOnly.body.data.items.every((n) => !n.readAt));
     await request(app).post("/api/v1/notifications/read-all").set(auth(customer.token));
     assert.equal((await request(app).get("/api/v1/notifications").set(auth(customer.token))).body.data.unread, 0);
     const others = await request(app).patch(`/api/v1/notifications/${inbox.body.data.items[0].id}/read`).set(auth(owner.token));
     assert.equal(others.status, 404, "cannot touch someone else's notification");
+    const cleared = await request(app).delete("/api/v1/notifications").set(auth(customer.token));
+    assert.equal(cleared.body.data.deleted, 5);
+    assert.equal((await request(app).get("/api/v1/notifications").set(auth(customer.token))).body.data.items.length, 0);
+    assert.ok((await request(app).get("/api/v1/notifications").set(auth(owner.token))).body.data.items.length > 0, "only my own are cleared");
   });
 });

@@ -1,27 +1,49 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { Router } from '@angular/router';
-import { MatBadgeModule } from '@angular/material/badge';
+import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { AuthService } from '../../../core/auth/auth.service';
 import { InboxService } from '../../../core/services/inbox.service';
-import { AppNotification } from '../../models/payment.models';
+import { NotificationService } from '../../../core/services/notification.service';
+import { notificationIcon } from '../../models/payment.models';
+import { ROLE_META } from '../../models/user.models';
+import { confirmed } from '../confirm-dialog/confirm-dialog';
 
-/** Header bell: unread count, latest notifications, mark read. Works for every role. */
+/** Header bell: unread count, latest notifications, mark read, clear all. Works for every role. */
 @Component({
   selector: 'bb-notification-bell',
-  imports: [DatePipe, MatBadgeModule, MatButtonModule, MatIconModule, MatMenuModule],
+  imports: [DatePipe, RouterLink, MatButtonModule, MatIconModule, MatMenuModule],
   templateUrl: './notification-bell.html',
   styleUrl: './notification-bell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NotificationBell {
   protected readonly inbox = inject(InboxService);
-  private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
+  private readonly dialog = inject(MatDialog);
+  private readonly notify = inject(NotificationService);
 
-  protected open(n: AppNotification): void {
-    this.inbox.markRead(n);
-    if (n.link) void this.router.navigateByUrl(n.link);
+  protected readonly icon = notificationIcon;
+  /** Menu open: the bell gets a ring. */
+  protected readonly opened = signal(false);
+  protected readonly badge = computed(() => (this.inbox.unread() > 99 ? '99+' : String(this.inbox.unread())));
+  /** This role's full Notifications page: /notifications, /admin/notifications… */
+  protected readonly allLink = computed(() => {
+    const role = this.auth.role();
+    return role ? `${ROLE_META[role].home.replace(/\/$/, '')}/notifications` : '/notifications';
+  });
+
+  protected clearAll(): void {
+    confirmed(this.dialog, {
+      title: 'Clear all notifications?',
+      message: 'This deletes all your notifications. It cannot be undone.',
+      confirmLabel: 'Clear all',
+      danger: true,
+    }).subscribe(() =>
+      this.inbox.clearAll().subscribe({ error: () => this.notify.error('Could not clear your notifications. Try again.') }),
+    );
   }
 }

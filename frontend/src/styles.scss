@@ -215,6 +215,56 @@ img {
   }
 }
 
+// Round header icon (bell, cart) with a red count badge on its top-right edge.
+// Use .bb-icon-circle on the icon button; put .bb-count-badge inside any .bb-badge-anchor.
+.bb-badge-anchor {
+  position: relative;
+}
+
+.mat-mdc-icon-button.bb-icon-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bb-surface-alt);
+  border: 1px solid var(--bb-border);
+  color: var(--bb-ink);
+}
+
+// Round initials avatar in the account buttons, the size of the icon circles beside it.
+.bb-avatar {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--bb-border);
+  background: var(--bb-plum);
+  color: var(--bb-amber);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.bb-count-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--bb-danger);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  // White ring, so the badge stands out from the circle behind it.
+  box-shadow: 0 0 0 2px var(--bb-surface);
+  pointer-events: none;
+}
+
 // Report pages: the period picker beside the title, and dimmed numbers while a new period loads.
 .bb-period {
   width: 180px !important; // beats the 100% NexPrime field rule below

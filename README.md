@@ -355,6 +355,7 @@ How it works:
 **Notifications** (`/api/v1/notifications`, every role):
 - Stored per user, kept for 90 days, and pushed live over Socket.IO (`notification:new`).
 - The bell in every header shows the unread count. Opening an item marks it read and follows its link; **Mark all read** clears the count.
+- **See all notifications** (bottom of the bell) opens the full Notifications page of each module (`/notifications`, `/restaurant/notifications`, `/delivery/notifications`, `/admin/notifications`): full text, All / Unread (`GET /notifications?unread=true`), paging, live updates.
 - **Customers:** order placed, accepted or rejected, rider assigned, picked up, delivered, cancelled, refund processed.
 - **Restaurants:** new orders (cash or paid online), rider assigned, picked up, delivered, cancelled; their restaurant approved, rejected or suspended.
 - **Riders:** new delivery requests, an order they carry cancelled or reassigned.
