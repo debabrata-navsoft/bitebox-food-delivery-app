@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
 import {
   FormRoot,
   TreeValidationResult,
@@ -104,6 +104,11 @@ export class RestaurantDetails {
   protected readonly locating = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly imageUrl = signal('');
+  /** The values as last loaded or saved, to tell whether anything was edited since. */
+  private readonly saved = signal('');
+  private readonly snapshot = () => JSON.stringify({ ...this.model(), imageUrl: this.imageUrl() });
+  /** Save is only offered once something changed (a new restaurant can always be submitted). */
+  protected readonly changed = computed(() => this.restaurant() === null || this.snapshot() !== this.saved());
 
   /** Text in the cuisine box, added as a chip on Enter or comma. */
   protected readonly cuisineDraft = signal('');
@@ -186,6 +191,7 @@ export class RestaurantDetails {
       openingTime: timeToDate(r.openingTime),
       closingTime: timeToDate(r.closingTime),
     });
+    this.saved.set(this.snapshot());
   }
 
   /** Enter or comma in the cuisine box turns the typed text into a chip. */

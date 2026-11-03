@@ -239,7 +239,7 @@
         </div>
       </section>
 
-      <button mat-flat-button type="submit" class="save" [disabled]="form().submitting()">
+      <button mat-flat-button type="submit" class="save" [disabled]="form().submitting() || !changed()">
         @if (form().submitting()) {
           <mat-progress-spinner mode="indeterminate" diameter="20" aria-label="Saving" />
         } @else {
