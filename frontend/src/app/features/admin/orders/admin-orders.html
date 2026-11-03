@@ -17,7 +17,7 @@
 
 @if (list.error(); as message) {
   <div class="bb-alert error" role="alert">
-    <mat-icon aria-hidden="true">error</mat-icon>
+    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
     <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
   </div>
 }
@@ -48,7 +48,7 @@
             </div>
             <span class="amount">{{ o.pricing.totalPaise | inr }}</span>
             <bb-order-status-chip [status]="o.status" [label]="statusLabel(o)" />
-            <mat-icon class="chev" aria-hidden="true">chevron_right</mat-icon>
+            <np-icon name="chevron-right" class="mat-icon chev" matButtonIcon />
           </button>
         </li>
       }

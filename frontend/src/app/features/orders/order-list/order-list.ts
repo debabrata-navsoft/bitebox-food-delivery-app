@@ -1,10 +1,10 @@
+import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RealtimeService } from '../../../core/services/realtime.service';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { errorMessage } from '../../../core/services/api-error';
 import { OrderService } from '../../../core/services/checkout-api.service';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
@@ -15,7 +15,7 @@ import { InrPipe } from '../../../shared/pipes/money.pipes';
 
 @Component({
   selector: 'bb-order-list',
-  imports: [DatePipe, RouterLink, MatButtonModule, MatIconModule, EmptyState, PageHeader, InrPipe],
+  imports: [DatePipe, RouterLink, MatButtonModule, IconComponent, EmptyState, PageHeader, InrPipe],
   templateUrl: './order-list.html',
   styleUrl: './order-list.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -13,10 +13,8 @@
   border-radius: var(--bb-radius-lg);
   padding: var(--bb-space-4) var(--bb-space-5);
 
-  mat-icon {
-    width: 48px;
-    height: 48px;
-    font-size: 48px;
+  np-icon {
+    --bb-icon-size: 48px;
   }
   h1 {
     color: var(--bb-success);
@@ -52,10 +50,8 @@
   text-decoration: none;
   font-weight: 600;
 
-  mat-icon {
-    width: 18px;
-    height: 18px;
-    font-size: 18px;
+  np-icon {
+    --bb-icon-size: 18px;
   }
 }
 
@@ -238,10 +234,8 @@ address {
   background: var(--bb-amber-100);
   font-size: 0.85rem;
 
-  mat-icon {
-    width: 18px;
-    height: 18px;
-    font-size: 18px;
+  np-icon {
+    --bb-icon-size: 18px;
   }
 }
 

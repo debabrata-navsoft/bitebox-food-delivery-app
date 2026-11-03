@@ -2,7 +2,7 @@
   title="Orders"
   subtitle="Accept new orders quickly: unanswered ones are rejected automatically."
 >
-  <button mat-stroked-button (click)="board.refresh()"><mat-icon>refresh</mat-icon>Refresh</button>
+  <button mat-stroked-button (click)="board.refresh()"><np-icon name="refresh-cw" class="mat-icon" matButtonIcon />Refresh</button>
 </bb-page-header>
 
 @if (board.noRestaurant()) {
@@ -35,7 +35,7 @@
 
   @if (board.error(); as message) {
     <div class="bb-alert error" role="alert">
-      <mat-icon aria-hidden="true">cloud_off</mat-icon>
+      <np-icon name="cloud-off" class="mat-icon" matButtonIcon />
       <span
         >{{ message }} <button class="bb-link-button" (click)="board.refresh()">Retry</button></span
       >
@@ -47,7 +47,7 @@
       <span class="bb-skeleton" style="height: 240px"></span>
     } @else if (history.error(); as message) {
       <div class="bb-alert error" role="alert">
-        <mat-icon aria-hidden="true">error</mat-icon>
+        <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
         <span
           >{{ message }}
           <button class="bb-link-button" (click)="history.load(1)">Retry</button></span
@@ -147,7 +147,7 @@
           </header>
 
           <p class="customer">
-            <mat-icon aria-hidden="true">person</mat-icon>
+            <np-icon name="user" class="mat-icon" matButtonIcon />
             {{ o.deliveryAddress.recipientName
             }}{{ o.deliveryAddress.area ? ' · ' + o.deliveryAddress.area : '' }}
           </p>
@@ -163,7 +163,7 @@
           </ul>
 
           @if (o.note) {
-            <p class="note"><mat-icon aria-hidden="true">sticky_note_2</mat-icon>{{ o.note }}</p>
+            <p class="note"><np-icon name="sticky-note" class="mat-icon" matButtonIcon />{{ o.note }}</p>
           }
 
           <div class="total">
@@ -173,7 +173,7 @@
 
           @if (o.status === 'pending') {
             <p class="deadline" [class.soon]="minutesLeft(o) <= 3">
-              <mat-icon aria-hidden="true">timer</mat-icon>
+              <np-icon name="timer" class="mat-icon" matButtonIcon />
               {{
                 minutesLeft(o) > 0
                   ? 'Auto-rejects in ' + minutesLeft(o) + ' min'
@@ -195,15 +195,12 @@
                 </button>
               }
               <button mat-flat-button [disabled]="busy().has(o.id)" (click)="advance(o)">
-                <mat-icon>{{ busy().has(o.id) ? 'hourglass_top' : step.icon }}</mat-icon
-                >{{ step.label }}
+                <np-icon [name]="(busy().has(o.id) ? 'hourglass_top' : step.icon) | npIcon" class="mat-icon" matButtonIcon />{{ step.label }}
               </button>
             </div>
           } @else {
             <p class="waiting">
-              <mat-icon aria-hidden="true">{{
-                o.riderAssigned ? 'two_wheeler' : 'hourglass_top'
-              }}</mat-icon>
+              <np-icon [name]="(o.riderAssigned ? 'two_wheeler' : 'hourglass_top') | npIcon" class="mat-icon" matButtonIcon />
               @switch (o.status) {
                 @case ('ready_for_pickup') {
                   Looking for a nearby rider…

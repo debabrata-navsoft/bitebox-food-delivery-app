@@ -3,9 +3,8 @@ import { DatePipe } from '@angular/common';
 import { form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule } from '@angular/material/paginator';
-import { SelectOption } from 'nexprime';
+import { IconComponent, SelectOption } from 'nexprime';
 import { AdminOrdersService } from '../../../core/services/order-management.service';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { OrderStatusChip } from '../../../shared/components/order-status-chip/order-status-chip';
@@ -25,7 +24,7 @@ import { openAdminOrder } from './admin-order-dialog';
     DatePipe,
     NP_FORM_FIELDS,
     MatButtonModule,
-    MatIconModule,
+    IconComponent,
     MatPaginatorModule,
     EmptyState,
     OrderStatusChip,

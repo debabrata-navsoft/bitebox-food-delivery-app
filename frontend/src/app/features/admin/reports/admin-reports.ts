@@ -1,6 +1,6 @@
+import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { MatIconModule } from '@angular/material/icon';
 import { ReportsService } from '../../../core/services/reports.service';
 import { DailyChart, SERIES_COLORS } from '../../../shared/components/daily-chart/daily-chart';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
@@ -27,7 +27,7 @@ function shares(rows: { label: string; n: number; value: string }[]): ShareRow[]
 /** Platform analytics: totals, daily trends, payment mix, order outcomes and top restaurants. */
 @Component({
   selector: 'bb-admin-reports',
-  imports: [DecimalPipe, NP_FORM_FIELDS, MatIconModule, DailyChart, PageHeader, StatTile, InrPipe],
+  imports: [DecimalPipe, NP_FORM_FIELDS, IconComponent, DailyChart, PageHeader, StatTile, InrPipe],
   templateUrl: './admin-reports.html',
   styleUrl: './admin-reports.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

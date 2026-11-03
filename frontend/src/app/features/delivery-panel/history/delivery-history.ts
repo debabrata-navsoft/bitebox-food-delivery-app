@@ -1,7 +1,7 @@
+import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { RiderService } from '../../../core/services/order-management.service';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
@@ -16,7 +16,7 @@ import { InrPipe } from '../../../shared/pipes/money.pipes';
   imports: [
     DatePipe,
     MatButtonModule,
-    MatIconModule,
+    IconComponent,
     MatPaginatorModule,
     EmptyState,
     OrderStatusChip,

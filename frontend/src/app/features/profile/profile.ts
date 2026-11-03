@@ -1,9 +1,9 @@
+import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormRoot, TreeValidationResult, form, required } from '@angular/forms/signals';
 import { firstValueFrom } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../core/auth/auth.service';
 import { errorMessage, fieldErrors } from '../../core/services/api-error';
@@ -24,7 +24,7 @@ import { PhoneInput } from '../../shared/components/phone-input/phone-input';
     DatePipe,
     FormRoot,
     MatButtonModule,
-    MatIconModule,
+    IconComponent,
     MatProgressSpinnerModule,
     PageHeader,
     ],

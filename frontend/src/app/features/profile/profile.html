@@ -29,7 +29,7 @@
         <h3 id="details-title">Personal details</h3>
         @if (profileError()) {
           <div class="bb-alert error" role="alert">
-            <mat-icon aria-hidden="true">error</mat-icon><span>{{ profileError() }}</span>
+            <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ profileError() }}</span>
           </div>
         }
         <form class="bb-form" [formRoot]="profileForm">
@@ -68,7 +68,7 @@
         <p class="bb-muted">You'll be signed out on all devices after changing your password.</p>
         @if (passwordError()) {
           <div class="bb-alert error" role="alert">
-            <mat-icon aria-hidden="true">error</mat-icon><span>{{ passwordError() }}</span>
+            <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ passwordError() }}</span>
           </div>
         }
         <form class="bb-form narrow" [formRoot]="passwordForm">

@@ -1,9 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { ToggleComponent } from 'nexprime';
+import { IconComponent, ToggleComponent } from 'nexprime';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { filter } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
 import { AdminCouponService } from '../../../core/services/checkout-api.service';
@@ -24,7 +23,7 @@ import { CouponFormDialog } from './coupon-form-dialog';
     ToggleComponent,
     DatePipe,
     MatButtonModule,
-    MatIconModule,
+    IconComponent,
     MatDialogModule,
     EmptyState,
     PageHeader,

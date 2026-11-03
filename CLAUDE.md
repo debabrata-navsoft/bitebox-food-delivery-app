@@ -115,6 +115,7 @@ npx ng build --configuration development   # fast type/template check (prefix NG
 - **UI:**
   - Angular Material (M3) plus NexPrime (`nexprime` package; npm `overrides` pin its Angular peers).
   - Brand tokens (`--bb-*`, NexPrime `--ui-*` mapped onto them) and global form and field rules live in `src/styles.scss`. NexPrime host widths are overridden there with `!important`, because their emulated host styles outrank element selectors.
+  - **Icons:** NexPrime `<np-icon name="…" class="mat-icon" matButtonIcon />` only, no `mat-icon`. Names are NexPrime/Lucide file names (`chef-hat`). Material names still in data (category icons in the database, nav items) go through `| npIcon` (`shared/icons/np-icon-name.ts`). Size with `--bb-icon-size` (global default 24px, 18px in text buttons), not width/height.
   - Breakpoint mixins are in `breakpoints`: `tablet-up`, `desktop-up`, `phone-only` and `below-desktop`, at 600 and 1024 px.
 - **Maps:**
   - `shared/components/map-picker` is the pin picker.

@@ -1,8 +1,8 @@
+import { NpIconPipe } from '../../../shared/icons/np-icon-name';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { ToggleComponent } from 'nexprime';
+import { IconComponent, ToggleComponent } from 'nexprime';
 import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { filter } from 'rxjs';
 import { AdminCatalogService } from '../../../core/services/admin/admin-catalog.service';
@@ -22,7 +22,7 @@ import { CategoryFormDialog } from './category-form-dialog';
   imports: [
     ToggleComponent,
     MatButtonModule,
-    MatIconModule,
+    IconComponent, NpIconPipe,
     MatTooltipModule,
     EmptyState,
     PageHeader,

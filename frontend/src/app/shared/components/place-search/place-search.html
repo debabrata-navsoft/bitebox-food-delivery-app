@@ -16,7 +16,7 @@
     @for (p of results(); track p.latitude + ',' + p.longitude) {
       <li>
         <button type="button" (click)="pick(p)">
-          <mat-icon aria-hidden="true">place</mat-icon>
+          <np-icon name="map-pin" class="mat-icon" matButtonIcon />
           <span
             ><strong>{{ p.label }}</strong
             ><small>{{ p.displayName }}</small></span

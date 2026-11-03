@@ -3,9 +3,8 @@ import { DatePipe } from '@angular/common';
 import { form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule } from '@angular/material/paginator';
-import { SelectOption } from 'nexprime';
+import { IconComponent, SelectOption } from 'nexprime';
 import { errorMessage } from '../../../core/services/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { ReportsService } from '../../../core/services/reports.service';
@@ -26,7 +25,7 @@ import { openAdminOrder } from '../orders/admin-order-dialog';
 /** Every payment, with failed refunds flagged for a retry. */
 @Component({
   selector: 'bb-admin-payments',
-  imports: [DatePipe, NP_FORM_FIELDS, MatButtonModule, MatIconModule, MatPaginatorModule, EmptyState, PageHeader, InrPipe],
+  imports: [DatePipe, NP_FORM_FIELDS, MatButtonModule, IconComponent, MatPaginatorModule, EmptyState, PageHeader, InrPipe],
   templateUrl: './admin-payments.html',
   styleUrl: './admin-payments.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

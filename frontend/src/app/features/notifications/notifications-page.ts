@@ -1,9 +1,10 @@
+import { NpIconPipe } from '../../shared/icons/np-icon-name';
+import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { InboxService } from '../../core/services/inbox.service';
 import { RealtimeService } from '../../core/services/realtime.service';
@@ -18,7 +19,7 @@ import { AppNotification, notificationIcon } from '../../shared/models/payment.m
  */
 @Component({
   selector: 'bb-notifications-page',
-  imports: [DatePipe, MatButtonModule, MatButtonToggleModule, MatIconModule, MatPaginatorModule, EmptyState, PageHeader],
+  imports: [DatePipe, MatButtonModule, MatButtonToggleModule, IconComponent, NpIconPipe, MatPaginatorModule, EmptyState, PageHeader],
   templateUrl: './notifications-page.html',
   styleUrl: './notifications-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

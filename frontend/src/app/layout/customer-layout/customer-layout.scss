@@ -64,7 +64,7 @@
     background: var(--bb-plum-100);
   }
 
-  mat-icon {
+  np-icon {
     color: var(--bb-amber-600);
     flex-shrink: 0;
   }
@@ -239,7 +239,7 @@
     &.active {
       color: var(--bb-plum);
 
-      mat-icon {
+      np-icon {
         color: var(--bb-amber-600);
       }
     }

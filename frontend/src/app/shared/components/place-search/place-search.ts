@@ -8,8 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { MatIconModule } from '@angular/material/icon';
-import { SearchInputComponent } from 'nexprime';
+import { IconComponent, SearchInputComponent } from 'nexprime';
 import { EMPTY, catchError, debounceTime, distinctUntilChanged, switchMap, tap } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
 import { DeliveryLocationService, Place } from '../../../core/services/delivery-location.service';
@@ -24,7 +23,7 @@ import { DeliveryLocationService, Place } from '../../../core/services/delivery-
  */
 @Component({
   selector: 'bb-place-search',
-  imports: [MatIconModule, SearchInputComponent],
+  imports: [IconComponent, SearchInputComponent],
   templateUrl: './place-search.html',
   styleUrl: './place-search.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

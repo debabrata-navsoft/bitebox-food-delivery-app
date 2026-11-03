@@ -16,10 +16,11 @@ import { environment } from '../../../../environments/environment';
 import { Point, isValidPoint } from '../../../core/services/routing.service';
 
 type MarkerKind = 'restaurant' | 'home' | 'rider';
+/** NexPrime icon per marker, drawn inline (markers are plain Leaflet HTML, not Angular templates). */
 const ICON: Record<MarkerKind, string> = {
-  restaurant: 'storefront',
-  home: 'home',
-  rider: 'two_wheeler',
+  restaurant: 'store',
+  home: 'house',
+  rider: 'bike',
 };
 const LABEL: Record<MarkerKind, string> = {
   restaurant: 'Restaurant',
@@ -65,6 +66,8 @@ export class TrackingMap {
   private L?: typeof Leaflet;
   private map?: Leaflet.Map;
   private readonly markers: Partial<Record<MarkerKind, Leaflet.Marker>> = {};
+  /** The marker icons' SVG markup, loaded once from the app's own /icons folder. */
+  private svgs: Partial<Record<MarkerKind, string>> = {};
   private line?: Leaflet.Polyline;
   private fitted = false;
   private glide?: number;
@@ -108,7 +111,7 @@ export class TrackingMap {
 
   private async init(): Promise<void> {
     try {
-      const mod = await import('leaflet');
+      const [mod] = await Promise.all([import('leaflet'), this.loadMarkerIcons()]);
       const L = (this.L = ((mod as { default?: typeof Leaflet }).default ?? mod) as typeof Leaflet);
       this.map = L.map(this.container().nativeElement, {
         zoomControl: true,
@@ -136,6 +139,16 @@ export class TrackingMap {
     }
   }
 
+  private async loadMarkerIcons(): Promise<void> {
+    const entries = await Promise.all(
+      (Object.keys(ICON) as MarkerKind[]).map(async (kind) => {
+        const res = await fetch(`icons/${ICON[kind]}.svg`).catch(() => null);
+        return [kind, res?.ok ? await res.text() : ''] as const;
+      }),
+    );
+    this.svgs = Object.fromEntries(entries);
+  }
+
   private place(kind: MarkerKind, point: Point | null, stale = false): void {
     const L = this.L!;
     const existing = this.markers[kind];
@@ -148,7 +161,7 @@ export class TrackingMap {
     if (!existing) {
       const icon = L.divIcon({
         className: `bb-track-marker bb-track-${kind}`,
-        html: `<span class="material-symbols-outlined" aria-hidden="true">${ICON[kind]}</span>`,
+        html: `<span class="bb-track-icon" aria-hidden="true">${this.svgs[kind] ?? ''}</span>`,
         iconSize: [36, 36],
         iconAnchor: [18, 18],
       });

@@ -1,10 +1,11 @@
+import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
 
 /** A headline number with its label (and an optional hint underneath). */
 @Component({
   selector: 'bb-stat-tile',
-  imports: [MatIconModule],
+  imports: [IconComponent, NpIconPipe],
   templateUrl: './stat-tile.html',
   styleUrl: './stat-tile.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -4,7 +4,7 @@
   <span class="bb-skeleton" style="height: 240px"></span>
 } @else if (list.error(); as message) {
   <div class="bb-alert error" role="alert">
-    <mat-icon aria-hidden="true">error</mat-icon>
+    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
     <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
   </div>
 } @else if (list.data(); as p) {

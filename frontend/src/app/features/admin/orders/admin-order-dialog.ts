@@ -1,3 +1,4 @@
+import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import {
@@ -7,7 +8,6 @@ import {
   MatDialogModule,
 } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { Observable, filter } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -48,7 +48,7 @@ const CANCELLABLE: OrderStatus[] = [
     DecimalPipe,
     MatDialogModule,
     MatButtonModule,
-    MatIconModule,
+    IconComponent,
     BillSummary,
     OrderStatusChip,
     TrackingMap,

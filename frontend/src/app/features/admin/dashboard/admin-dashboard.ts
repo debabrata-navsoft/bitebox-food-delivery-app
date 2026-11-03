@@ -1,8 +1,9 @@
+import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { forkJoin } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -25,7 +26,7 @@ interface StatCard {
 
 @Component({
   selector: 'bb-admin-dashboard',
-  imports: [DatePipe, RouterLink, MatButtonModule, MatIconModule, PageHeader, StatTile],
+  imports: [DatePipe, RouterLink, MatButtonModule, IconComponent, NpIconPipe, PageHeader, StatTile],
   templateUrl: './admin-dashboard.html',
   styleUrl: './admin-dashboard.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

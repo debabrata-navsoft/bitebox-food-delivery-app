@@ -161,10 +161,8 @@ h2 {
   gap: 6px;
   font-weight: 700;
 
-  mat-icon {
-    width: 18px;
-    height: 18px;
-    font-size: 18px;
+  np-icon {
+    --bb-icon-size: 18px;
     color: var(--bb-plum-500);
   }
 }

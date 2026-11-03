@@ -1,6 +1,6 @@
+import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { MatIconModule } from '@angular/material/icon';
 import { EarningsScope, ReportsService } from '../../core/services/reports.service';
 import { DailyChart } from '../../shared/components/daily-chart/daily-chart';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
@@ -16,7 +16,7 @@ import { InrPipe, formatDistance, formatPaise } from '../../shared/pipes/money.p
  */
 @Component({
   selector: 'bb-earnings-page',
-  imports: [DatePipe, NP_FORM_FIELDS, MatIconModule, DailyChart, EmptyState, PageHeader, StatTile, InrPipe],
+  imports: [DatePipe, NP_FORM_FIELDS, IconComponent, DailyChart, EmptyState, PageHeader, StatTile, InrPipe],
   templateUrl: './earnings-page.html',
   styleUrl: './earnings-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,5 +1,5 @@
 @if (icon(); as i) {
-  <mat-icon class="icon" aria-hidden="true">{{ i }}</mat-icon>
+  <np-icon [name]="(i) | npIcon" class="mat-icon icon" matButtonIcon />
 }
 <span class="label">{{ label() }}</span>
 <strong class="value">{{ value() }}</strong>

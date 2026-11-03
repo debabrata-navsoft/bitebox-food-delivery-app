@@ -16,7 +16,7 @@
           : 'Choose delivery location'
       "
     >
-      <mat-icon aria-hidden="true">location_on</mat-icon>
+      <np-icon name="map-pin" class="mat-icon" matButtonIcon />
       <span class="location-text">
         @if (deliveryLocation(); as loc) {
           <strong>{{ loc.label }}</strong>
@@ -24,7 +24,7 @@
           <strong>Set location</strong>
         }
       </span>
-      <mat-icon class="caret" aria-hidden="true">expand_more</mat-icon>
+      <np-icon name="chevron-down" class="mat-icon caret" matButtonIcon />
     </button>
 
     <nav class="desktop-nav" aria-label="Main">
@@ -42,7 +42,7 @@
       } @else if (shown(); as u) {
         @if (panelLink(); as link) {
           <a mat-stroked-button [routerLink]="link" class="hide-phone">
-            <mat-icon>space_dashboard</mat-icon>
+            <np-icon name="layout-dashboard" class="mat-icon" matButtonIcon />
             My panel
           </a>
         }
@@ -54,7 +54,7 @@
             class="cart-button bb-icon-circle bb-badge-anchor"
             [attr.aria-label]="'Cart, ' + cart.itemCount() + ' items'"
           >
-            <mat-icon aria-hidden="true">shopping_bag</mat-icon>
+            <np-icon name="shopping-bag" class="mat-icon" matButtonIcon />
             @if (cart.itemCount(); as n) {
               <span class="bb-count-badge" aria-hidden="true">{{ n > 99 ? '99+' : n }}</span>
             }
@@ -78,25 +78,25 @@
           <mat-divider />
           @if (panelLink(); as link) {
             <a mat-menu-item [routerLink]="link">
-              <mat-icon>space_dashboard</mat-icon>
+              <np-icon name="layout-dashboard" class="mat-icon" matButtonIcon />
               <span>My panel</span>
             </a>
           } @else {
             <a mat-menu-item routerLink="/orders">
-              <mat-icon>receipt_long</mat-icon>
+              <np-icon name="receipt" class="mat-icon" matButtonIcon />
               <span>My orders</span>
             </a>
             <a mat-menu-item routerLink="/account/addresses">
-              <mat-icon>location_on</mat-icon>
+              <np-icon name="map-pin" class="mat-icon" matButtonIcon />
               <span>Saved addresses</span>
             </a>
             <a mat-menu-item routerLink="/account">
-              <mat-icon>manage_accounts</mat-icon>
+              <np-icon name="user-cog" class="mat-icon" matButtonIcon />
               <span>My account</span>
             </a>
           }
           <button mat-menu-item (click)="logout()">
-            <mat-icon>logout</mat-icon>
+            <np-icon name="log-out" class="mat-icon" matButtonIcon />
             <span>Sign out</span>
           </button>
         </mat-menu>
@@ -146,17 +146,17 @@
 <!-- Bottom tab bar on phones -->
 <nav class="tab-bar" aria-label="Quick navigation">
   <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-    <mat-icon aria-hidden="true">home</mat-icon>
+    <np-icon name="house" class="mat-icon" matButtonIcon />
     <span>Home</span>
   </a>
   <a routerLink="/restaurants" routerLinkActive="active">
-    <mat-icon aria-hidden="true">storefront</mat-icon>
+    <np-icon name="store" class="mat-icon" matButtonIcon />
     <span>Restaurants</span>
   </a>
   @if (showCart()) {
     <a routerLink="/checkout" routerLinkActive="active">
       <span class="badge-host bb-badge-anchor">
-        <mat-icon aria-hidden="true">shopping_bag</mat-icon>
+        <np-icon name="shopping-bag" class="mat-icon" matButtonIcon />
         @if (cart.itemCount(); as n) {
           <span class="bb-count-badge" [attr.aria-label]="n + ' items'">{{ n > 99 ? '99+' : n }}</span>
         }
@@ -165,18 +165,18 @@
     </a>
   } @else {
     <a routerLink="/dishes" routerLinkActive="active">
-      <mat-icon aria-hidden="true">ramen_dining</mat-icon>
+      <np-icon name="soup" class="mat-icon" matButtonIcon />
       <span>Dishes</span>
     </a>
   }
   @if (shown()) {
     <a [routerLink]="panelLink() ?? '/account'" routerLinkActive="active">
-      <mat-icon aria-hidden="true">person</mat-icon>
+      <np-icon name="user" class="mat-icon" matButtonIcon />
       <span>{{ panelLink() ? 'Panel' : 'Account' }}</span>
     </a>
   } @else {
     <a routerLink="/login" routerLinkActive="active">
-      <mat-icon aria-hidden="true">login</mat-icon>
+      <np-icon name="log-in" class="mat-icon" matButtonIcon />
       <span>Sign in</span>
     </a>
   }

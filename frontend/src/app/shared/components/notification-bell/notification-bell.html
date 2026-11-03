@@ -7,7 +7,7 @@
   (menuClosed)="opened.set(false)"
   [attr.aria-label]="inbox.unread() ? 'Notifications, ' + inbox.unread() + ' unread' : 'Notifications'"
 >
-  <mat-icon aria-hidden="true">notifications</mat-icon>
+  <np-icon name="bell" class="mat-icon" matButtonIcon />
   @if (inbox.unread()) {
     <span class="bb-count-badge" aria-hidden="true">{{ badge() }}</span>
   }
@@ -23,7 +23,7 @@
     </h2>
     @if (inbox.unread()) {
       <button type="button" class="text-action" (click)="inbox.markAllRead()">
-        <mat-icon aria-hidden="true">done_all</mat-icon>Mark all read
+        <np-icon name="check-check" class="mat-icon" matButtonIcon />Mark all read
       </button>
     }
   </div>
@@ -31,7 +31,7 @@
   <div class="list">
     @for (n of inbox.items(); track n.id) {
       <button mat-menu-item class="item" [class.unread]="!n.readAt" (click)="inbox.open(n)">
-        <span class="icon" aria-hidden="true"><mat-icon>{{ icon(n.type) }}</mat-icon></span>
+        <span class="icon" aria-hidden="true"><np-icon [name]="(icon(n.type)) | npIcon" class="mat-icon" matButtonIcon /></span>
         <span class="text">
           <span class="title">{{ n.title }}</span>
           @if (n.body) {
@@ -45,7 +45,7 @@
       </button>
     } @empty {
       <p class="empty">
-        <mat-icon aria-hidden="true">notifications_none</mat-icon>
+        <np-icon name="bell" class="mat-icon" matButtonIcon />
         {{ inbox.loaded() ? "You're all caught up." : 'Loading…' }}
       </p>
     }
@@ -55,7 +55,7 @@
     <a class="text-action" [routerLink]="allLink()">See all notifications</a>
     @if (inbox.items().length) {
       <button type="button" class="text-action danger" (click)="clearAll()">
-        <mat-icon aria-hidden="true">delete</mat-icon>Clear all
+        <np-icon name="trash-2" class="mat-icon" matButtonIcon />Clear all
       </button>
     }
   </div>

@@ -2,10 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
-import { ScrollTopComponent } from 'nexprime';
+import { IconComponent, ScrollTopComponent } from 'nexprime';
 import { AuthService } from '../../core/auth/auth.service';
 import { CartService } from '../../core/services/cart.service';
 import { DeliveryLocationService } from '../../core/services/delivery-location.service';
@@ -28,7 +27,7 @@ import { initialsOf } from '../../shared/models/user.models';
     RouterLinkActive,
     MatButtonModule,
     MatDividerModule,
-    MatIconModule,
+    IconComponent,
     MatMenuModule,
     BrandLogo,
     ScrollTopComponent,

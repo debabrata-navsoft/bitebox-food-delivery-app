@@ -3,9 +3,8 @@ import { DatePipe } from '@angular/common';
 import { form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule } from '@angular/material/paginator';
-import { ToggleComponent } from 'nexprime';
+import { IconComponent, ToggleComponent } from 'nexprime';
 import { errorMessage } from '../../../core/services/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AdminOrdersService } from '../../../core/services/order-management.service';
@@ -36,7 +35,7 @@ const RIDER_EVENTS: OrderStatus[] = [
     DatePipe,
     NP_FORM_FIELDS,
     MatButtonModule,
-    MatIconModule,
+    IconComponent,
     MatPaginatorModule,
     ToggleComponent,
     EmptyState,

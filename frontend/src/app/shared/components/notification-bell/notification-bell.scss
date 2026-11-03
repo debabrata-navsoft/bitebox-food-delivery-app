@@ -80,10 +80,8 @@
       color: var(--bb-danger);
     }
 
-    mat-icon {
-      width: 18px;
-      height: 18px;
-      font-size: 18px;
+    np-icon {
+      --bb-icon-size: 18px;
     }
   }
 
@@ -124,11 +122,9 @@
     background: var(--bb-plum-100);
     color: var(--bb-plum);
 
-    mat-icon {
+    np-icon {
+      --bb-icon-size: 20px;
       margin: 0;
-      width: 20px;
-      height: 20px;
-      font-size: 20px;
     }
   }
 

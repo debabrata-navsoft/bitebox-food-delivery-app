@@ -1,6 +1,6 @@
 <bb-page-header title="Menu" subtitle="Add dishes, set prices and switch availability on or off.">
   @if (!noRestaurant() && !loading()) {
-    <button mat-flat-button (click)="openForm()"><mat-icon>add</mat-icon>Add dish</button>
+    <button mat-flat-button (click)="openForm()"><np-icon name="plus" class="mat-icon" matButtonIcon />Add dish</button>
   }
 </bb-page-header>
 
@@ -18,7 +18,7 @@
   </bb-empty-state>
 } @else if (error()) {
   <div class="bb-alert error" role="alert">
-    <mat-icon aria-hidden="true">error</mat-icon>
+    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
     <span>{{ error() }} <button class="bb-link-button" (click)="load()">Retry</button></span>
   </div>
 } @else if (items().length === 0) {
@@ -28,7 +28,7 @@
     message="Add your first dish so customers can see what you serve."
   >
     <button mat-flat-button (click)="openForm()">
-      <mat-icon>add</mat-icon>Add your first dish
+      <np-icon name="plus" class="mat-icon" matButtonIcon />Add your first dish
     </button>
   </bb-empty-state>
 } @else {
@@ -52,7 +52,7 @@
   <p class="count bb-muted">Showing {{ filtered().length }} of {{ items().length }} dishes</p>
   @if (total() > items().length) {
     <div class="bb-alert info" role="status">
-      <mat-icon aria-hidden="true">info</mat-icon>
+      <np-icon name="info" class="mat-icon" matButtonIcon />
       <span>Showing the first {{ items().length }} of {{ total() }} dishes.</span>
     </div>
   }
@@ -64,7 +64,7 @@
           <img [src]="item.imageUrl" alt="" loading="lazy" />
         } @else {
           <span class="thumb" aria-hidden="true"
-            ><mat-icon>{{ item.category.icon }}</mat-icon></span
+            ><np-icon [name]="(item.category.icon) | npIcon: 'utensils'" class="mat-icon" matButtonIcon /></span
           >
         }
         <div class="info">
@@ -85,14 +85,14 @@
           [attr.aria-label]="'Actions for ' + item.name"
           [disabled]="busyId() === item.id"
         >
-          <mat-icon>more_vert</mat-icon>
+          <np-icon name="ellipsis-vertical" class="mat-icon" matButtonIcon />
         </button>
         <mat-menu #itemMenu="matMenu" xPosition="before">
           <button mat-menu-item (click)="openForm(item)">
-            <mat-icon>edit</mat-icon><span>Edit</span>
+            <np-icon name="pencil" class="mat-icon" matButtonIcon /><span>Edit</span>
           </button>
           <button mat-menu-item (click)="remove(item)">
-            <mat-icon>delete</mat-icon><span>Delete</span>
+            <np-icon name="trash-2" class="mat-icon" matButtonIcon /><span>Delete</span>
           </button>
         </mat-menu>
       </li>

@@ -215,6 +215,24 @@ img {
   }
 }
 
+// Icons are NexPrime <np-icon>s. They are sized from CSS, like Material icons were:
+// 24px by default, 18px in text buttons, and per place with --bb-icon-size. The
+// !important beats NexPrime's inline 20px size.
+np-icon.np-icon {
+  width: var(--bb-icon-size, 24px) !important;
+  height: var(--bb-icon-size, 24px) !important;
+}
+
+// matButtonIcon puts it in the button's icon slot, where Material spaces it from the label.
+.mat-mdc-button-base:not(.mat-mdc-icon-button) > np-icon {
+  --bb-icon-size: 18px;
+}
+
+// Menu items: icon, then a gap, then the text (as with Material icons).
+.mat-mdc-menu-item > np-icon {
+  margin-right: 16px;
+}
+
 // Round header icon (bell, cart) with a red count badge on its top-right edge.
 // Use .bb-icon-circle on the icon button; put .bb-count-badge inside any .bb-badge-anchor.
 .bb-badge-anchor {
@@ -552,7 +570,7 @@ np-time-picker .time-picker-field {
   font-size: 0.95rem;
   line-height: 1.45;
 
-  mat-icon {
+  np-icon {
     flex-shrink: 0;
   }
 

@@ -7,7 +7,7 @@
 
 @if (list.error(); as message) {
   <div class="bb-alert error" role="alert">
-    <mat-icon aria-hidden="true">error</mat-icon>
+    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
     <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
   </div>
 }
@@ -44,7 +44,7 @@
           <div class="action">
             @if (p.refundNeeded) {
               <button mat-stroked-button type="button" [disabled]="refunding() === p.id" (click)="retryRefund(p)">
-                <mat-icon>replay</mat-icon>
+                <np-icon name="rotate-ccw" class="mat-icon" matButtonIcon />
                 Retry refund
               </button>
             }

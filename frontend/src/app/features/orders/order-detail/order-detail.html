@@ -13,7 +13,7 @@
     @if (placed()) {
       <np-confetti trigger="manual" [count]="140" class="placed-confetti">
         <div class="placed" role="status">
-          <mat-icon aria-hidden="true">check_circle</mat-icon>
+          <np-icon name="circle-check" class="mat-icon" matButtonIcon />
           <div>
             <h1>Order placed!</h1>
             <p>
@@ -36,7 +36,7 @@
     <header class="head">
       <div>
         <a routerLink="/orders" class="back"
-          ><mat-icon aria-hidden="true">arrow_back</mat-icon>My orders</a
+          ><np-icon name="arrow-left" class="mat-icon" matButtonIcon />My orders</a
         >
         <h2>Order {{ o.orderNumber }}</h2>
         <p class="bb-muted">Placed {{ o.createdAt | date: 'medium' }}</p>
@@ -76,7 +76,7 @@
             </p>
             @if (t.riderStale()) {
               <p class="stale" role="status">
-                <mat-icon aria-hidden="true">signal_cellular_connected_no_internet_0_bar</mat-icon>
+                <np-icon name="signal-zero" class="mat-icon" matButtonIcon />
                 Last location update {{ minutes(t.riderSeenSeconds() ?? 0) }} min ago. The rider may
                 have a weak signal.
               </p>
@@ -114,7 +114,7 @@
           <h3 id="progress-title">Progress</h3>
           @if (ended()) {
             <div class="bb-alert error" role="status">
-              <mat-icon aria-hidden="true">cancel</mat-icon>
+              <np-icon name="circle-x" class="mat-icon" matButtonIcon />
               <span>
                 @switch (o.cancellation?.by) {
                   @case ('customer') {
@@ -151,9 +151,7 @@
             </div>
           } @else if (awaitingPayment()) {
             <div class="bb-alert info pay-due" role="status">
-              <mat-icon aria-hidden="true">{{
-                o.paymentStatus === 'failed' ? 'error' : 'schedule'
-              }}</mat-icon>
+              <np-icon [name]="(o.paymentStatus === 'failed' ? 'error' : 'schedule') | npIcon" class="mat-icon" matButtonIcon />
               <span>
                 @if (o.paymentStatus === 'failed') {
                   The payment did not go through{{
@@ -173,7 +171,7 @@
                 [disabled]="paying() || cancelling()"
                 (click)="payNow(o)"
               >
-                <mat-icon>{{ o.payment?.simulated ? 'science' : 'lock' }}</mat-icon>
+                <np-icon [name]="(o.payment?.simulated ? 'science' : 'lock') | npIcon" class="mat-icon" matButtonIcon />
                 {{ paying() ? 'Opening payment…' : 'Pay ' + (o.pricing.totalPaise | inr) }}
               </button>
               <button
@@ -238,7 +236,7 @@
             [distanceMeters]="o.distanceMeters"
           />
           <p class="payment">
-            <mat-icon aria-hidden="true">payments</mat-icon>
+            <np-icon name="banknote" class="mat-icon" matButtonIcon />
             @if (o.payment; as p) {
               {{ providerLabel[p.provider] }} ·
               <span class="pay-{{ p.status }}">{{ paymentLabel[p.status] }}</span>
@@ -265,7 +263,7 @@
               </div>
               @if (r.phone && o.status !== 'delivered') {
                 <a mat-icon-button [href]="'tel:' + r.phone" [attr.aria-label]="'Call ' + r.name"
-                  ><mat-icon>call</mat-icon></a
+                  ><np-icon name="phone" class="mat-icon" matButtonIcon /></a
                 >
               }
             </div>

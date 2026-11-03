@@ -1,3 +1,4 @@
+import { NpIconPipe } from '../../../shared/icons/np-icon-name';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -12,12 +13,11 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, DecimalPipe, TitleCasePipe, formatDate } from '@angular/common';
-import { ConfettiComponent, TimelineComponent, type TimelineEvent } from 'nexprime';
+import { ConfettiComponent, IconComponent, TimelineComponent, type TimelineEvent } from 'nexprime';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
 import { EMPTY, catchError, firstValueFrom } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
 import { OrderService } from '../../../core/services/checkout-api.service';
@@ -60,7 +60,7 @@ const JOURNEY: { status: OrderStatus; icon: string }[] = [
     TitleCasePipe,
     RouterLink,
     MatButtonModule,
-    MatIconModule,
+    IconComponent, NpIconPipe,
     BillSummary,
     EmptyState,
     VegBadge,

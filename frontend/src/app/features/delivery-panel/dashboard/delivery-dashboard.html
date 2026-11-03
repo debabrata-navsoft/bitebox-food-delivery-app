@@ -1,5 +1,5 @@
 <bb-page-header title="Deliveries" subtitle="Go online to receive delivery requests near you.">
-  <a mat-stroked-button routerLink="/delivery/history"><mat-icon>history</mat-icon>History</a>
+  <a mat-stroked-button routerLink="/delivery/history"><np-icon name="history" class="mat-icon" matButtonIcon />History</a>
 </bb-page-header>
 
 @if (!data()) {
@@ -46,12 +46,12 @@
         }
         @if (online() && gps.problem(); as problem) {
           <div class="bb-alert info" role="status">
-            <mat-icon aria-hidden="true">gps_off</mat-icon><span>{{ problem }}</span>
+            <np-icon name="locate-off" class="mat-icon" matButtonIcon /><span>{{ problem }}</span>
           </div>
         }
         @if (availabilityError(); as message) {
           <div class="bb-alert error" role="alert">
-            <mat-icon aria-hidden="true">location_off</mat-icon><span>{{ message }}</span>
+            <np-icon name="map-pin-off" class="mat-icon" matButtonIcon /><span>{{ message }}</span>
           </div>
         }
         <dl class="stats">
@@ -123,20 +123,20 @@
 
           <ol class="stops">
             <li [class.done]="o.status !== 'assigned'">
-              <mat-icon aria-hidden="true">storefront</mat-icon>
+              <np-icon name="store" class="mat-icon" matButtonIcon />
               <div>
                 <span class="stop-label">Pickup</span>
                 <strong>{{ o.restaurantSnapshot.name }}</strong>
                 <span>{{ o.restaurantSnapshot.address }}</span>
                 @if (o.restaurantSnapshot.phone; as phone) {
                   <a class="call" [href]="'tel:' + phone"
-                    ><mat-icon aria-hidden="true">call</mat-icon>Call restaurant</a
+                    ><np-icon name="phone" class="mat-icon" matButtonIcon />Call restaurant</a
                   >
                 }
               </div>
             </li>
             <li>
-              <mat-icon aria-hidden="true">home_pin</mat-icon>
+              <np-icon name="map-pin-house" class="mat-icon" matButtonIcon />
               <div>
                 <span class="stop-label">Drop</span>
                 <strong>{{ o.deliveryAddress.recipientName }}</strong>
@@ -151,7 +151,7 @@
                 }
                 @if (o.deliveryAddress.phone; as phone) {
                   <a class="call" [href]="'tel:' + phone"
-                    ><mat-icon aria-hidden="true">call</mat-icon>Call customer</a
+                    ><np-icon name="phone" class="mat-icon" matButtonIcon />Call customer</a
                   >
                 }
               </div>
@@ -159,7 +159,7 @@
           </ol>
 
           @if (o.note) {
-            <p class="note"><mat-icon aria-hidden="true">sticky_note_2</mat-icon>{{ o.note }}</p>
+            <p class="note"><np-icon name="sticky-note" class="mat-icon" matButtonIcon />{{ o.note }}</p>
           }
 
           @if (stops(); as s) {
@@ -173,20 +173,20 @@
             />
             <p class="route-line">
               @if (routeToStop(); as r) {
-                <mat-icon aria-hidden="true">route</mat-icon>
+                <np-icon name="route" class="mat-icon" matButtonIcon />
                 {{ r.distanceMeters / 1000 | number: '1.1-1' }} km · about
                 {{ minutes(r.durationSeconds) }} min by road to
                 {{ s.toRestaurant ? 'the restaurant' : 'the customer' }}
                 <span class="bb-muted">(estimate, no live traffic)</span>
               } @else if (!myPosition()) {
-                <mat-icon aria-hidden="true">gps_not_fixed</mat-icon>
+                <np-icon name="locate" class="mat-icon" matButtonIcon />
                 Waiting for your GPS position…
               }
             </p>
           }
 
           <div class="cash">
-            <mat-icon aria-hidden="true">payments</mat-icon>
+            <np-icon name="banknote" class="mat-icon" matButtonIcon />
             <span>Collect in cash</span>
             <strong>{{ o.pricing.totalPaise | inr }}</strong>
           </div>
@@ -196,12 +196,11 @@
             <div class="work-actions">
               @if (directionsUrl(); as url) {
                 <a mat-stroked-button [href]="url" target="_blank" rel="noopener"
-                  ><mat-icon>directions</mat-icon>Directions</a
+                  ><np-icon name="navigation" class="mat-icon" matButtonIcon />Directions</a
                 >
               }
               <button mat-flat-button class="go" [disabled]="acting()" (click)="advance(o)">
-                <mat-icon>{{ step.icon }}</mat-icon
-                >{{ step.label }}
+                <np-icon [name]="(step.icon) | npIcon" class="mat-icon" matButtonIcon />{{ step.label }}
               </button>
             </div>
           }
@@ -223,7 +222,7 @@
 
           <ol class="stops">
             <li>
-              <mat-icon aria-hidden="true">storefront</mat-icon>
+              <np-icon name="store" class="mat-icon" matButtonIcon />
               <div>
                 <span class="stop-label">Pickup</span>
                 <strong>{{ o.restaurantSnapshot.name }}</strong>
@@ -231,7 +230,7 @@
               </div>
             </li>
             <li>
-              <mat-icon aria-hidden="true">home_pin</mat-icon>
+              <np-icon name="map-pin-house" class="mat-icon" matButtonIcon />
               <div>
                 <span class="stop-label">Drop</span>
                 <strong>{{ o.deliveryAddress.area || o.deliveryAddress.city }}</strong>
@@ -273,13 +272,13 @@
               [disabled]="acting() || offerSecondsLeft() === 0"
               (click)="accept(o)"
             >
-              <mat-icon>check</mat-icon>Accept
+              <np-icon name="check" class="mat-icon" matButtonIcon />Accept
             </button>
           </div>
         </section>
       } @else {
         <section class="bb-card idle" aria-live="polite">
-          <mat-icon aria-hidden="true">{{ online() ? 'radar' : 'bedtime' }}</mat-icon>
+          <np-icon [name]="(online() ? 'radar' : 'bedtime') | npIcon" class="mat-icon" matButtonIcon />
           <h2>{{ online() ? 'Looking for requests…' : 'No active delivery' }}</h2>
           <p class="bb-muted">
             {{

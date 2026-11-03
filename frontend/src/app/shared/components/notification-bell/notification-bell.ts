@@ -1,9 +1,10 @@
+import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { AuthService } from '../../../core/auth/auth.service';
 import { InboxService } from '../../../core/services/inbox.service';
@@ -15,7 +16,7 @@ import { confirmed } from '../confirm-dialog/confirm-dialog';
 /** Header bell: unread count, latest notifications, mark read, clear all. Works for every role. */
 @Component({
   selector: 'bb-notification-bell',
-  imports: [DatePipe, RouterLink, MatButtonModule, MatIconModule, MatMenuModule],
+  imports: [DatePipe, RouterLink, MatButtonModule, IconComponent, NpIconPipe, MatMenuModule],
   templateUrl: './notification-bell.html',
   styleUrl: './notification-bell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

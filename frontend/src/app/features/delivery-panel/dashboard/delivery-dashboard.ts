@@ -1,3 +1,4 @@
+import { NpIconPipe } from '../../../shared/icons/np-icon-name';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -14,9 +15,8 @@ import { DecimalPipe } from '@angular/common';
 import { FormRoot, form, required } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { SelectOption, ToggleComponent } from 'nexprime';
+import { IconComponent, SelectOption, ToggleComponent } from 'nexprime';
 import { EMPTY, catchError, firstValueFrom, interval, of, switchMap } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
 import {
@@ -80,7 +80,7 @@ const NEXT_STEP: Partial<
     NP_FORM_FIELDS,
     RouterLink,
     MatButtonModule,
-    MatIconModule,
+    IconComponent, NpIconPipe,
     MatProgressBarModule,
     ToggleComponent,
     EmptyState,

@@ -3,21 +3,21 @@
   subtitle="Overview of BiteBox business and accounts."
 >
   <a mat-flat-button routerLink="/admin/users">
-    <mat-icon>group</mat-icon>
+    <np-icon name="users" class="mat-icon" matButtonIcon />
     Manage users
   </a>
 </bb-page-header>
 
 @if (error()) {
   <div class="bb-alert error" role="alert">
-    <mat-icon aria-hidden="true">error</mat-icon>
+    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
     <span>{{ error() }} <button class="bb-link-button" (click)="load()">Retry</button></span>
   </div>
 }
 
 @if (restaurantCounts(); as rc) {
   <section class="approvals bb-card" aria-labelledby="approvals-title">
-    <span class="approvals-icon" aria-hidden="true"><mat-icon>pending_actions</mat-icon></span>
+    <span class="approvals-icon" aria-hidden="true"><np-icon name="clipboard-clock" class="mat-icon" matButtonIcon /></span>
     <div>
       <h3 id="approvals-title">
         {{ rc.pending }} restaurant {{ rc.pending === 1 ? 'application' : 'applications' }} awaiting review
@@ -33,7 +33,7 @@
 <section class="business" aria-labelledby="business-title">
   <div class="business-head">
     <h3 id="business-title">Last 30 days</h3>
-    <a mat-button routerLink="/admin/reports">Full report <mat-icon iconPositionEnd>arrow_forward</mat-icon></a>
+    <a mat-button routerLink="/admin/reports">Full report <np-icon name="arrow-right" class="mat-icon" iconPositionEnd matButtonIcon /></a>
   </div>
   @if (report.hasValue()) {
     @let t = report.value().totals;
@@ -62,7 +62,7 @@
   } @else {
     @for (card of stats(); track card.role) {
       <a class="bb-card stat" [routerLink]="'/admin/users'" [queryParams]="{ role: card.role }">
-        <span class="stat-icon"><mat-icon aria-hidden="true">{{ card.icon }}</mat-icon></span>
+        <span class="stat-icon"><np-icon [name]="(card.icon) | npIcon" class="mat-icon" matButtonIcon /></span>
         <span class="stat-value">{{ card.value }}</span>
         <span class="stat-label">{{ card.label }}</span>
       </a>

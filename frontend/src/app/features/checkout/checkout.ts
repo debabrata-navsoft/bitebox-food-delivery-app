@@ -1,10 +1,11 @@
+import { NpIconPipe } from '../../shared/icons/np-icon-name';
+import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormRoot, form, maxLength, pattern } from '@angular/forms/signals';
 import { TitleCasePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -49,7 +50,7 @@ import { NP_FORM_FIELDS } from '../../shared/forms/np-form-fields';
     NP_FORM_FIELDS,
     RouterLink,
     MatButtonModule,
-    MatIconModule,
+    IconComponent, NpIconPipe,
     MatProgressSpinnerModule,
     MatRadioModule,
     BillSummary,

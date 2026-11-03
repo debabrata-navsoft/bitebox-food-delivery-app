@@ -17,10 +17,9 @@ import {
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { CheckboxComponent } from 'nexprime';
+import { CheckboxComponent, IconComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { errorMessage, fieldErrors } from '../../../core/services/api-error';
@@ -57,7 +56,7 @@ type AutoField = 'area' | 'city' | 'state' | 'postalCode';
     MatDialogModule,
     MatButtonModule,
     MatButtonToggleModule,
-    MatIconModule,
+    IconComponent,
     MatProgressBarModule,
     MatProgressSpinnerModule,
     MapPicker,

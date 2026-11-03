@@ -3,11 +3,11 @@
   <mat-dialog-content class="bb-form">
     @if (error()) {
       <div class="bb-alert error" role="alert">
-        <mat-icon aria-hidden="true">error</mat-icon><span>{{ error() }}</span>
+        <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ error() }}</span>
       </div>
     } @else if (pinMissing()) {
       <div class="bb-alert error" role="alert">
-        <mat-icon aria-hidden="true">error</mat-icon>
+        <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
         <span
           >Pin your delivery location first (use your current location, search, or tap the
           map).</span
@@ -27,7 +27,7 @@
             (click)="useCurrentLocation()"
             [disabled]="locating()"
           >
-            <mat-icon>my_location</mat-icon>
+            <np-icon name="locate-fixed" class="mat-icon" matButtonIcon />
             {{ locating() ? 'Finding you…' : 'Current location' }}
           </button>
         }
@@ -37,7 +37,7 @@
       }
       @if (locationError()) {
         <div class="bb-alert info" role="status">
-          <mat-icon aria-hidden="true">location_off</mat-icon>
+          <np-icon name="map-pin-off" class="mat-icon" matButtonIcon />
           <span>{{ locationError() }}</span>
         </div>
       }
@@ -49,7 +49,7 @@
 
       @if (pinned()) {
         <div class="pin pinned" role="status">
-          <mat-icon aria-hidden="true">where_to_vote</mat-icon>
+          <np-icon name="map-pin-check" class="mat-icon" matButtonIcon />
           <div class="pin-text">
             <strong>Delivering here</strong>
             <span>{{ pinLabel() || model().latitude + ', ' + model().longitude }}</span>
@@ -57,7 +57,7 @@
         </div>
       } @else {
         <div class="pin" [class.missing]="pinMissing()">
-          <mat-icon aria-hidden="true">add_location_alt</mat-icon>
+          <np-icon name="map-pin-plus" class="mat-icon" matButtonIcon />
           <div class="pin-text">
             <strong>Pin where we should deliver</strong>
             <span>Search, use your current location, or tap the map.</span>
@@ -172,9 +172,9 @@
         aria-labelledby="label-title"
         class="labels"
       >
-        <mat-button-toggle value="home"><mat-icon>home</mat-icon> Home</mat-button-toggle>
-        <mat-button-toggle value="work"><mat-icon>work</mat-icon> Work</mat-button-toggle>
-        <mat-button-toggle value="other"><mat-icon>place</mat-icon> Other</mat-button-toggle>
+        <mat-button-toggle value="home"><np-icon name="house" class="mat-icon" matButtonIcon /> Home</mat-button-toggle>
+        <mat-button-toggle value="work"><np-icon name="briefcase" class="mat-icon" matButtonIcon /> Work</mat-button-toggle>
+        <mat-button-toggle value="other"><np-icon name="map-pin" class="mat-icon" matButtonIcon /> Other</mat-button-toggle>
       </mat-button-toggle-group>
       <np-checkbox [formField]="form.isDefault" label="Make this my default address" />
     </section>

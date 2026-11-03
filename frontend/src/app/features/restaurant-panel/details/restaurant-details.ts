@@ -12,9 +12,8 @@ import {
 import { firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { ChipComponent, ToggleComponent } from 'nexprime';
+import { ChipComponent, IconComponent, ToggleComponent } from 'nexprime';
 import { errorMessage, fieldErrors } from '../../../core/services/api-error';
 import { DeliveryLocationService, Place } from '../../../core/services/delivery-location.service';
 import { PlaceSearch } from '../../../shared/components/place-search/place-search';
@@ -80,7 +79,7 @@ function emptyModel() {
     NP_FORM_FIELDS,
     ChipComponent,
     MatButtonModule,
-    MatIconModule,
+    IconComponent,
     MatProgressSpinnerModule,
     ImageUpload,
     MapPicker,

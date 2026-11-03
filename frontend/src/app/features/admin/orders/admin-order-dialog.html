@@ -17,19 +17,19 @@
   <mat-dialog-content class="content">
     @if (o.cancellation; as c) {
       <div class="bb-alert error" role="status">
-        <mat-icon aria-hidden="true">cancel</mat-icon>
+        <np-icon name="circle-x" class="mat-icon" matButtonIcon />
         <span>{{ o.status === 'rejected' ? 'Rejected' : 'Cancelled' }} by {{ c.by }}{{ c.reason ? ': ' + c.reason : '' }}</span>
       </div>
     }
     @if (o.payment?.failureReason; as reason) {
       <div class="bb-alert info" role="status">
-        <mat-icon aria-hidden="true">info</mat-icon><span>{{ reason }}</span>
+        <np-icon name="info" class="mat-icon" matButtonIcon /><span>{{ reason }}</span>
       </div>
     }
 
     <div class="parties">
       <section class="party">
-        <h3><mat-icon aria-hidden="true">storefront</mat-icon>Restaurant</h3>
+        <h3><np-icon name="store" class="mat-icon" matButtonIcon />Restaurant</h3>
         <strong>{{ o.restaurantSnapshot.name }}</strong>
         @if (o.restaurantSnapshot.address; as address) {
           <span class="clamp" [title]="address">{{ address }}</span>
@@ -39,7 +39,7 @@
         }
       </section>
       <section class="party">
-        <h3><mat-icon aria-hidden="true">person</mat-icon>Customer</h3>
+        <h3><np-icon name="user" class="mat-icon" matButtonIcon />Customer</h3>
         @let a = o.deliveryAddress;
         <strong>{{ a.recipientName }}</strong>
         @let line = a.line1 + (a.line2 ? ', ' + a.line2 : '') + ', ' + (a.area ? a.area + ', ' : '') + a.city + ' ' + a.postalCode;
@@ -47,7 +47,7 @@
         <a class="phone" [href]="'tel:' + a.phone">{{ a.phone }}</a>
       </section>
       <section class="party">
-        <h3><mat-icon aria-hidden="true">two_wheeler</mat-icon>Rider</h3>
+        <h3><np-icon name="bike" class="mat-icon" matButtonIcon />Rider</h3>
         @if (o.rider; as r) {
           <strong>{{ r.name }}</strong>
           <span>{{ r.vehicleType ? vehicleLabel[r.vehicleType] : '' }}{{ r.vehicleNumber ? ' · ' + r.vehicleNumber : '' }}</span>
@@ -130,7 +130,7 @@
 } @else if (error(); as message) {
   <mat-dialog-content>
     <div class="bb-alert error" role="alert">
-      <mat-icon aria-hidden="true">error</mat-icon><span>{{ message }} <button class="bb-link-button" (click)="load()">Retry</button></span>
+      <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ message }} <button class="bb-link-button" (click)="load()">Retry</button></span>
     </div>
   </mat-dialog-content>
   <mat-dialog-actions align="end"><button mat-button mat-dialog-close>Close</button></mat-dialog-actions>

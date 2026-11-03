@@ -1,10 +1,11 @@
+import { NpIconPipe } from '../../shared/icons/np-icon-name';
+import { IconComponent } from 'nexprime';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { ChangeDetectionStrategy, Component, Signal, computed, inject, input, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
@@ -39,7 +40,7 @@ import { initialsOf } from '../../shared/models/user.models';
     RouterLinkActive,
     MatButtonModule,
     MatDividerModule,
-    MatIconModule,
+    IconComponent, NpIconPipe,
     MatListModule,
     MatMenuModule,
     MatSidenavModule,

@@ -3,8 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { ToggleComponent } from 'nexprime';
-import { MatIconModule } from '@angular/material/icon';
+import { IconComponent, ToggleComponent } from 'nexprime';
 import { AuthService } from '../../../core/auth/auth.service';
 import { errorMessage } from '../../../core/services/api-error';
 import {
@@ -18,7 +17,7 @@ import { StatusBanner } from '../status-banner/status-banner';
 
 @Component({
   selector: 'bb-restaurant-dashboard',
-  imports: [ToggleComponent, RouterLink, MatButtonModule, MatIconModule, InrPipe, StatusBanner],
+  imports: [ToggleComponent, RouterLink, MatButtonModule, IconComponent, InrPipe, StatusBanner],
   templateUrl: './restaurant-dashboard.html',
   styleUrl: './restaurant-dashboard.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

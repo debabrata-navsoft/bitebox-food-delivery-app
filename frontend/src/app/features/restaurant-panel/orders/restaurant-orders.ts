@@ -1,3 +1,5 @@
+import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { IconComponent } from 'nexprime';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -12,7 +14,6 @@ import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { interval } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
@@ -57,7 +58,7 @@ const NEXT: Partial<
     RouterLink,
     MatButtonModule,
     MatButtonToggleModule,
-    MatIconModule,
+    IconComponent, NpIconPipe,
     MatPaginatorModule,
     EmptyState,
     OrderStatusChip,

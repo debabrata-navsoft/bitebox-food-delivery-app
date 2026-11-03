@@ -27,11 +27,9 @@
   border-radius: var(--bb-radius);
   margin-bottom: var(--bb-space-3);
 
-  > mat-icon {
+  > np-icon {
+    --bb-icon-size: 32px;
     flex-shrink: 0;
-    width: 32px;
-    height: 32px;
-    font-size: 32px;
     color: var(--bb-amber-600);
   }
 
@@ -39,7 +37,7 @@
     border: 1px solid var(--bb-success);
     background: #e6f5ec;
 
-    > mat-icon {
+    > np-icon {
       color: var(--bb-success);
     }
   }

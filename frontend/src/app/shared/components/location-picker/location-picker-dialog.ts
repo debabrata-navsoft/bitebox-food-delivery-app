@@ -1,3 +1,5 @@
+import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { IconComponent } from 'nexprime';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -8,7 +10,6 @@ import {
 } from '@angular/core';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -47,7 +48,7 @@ interface Candidate {
     PlaceSearch,
     MatDialogModule,
     MatButtonModule,
-    MatIconModule,
+    IconComponent, NpIconPipe,
     MatProgressBarModule,
     MapPicker,
   ],

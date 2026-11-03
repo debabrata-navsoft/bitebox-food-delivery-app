@@ -1,3 +1,4 @@
+import { NpIconPipe } from '../../../shared/icons/np-icon-name';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -11,7 +12,6 @@ import { RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, filter, of } from 'rxjs';
@@ -33,7 +33,7 @@ import { FoodFormDialog, FoodFormData } from '../food-form-dialog/food-form-dial
 type AvailabilityFilter = 'all' | 'available' | 'unavailable';
 
 import { form } from '@angular/forms/signals';
-import { SelectOption, ToggleComponent } from 'nexprime';
+import { IconComponent, SelectOption, ToggleComponent } from 'nexprime';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 
 @Component({
@@ -43,7 +43,7 @@ import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
     NP_FORM_FIELDS,
     RouterLink,
     MatButtonModule,
-    MatIconModule,
+    IconComponent, NpIconPipe,
     MatMenuModule,
     EmptyState,
     PageHeader,

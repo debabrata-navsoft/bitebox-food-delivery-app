@@ -11,9 +11,8 @@ import { form } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { ToggleComponent } from 'nexprime';
+import { IconComponent, ToggleComponent } from 'nexprime';
 import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { Subscription, debounceTime, distinctUntilChanged, filter, skip } from 'rxjs';
 import {
@@ -41,7 +40,7 @@ import { InrPipe } from '../../../shared/pipes/money.pipes';
     NP_FORM_FIELDS,
     RouterLink,
     MatButtonModule,
-    MatIconModule,
+    IconComponent,
     MatPaginatorModule,
     EmptyState,
     PageHeader,

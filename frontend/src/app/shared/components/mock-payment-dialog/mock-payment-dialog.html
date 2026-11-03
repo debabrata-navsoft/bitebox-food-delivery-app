@@ -5,14 +5,14 @@
     <span>Order {{ session.orderNumber }}</span>
   </div>
   <button mat-icon-button type="button" mat-dialog-close aria-label="Close payment" [disabled]="processing()">
-    <mat-icon>close</mat-icon>
+    <np-icon name="x" class="mat-icon" matButtonIcon />
   </button>
   <span class="amount-label">Amount to pay</span>
   <strong class="amount">{{ session.amountPaise | inr }}</strong>
 </header>
 
 <p class="test-mode" role="note">
-  <mat-icon aria-hidden="true">science</mat-icon>
+  <np-icon name="flask-conical" class="mat-icon" matButtonIcon />
   <span><strong>Test mode.</strong> No real money moves. Available in development only.</span>
 </p>
 
@@ -29,7 +29,7 @@
         [disabled]="processing()"
         (click)="method.set(m.id)"
       >
-        <mat-icon aria-hidden="true">{{ m.icon }}</mat-icon>
+        <np-icon [name]="(m.icon) | npIcon" class="mat-icon" matButtonIcon />
         <span class="text">
           {{ m.label }}
           <span class="bb-muted hint">{{ m.hint }}</span>
@@ -43,11 +43,11 @@
 
 <footer class="gateway-foot">
   <button mat-flat-button type="button" class="pay bb-btn-accent" [disabled]="processing()" (click)="finish('success')" cdkFocusInitial>
-    <mat-icon>lock</mat-icon>
+    <np-icon name="lock" class="mat-icon" matButtonIcon />
     {{ processing() ? 'Processing…' : 'Pay ' + (session.amountPaise | inr) }}
   </button>
   <button type="button" class="bb-link-button fail" [disabled]="processing()" (click)="finish('failure')">
     Simulate a failed payment
   </button>
-  <p class="bb-muted secured"><mat-icon aria-hidden="true">verified_user</mat-icon> Simulated gateway · BiteBox test environment</p>
+  <p class="bb-muted secured"><np-icon name="shield-check" class="mat-icon" matButtonIcon /> Simulated gateway · BiteBox test environment</p>
 </footer>

@@ -15,7 +15,7 @@
   }
   @if (error()) {
     <div class="bb-alert error" role="alert">
-      <mat-icon aria-hidden="true">error</mat-icon>
+      <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
       <span>{{ error() }}</span>
     </div>
   }
@@ -129,14 +129,14 @@
                 (click)="useCurrentLocation()"
                 [disabled]="locating()"
               >
-                <mat-icon>my_location</mat-icon>
+                <np-icon name="locate-fixed" class="mat-icon" matButtonIcon />
                 {{ locating() ? 'Locating…' : 'Current location' }}
               </button>
             }
           </bb-place-search>
           @if (locationError()) {
             <div class="bb-alert info" role="status">
-              <mat-icon aria-hidden="true">location_off</mat-icon>
+              <np-icon name="map-pin-off" class="mat-icon" matButtonIcon />
               <span>{{ locationError() }}</span>
             </div>
           }

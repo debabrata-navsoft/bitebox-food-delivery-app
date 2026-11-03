@@ -63,7 +63,7 @@
   color: #7a4b00;
   font-size: 0.82rem;
 
-  mat-icon {
+  np-icon {
     @include small-icon(18px);
   }
 }
@@ -106,7 +106,7 @@ h2 {
     box-shadow: inset 0 0 0 1px var(--bb-plum);
   }
 
-  > mat-icon {
+  > np-icon {
     flex: none;
     color: var(--bb-plum);
   }
@@ -171,7 +171,7 @@ h2 {
   margin: 0;
   font-size: 0.75rem;
 
-  mat-icon {
+  np-icon {
     @include small-icon(14px);
   }
 }

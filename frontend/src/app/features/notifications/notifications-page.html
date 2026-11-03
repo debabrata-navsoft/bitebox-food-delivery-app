@@ -3,7 +3,7 @@
   [subtitle]="inbox.unread() ? inbox.unread() + ' unread' : 'You\'re all caught up.'"
 >
   <button mat-stroked-button type="button" [disabled]="!inbox.unread()" (click)="markAllRead()">
-    <mat-icon>done_all</mat-icon>
+    <np-icon name="check-check" class="mat-icon" matButtonIcon />
     Mark all read
   </button>
 </bb-page-header>
@@ -21,7 +21,7 @@
 
 @if (list.error(); as message) {
   <div class="bb-alert error" role="alert">
-    <mat-icon aria-hidden="true">error</mat-icon>
+    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
     <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
   </div>
 }
@@ -43,7 +43,7 @@
         @let unread = isUnread(n);
         <li>
           <button type="button" class="row" [class.unread]="unread" (click)="open(n)">
-            <span class="icon" aria-hidden="true"><mat-icon>{{ icon(n.type) }}</mat-icon></span>
+            <span class="icon" aria-hidden="true"><np-icon [name]="(icon(n.type)) | npIcon" class="mat-icon" matButtonIcon /></span>
             <span class="text">
               <span class="title">{{ n.title }}</span>
               @if (n.body) {
@@ -55,7 +55,7 @@
               <span class="dot" aria-label="Unread"></span>
             }
             @if (n.link) {
-              <mat-icon class="chev" aria-hidden="true">chevron_right</mat-icon>
+              <np-icon name="chevron-right" class="mat-icon chev" matButtonIcon />
             }
           </button>
         </li>

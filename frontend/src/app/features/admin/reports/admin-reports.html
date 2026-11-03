@@ -4,7 +4,7 @@
 
 @if (report.error(); as message) {
   <div class="bb-alert error" role="alert">
-    <mat-icon aria-hidden="true">error</mat-icon>
+    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
     <span>{{ message }} <button class="bb-link-button" (click)="report.resource.reload()">Retry</button></span>
   </div>
 }
