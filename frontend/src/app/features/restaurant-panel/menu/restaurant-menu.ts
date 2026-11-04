@@ -35,6 +35,7 @@ type AvailabilityFilter = 'all' | 'available' | 'unavailable';
 import { form } from '@angular/forms/signals';
 import { IconComponent, SelectOption, ToggleComponent } from 'nexprime';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
+import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
 
 @Component({
   selector: 'bb-restaurant-menu',
@@ -50,6 +51,8 @@ import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
     PageHeader,
     VegBadge,
     InrPipe,
+    ImageFallback,
+    UsableImagePipe,
   ],
   templateUrl: './restaurant-menu.html',
   styleUrl: './restaurant-menu.scss',

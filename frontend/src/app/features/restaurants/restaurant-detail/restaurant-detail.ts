@@ -26,10 +26,12 @@ import { QtyStepper } from '../../../shared/components/qty-stepper/qty-stepper';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
 import { FoodItem, MenuSection, Restaurant } from '../../../shared/models/catalog.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
+import { ClockTimePipe } from '../../../shared/pipes/clock-time.pipe';
 import { FoodDetailDialog, FoodDetailData } from '../../food/food-detail-dialog/food-detail-dialog';
 
 import { form } from '@angular/forms/signals';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
+import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
 
 @Component({
   selector: 'bb-restaurant-detail',
@@ -44,6 +46,9 @@ import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
     QtyStepper,
     VegBadge,
     InrPipe,
+    ClockTimePipe,
+    ImageFallback,
+    UsableImagePipe,
   ],
   templateUrl: './restaurant-detail.html',
   styleUrl: './restaurant-detail.scss',

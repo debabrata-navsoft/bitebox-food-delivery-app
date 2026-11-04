@@ -23,6 +23,7 @@ import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { Pagination } from '../../../shared/models/api.models';
 import { AdminRestaurant, RestaurantStatus } from '../../../shared/models/catalog.models';
+import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
 
 const TABS: { status: RestaurantStatus; label: string }[] = [
   { status: 'pending', label: 'Pending' },
@@ -43,6 +44,8 @@ const TABS: { status: RestaurantStatus; label: string }[] = [
     MatTabsModule,
     EmptyState,
     PageHeader,
+    ImageFallback,
+    UsableImagePipe,
   ],
   templateUrl: './admin-restaurants.html',
   styleUrl: './admin-restaurants.scss',

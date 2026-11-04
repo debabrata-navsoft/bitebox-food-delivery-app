@@ -13,11 +13,13 @@ import {
 import { NotificationService } from '../../../core/services/notification.service';
 import { RealtimeService } from '../../../core/services/realtime.service';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
+import { ClockTimePipe } from '../../../shared/pipes/clock-time.pipe';
 import { StatusBanner } from '../status-banner/status-banner';
+import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
 
 @Component({
   selector: 'bb-restaurant-dashboard',
-  imports: [ToggleComponent, RouterLink, MatButtonModule, IconComponent, InrPipe, StatusBanner],
+  imports: [ToggleComponent, RouterLink, MatButtonModule, IconComponent, InrPipe, ClockTimePipe, StatusBanner, ImageFallback, UsableImagePipe],
   templateUrl: './restaurant-dashboard.html',
   styleUrl: './restaurant-dashboard.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

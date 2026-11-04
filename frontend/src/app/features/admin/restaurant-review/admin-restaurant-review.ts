@@ -30,6 +30,8 @@ import {
   RestaurantStatus,
 } from '../../../shared/models/catalog.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
+import { ClockTimePipe } from '../../../shared/pipes/clock-time.pipe';
+import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
 
 interface StatusAction {
   status: RestaurantStatus;
@@ -75,7 +77,7 @@ const ACTIONS: Record<RestaurantStatus, StatusAction[]> = {
 
 @Component({
   selector: 'bb-admin-restaurant-review',
-  imports: [DatePipe, RouterLink, MatButtonModule, IconComponent, NpIconPipe, EmptyState, InrPipe],
+  imports: [DatePipe, RouterLink, MatButtonModule, IconComponent, NpIconPipe, EmptyState, InrPipe, ClockTimePipe, ImageFallback, UsableImagePipe],
   templateUrl: './admin-restaurant-review.html',
   styleUrl: './admin-restaurant-review.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

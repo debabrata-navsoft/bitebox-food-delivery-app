@@ -27,6 +27,7 @@ import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { FoodDetailDialog, FoodDetailData } from '../food-detail-dialog/food-detail-dialog';
 
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
+import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
 
 @Component({
   selector: 'bb-food-search',
@@ -41,6 +42,8 @@ import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
     EmptyState,
     VegBadge,
     InrPipe,
+    ImageFallback,
+    UsableImagePipe,
   ],
   templateUrl: './food-search.html',
   styleUrl: './food-search.scss',

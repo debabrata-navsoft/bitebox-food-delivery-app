@@ -1,6 +1,6 @@
 @let item = data.item;
-@if (item.imageUrl) {
-  <img class="hero" [src]="item.imageUrl" alt="" />
+@if (item.imageUrl | usableImage) {
+  <img class="hero" [bbSrc]="item.imageUrl" alt="" />
 }
 <h2 mat-dialog-title>
   <bb-veg-badge [veg]="item.isVeg" />

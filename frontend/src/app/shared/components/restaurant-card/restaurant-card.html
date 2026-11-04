@@ -1,8 +1,8 @@
 @let r = restaurant();
 <a class="card" [routerLink]="['/restaurants', r.slug]">
   <div class="media">
-    @if (r.imageUrl) {
-      <img [src]="r.imageUrl" [alt]="''" loading="lazy" />
+    @if (r.imageUrl | usableImage) {
+      <img [bbSrc]="r.imageUrl" [alt]="''" loading="lazy" />
     } @else {
       <div class="placeholder" aria-hidden="true">
         <np-icon name="utensils" class="mat-icon" matButtonIcon />

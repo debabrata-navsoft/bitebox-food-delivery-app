@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
 import { FoodItem } from '../../../shared/models/catalog.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
+import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
 
 export interface FoodDetailData {
   item: Pick<
@@ -36,6 +37,8 @@ export interface FoodDetailData {
     NpIconPipe,
     VegBadge,
     InrPipe,
+    ImageFallback,
+    UsableImagePipe,
   ],
   templateUrl: './food-detail-dialog.html',
   styleUrl: './food-detail-dialog.scss',

@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   inject,
   input,
@@ -12,6 +13,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ImageUploadComponent } from 'nexprime';
 import { errorMessage } from '../../../core/services/api-error';
 import { MAX_IMAGE_BYTES, UploadService } from '../../../core/services/upload.service';
+import { BrokenImages } from '../../images/broken-images';
 
 @Component({
   selector: 'bb-image-upload',
@@ -22,6 +24,7 @@ import { MAX_IMAGE_BYTES, UploadService } from '../../../core/services/upload.se
 })
 export class ImageUpload {
   private readonly uploads = inject(UploadService);
+  private readonly images = inject(BrokenImages);
 
   readonly url = model<string>('');
   readonly label = input('Upload image');
@@ -32,11 +35,16 @@ export class ImageUpload {
   protected readonly uploading = signal(false);
   protected readonly error = signal<string | null>(null);
 
+  /** The saved image no longer loads (e.g. a deleted upload): show an empty box and ask for a new one. */
+  protected readonly missing = computed(() => !!this.url() && !this.images.usable(this.url()));
+
   constructor() {
     effect(() => {
       const url = this.url();
+      const shown = this.missing() ? '' : url;
       untracked(() => {
-        if (!this.uploading()) this.preview.set(url);
+        if (!this.uploading()) this.preview.set(shown);
+        this.images.check(url);
       });
     });
   }
