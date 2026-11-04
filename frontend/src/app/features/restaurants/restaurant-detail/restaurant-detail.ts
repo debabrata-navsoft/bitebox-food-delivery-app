@@ -1,5 +1,14 @@
 import { NpIconPipe } from '../../../shared/icons/np-icon-name';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
@@ -29,7 +38,8 @@ import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
     NP_FORM_FIELDS,
     RouterLink,
     MatButtonModule,
-    IconComponent, NpIconPipe,
+    IconComponent,
+    NpIconPipe,
     EmptyState,
     QtyStepper,
     VegBadge,
@@ -47,7 +57,6 @@ export class RestaurantDetail {
   protected readonly cart = inject(CartService);
   protected readonly cartActions = inject(CartActions);
 
-  /** Route param :slug */
   readonly slug = input.required<string>();
 
   protected readonly restaurant = signal<Restaurant | null>(null);
@@ -57,7 +66,6 @@ export class RestaurantDetail {
   protected readonly error = signal<string | null>(null);
 
   protected readonly vegOnly = signal(false);
-  /** "Search this menu" box (filters locally). */
   protected readonly menuSearch = form(signal({ search: '' }));
 
   protected readonly rating = computed(() => {
@@ -65,32 +73,37 @@ export class RestaurantDetail {
     return r && r.count > 0 ? r.average.toFixed(1) : null;
   });
 
-  /** Menu after the veg / search filters. Empty sections are dropped. */
   protected readonly visibleSections = computed(() => {
     const term = this.menuSearch.search().value().trim().toLowerCase();
     const veg = this.vegOnly();
     return this.sections()
       .map((s) => ({
         ...s,
-        items: s.items.filter((i) => (!veg || i.isVeg) && (!term || i.name.toLowerCase().includes(term) || i.description?.toLowerCase().includes(term))),
+        items: s.items.filter(
+          (i) =>
+            (!veg || i.isVeg) &&
+            (!term ||
+              i.name.toLowerCase().includes(term) ||
+              i.description?.toLowerCase().includes(term)),
+        ),
       }))
       .filter((s) => s.items.length > 0);
   });
 
-  /** CSS value for the hero background (URL is quoted; the API also rejects quotes/parens in image URLs). */
   protected readonly heroImage = computed(() => {
     const url = this.restaurant()?.imageUrl;
     return url ? `url("${url}")` : null;
   });
 
-  /** Cart summary for the sticky bar, only when the cart belongs to this restaurant. */
   protected readonly cartHere = computed(() => {
     const quote = this.cart.quote();
     return quote?.cart && quote.cart.restaurant?.id === this.restaurant()?.id ? quote.cart : null;
   });
   protected readonly cartSubtotal = computed(() => this.cart.quote()?.pricing.subtotalPaise ?? 0);
 
-  protected readonly itemCount = computed(() => this.sections().reduce((n, s) => n + s.items.length, 0));
+  protected readonly itemCount = computed(() =>
+    this.sections().reduce((n, s) => n + s.items.length, 0),
+  );
 
   constructor() {
     effect(() => {
@@ -103,7 +116,10 @@ export class RestaurantDetail {
     this.loading.set(true);
     this.error.set(null);
     this.notFound.set(false);
-    forkJoin({ restaurant: this.catalog.restaurant(slug), sections: this.catalog.menu(slug) }).subscribe({
+    forkJoin({
+      restaurant: this.catalog.restaurant(slug),
+      sections: this.catalog.menu(slug),
+    }).subscribe({
       next: ({ restaurant, sections }) => {
         this.restaurant.set(restaurant);
         this.sections.set(sections);
@@ -122,7 +138,6 @@ export class RestaurantDetail {
     return this.cartActions.canOrder();
   }
 
-  /** Open and accepting orders right now (the server re-checks at checkout). */
   protected readonly takingOrders = computed(() => {
     const r = this.restaurant();
     return !!r && r.isOpenNow && r.isAcceptingOrders;
@@ -141,7 +156,9 @@ export class RestaurantDetail {
   }
 
   protected scrollTo(section: MenuSection): void {
-    this.document.getElementById(this.sectionId(section))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    this.document
+      .getElementById(this.sectionId(section))
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   protected openItem(item: FoodItem): void {
@@ -149,8 +166,15 @@ export class RestaurantDetail {
     if (!restaurant) return;
     this.dialog.open<FoodDetailDialog, FoodDetailData>(FoodDetailDialog, {
       data: {
-        item: { ...item, category: item.category ? { name: item.category.name, icon: item.category.icon } : null },
-        restaurant: { name: restaurant.name, slug: restaurant.slug, isOpenNow: restaurant.isOpenNow },
+        item: {
+          ...item,
+          category: item.category ? { name: item.category.name, icon: item.category.icon } : null,
+        },
+        restaurant: {
+          name: restaurant.name,
+          slug: restaurant.slug,
+          isOpenNow: restaurant.isOpenNow,
+        },
       },
       width: '480px',
       maxWidth: '95vw',

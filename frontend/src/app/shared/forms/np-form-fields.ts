@@ -12,7 +12,6 @@ import { FieldError } from './field-error/field-error';
 import { NpFieldTouch } from './np-field-touch';
 import { NpInputAttrs } from './np-input-attrs';
 
-/** Everything a form template needs for NexPrime inputs bound with `[formField]`. */
 export const NP_FORM_FIELDS = [
   FormField,
   NpFieldTouch,

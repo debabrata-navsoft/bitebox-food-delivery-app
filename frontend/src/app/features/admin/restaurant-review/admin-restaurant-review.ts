@@ -1,6 +1,15 @@
 import { NpIconPipe } from '../../../shared/icons/np-icon-name';
 import { IconComponent } from 'nexprime';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,9 +19,16 @@ import { filter } from 'rxjs';
 import { AdminCatalogService } from '../../../core/services/admin/admin-catalog.service';
 import { errorMessage } from '../../../core/services/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
-import { ConfirmDialog, ConfirmDialogData } from '../../../shared/components/confirm-dialog/confirm-dialog';
+import {
+  ConfirmDialog,
+  ConfirmDialogData,
+} from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
-import { AdminRestaurant, MenuStats, RestaurantStatus } from '../../../shared/models/catalog.models';
+import {
+  AdminRestaurant,
+  MenuStats,
+  RestaurantStatus,
+} from '../../../shared/models/catalog.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 
 interface StatusAction {
@@ -23,15 +39,38 @@ interface StatusAction {
   danger: boolean;
 }
 
-/** Mirrors the backend ADMIN_STATUS_TRANSITIONS table (the API enforces it). */
 const ACTIONS: Record<RestaurantStatus, StatusAction[]> = {
   pending: [
-    { status: 'approved', label: 'Approve', icon: 'check_circle', needsReason: false, danger: false },
+    {
+      status: 'approved',
+      label: 'Approve',
+      icon: 'check_circle',
+      needsReason: false,
+      danger: false,
+    },
     { status: 'rejected', label: 'Reject', icon: 'cancel', needsReason: true, danger: true },
   ],
-  approved: [{ status: 'suspended', label: 'Suspend', icon: 'block', needsReason: true, danger: true }],
-  suspended: [{ status: 'approved', label: 'Reinstate', icon: 'restart_alt', needsReason: false, danger: false }],
-  rejected: [{ status: 'approved', label: 'Approve anyway', icon: 'check_circle', needsReason: false, danger: false }],
+  approved: [
+    { status: 'suspended', label: 'Suspend', icon: 'block', needsReason: true, danger: true },
+  ],
+  suspended: [
+    {
+      status: 'approved',
+      label: 'Reinstate',
+      icon: 'restart_alt',
+      needsReason: false,
+      danger: false,
+    },
+  ],
+  rejected: [
+    {
+      status: 'approved',
+      label: 'Approve anyway',
+      icon: 'check_circle',
+      needsReason: false,
+      danger: false,
+    },
+  ],
 };
 
 @Component({
@@ -83,7 +122,8 @@ export class AdminRestaurantReview {
         this.loading.set(false);
       },
       error: (err: unknown) => {
-        if (err instanceof HttpErrorResponse && (err.status === 404 || err.status === 422)) this.notFound.set(true);
+        if (err instanceof HttpErrorResponse && (err.status === 404 || err.status === 422))
+          this.notFound.set(true);
         else this.error.set(errorMessage(err));
         this.loading.set(false);
       },
@@ -122,7 +162,6 @@ export class AdminRestaurantReview {
           error: (err: unknown) => {
             this.notify.error(errorMessage(err));
             this.acting.set(false);
-            // Someone else may have changed it (409): show the current state.
             if (err instanceof HttpErrorResponse && err.status === 409) this.load();
           },
         });

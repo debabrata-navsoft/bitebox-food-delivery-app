@@ -11,7 +11,6 @@ export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 export class UploadService {
   private readonly http = inject(HttpClient);
 
-  /** Client-side pre-check for fast feedback; the server re-validates the actual bytes. */
   validate(file: File): string | null {
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) return 'Choose a JPEG, PNG or WebP image';
     if (file.size > MAX_IMAGE_BYTES) return 'Image must be 2 MB or smaller';

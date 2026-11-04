@@ -1,5 +1,14 @@
 import { NpIconPipe } from '../../../shared/icons/np-icon-name';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { form } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
@@ -17,7 +26,6 @@ import { DishSearchResult } from '../../../shared/models/catalog.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { FoodDetailDialog, FoodDetailData } from '../food-detail-dialog/food-detail-dialog';
 
-/** Food search: available dishes across all approved restaurants. */
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 
 @Component({
@@ -28,7 +36,8 @@ import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
     RouterLink,
     MatButtonModule,
     MatChipsModule,
-    IconComponent, NpIconPipe,
+    IconComponent,
+    NpIconPipe,
     EmptyState,
     VegBadge,
     InrPipe,
@@ -46,8 +55,10 @@ export class FoodSearch {
   readonly category = input<string>();
   readonly veg = input<string>();
 
-  protected readonly categories = toSignal(this.catalog.categories().pipe(catchError(() => of([]))), { initialValue: [] });
-  /** The search box; the URL (?search=) is the source of truth for what is shown. */
+  protected readonly categories = toSignal(
+    this.catalog.categories().pipe(catchError(() => of([]))),
+    { initialValue: [] },
+  );
   protected readonly filters = form(signal({ search: '' }));
   protected readonly dishes = signal<DishSearchResult[]>([]);
   protected readonly pagination = signal<Pagination | null>(null);
@@ -71,7 +82,6 @@ export class FoodSearch {
     effect(() => {
       const query = this.query();
       untracked(() => {
-        // Follow the URL (back/forward, links) without fighting what is being typed.
         const box = this.filters.search().value;
         if (box().trim() !== (query.search ?? '')) box.set(query.search ?? '');
         this.load(1);
@@ -85,7 +95,11 @@ export class FoodSearch {
   }
 
   protected setParams(params: Record<string, string | boolean | null>): void {
-    void this.router.navigate([], { queryParams: params, queryParamsHandling: 'merge', replaceUrl: true });
+    void this.router.navigate([], {
+      queryParams: params,
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   protected load(page: number): void {
@@ -114,7 +128,10 @@ export class FoodSearch {
   protected open(dish: DishSearchResult): void {
     this.dialog.open<FoodDetailDialog, FoodDetailData>(FoodDetailDialog, {
       data: {
-        item: { ...dish, category: dish.category ? { name: dish.category.name, icon: dish.category.icon } : null },
+        item: {
+          ...dish,
+          category: dish.category ? { name: dish.category.name, icon: dish.category.icon } : null,
+        },
         restaurant: { name: dish.restaurant.name, slug: dish.restaurant.slug },
         showRestaurantLink: true,
       },

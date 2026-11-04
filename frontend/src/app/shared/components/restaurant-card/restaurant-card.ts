@@ -4,7 +4,6 @@ import { RouterLink } from '@angular/router';
 import { Restaurant } from '../../models/catalog.models';
 import { DistancePipe, InrPipe } from '../../pipes/money.pipes';
 
-/** Restaurant tile used in listings. Falls back to a branded illustration when there is no photo. */
 @Component({
   selector: 'bb-restaurant-card',
   imports: [RouterLink, IconComponent, InrPipe, DistancePipe],

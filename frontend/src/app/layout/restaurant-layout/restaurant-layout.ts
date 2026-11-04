@@ -13,7 +13,12 @@ export class RestaurantLayout {
 
   protected readonly nav: NavItem[] = [
     { label: 'Dashboard', icon: 'space_dashboard', link: '/restaurant', exact: true },
-    { label: 'Orders', icon: 'receipt_long', link: '/restaurant/orders', badge: this.board.pendingCount },
+    {
+      label: 'Orders',
+      icon: 'receipt_long',
+      link: '/restaurant/orders',
+      badge: this.board.pendingCount,
+    },
     { label: 'Restaurant details', icon: 'storefront', link: '/restaurant/details' },
     { label: 'Menu', icon: 'menu_book', link: '/restaurant/menu' },
     { label: 'Earnings', icon: 'account_balance_wallet', link: '/restaurant/earnings' },
@@ -21,7 +26,6 @@ export class RestaurantLayout {
   ];
 
   constructor() {
-    // New-order alerts and the nav badge work on every page of the panel.
     this.board.connect(inject(DestroyRef));
   }
 }

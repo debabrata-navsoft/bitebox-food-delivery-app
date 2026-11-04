@@ -34,10 +34,13 @@ export class OrderList {
 
   constructor() {
     this.load(1);
-    // Live status changes for orders already on screen.
     inject(RealtimeService)
       .orderUpdates$.pipe(takeUntilDestroyed())
-      .subscribe((e) => this.orders.update((list) => list.map((o) => (o.id === e.id ? { ...o, status: e.status } : o))));
+      .subscribe((e) =>
+        this.orders.update((list) =>
+          list.map((o) => (o.id === e.id ? { ...o, status: e.status } : o)),
+        ),
+      );
   }
 
   protected load(page: number): void {

@@ -33,7 +33,6 @@ export class RestaurantDashboard {
 
   constructor() {
     this.load();
-    // An admin approved, rejected or suspended the restaurant: show the new status at once.
     inject(RealtimeService)
       .notifications$.pipe(
         filter((n) => n.type.startsWith('restaurant.')),
@@ -50,7 +49,6 @@ export class RestaurantDashboard {
     });
   }
 
-  /** Optimistic: the switch follows the state; on failure the state (and so the switch) goes back. */
   protected toggleOrders(checked: boolean): void {
     const set = (isAcceptingOrders: boolean) =>
       this.state.update((s) =>

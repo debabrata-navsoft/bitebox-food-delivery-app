@@ -51,8 +51,8 @@ npm install
 
 ### Frontend environments
 
-- `src/environments/environment.development.ts` sets `apiUrl: 'http://localhost:5000/api/v1'` (used by `ng serve`).
-- `src/environments/environment.ts` (production) sets `apiUrl: '/api/v1'`, which assumes a reverse proxy serves the API on the same origin.
+- `src/environments/environment.ts` (development, the default) sets `apiUrl: '/api/v1'`. `ng serve` proxies `/api`, `/socket.io` and `/uploads` to the API on :5000 (`proxy.conf.json`).
+- `src/environments/environment.prod.ts` (swapped in by the production build) sets `apiUrl: '/api/v1'`, which assumes a reverse proxy serves the API on the same origin.
 
 These files are bundled into browser code, so **never put secrets in them**.
 

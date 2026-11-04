@@ -1,5 +1,3 @@
-/** All money values from the API are integer paise (₹1 = 100 paise). */
-
 export type RestaurantStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
 export interface Address {
@@ -48,7 +46,14 @@ export interface Restaurant {
 
 /** Restaurant as seen by admins (owner populated). */
 export interface AdminRestaurant extends Restaurant {
-  owner: { id?: string; _id?: string; name: string; email: string; phone?: string; status?: string };
+  owner: {
+    id?: string;
+    _id?: string;
+    name: string;
+    email: string;
+    phone?: string;
+    status?: string;
+  };
 }
 
 export interface RestaurantInput {
@@ -87,7 +92,9 @@ export interface FoodCategory {
   itemCount?: number;
 }
 
-export type FoodCategoryInput = Partial<Pick<FoodCategory, 'name' | 'description' | 'icon' | 'imageUrl' | 'sortOrder' | 'isActive'>>;
+export type FoodCategoryInput = Partial<
+  Pick<FoodCategory, 'name' | 'description' | 'icon' | 'imageUrl' | 'sortOrder' | 'isActive'>
+>;
 
 export interface FoodItem {
   id: string;
