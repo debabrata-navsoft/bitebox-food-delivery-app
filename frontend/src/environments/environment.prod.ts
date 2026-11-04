@@ -1,6 +1,11 @@
+/**
+ * Production configuration. Public values only: anything here ships to the
+ * browser, so never put secrets in environment files.
+ */
 export const environment = {
-  production: false,
-  apiUrl: 'http://localhost:5000/api/v1',
+  production: true,
+  // Same-origin API behind a reverse proxy in production. Change if the API lives elsewhere.
+  apiUrl: '/api/v1',
   /**
    * Map tiles. The public OpenStreetMap tile server is fine for development and
    * light use only (https://operations.osmfoundation.org/policies/tiles/); use a
