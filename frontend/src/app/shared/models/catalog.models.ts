@@ -1,3 +1,4 @@
+import { RatingSummary } from './review.models';
 export type RestaurantStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
 export interface Address {
@@ -37,7 +38,7 @@ export interface Restaurant {
   status: RestaurantStatus;
   statusReason?: string;
   reviewedAt?: string;
-  rating: { average: number; count: number };
+  rating: RatingSummary;
   /** Straight-line distance, present only for nearby searches. */
   distanceMeters?: number;
   createdAt: string;
@@ -108,6 +109,8 @@ export interface FoodItem {
   imageUrl?: string;
   prepTimeMinutes?: number;
   tags?: string[];
+  /** Published dish reviews (missing on records saved before ratings existed). */
+  rating?: RatingSummary;
   createdAt: string;
   updatedAt: string;
 }

@@ -31,6 +31,8 @@ import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { deliveryTracking } from '../../../shared/components/tracking-map/delivery-tracking';
 import { TrackingMap } from '../../../shared/components/tracking-map/tracking-map';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
+import { Stars } from '../../../shared/components/stars/stars';
+import { OrderReviews } from '../order-reviews/order-reviews';
 import {
   ORDER_STATUS_LABEL,
   Order,
@@ -68,6 +70,8 @@ const JOURNEY: { status: OrderStatus; icon: string }[] = [
     ConfettiComponent,
     TrackingMap,
     DecimalPipe,
+    OrderReviews,
+    Stars,
   ],
   templateUrl: './order-detail.html',
   styleUrl: './order-detail.scss',
@@ -81,6 +85,8 @@ export class OrderDetail {
 
   readonly id = input.required<string>();
   readonly placed = input<string>();
+  /** ?rate=1 (from "Rate this order" in the order list) opens the rating dialog. */
+  readonly rate = input<string>();
 
   protected readonly order = signal<Order | null>(null);
   protected readonly loading = signal(true);

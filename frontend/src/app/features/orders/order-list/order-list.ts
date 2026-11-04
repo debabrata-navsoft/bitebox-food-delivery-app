@@ -9,13 +9,23 @@ import { errorMessage } from '../../../core/services/api-error';
 import { OrderService } from '../../../core/services/checkout-api.service';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
+import { Stars } from '../../../shared/components/stars/stars';
 import { Pagination } from '../../../shared/models/api.models';
 import { Order, customerStatusLabel } from '../../../shared/models/checkout.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 
 @Component({
   selector: 'bb-order-list',
-  imports: [DatePipe, RouterLink, MatButtonModule, IconComponent, EmptyState, PageHeader, InrPipe],
+  imports: [
+    DatePipe,
+    RouterLink,
+    MatButtonModule,
+    IconComponent,
+    EmptyState,
+    PageHeader,
+    InrPipe,
+    Stars,
+  ],
   templateUrl: './order-list.html',
   styleUrl: './order-list.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

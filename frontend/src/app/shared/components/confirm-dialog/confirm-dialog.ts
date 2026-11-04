@@ -16,6 +16,8 @@ export interface ConfirmDialogData {
   confirmLabel?: string;
   danger?: boolean;
   reasonLabel?: string;
+  /** Longest reason the API accepts (default 500). */
+  reasonMax?: number;
 }
 
 @Component({
@@ -38,7 +40,8 @@ export class ConfirmDialog {
           ? { kind: 'required', message: 'A reason is required' }
           : undefined,
       );
-      maxLength(path.reason, 500, { message: 'Keep it under 500 characters' });
+      const max = this.data.reasonMax ?? 500;
+      maxLength(path.reason, max, { message: `Keep it under ${max} characters` });
     },
     {
       submission: {

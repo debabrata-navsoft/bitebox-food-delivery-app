@@ -172,6 +172,8 @@ export interface Order {
   };
   /** The rider, once one has accepted the delivery (customer and admin views). */
   rider?: RiderCard | null;
+  /** Order history only: the customer's own rating of the restaurant for this order. */
+  myRating?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -182,6 +184,8 @@ export interface RiderCard {
   phone: string | null;
   vehicleType: VehicleType | null;
   vehicleNumber: string | null;
+  /** Published delivery ratings; null until the rider has one. */
+  rating?: { average: number; count: number } | null;
 }
 
 export type VehicleType = 'bicycle' | 'scooter' | 'motorbike' | 'car';

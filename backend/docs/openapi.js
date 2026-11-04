@@ -14,6 +14,11 @@ import {
   paymentsSchemas,
   paymentsTags,
 } from "./openapi.payments.js";
+import {
+  reviewsPaths,
+  reviewsSchemas,
+  reviewsTags,
+} from "./openapi.reviews.js";
 
 const ok = (dataSchema, description = "Success") => ({
   description,
@@ -75,6 +80,7 @@ export const openApiDocument = {
     ...checkoutTags,
     ...ordersTags,
     ...paymentsTags,
+    ...reviewsTags,
   ],
   components: {
     securitySchemes: {
@@ -85,6 +91,7 @@ export const openApiDocument = {
       ...checkoutSchemas,
       ...ordersSchemas,
       ...paymentsSchemas,
+      ...reviewsSchemas,
       Role: {
         type: "string",
         enum: ["customer", "admin", "restaurant", "delivery"],
@@ -198,6 +205,7 @@ export const openApiDocument = {
     ...checkoutPaths,
     ...ordersPaths,
     ...paymentsPaths,
+    ...reviewsPaths,
     "/health": {
       get: {
         tags: ["Health"],

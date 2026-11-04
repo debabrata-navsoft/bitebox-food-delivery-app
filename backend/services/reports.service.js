@@ -6,12 +6,12 @@ import { ApiError } from "../utils/api-error.js";
 
 const S = ORDER_STATUS;
 const tz = () => env.reportTimezone;
-const day = (field) => ({
+export const day = (field) => ({
   $dateToString: { format: "%Y-%m-%d", date: field, timezone: tz() },
 });
 
 /** The reporting window: the last `days` days up to now. */
-const since = (days) => new Date(Date.now() - days * 86_400_000);
+export const since = (days) => new Date(Date.now() - days * 86_400_000);
 
 /** Every day in the window (oldest first), so charts have no gaps on quiet days. */
 function dayKeys(days) {
@@ -26,7 +26,7 @@ function dayKeys(days) {
   );
 }
 
-function fillDays(days, rows, empty) {
+export function fillDays(days, rows, empty) {
   const byDay = new Map(rows.map(({ _id, ...rest }) => [_id, rest]));
   return dayKeys(days).map((date) => ({ date, ...empty, ...byDay.get(date) }));
 }

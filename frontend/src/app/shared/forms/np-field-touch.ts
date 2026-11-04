@@ -3,7 +3,7 @@ import { FormField } from '@angular/forms/signals';
 
 @Directive({
   selector:
-    'np-text-input[formField], np-textarea[formField], np-input-number[formField], np-select[formField], np-calendar[formField], np-time-picker[formField]',
+    'np-text-input[formField], np-textarea[formField], np-input-number[formField], np-select[formField], np-calendar[formField], np-time-picker[formField], np-rating[formField]',
   host: { '(focusout)': 'onFocusOut($event)' },
 })
 export class NpFieldTouch {

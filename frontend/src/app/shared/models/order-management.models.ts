@@ -1,3 +1,4 @@
+import { RatingSummary } from './review.models';
 import { Pagination } from './api.models';
 import { Order, OrderStatus, RiderCard, VehicleType } from './checkout.models';
 
@@ -42,6 +43,7 @@ export interface RiderProfile {
   isOnline: boolean;
   locationUpdatedAt?: string;
   completedDeliveries: number;
+  rating?: RatingSummary;
 }
 
 export interface RiderOrder extends Omit<Order, 'deliveryAddress' | 'rider' | 'cancellation'> {
@@ -83,5 +85,6 @@ export interface AdminRider {
   isOnline: boolean;
   locationUpdatedAt: string | null;
   completedDeliveries: number;
+  rating: RatingSummary | null;
   activeOrder: { id: string; orderNumber: string; status: OrderStatus } | null;
 }

@@ -17,11 +17,12 @@ export class UploadService {
     return null;
   }
 
-  uploadImage(file: File): Observable<string> {
+  /** `review-images` is the customers' endpoint for review photos; `images` is for partners. */
+  uploadImage(file: File, endpoint: 'images' | 'review-images' = 'images'): Observable<string> {
     const form = new FormData();
     form.append('image', file);
     return this.http
-      .post<ApiResponse<{ url: string }>>(`${environment.apiUrl}/uploads/images`, form)
+      .post<ApiResponse<{ url: string }>>(`${environment.apiUrl}/uploads/${endpoint}`, form)
       .pipe(map((res) => res.data.url));
   }
 }

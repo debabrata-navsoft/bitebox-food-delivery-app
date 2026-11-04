@@ -1,5 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
+import { env } from "../config/env.js";
 import { authenticate, authorize } from "../middleware/auth.middleware.js";
 import { createRateLimiter } from "../middleware/security.middleware.js";
 import { ROLES } from "../models/user.model.js";
@@ -29,26 +30,25 @@ const singleImage = (req, res, next) =>
     next(error);
   });
 
-const router = Router();
-
-router.post(
-  "/images",
+/** One image per request, checked by its bytes, for the given roles and hourly limit. */
+const imageRoute = (roles, limit, noun) => [
   authenticate,
-  authorize(ROLES.RESTAURANT, ROLES.ADMIN),
+  authorize(...roles),
   createRateLimiter({
     windowMs: 60 * 60_000,
-    limit: 60,
-    message: "Too many uploads. Try again later.",
+    limit: env.isTest ? 1000 : limit,
+    message: `Too many ${noun.toLowerCase()} uploads. Try again later.`,
   }),
   singleImage,
   async (req, res) => {
     const image = await saveImage(req.file);
-    sendSuccess(res, {
-      statusCode: 201,
-      message: "Image uploaded",
-      data: image,
-    });
+    sendSuccess(res, { statusCode: 201, message: `${noun} uploaded`, data: image });
   },
-);
+];
+
+const router = Router();
+router.post("/images", ...imageRoute([ROLES.RESTAURANT, ROLES.ADMIN], 60, "Image"));
+// Customers attach photos to reviews, with their own, tighter limit.
+router.post("/review-images", ...imageRoute([ROLES.CUSTOMER], 30, "Photo"));
 
 export default router;

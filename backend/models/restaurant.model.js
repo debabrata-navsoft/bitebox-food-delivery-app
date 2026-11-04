@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { emptyRating, ratingSummarySchema } from "./rating-summary.schema.js";
 
 export const RESTAURANT_STATUS = Object.freeze({
   PENDING: "pending",
@@ -115,10 +116,7 @@ const restaurantSchema = new mongoose.Schema(
     reviewedAt: { type: Date },
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 
-    rating: {
-      average: { type: Number, default: 0, min: 0, max: 5 },
-      count: { type: Number, default: 0, min: 0 },
-    },
+    rating: { type: ratingSummarySchema, default: emptyRating },
   },
   {
     timestamps: true,

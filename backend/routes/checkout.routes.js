@@ -9,6 +9,9 @@ import { ROLES } from "../models/user.model.js";
 import * as rules from "../validators/checkout.validators.js";
 import * as orderRules from "../validators/order-management.validators.js";
 import { mongoIdParam } from "../validators/common.validators.js";
+import { orderReviews, reviewOrder } from "../services/review.service.js";
+import { orderReviewRules } from "../validators/review.validators.js";
+import { respond } from "../utils/api-response.js";
 
 const customerOnly = [authenticate, authorize(ROLES.CUSTOMER)];
 
@@ -69,6 +72,20 @@ export const ordersRouter = Router()
   )
   .get("/", validate(rules.listOrdersRules), c.listMyOrders)
   .get("/:id", validate([mongoIdParam()]), orders.customerGet)
+  .get(
+    "/:id/reviews",
+    validate([mongoIdParam()]),
+    respond((req) => orderReviews(req.user._id, req.params.id)),
+  )
+  .post(
+    "/:id/reviews",
+    validate(orderReviewRules),
+    respond(
+      (req) => reviewOrder(req.user, req.params.id, req.body),
+      "Thanks for rating your order",
+      201,
+    ),
+  )
   .post(
     "/:id/cancel",
     validate(orderRules.customerCancelRules),

@@ -6,6 +6,9 @@ import { createRateLimiter } from "../middleware/security.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
 import { ROLES } from "../models/user.model.js";
 import * as reports from "../services/reports.service.js";
+import * as reviews from "../services/review.service.js";
+import { parsePagination } from "../utils/pagination.js";
+import { riderListRules } from "../validators/review.validators.js";
 import { respond } from "../utils/api-response.js";
 import * as rules from "../validators/order-management.validators.js";
 import { daysRules } from "../validators/payment.validators.js";
@@ -37,6 +40,17 @@ export default Router()
     c.riderSetStatus,
   )
   .get("/orders/history", validate(rules.riderHistoryRules), c.riderHistory)
+  .get(
+    "/reviews",
+    validate(riderListRules),
+    respond((req) =>
+      reviews.riderList(
+        req.user._id,
+        req.validatedQuery,
+        parsePagination(req.validatedQuery, { defaultLimit: 10 }),
+      ),
+    ),
+  )
   .get(
     "/earnings",
     validate(daysRules),

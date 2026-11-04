@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { emptyRating, ratingSummarySchema } from "./rating-summary.schema.js";
 
 const foodItemSchema = new mongoose.Schema(
   {
@@ -41,6 +42,7 @@ const foodItemSchema = new mongoose.Schema(
         message: "At most 10 tags",
       },
     },
+    rating: { type: ratingSummarySchema, default: emptyRating },
     deletedAt: { type: Date, default: null },
   },
   {

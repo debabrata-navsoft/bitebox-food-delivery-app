@@ -41,6 +41,10 @@ import deliveryRoutes from "./routes/delivery.routes.js";
 import geoRoutes from "./routes/geo.routes.js";
 import healthRoutes from "./routes/health.routes.js";
 import myRestaurantRoutes from "./routes/my-restaurant.routes.js";
+import {
+  adminReviewsRouter,
+  reviewsRouter,
+} from "./routes/review.routes.js";
 import uploadsRoutes from "./routes/uploads.routes.js";
 
 export function createApp(options = {}) {
@@ -114,6 +118,7 @@ export function createApp(options = {}) {
   app.use("/api/v1/admin/delivery-partners", adminDeliveryPartnersRouter);
   app.use("/api/v1/admin/payments", adminPaymentsRouter);
   app.use("/api/v1/admin/reports", adminReportsRouter);
+  app.use("/api/v1/admin/reviews", adminReviewsRouter);
   app.use("/api/v1/admin", adminCatalogRoutes);
   app.use("/api/v1/restaurants", restaurantsRouter);
   app.use("/api/v1/categories", categoriesRouter);
@@ -127,6 +132,7 @@ export function createApp(options = {}) {
   app.use("/api/v1/delivery", deliveryRoutes);
   app.use("/api/v1/payments", paymentsRouter);
   app.use("/api/v1/notifications", notificationRoutes);
+  app.use("/api/v1/reviews", reviewsRouter);
   app.use("/api/v1/geo", geoRoutes);
 
   app.use(notFound);

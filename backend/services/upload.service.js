@@ -79,6 +79,26 @@ export function useImageStorage(replacement) {
   };
 }
 
+const LOCAL_IMAGE = /^\/uploads\/images\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
+
+/** True only for images this API stored (local disk or our Cloudinary account), never outside links. */
+export function isUploadedImageUrl(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  if (`${url.protocol}//${url.host}` === new URL(env.publicBaseUrl).origin)
+    return LOCAL_IMAGE.test(url.pathname) && !url.search && !url.hash;
+  return (
+    !!env.cloudinary.cloudName &&
+    url.protocol === "https:" &&
+    url.host === "res.cloudinary.com" &&
+    url.pathname.startsWith(`/${env.cloudinary.cloudName}/image/upload/`)
+  );
+}
+
 export async function saveImage(file) {
   if (!file) throw ApiError.badRequest("Choose an image to upload");
   const type = detectImageType(file.buffer);

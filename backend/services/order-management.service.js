@@ -32,7 +32,7 @@ async function riderCard(userId) {
   const [user, profile] = await Promise.all([
     User.findById(userId).select("name phone"),
     DeliveryPartner.findOne({ user: userId }).select(
-      "vehicleType vehicleNumber",
+      "vehicleType vehicleNumber rating.average rating.count",
     ),
   ]);
   if (!user) return null;
@@ -42,6 +42,9 @@ async function riderCard(userId) {
     phone: user.phone ?? null,
     vehicleType: profile?.vehicleType ?? null,
     vehicleNumber: profile?.vehicleNumber ?? null,
+    rating: profile?.rating?.count
+      ? { average: profile.rating.average, count: profile.rating.count }
+      : null,
   };
 }
 

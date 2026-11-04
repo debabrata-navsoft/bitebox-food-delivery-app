@@ -2,6 +2,7 @@ import { FormField } from '@angular/forms/signals';
 import {
   CalendarComponent,
   InputNumberComponent,
+  RatingComponent,
   SearchInputComponent,
   SelectComponent,
   TextInputComponent,
@@ -20,6 +21,7 @@ export const NP_FORM_FIELDS = [
   TextInputComponent,
   TextareaComponent,
   InputNumberComponent,
+  RatingComponent,
   SelectComponent,
   SearchInputComponent,
   CalendarComponent,

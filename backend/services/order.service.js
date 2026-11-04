@@ -11,6 +11,11 @@ import {
   Payment,
 } from "../models/order.model.js";
 import { Restaurant } from "../models/restaurant.model.js";
+import {
+  REVIEW_STATUS,
+  REVIEW_TARGETS,
+  Review,
+} from "../models/review.model.js";
 import { ApiError } from "../utils/api-error.js";
 import { paginationMeta } from "../utils/pagination.js";
 import { withTransaction } from "../utils/transaction.js";
@@ -287,5 +292,19 @@ export async function listMine(userId, pagination) {
       ),
     Order.countDocuments(filter),
   ]);
-  return { items, pagination: paginationMeta(pagination, total) };
+  // The customer's own restaurant rating, shown on each delivered order in the history.
+  const rated = await Review.find({
+    customer: userId,
+    target: REVIEW_TARGETS.RESTAURANT,
+    order: { $in: items.map((o) => o._id) },
+    status: { $ne: REVIEW_STATUS.DELETED },
+  }).select("order rating");
+  const ratingByOrder = new Map(rated.map((r) => [String(r.order), r.rating]));
+  return {
+    items: items.map((o) => ({
+      ...o.toJSON(),
+      myRating: ratingByOrder.get(String(o._id)) ?? null,
+    })),
+    pagination: paginationMeta(pagination, total),
+  };
 }

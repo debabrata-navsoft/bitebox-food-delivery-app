@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { emptyRating, ratingSummarySchema } from "./rating-summary.schema.js";
 
 export const VEHICLE_TYPES = Object.freeze([
   "bicycle",
@@ -38,6 +39,7 @@ const deliveryPartnerSchema = new mongoose.Schema(
     },
     lastAssignedAt: { type: Date, default: null },
     completedDeliveries: { type: Number, default: 0, min: 0 },
+    rating: { type: ratingSummarySchema, default: emptyRating },
   },
   {
     timestamps: true,

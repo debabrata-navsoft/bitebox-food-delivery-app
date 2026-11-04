@@ -166,6 +166,7 @@ export async function adminList({ search, online }, pagination) {
       isOnline: p?.isOnline ?? false,
       locationUpdatedAt: p?.locationUpdatedAt ?? null,
       completedDeliveries: p?.completedDeliveries ?? 0,
+      rating: p?.rating ?? null,
       activeOrder: active
         ? {
             id: String(active._id),

@@ -84,8 +84,10 @@ export const env = Object.freeze({
     folder: process.env.CLOUDINARY_FOLDER || "bitebox",
   },
 
-  uploadDir:
-    process.env.UPLOAD_DIR || (isTest ? "tmp/test-uploads" : "uploads"),
+  // Tests always use their own folder, so they never write into the development uploads.
+  uploadDir: isTest
+    ? "tmp/test-uploads"
+    : process.env.UPLOAD_DIR || "uploads",
   publicBaseUrl: (
     process.env.PUBLIC_BASE_URL || `http://localhost:${integer("PORT", 5000)}`
   ).replace(/\/$/, ""),

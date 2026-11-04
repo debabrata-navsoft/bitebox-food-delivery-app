@@ -9,7 +9,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, DecimalPipe } from '@angular/common';
 import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,6 +24,8 @@ import { errorMessage } from '../../../core/services/api-error';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { QtyStepper } from '../../../shared/components/qty-stepper/qty-stepper';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
+import { PublicReviews } from '../../../shared/components/public-reviews/public-reviews';
+import { Stars } from '../../../shared/components/stars/stars';
 import { FoodItem, MenuSection, Restaurant } from '../../../shared/models/catalog.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { ClockTimePipe } from '../../../shared/pipes/clock-time.pipe';
@@ -49,6 +51,9 @@ import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-im
     ClockTimePipe,
     ImageFallback,
     UsableImagePipe,
+    DecimalPipe,
+    PublicReviews,
+    Stars,
   ],
   templateUrl: './restaurant-detail.html',
   styleUrl: './restaurant-detail.scss',
@@ -164,6 +169,13 @@ export class RestaurantDetail {
     this.document
       .getElementById(this.sectionId(section))
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  protected scrollToReviews(event: Event): void {
+    event.preventDefault();
+    const target = this.document.getElementById('reviews');
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    target?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
   }
 
   protected openItem(item: FoodItem): void {

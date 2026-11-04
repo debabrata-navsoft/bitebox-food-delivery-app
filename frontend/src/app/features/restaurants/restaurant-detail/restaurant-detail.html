@@ -33,7 +33,10 @@
       <ul class="facts">
         <li>
           @if (rating(); as stars) {
-            <np-icon name="star" class="mat-icon" matButtonIcon />{{ stars }} <span class="muted">({{ r.rating.count }})</span>
+            <a href="#reviews" class="rating-link" (click)="scrollToReviews($event)">
+              <np-icon name="star" class="mat-icon" matButtonIcon />{{ stars }}
+              <span class="muted">({{ r.rating.count }} {{ r.rating.count === 1 ? 'review' : 'reviews' }})</span>
+            </a>
           } @else {
             <np-icon name="sparkles" class="mat-icon" matButtonIcon />New on BiteBox
           }
@@ -115,6 +118,12 @@
                   <button type="button" class="dish-text" (click)="openItem(item)">
                     <span class="dish-name"><bb-veg-badge [veg]="item.isVeg" /> {{ item.name }}</span>
                     <span class="dish-price">{{ item.pricePaise | inr }}</span>
+                    @if (item.rating?.count) {
+                      <span class="dish-rating">
+                        <bb-stars [value]="item.rating!.average" size="sm" />
+                        <span>{{ item.rating!.average | number: '1.1-1' }} ({{ item.rating!.count }})</span>
+                      </span>
+                    }
                     @if (item.description) {
                       <span class="dish-desc">{{ item.description }}</span>
                     }
@@ -144,6 +153,11 @@
           </ul>
         </section>
       }
+
+      <section class="reviews-section" id="reviews" aria-labelledby="reviews-title">
+        <h2 id="reviews-title" tabindex="-1"><np-icon name="star" class="mat-icon" matButtonIcon />Ratings and reviews</h2>
+        <bb-public-reviews [subject]="{ kind: 'restaurant', key: r.slug }" [responder]="r.name" />
+      </section>
     </div>
 
     <!-- Desktop: the cart sits beside the menu. Phones/tablets use the bar below. -->
