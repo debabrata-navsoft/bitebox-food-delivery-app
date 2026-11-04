@@ -2,12 +2,21 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { io as connect } from "socket.io-client";
-import { Address } from "../src/models/address.model.js";
-import { FoodItem } from "../src/models/food-item.model.js";
-import { Restaurant } from "../src/models/restaurant.model.js";
-import { attachRealtime } from "../src/sockets/index.js";
-import { setRealtimeServer } from "../src/sockets/events.js";
-import { buildApp, createAndLogin, registerUser, request, resetDb, seedCatalogFor, setupTestDb, teardownTestDb } from "./helpers.js";
+import { Address } from "../models/address.model.js";
+import { FoodItem } from "../models/food-item.model.js";
+import { Restaurant } from "../models/restaurant.model.js";
+import { attachRealtime } from "../sockets/index.js";
+import { setRealtimeServer } from "../sockets/events.js";
+import {
+  buildApp,
+  createAndLogin,
+  registerUser,
+  request,
+  resetDb,
+  seedCatalogFor,
+  setupTestDb,
+  teardownTestDb,
+} from "./helpers.js";
 
 const auth = (token) => ({ Authorization: `Bearer ${token}` });
 
@@ -38,15 +47,22 @@ describe("realtime order events (Socket.IO)", () => {
   beforeEach(async () => {
     await resetDb();
     owner = await seedCatalogFor(app);
-    const { seedCheckoutData } = await import("../src/scripts/seed.js");
+    const { seedCheckoutData } = await import("../scripts/seed.js");
     await seedCheckoutData();
-    await Restaurant.updateOne({ slug: "spice-route-kitchen" }, { openingTime: "00:00", closingTime: "00:00" });
+    await Restaurant.updateOne(
+      { slug: "spice-route-kitchen" },
+      { openingTime: "00:00", closingTime: "00:00" },
+    );
     customer = await createAndLogin(app, "customer");
   });
 
   /** Connects and collects every order:updated event. Resolves once connected (or rejects with the error). */
   function listen(token) {
-    const socket = connect(url, { auth: { token }, transports: ["websocket"], reconnection: false });
+    const socket = connect(url, {
+      auth: { token },
+      transports: ["websocket"],
+      reconnection: false,
+    });
     sockets.push(socket);
     const events = [];
     socket.on("order:updated", (e) => events.push(e));
@@ -59,9 +75,15 @@ describe("realtime order events (Socket.IO)", () => {
 
   async function placeOrder() {
     const food = await FoodItem.findOne({ name: "Butter Chicken" });
-    await request(app).post("/api/v1/cart/items").set(auth(customer.token)).send({ foodItemId: food.id, quantity: 1 });
+    await request(app)
+      .post("/api/v1/cart/items")
+      .set(auth(customer.token))
+      .send({ foodItemId: food.id, quantity: 1 });
     const address = await Address.findOne({ user: customer.user.id });
-    const res = await request(app).post("/api/v1/orders").set(auth(customer.token)).send({ addressId: String(address._id), paymentMethod: "cod" });
+    const res = await request(app)
+      .post("/api/v1/orders")
+      .set(auth(customer.token))
+      .send({ addressId: String(address._id), paymentMethod: "cod" });
     return res.body.data.order;
   }
 
@@ -86,11 +108,26 @@ describe("realtime order events (Socket.IO)", () => {
       "the restaurant hears about its new order",
     );
 
-    await request(app).patch(`/api/v1/my/restaurant/orders/${order.id}/status`).set(auth(owner.token)).send({ status: "confirmed" });
+    await request(app)
+      .patch(`/api/v1/my/restaurant/orders/${order.id}/status`)
+      .set(auth(owner.token))
+      .send({ status: "confirmed" });
     await settle();
-    assert.equal(customerFeed.events.at(-1)?.status, "confirmed", "the customer sees the acceptance live");
+    assert.equal(
+      customerFeed.events.at(-1)?.status,
+      "confirmed",
+      "the customer sees the acceptance live",
+    );
     assert.equal(strangerFeed.events.length, 0, "other customers hear nothing");
-    assert.equal(otherRestaurantFeed.events.length, 0, "other restaurants hear nothing");
-    assert.deepEqual(Object.keys(customerFeed.events[0]).sort(), ["id", "orderNumber", "status", "updatedAt"], "no order details in events");
+    assert.equal(
+      otherRestaurantFeed.events.length,
+      0,
+      "other restaurants hear nothing",
+    );
+    assert.deepEqual(
+      Object.keys(customerFeed.events[0]).sort(),
+      ["id", "orderNumber", "status", "updatedAt"],
+      "no order details in events",
+    );
   });
 });
