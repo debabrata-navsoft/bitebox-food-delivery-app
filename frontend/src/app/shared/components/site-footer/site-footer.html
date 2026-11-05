@@ -51,7 +51,7 @@
 
         <!-- Link groups: columns on wider screens, an accordion on phones -->
         <div class="groups">
-          @for (g of groups; track g.title; let i = $index) {
+          @for (g of groups(); track g.title; let i = $index) {
             <nav class="group" [attr.aria-labelledby]="'footer-group-' + i">
               @if (phone()) {
                 <h2 class="group-title">

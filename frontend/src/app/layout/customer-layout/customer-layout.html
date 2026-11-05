@@ -33,8 +33,10 @@
         >Home</a
       >
       <a routerLink="/restaurants" routerLinkActive="active">Restaurants</a>
-      <a routerLink="/dishes" routerLinkActive="active">Dishes</a>
-      <a routerLink="/" fragment="partners">Partner with us</a>
+      <!-- Partner sign-up is shown to visitors only (the home page hides it once signed in). -->
+      @if (!shown()) {
+        <a routerLink="/" fragment="partners">Partner with us</a>
+      }
     </nav>
 
     <div class="header-actions">
@@ -163,11 +165,6 @@
         }
       </span>
       <span>Cart</span>
-    </a>
-  } @else {
-    <a routerLink="/dishes" routerLinkActive="active">
-      <np-icon name="soup" class="mat-icon" matButtonIcon />
-      <span>Dishes</span>
     </a>
   }
   @if (shown()) {

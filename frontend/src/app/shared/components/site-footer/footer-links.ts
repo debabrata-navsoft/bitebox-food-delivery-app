@@ -10,6 +10,8 @@ export interface FooterLink {
   /** External URL (opens in a new tab). Empty = not configured; not shown. */
   href?: string;
   icon?: string;
+  /** Only for signed-out visitors (e.g. partner sign-up, hidden on the home page once signed in). */
+  visitorsOnly?: boolean;
 }
 
 /** A page BiteBox does not have yet: listed so it is easy to switch on, never shown until then. */
@@ -34,7 +36,7 @@ export const FOOTER_GROUPS: FooterGroup[] = [
       soon('Careers'),
       soon('Blog'),
       { label: 'Contact us', route: '/support' },
-      { label: 'Partner with us', route: '/', fragment: 'partners' },
+      { label: 'Partner with us', route: '/', fragment: 'partners', visitorsOnly: true },
     ],
   },
   {
@@ -42,7 +44,6 @@ export const FOOTER_GROUPS: FooterGroup[] = [
     links: [
       { label: 'Browse restaurants', route: '/restaurants' },
       { label: 'Top-rated restaurants', route: '/restaurants', queryParams: { sort: 'rating' } },
-      { label: 'Browse dishes', route: '/dishes' },
       { label: 'Offers & rewards', route: '/account/rewards' },
       { label: 'Refer & earn', route: '/account/refer' },
       { label: 'My orders & tracking', route: '/orders' },

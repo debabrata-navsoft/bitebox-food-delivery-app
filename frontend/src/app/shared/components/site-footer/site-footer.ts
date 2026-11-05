@@ -33,8 +33,11 @@ export class SiteFooter {
   readonly compact = input(false);
 
   protected readonly year = new Date().getFullYear();
-  protected readonly groups = FOOTER_GROUPS.map((g) => ({ ...g, links: available(g.links) })).filter(
-    (g) => g.links.length,
+  protected readonly groups = computed(() =>
+    FOOTER_GROUPS.map((g) => ({
+      ...g,
+      links: available(g.links).filter((l) => !(l.visitorsOnly && this.signedIn())),
+    })).filter((g) => g.links.length),
   );
   protected readonly bottomLinks = available(BOTTOM_LINKS);
   protected readonly partners = PARTNER_CARDS;
