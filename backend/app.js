@@ -10,7 +10,10 @@ import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
 import { openApiDocument } from "./docs/openapi.js";
 import { errorHandler, notFound } from "./middleware/error.middleware.js";
-import { mongoSanitize } from "./middleware/security.middleware.js";
+import {
+  isAllowedOrigin,
+  mongoSanitize,
+} from "./middleware/security.middleware.js";
 import adminCatalogRoutes from "./routes/admin-catalog.routes.js";
 import adminUsersRoutes from "./routes/admin-users.routes.js";
 import { createAuthRouter } from "./routes/auth.routes.js";
@@ -58,12 +61,9 @@ export function createApp(options = {}) {
   app.disable("x-powered-by");
 
   app.use(pinoHttp({ logger, autoLogging: process.env.LOG_HTTP === "true" }));
-  app.use(helmet());
-  app.use(compression());
   app.use(
     cors({
-      origin: (origin, callback) =>
-        callback(null, !origin || env.clientUrls.includes(origin)),
+      origin: (origin, callback) => callback(null, isAllowedOrigin(origin)),
       credentials: true,
       allowedHeaders: [
         "Content-Type",
@@ -71,9 +71,11 @@ export function createApp(options = {}) {
         "X-Requested-With",
         "Idempotency-Key",
       ],
-      methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     }),
   );
+  app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+  app.use(compression());
   // Signed gateway webhooks need the raw body, so they are mounted before the JSON parser.
   app.use("/api/v1/payments/webhooks/razorpay", razorpayWebhookRouter);
   app.use(express.json({ limit: "100kb" }));

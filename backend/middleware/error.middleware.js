@@ -32,6 +32,11 @@ function normalise(err) {
       code: "PAYLOAD_TOO_LARGE",
     });
 
+  if (/^Mongo(ose)?(ServerSelection|Network|Timeout)Error$/.test(err?.name))
+    return new ApiError(503, "Service temporarily unavailable, please retry", {
+      code: "DATABASE_UNAVAILABLE",
+    });
+
   return null;
 }
 

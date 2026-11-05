@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import {
   Injectable,
   Injector,
@@ -20,7 +20,7 @@ import {
   tap,
   throwError,
   timer,
-  switchMap,
+  retry,
 } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../../shared/models/api.models';
@@ -99,21 +99,25 @@ export class AuthService {
   refresh(): Observable<string> {
     if (!this.refreshInFlight$) {
       const attempt = () =>
-        this.http.post<ApiResponse<AuthSession>>(`${this.baseUrl}/refresh`, {}).pipe(
-          map((res) => {
-            this.applySession(res.data);
-            return res.data.accessToken;
-          }),
-        );
+        this.http
+          .post<ApiResponse<AuthSession>>(`${this.baseUrl}/refresh`, {})
+          .pipe(map((res) => (this.applySession(res.data), res.data.accessToken)));
 
       this.refreshInFlight$ = attempt().pipe(
-        catchError((error: unknown) =>
-          errorCode(error) === 'REFRESH_RACE'
-            ? timer(300).pipe(switchMap(attempt))
-            : throwError(() => error),
-        ),
+        // A serverless API can answer the first request after a cold start with a 5xx or
+        // drop it; retry those before deciding the user is signed out.
+        retry({
+          count: 3,
+          delay: (error: unknown, n) =>
+            errorCode(error) === 'REFRESH_RACE'
+              ? timer(300)
+              : isTransient(error)
+                ? timer(500 * n)
+                : throwError(() => error),
+        }),
+        // Only a definite "no valid session" answer ends the session, not a network blip.
         catchError((error: unknown) => {
-          this.clearSession();
+          if (!isTransient(error)) this.clearSession();
           return throwError(() => error);
         }),
         finalize(() => (this.refreshInFlight$ = null)),
@@ -191,6 +195,10 @@ export class AuthService {
     return session.user;
   }
 }
+
+/** Network failure or a gateway/server error, as opposed to the API rejecting the session. */
+const isTransient = (error: unknown) =>
+  error instanceof HttpErrorResponse && (error.status === 0 || error.status >= 500);
 
 function readHint(): SessionHint | null {
   try {

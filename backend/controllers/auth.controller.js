@@ -5,12 +5,16 @@ import { sendSuccess } from "../utils/api-response.js";
 const cookieOptions = () => ({
   httpOnly: true,
   secure: env.isProduction,
+  // The web app reaches the API through a same-origin /api proxy, so the cookie is first-party.
+  // Set COOKIE_SAMESITE=none only if the browser calls the API on a different site.
   sameSite: process.env.COOKIE_SAMESITE || "strict",
   path: "/api/v1/auth",
   maxAge: env.refreshToken.ttlDays * 86_400_000,
 });
 
 const requestMeta = (req) => ({ ip: req.ip, userAgent: req.get("user-agent") });
+
+const getRefreshToken = (req) => req.cookies?.[env.refreshToken.cookieName];
 
 function sendSession(
   res,
@@ -40,7 +44,7 @@ export async function login(req, res) {
 export async function refresh(req, res) {
   try {
     const session = await authService.refresh(
-      req.cookies?.[env.refreshToken.cookieName],
+      getRefreshToken(req),
       requestMeta(req),
     );
     sendSession(res, session, "Session refreshed");
@@ -51,7 +55,7 @@ export async function refresh(req, res) {
 }
 
 export async function logout(req, res) {
-  await authService.logout(req.cookies?.[env.refreshToken.cookieName]);
+  await authService.logout(getRefreshToken(req));
   clearSessionCookie(res);
   sendSuccess(res, { message: "Signed out successfully" });
 }
