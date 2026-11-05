@@ -39,6 +39,7 @@ export const rewardsTags = [
   },
   { name: "Referrals", description: "Refer & earn: the customer's code, statistics and history." },
   { name: "Special rewards", description: "Welcome and birthday bonuses, festival and promotional campaigns." },
+  { name: "Newsletter", description: "Marketing email sign-up from the site footer." },
   { name: "Admin - Rewards", description: "Coins & Rewards management. Reading needs rewards:view; changes need rewards:manage (super admin) and are audited." },
 ];
 
@@ -209,6 +210,18 @@ export const rewardsPaths = {
     }),
   },
 
+  "/newsletter/subscriptions": {
+    post: {
+      tags: ["Newsletter"],
+      summary: "Subscribe an email to the newsletter (public, rate limited; repeating it is harmless)",
+      requestBody: body({ type: "object", required: ["email"], properties: { email: { type: "string", format: "email" } } }),
+      responses: {
+        200: ok(obj({ subscribed: { type: "boolean" }, alreadySubscribed: { type: "boolean" } })),
+        422: err("Invalid email"),
+        429: err("Too many attempts"),
+      },
+    },
+  },
   "/admin/rewards/configuration": {
     get: adminOp("Reward settings", { responses: { 200: ok(obj({ configuration: ref("RewardConfiguration") })), ...forbidden } }),
     put: adminOp("Change reward settings (super admin, audited)", {

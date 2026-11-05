@@ -22,6 +22,7 @@ import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { filter, map } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { currentUrl } from '../../core/services/current-url';
 import { NotificationBell } from '../../shared/components/notification-bell/notification-bell';
 import { BrandLogo } from '../../shared/components/brand-logo/brand-logo';
 
@@ -73,13 +74,7 @@ export class PanelShell {
   protected readonly user = this.auth.user;
   protected readonly initials = computed(() => initialsOf(this.user()?.name) || '?');
 
-  private readonly url = toSignal(
-    this.router.events.pipe(
-      filter((event) => event instanceof NavigationEnd),
-      map(() => this.router.url),
-    ),
-    { initialValue: this.router.url },
-  );
+  private readonly url = currentUrl();
 
   /** Groups whose page is open; they start expanded (a manual toggle wins until the next navigation). */
   protected readonly openGroups = linkedSignal(() => {

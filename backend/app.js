@@ -53,6 +53,7 @@ import { coinsRouter } from "./routes/coins.routes.js";
 import { referralsRouter } from "./routes/referral.routes.js";
 import { rewardsRouter } from "./routes/rewards.routes.js";
 import { adminRewardsRouter } from "./routes/admin-rewards.routes.js";
+import { newsletterRouter } from "./routes/newsletter.routes.js";
 import { adminFinanceRouter } from "./routes/admin-finance.routes.js";
 import { adminOperationsRouter } from "./routes/admin-operations.routes.js";
 import { adminAuditRouter, adminStaffRouter } from "./routes/admin-staff.routes.js";
@@ -153,6 +154,7 @@ export function createApp(options = {}) {
   app.use("/api/v1/coins", coinsRouter);
   app.use("/api/v1/referrals", referralsRouter);
   app.use("/api/v1/rewards", rewardsRouter);
+  app.use("/api/v1/newsletter", newsletterRouter);
   app.use("/api/v1/geo", geoRoutes);
 
   app.use(notFound);

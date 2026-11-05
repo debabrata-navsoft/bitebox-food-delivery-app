@@ -132,27 +132,8 @@
   <router-outlet />
 </main>
 
-<footer class="site-footer">
-  <div class="bb-container footer-grid">
-    <div>
-      <bb-brand-logo variant="light" [height]="32" />
-      <p>Good food, boxed and delivered.</p>
-    </div>
-    <nav aria-label="Partners">
-      <h2 class="bb-h3">Partners</h2>
-      <a routerLink="/restaurant/register">Add your restaurant</a>
-      <a routerLink="/delivery/register">Ride with BiteBox</a>
-      <a routerLink="/login">Partner &amp; rider sign in</a>
-    </nav>
-    <nav aria-label="Account">
-      <h2 class="bb-h3">Account</h2>
-      <a routerLink="/login">Sign in</a>
-      <a routerLink="/register">Create account</a>
-      <a routerLink="/forgot-password">Forgot password</a>
-    </nav>
-  </div>
-  <p class="bb-container copyright">&copy; {{ year }} BiteBox. All rights reserved.</p>
-</footer>
+<!-- Checkout keeps only the bottom bar so nothing distracts from paying. -->
+<bb-site-footer [compact]="onCheckout()" />
 
 <!-- Back-to-top button with a scroll-progress ring (NexPrime) -->
 <np-scroll-top
