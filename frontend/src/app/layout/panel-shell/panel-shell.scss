@@ -86,6 +86,8 @@
   position: sticky;
   top: 0;
   z-index: 5;
+  // The content column is a flex box: without this, long pages (e.g. the dashboard) squash the bar.
+  flex-shrink: 0;
   gap: var(--bb-space-2);
   background: rgb(255 255 255 / 92%);
   backdrop-filter: blur(8px);
