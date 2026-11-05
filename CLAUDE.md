@@ -102,6 +102,7 @@ Production: `docker compose --env-file deploy/.env up -d --build` (see README §
 - **Live data:**
   - `core/services/realtime.service.ts` owns the socket: it connects while signed in, refreshes the token on handshake failure, and exposes `orderUpdates$`, `track(orderId)` and `sendRiderLocation()`.
   - Screens react to events with a slow fallback poll that pauses on hidden tabs. Use `core/services/poll.ts#liveRefresh(request, { pollMs, when })`, which wraps `pollWhileVisible`. A request passed to either must catch its own errors.
+  - **Page loader:** `core/services/page-loader.ts` shows a top bar (in `app.html`) for every HttpClient request slower than 200 ms. Wrap background requests in `inBackground(request$)` so they don't show it; `poll.ts` already does this for repeat polls and live refreshes.
   - Paginated admin-style lists use `shared/list/paged-list.ts#pagedList(fetch, opts)`, which gives data, loading and error state, live refresh, and a reset to page 1 when the filters change.
   - Confirm-then-act flows use `confirmed(dialog, data)` from `shared/components/confirm-dialog/confirm-dialog.ts`.
   - **Toggles:** bind `np-toggle [checked]` to the source state and update that state optimistically, restoring it on failure. Never call `toggle.checked.set()`: it re-emits `checkedChange`.

@@ -199,7 +199,7 @@
           @if (placing()) {
             <mat-progress-spinner mode="indeterminate" diameter="20" aria-label="Placing order" />
           } @else {
-            {{ paymentMethod() === 'online' ? 'Place order & pay' : 'Place order' }} · {{ q.pricing.totalPaise | inr }}
+            {{ paymentMethod() === 'online' ? 'Place order & pay' : 'Place order' }} {{ q.pricing.totalPaise | inr }}
           }
         </button>
         @if (!selectedAddressId()) {
