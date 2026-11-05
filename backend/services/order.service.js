@@ -3,6 +3,7 @@ import { Cart } from "../models/cart.model.js";
 import { Coupon, CouponRedemption } from "../models/coupon.model.js";
 import { FoodItem } from "../models/food-item.model.js";
 import {
+  ORDER_COIN_STATES,
   ORDER_STATUS,
   Order,
   PAYMENT_METHODS,
@@ -21,7 +22,9 @@ import { paginationMeta } from "../utils/pagination.js";
 import { withTransaction } from "../utils/transaction.js";
 import * as addressService from "./address.service.js";
 import * as cartService from "./cart.service.js";
+import * as coinsService from "./coins.service.js";
 import * as couponService from "./coupon.service.js";
+import * as rewardEvents from "./reward-events.js";
 import { notifyNewOrder } from "./order-notifications.js";
 import { providerFor } from "./payments/payment.service.js";
 
@@ -63,6 +66,14 @@ export async function placeOrder(
     throw conflict(
       "Prices changed since you last looked. Please review your order.",
       "PRICE_CHANGED",
+    );
+  }
+
+  const coinsRedeemed = quote.coins?.applied ?? 0;
+  if (coinsRedeemed && !quote.coins.paymentMethods.includes(paymentMethod)) {
+    throw conflict(
+      "Coins can't be used with this payment method. Remove the coins or pay another way.",
+      "COINS_NOT_ALLOWED",
     );
   }
 
@@ -117,6 +128,17 @@ export async function placeOrder(
     coupon: quote.coupon
       ? { code: quote.coupon.code, discountPaise: quote.pricing.discountPaise }
       : undefined,
+    coins: coinsRedeemed
+      ? {
+          redeemed: coinsRedeemed,
+          discountPaise: quote.pricing.coinDiscountPaise,
+          // Cash orders spend the coins now; online orders hold them until paid.
+          state:
+            paymentMethod === PAYMENT_METHODS.COD
+              ? ORDER_COIN_STATES.COMMITTED
+              : ORDER_COIN_STATES.RESERVED,
+        }
+      : undefined,
     distanceMeters: quote.delivery.distanceMeters,
     note: note || undefined,
     status: ORDER_STATUS.PENDING,
@@ -139,6 +161,7 @@ export async function placeOrder(
       { orderId: order.id, orderNumber, userId: String(userId) },
       "Order placed",
     );
+    await rewardEvents.orderPlaced(order);
     if (order.submittedAt) await notifyNewOrder(order, "cash on delivery");
     return { order, created: true };
   } catch (error) {
@@ -246,6 +269,15 @@ async function commitOrder(
         { session },
       );
     }
+
+    // 4. Hold the redeemed coins (cash orders spend them straight away).
+    await coinsService.reserveForOrder(
+      userId,
+      order,
+      { cash: paymentMethod === PAYMENT_METHODS.COD },
+      session,
+      undo,
+    );
     return order;
   } catch (error) {
     if (!session) {

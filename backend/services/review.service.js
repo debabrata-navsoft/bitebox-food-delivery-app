@@ -16,6 +16,7 @@ import { emptyRating } from "../models/rating-summary.schema.js";
 import { ROLES } from "../models/user.model.js";
 import { ApiError } from "../utils/api-error.js";
 import { paginationMeta } from "../utils/pagination.js";
+import * as rewardEvents from "./reward-events.js";
 import {
   notify,
   notifyAdmins,
@@ -378,6 +379,8 @@ export async function reviewOrder(user, orderId, input) {
     throw failed.reason;
   }
 
+  await rewardEvents.reviewsPosted(order, created);
+
   // Each created review is a different subject, so each refresh is needed once.
   // One notification per party, not one per dish.
   const forRestaurant = created.find((r) => r.target !== T.RIDER);
@@ -518,6 +521,7 @@ export async function remove(customerId, id) {
   if (!review) throw ApiError.notFound("Review not found");
   // Hidden and removed reviews never counted, so only a published one changes the rating.
   if (review.status === REVIEW_STATUS.PUBLISHED) await refreshFor(review);
+  await rewardEvents.reviewWithdrawn(review, "review deleted");
   return { deleted: true };
 }
 

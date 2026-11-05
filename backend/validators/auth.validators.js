@@ -54,6 +54,13 @@ export const registerRules = [
   phone(),
   newPassword(),
   body("role").optional().isIn(SELF_REGISTER_ROLES).withMessage("Invalid role"),
+  body("referralCode")
+    .optional({ values: "falsy" })
+    .isString()
+    .trim()
+    .toUpperCase()
+    .matches(/^[A-Z0-9-]{4,40}$/)
+    .withMessage("Enter a valid referral code"),
 ];
 
 export const loginRules = [

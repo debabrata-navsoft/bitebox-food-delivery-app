@@ -103,7 +103,7 @@
         @if (o.note) {
           <p class="note"><strong>Note:</strong> {{ o.note }}</p>
         }
-        <bb-bill-summary class="bill" [pricing]="o.pricing" [couponCode]="o.coupon?.code" [distanceMeters]="o.distanceMeters" />
+        <bb-bill-summary class="bill" [pricing]="o.pricing" [couponCode]="o.coupon?.code" [distanceMeters]="o.distanceMeters" [coinsRedeemed]="o.coins?.redeemed" />
       </section>
       <section class="panel">
         <h3>History</h3>

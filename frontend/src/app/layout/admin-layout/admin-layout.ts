@@ -49,6 +49,18 @@ const NAV: Record<AdminRole, NavItem[]> = {
         { label: 'Reviews', icon: 'star', link: '/admin/reviews' },
       ],
     },
+    {
+      label: 'Coins & rewards',
+      icon: 'coins',
+      children: [
+        { label: 'Overview', icon: 'space_dashboard', link: '/admin/rewards', exact: true },
+        { label: 'Settings', icon: 'settings', link: '/admin/rewards/settings' },
+        { label: 'Campaigns', icon: 'party-popper', link: '/admin/rewards/campaigns' },
+        { label: 'Referrals', icon: 'user-plus', link: '/admin/rewards/referrals' },
+        { label: 'Coin transactions', icon: 'coins', link: '/admin/rewards/transactions' },
+        { label: 'Reward history', icon: 'gift', link: '/admin/rewards/history' },
+      ],
+    },
     { label: 'Categories', icon: 'category', link: '/admin/categories' },
     { label: 'Coupons', icon: 'local_offer', link: '/admin/coupons' },
     { label: 'Users', icon: 'group', link: '/admin/users' },

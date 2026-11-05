@@ -19,6 +19,9 @@ export const PERMISSIONS = Object.freeze({
   PAYOUTS_MANAGE: "payouts:manage",
   SUPPORT_MANAGE: "support:manage", // tickets
   REVIEWS_MODERATE: "reviews:moderate",
+  // Coins, referral and campaign settings (super admin only), and read-only rewards reports.
+  REWARDS_MANAGE: "rewards:manage",
+  REWARDS_VIEW: "rewards:view",
 });
 
 const P = PERMISSIONS;

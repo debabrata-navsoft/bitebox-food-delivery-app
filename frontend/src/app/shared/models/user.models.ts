@@ -28,7 +28,9 @@ export type Permission =
   | 'refunds:manage'
   | 'payouts:manage'
   | 'support:manage'
-  | 'reviews:moderate';
+  | 'reviews:moderate'
+  | 'rewards:manage'
+  | 'rewards:view';
 export type UserStatus = 'active' | 'suspended';
 
 export interface User {
@@ -62,6 +64,8 @@ export interface RegisterRequest {
   phone?: string;
   password: string;
   role: SelfRegisterRole;
+  /** A friend's referral code (customers only). */
+  referralCode?: string;
 }
 
 export interface UpdateProfileRequest {

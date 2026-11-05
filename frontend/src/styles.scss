@@ -969,3 +969,9 @@ np-time-picker .time-picker-field {
     visibility: hidden;
   }
 }
+
+// The customer account menu (header avatar). The panel lives in an overlay, so it is styled here.
+.mat-mdc-menu-panel.bb-account-menu {
+  width: 300px;
+  max-width: calc(100vw - 32px);
+}

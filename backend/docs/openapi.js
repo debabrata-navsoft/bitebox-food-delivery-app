@@ -20,6 +20,11 @@ import {
   paymentsTags,
 } from "./openapi.payments.js";
 import {
+  rewardsPaths,
+  rewardsSchemas,
+  rewardsTags,
+} from "./openapi.rewards.js";
+import {
   reviewsPaths,
   reviewsSchemas,
   reviewsTags,
@@ -87,6 +92,7 @@ export const openApiDocument = {
     ...paymentsTags,
     ...adminRolesTags,
     ...reviewsTags,
+    ...rewardsTags,
   ],
   components: {
     securitySchemes: {
@@ -99,6 +105,7 @@ export const openApiDocument = {
       ...paymentsSchemas,
       ...adminRolesSchemas,
       ...reviewsSchemas,
+      ...rewardsSchemas,
       Role: {
         type: "string",
         enum: ["customer", "admin", "restaurant", "delivery"],
@@ -152,6 +159,10 @@ export const openApiDocument = {
             type: "string",
             enum: ["customer", "restaurant", "delivery"],
             default: "customer",
+          },
+          referralCode: {
+            type: "string",
+            description: "A friend's referral code (customers only), e.g. BITEBOX-RIYA7K2Q",
           },
         },
       },
@@ -214,6 +225,7 @@ export const openApiDocument = {
     ...paymentsPaths,
     ...adminRolesPaths,
     ...reviewsPaths,
+    ...rewardsPaths,
     "/health": {
       get: {
         tags: ["Health"],

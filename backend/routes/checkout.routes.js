@@ -9,6 +9,7 @@ import { validate } from "../middleware/validate.middleware.js";
 import { ROLES } from "../models/user.model.js";
 import * as rules from "../validators/checkout.validators.js";
 import * as orderRules from "../validators/order-management.validators.js";
+import { cartCoinsRules } from "../validators/rewards.validators.js";
 import { mongoIdParam } from "../validators/common.validators.js";
 import { orderReviews, reviewOrder } from "../services/review.service.js";
 import { orderReviewRules } from "../validators/review.validators.js";
@@ -47,7 +48,9 @@ export const cartRouter = Router()
     validate([...rules.quoteRules, ...rules.couponCodeRules]),
     c.applyCoupon,
   )
-  .delete("/coupon", validate(rules.quoteRules), c.removeCoupon);
+  .delete("/coupon", validate(rules.quoteRules), c.removeCoupon)
+  .put("/coins", validate([...rules.quoteRules, ...cartCoinsRules]), c.setCoins)
+  .delete("/coins", validate(rules.quoteRules), c.removeCoins);
 
 /** /api/v1/addresses */
 export const addressesRouter = Router()

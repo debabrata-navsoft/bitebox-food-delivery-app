@@ -70,7 +70,7 @@
           <span class="hide-phone">{{ firstName() }}</span>
           <span class="bb-sr-only">account menu</span>
         </button>
-        <mat-menu #accountMenu="matMenu" xPosition="before">
+        <mat-menu #accountMenu="matMenu" xPosition="before" class="bb-account-menu">
           <!-- Clicking the name/email area keeps the menu open (it is not a menu item). -->
           <div class="menu-header" (click)="$event.stopPropagation()" role="presentation">
             <strong>{{ u.name }}</strong>
@@ -91,6 +91,20 @@
               <np-icon name="map-pin" class="mat-icon" matButtonIcon />
               <span>Saved addresses</span>
             </a>
+            <mat-divider />
+            <a mat-menu-item routerLink="/account/coins">
+              <np-icon name="coins" class="mat-icon" matButtonIcon />
+              <span>My coins</span>
+            </a>
+            <a mat-menu-item routerLink="/account/refer">
+              <np-icon name="user-plus" class="mat-icon" matButtonIcon />
+              <span>Refer & earn</span>
+            </a>
+            <a mat-menu-item routerLink="/account/rewards">
+              <np-icon name="gift" class="mat-icon" matButtonIcon />
+              <span>Rewards</span>
+            </a>
+            <mat-divider />
             <a mat-menu-item routerLink="/account">
               <np-icon name="user-cog" class="mat-icon" matButtonIcon />
               <span>My account</span>
@@ -100,6 +114,7 @@
               <span>Help & support</span>
             </a>
           }
+          <mat-divider />
           <button mat-menu-item (click)="logout()">
             <np-icon name="log-out" class="mat-icon" matButtonIcon />
             <span>Sign out</span>

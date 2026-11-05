@@ -11,6 +11,7 @@ import { User } from "../../models/user.model.js";
 import { ApiError } from "../../utils/api-error.js";
 import { escapeRegex, paginationMeta } from "../../utils/pagination.js";
 import { notifyNewOrder, notifyRefund } from "../order-notifications.js";
+import * as rewardEvents from "../reward-events.js";
 import { mockProvider } from "./mock.provider.js";
 import { razorpayFromEnv } from "./razorpay.provider.js";
 
@@ -274,6 +275,7 @@ async function markPaid(paymentId, providerPaymentId) {
       { orderId: order.id },
       "Online payment received; order sent to the restaurant",
     );
+    await rewardEvents.orderPaid(order);
     await notifyNewOrder(order, "paid online");
   } else {
     // Paid after the order closed: refund straight away.

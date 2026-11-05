@@ -62,6 +62,11 @@ const userSchema = new mongoose.Schema(
     passwordResetExpiresAt: { type: Date, select: false },
 
     lastLoginAt: { type: Date },
+
+    // Customers: their own invite code (BITEBOX-NAME7K2Q), made on sign-up or first use.
+    referralCode: { type: String, trim: true, uppercase: true, maxlength: 40 },
+    // Customers: date of birth (UTC midnight of the day) for birthday rewards. Set once.
+    birthDate: { type: Date, default: undefined },
   },
   {
     timestamps: true,
@@ -88,6 +93,10 @@ userSchema.index(
   { unique: true, partialFilterExpression: { phone: { $type: "string" } } },
 );
 userSchema.index({ role: 1, status: 1, createdAt: -1 });
+userSchema.index(
+  { referralCode: 1 },
+  { unique: true, partialFilterExpression: { referralCode: { $type: "string" } } },
+);
 userSchema.index({ passwordResetTokenHash: 1 }, { sparse: true });
 
 export const User = mongoose.model("User", userSchema);

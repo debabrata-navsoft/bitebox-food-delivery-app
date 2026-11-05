@@ -304,3 +304,14 @@ address {
   margin-top: var(--bb-space-3);
   --bb-icon-size: 18px;
 }
+
+.coins-earned {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--bb-space-1);
+  margin: var(--bb-space-2) 0 0;
+  font-size: 0.9rem;
+  --bb-icon-size: 18px;
+  color: var(--bb-ink-muted);
+}

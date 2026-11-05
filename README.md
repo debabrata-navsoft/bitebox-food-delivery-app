@@ -484,6 +484,40 @@ The `admin` role is the **super admin**. Three staff roles share the `/admin` pa
   - **Requesters:** they can only attach their own orders, see staff as "BiteBox Support", and reopen a resolved ticket by replying.
   - **History:** every change is kept in the ticket history.
 
+### Coins, referrals and special rewards
+
+A loyalty programme run entirely on the server. Coins are a platform reward, kept apart from payments, restaurant payouts and rider earnings. The super admin configures everything at `/admin/rewards/*` (permission `rewards:manage`; reports and lists need `rewards:view`). The design is in `docs/COINS_REWARDS_PLAN.md`.
+
+**Customers** have three pages: `/account/coins` (wallet and history), `/account/refer` (code, invite link, friends) and `/account/rewards` (birthday, welcome bonus, campaigns). Checkout has a coins card.
+
+| Rule | Default (configurable) |
+|---|---|
+| Order reward | 10 coins per ₹100 of food value after discounts, on **delivered** orders; at most 500 per order |
+| Review reward | 5 coins for the restaurant review of a delivered order, once; taken back if the review is removed or deleted |
+| Redemption | 100 coins = ₹10; minimum 100 coins; at most 2,000 coins and 20% of the food value; orders from ₹199; cash and online |
+| Expiry | 180 days per reward source (0 = never); oldest-expiry coins are spent first; returned coins stay valid for at least 7 more days |
+| Referral | Referrer 50, friend 25 coins once the friend's first order (₹199+) is delivered within 30 days; up to 50 referrals per customer and 10 rewarded per month |
+| Birthday / welcome | 100 coins on the birthday (once a year, in `REPORT_TIMEZONE`); 25 coins on sign-up (or on the first delivered order) |
+
+- **Ledger** (`services/coin-wallet.service.js`): every change is an immutable `CoinTransaction` row. `CoinWallet` keeps the running balances and the live credit batches (FIFO by expiry).
+  - **Concurrency:** a per-wallet sequence number serialises operations, with or without MongoDB transactions. Every operation has an idempotency key, so a balance can never go negative or be paid twice.
+  - **Recovery:** a crash leaves a pending row, which the next operation (or the sweep) applies.
+  - **Integrity check:** `reconcile()` replays a wallet's ledger.
+- **Checkout:** `PUT /cart/coins { coins }` stores the request. The cart quote works out what can apply (`quote.coins`), and coins come off the payable total (`pricing.coinDiscountPaise`); tax, fees and the restaurant's share are unchanged.
+  - Placing the order **holds** the coins. Cash orders spend them at once, and online orders spend them when paid.
+  - A rejected or cancelled order returns them. An unpaid online order releases them when the payment window closes.
+- **Referrals** (`services/referral.service.js`):
+  - **Codes:** `BITEBOX-NAME1234`, unique in the database.
+  - **Sign-up:** `POST /auth/register` takes `referralCode`, and a customer has exactly one referrer.
+  - **Fraud signals:** the same sign-up network as the referrer, delivery to the referrer's address, an address shared with another referral, or a burst of sign-ups. Any of these **holds** the referral for the admin (`/admin/rewards/referrals`) to approve or reject. Customers never see the signals.
+- **Campaigns** (`services/special-rewards.service.js`): festival or promotional rewards, either claimed (`POST /rewards/campaigns/:id/claim`) or earned automatically on qualifying delivered orders.
+  - **Targeting:** all, new, existing or inactive customers, a minimum order, first order only, and selected restaurants.
+  - **Limits:** per customer, in total, and a coin budget, all enforced atomically.
+  - **Statuses:** draft, scheduled, active, paused, expired and completed.
+  - **Editing:** running campaigns can only change their wording, end date and limits.
+- **Background sweep** (`services/rewards-jobs.service.js`, every 2 minutes, started in `server.js`): finishes pending ledger rows, settles coin holds of closed orders, expires coins, expires referral windows, schedules and ends campaigns, and pays birthdays. Every step is idempotent and safe on several API instances.
+- **Endpoints:** `/coins/*`, `/cart/coins`, `/referrals/*`, `/rewards/*` (customers) and `/admin/rewards/*` (configuration, campaigns, claims, transactions and reversals, wallets, reports, referrals). See Swagger.
+
 ### Quality: security, performance and accessibility
 
 **Security**

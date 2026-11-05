@@ -46,6 +46,45 @@ export const ADMIN_ROUTES: Routes = [
     loadComponent: () => import('./coupons/admin-coupons').then((m) => m.AdminCoupons),
   },
 
+  // Coins & rewards (reports need rewards:view; changing anything needs rewards:manage)
+  {
+    path: 'rewards',
+    title: 'Coins & rewards | BiteBox Admin',
+    canActivate: [can('rewards:view')],
+    loadComponent: () => import('./rewards/overview/rewards-overview').then((m) => m.RewardsOverviewPage),
+  },
+  {
+    path: 'rewards/settings',
+    title: 'Coins configuration | BiteBox Admin',
+    canActivate: [can('rewards:view')],
+    loadComponent: () => import('./rewards/settings/rewards-settings').then((m) => m.RewardsSettingsPage),
+  },
+  {
+    path: 'rewards/campaigns',
+    title: 'Reward campaigns | BiteBox Admin',
+    canActivate: [can('rewards:view')],
+    loadComponent: () => import('./rewards/campaigns/reward-campaigns').then((m) => m.RewardCampaignsPage),
+  },
+  {
+    path: 'rewards/referrals',
+    title: 'Referrals | BiteBox Admin',
+    canActivate: [can('rewards:view')],
+    loadComponent: () => import('./rewards/referrals/reward-referrals').then((m) => m.RewardReferralsPage),
+  },
+  {
+    path: 'rewards/transactions',
+    title: 'Coin transactions | BiteBox Admin',
+    canActivate: [can('rewards:view')],
+    loadComponent: () =>
+      import('./rewards/transactions/coin-transactions').then((m) => m.CoinTransactionsPage),
+  },
+  {
+    path: 'rewards/history',
+    title: 'Reward history | BiteBox Admin',
+    canActivate: [can('rewards:view')],
+    loadComponent: () => import('./rewards/history/reward-history').then((m) => m.RewardHistoryPage),
+  },
+
   // Operations
   {
     path: 'operations',

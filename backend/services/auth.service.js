@@ -14,6 +14,8 @@ import { ApiError } from "../utils/api-error.js";
 import { hashToken, randomToken, signAccessToken } from "../utils/tokens.js";
 import { sendMail } from "./mail.service.js";
 import { notifyAdmins } from "./notification.service.js";
+import * as referralService from "./referral.service.js";
+import * as rewardEvents from "./reward-events.js";
 
 const ROTATION_GRACE_MS = 15_000;
 
@@ -66,12 +68,17 @@ const PARTNER_SIGNUP = {
 };
 
 export async function register(
-  { name, email, phone, password, role = ROLES.CUSTOMER },
+  { name, email, phone, password, role = ROLES.CUSTOMER, referralCode },
   meta,
 ) {
   if (!SELF_REGISTER_ROLES.includes(role)) {
     throw ApiError.forbidden("This role cannot be self-registered");
   }
+  // Referral codes are for customers; check the code before creating the account.
+  const referral =
+    referralCode && role === ROLES.CUSTOMER
+      ? await referralService.resolveCode(referralCode)
+      : null;
 
   const existing = await User.exists({ email });
   if (existing)
@@ -88,6 +95,8 @@ export async function register(
     passwordHash: await hashPassword(password),
   });
   logger.info({ userId: user.id, role }, "User registered");
+  if (role === ROLES.CUSTOMER)
+    await rewardEvents.customerRegistered(user, { referral, ip: meta?.ip });
   const signup = PARTNER_SIGNUP[role];
   if (signup)
     await notifyAdmins({

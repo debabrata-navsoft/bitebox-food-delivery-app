@@ -243,7 +243,19 @@
             [pricing]="o.pricing"
             [couponCode]="o.coupon?.code"
             [distanceMeters]="o.distanceMeters"
+            [coinsRedeemed]="o.coins?.redeemed"
           />
+          @if (o.coins?.earned) {
+            <p class="coins-earned">
+              <np-icon name="coins" class="mat-icon" matButtonIcon />
+              You earned {{ o.coins!.earned }} coins on this order. <a routerLink="/account/coins">View wallet</a>
+            </p>
+          } @else if (o.coins?.state === 'released' || o.coins?.state === 'refunded') {
+            <p class="coins-earned">
+              <np-icon name="coins" class="mat-icon" matButtonIcon />
+              The {{ o.coins!.redeemed }} coins you used are back in your wallet.
+            </p>
+          }
           @let status = o.payment?.status ?? o.paymentStatus;
           <p class="payment">
             <span class="method">

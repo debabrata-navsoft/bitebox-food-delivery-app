@@ -49,6 +49,10 @@ import {
   reviewsRouter,
 } from "./routes/review.routes.js";
 import uploadsRoutes from "./routes/uploads.routes.js";
+import { coinsRouter } from "./routes/coins.routes.js";
+import { referralsRouter } from "./routes/referral.routes.js";
+import { rewardsRouter } from "./routes/rewards.routes.js";
+import { adminRewardsRouter } from "./routes/admin-rewards.routes.js";
 import { adminFinanceRouter } from "./routes/admin-finance.routes.js";
 import { adminOperationsRouter } from "./routes/admin-operations.routes.js";
 import { adminAuditRouter, adminStaffRouter } from "./routes/admin-staff.routes.js";
@@ -130,6 +134,7 @@ export function createApp(options = {}) {
   app.use("/api/v1/admin/operations", adminOperationsRouter);
   app.use("/api/v1/admin/finance", adminFinanceRouter);
   app.use("/api/v1/admin/support", adminSupportRouter);
+  app.use("/api/v1/admin/rewards", adminRewardsRouter);
   app.use("/api/v1/admin", adminCatalogRoutes);
   app.use("/api/v1/restaurants", restaurantsRouter);
   app.use("/api/v1/categories", categoriesRouter);
@@ -145,6 +150,9 @@ export function createApp(options = {}) {
   app.use("/api/v1/notifications", notificationRoutes);
   app.use("/api/v1/reviews", reviewsRouter);
   app.use("/api/v1/support", supportRouter);
+  app.use("/api/v1/coins", coinsRouter);
+  app.use("/api/v1/referrals", referralsRouter);
+  app.use("/api/v1/rewards", rewardsRouter);
   app.use("/api/v1/geo", geoRoutes);
 
   app.use(notFound);
