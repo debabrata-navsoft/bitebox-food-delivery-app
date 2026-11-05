@@ -46,6 +46,7 @@ import healthRoutes from "./routes/health.routes.js";
 import myRestaurantRoutes from "./routes/my-restaurant.routes.js";
 import {
   adminReviewsRouter,
+  featuredReviewsRouter,
   reviewsRouter,
 } from "./routes/review.routes.js";
 import uploadsRoutes from "./routes/uploads.routes.js";
@@ -149,6 +150,7 @@ export function createApp(options = {}) {
   app.use("/api/v1/delivery", deliveryRoutes);
   app.use("/api/v1/payments", paymentsRouter);
   app.use("/api/v1/notifications", notificationRoutes);
+  app.use("/api/v1/reviews/featured", featuredReviewsRouter);
   app.use("/api/v1/reviews", reviewsRouter);
   app.use("/api/v1/support", supportRouter);
   app.use("/api/v1/coins", coinsRouter);

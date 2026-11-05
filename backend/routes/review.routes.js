@@ -18,6 +18,12 @@ const page = (req) => parsePagination(req.validatedQuery, { defaultLimit: 10 });
 const asReview = (load) => async (req) => ({ review: await load(req) });
 const customerOnly = authorize(ROLES.CUSTOMER);
 
+/** /api/v1/reviews/featured: public, for the home page. Mounted before the signed-in router. */
+export const featuredReviewsRouter = Router().get(
+  "/",
+  respond(() => reviews.featuredReviews()),
+);
+
 /** /api/v1/reviews: customers write and manage their reviews; customers and the reviewed party report them. */
 export const reviewsRouter = Router()
   .use(authenticate)

@@ -218,6 +218,13 @@ export const reviewsSchemas = {
 };
 
 export const reviewsPaths = {
+  "/reviews/featured": {
+    get: {
+      tags: ["Reviews"],
+      summary: "Recent 4-5 star restaurant reviews with a comment (public; home page)",
+      responses: { 200: ok({ type: "object", properties: { items: { type: "array", items: { type: "object" } } } }) },
+    },
+  },
   "/restaurants/{slugOrId}/reviews": {
     get: {
       tags: ["Reviews"],

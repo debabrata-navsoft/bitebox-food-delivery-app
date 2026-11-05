@@ -4,6 +4,7 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../../shared/models/api.models';
 import {
+  FeaturedReview,
   AdminOrderReviewPage,
   AdminOrderReviews,
   AdminReviewDetail,
@@ -63,6 +64,10 @@ export class ReviewService {
   }
 
   // Public
+  featured(): Observable<FeaturedReview[]> {
+    return this.get<{ items: FeaturedReview[] }>('reviews/featured', {}, true).pipe(map((d) => d.items));
+  }
+
   restaurantReviews(slug: string, query: ReviewListQuery): Observable<ReviewPage<PublicReview>> {
     return this.get(`restaurants/${id(slug)}/reviews`, query, true);
   }

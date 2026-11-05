@@ -4,7 +4,7 @@ import { REVIEW_POLICY } from "../config/reviews.js";
 import { DeliveryPartner } from "../models/delivery-partner.model.js";
 import { FoodItem } from "../models/food-item.model.js";
 import { ORDER_STATUS, Order } from "../models/order.model.js";
-import { Restaurant } from "../models/restaurant.model.js";
+import { RESTAURANT_STATUS, Restaurant } from "../models/restaurant.model.js";
 import {
   REPORT_STATUS,
   REVIEW_STATUS,
@@ -601,6 +601,30 @@ async function publicPage(filter, query, pagination) {
   return {
     items: result.items.map(presentPublic),
     pagination: result.pagination,
+  };
+}
+
+/**
+ * Recent happy restaurant reviews with a comment, for the home page ("What our customers say").
+ * Public view only: short author name, no ids or order details.
+ */
+export async function featuredReviews(limit = 8) {
+  const reviews = await Review.find({
+    target: T.RESTAURANT,
+    status: REVIEW_STATUS.PUBLISHED,
+    rating: { $gte: 4 },
+    comment: { $exists: true, $ne: "" },
+  })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .populate("restaurant", "name slug imageUrl status");
+  return {
+    items: reviews
+      .filter((r) => r.restaurant?.status === RESTAURANT_STATUS.APPROVED)
+      .map((r) => ({
+        ...presentPublic(r),
+        restaurant: { name: r.restaurant.name, slug: r.restaurant.slug, imageUrl: r.restaurant.imageUrl ?? null },
+      })),
   };
 }
 

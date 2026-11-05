@@ -42,6 +42,11 @@ export interface PublicReview {
   editedAt: string | null;
 }
 
+/** Home page "What our customers say": a recent happy restaurant review. */
+export interface FeaturedReview extends PublicReview {
+  restaurant: { name: string; slug: string; imageUrl: string | null };
+}
+
 export interface MyReview extends PublicReview {
   status: Exclude<ReviewStatus, 'deleted'>;
   order: string;

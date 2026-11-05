@@ -33,6 +33,11 @@
         >Home</a
       >
       <a routerLink="/restaurants" routerLinkActive="active">Restaurants</a>
+      @if (shown()?.role === 'customer') {
+        <a routerLink="/account/rewards" routerLinkActive="active">Offers &amp; rewards</a>
+        <a routerLink="/account/refer" routerLinkActive="active">Refer &amp; earn</a>
+        <a routerLink="/orders" routerLinkActive="active">My orders</a>
+      }
       <!-- Partner sign-up is shown to visitors only (the home page hides it once signed in). -->
       @if (!shown()) {
         <a routerLink="/" fragment="partners">Partner with us</a>
