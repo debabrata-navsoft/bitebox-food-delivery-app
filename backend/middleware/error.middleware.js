@@ -42,6 +42,7 @@ function normalise(err) {
 
 export function errorHandler(err, req, res, _next) {
   const apiError = normalise(err);
+  res.set("Cache-Control", "no-store"); // never let a CDN keep an error for a cached route
 
   if (!apiError) {
     req.log?.error({ err }, "Unhandled error");

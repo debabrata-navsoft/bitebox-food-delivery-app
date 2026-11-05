@@ -39,6 +39,19 @@ export function requireTrustedOrigin(req, _res, next) {
   next();
 }
 
+/**
+ * Lets the CDN (Vercel edge) share public catalogue reads: fresh for 60 s, then served stale
+ * for up to 10 min while one request refreshes it in the background. Browsers always revalidate.
+ */
+export function publicCache(req, res, next) {
+  if (req.method === "GET")
+    res.set(
+      "Cache-Control",
+      "public, max-age=0, s-maxage=60, stale-while-revalidate=600",
+    );
+  next();
+}
+
 export const createRateLimiter = ({ windowMs, limit, message }) =>
   rateLimit({
     windowMs,
