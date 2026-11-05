@@ -42,8 +42,8 @@ h2 {
   gap: var(--bb-space-2);
   padding: var(--bb-space-3) 0;
   background: var(--bb-bg);
-  // Above the toggles and fields scrolling underneath.
-  z-index: 2;
+  // Above the toggles (NexPrime draws their knobs at z-index 1) and fields scrolling underneath.
+  z-index: 10;
   border-top: 1px solid var(--bb-border);
 
   // The global form rule makes submit buttons full width; here it sits beside "Discard".
