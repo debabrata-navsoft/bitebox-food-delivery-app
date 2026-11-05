@@ -2,7 +2,8 @@ import { Router } from "express";
 import * as c from "../controllers/checkout.controller.js";
 import * as orders from "../controllers/order-management.controller.js";
 import { env } from "../config/env.js";
-import { authenticate, authorize } from "../middleware/auth.middleware.js";
+import { PERMISSIONS } from "../config/permissions.js";
+import { authenticate, authorize, can } from "../middleware/auth.middleware.js";
 import { createRateLimiter } from "../middleware/security.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
 import { ROLES } from "../models/user.model.js";
@@ -99,7 +100,7 @@ export const couponsRouter = Router()
 
 /** /api/v1/admin/coupons */
 export const adminCouponsRouter = Router()
-  .use(authenticate, authorize(ROLES.ADMIN))
+  .use(authenticate, can(PERMISSIONS.CATALOG_MANAGE))
   .get("/", validate(rules.adminCouponListRules), c.adminListCoupons)
   .post("/", validate(rules.createCouponRules), c.adminCreateCoupon)
   .patch("/:id", validate(rules.updateCouponRules), c.adminUpdateCoupon)

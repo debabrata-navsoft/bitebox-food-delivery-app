@@ -28,6 +28,7 @@ import {
   AuthSession,
   ChangePasswordRequest,
   LoginRequest,
+  Permission,
   ROLE_META,
   RegisterRequest,
   Role,
@@ -65,6 +66,12 @@ export class AuthService {
   readonly initialised = this._initialised.asReadonly();
   readonly isAuthenticated = computed(() => this._user() !== null);
   readonly role = computed(() => this._user()?.role ?? null);
+  private readonly permissions = computed(() => new Set(this._user()?.permissions ?? []));
+
+  /** Admin permission check for menus and guards (the API enforces the real rule). */
+  can(permission: Permission): boolean {
+    return this.permissions().has(permission);
+  }
 
   constructor() {
     if (!this.isBrowser) return;

@@ -296,3 +296,11 @@ address {
   font-size: 0.82rem;
   color: var(--bb-ink-muted);
 }
+
+.help-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--bb-space-3);
+  --bb-icon-size: 18px;
+}

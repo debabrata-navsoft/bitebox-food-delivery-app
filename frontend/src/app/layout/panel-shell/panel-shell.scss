@@ -157,6 +157,40 @@
   padding: var(--bb-space-5) var(--bb-page-gutter) var(--bb-space-7);
 }
 
+// Expandable group (super admin: Operations, Finance, Support) and its indented sub-links.
+.nav .group {
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  margin-bottom: 2px;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+
+  .chevron {
+    --bb-icon-size: 18px;
+    color: #cdb8dc;
+    transition: transform 0.15s;
+  }
+  &.open .chevron {
+    transform: rotate(180deg);
+  }
+}
+
+.subnav {
+  position: relative;
+  margin: 2px 0 6px 26px;
+  padding-left: 10px;
+  border-left: 1px solid rgb(255 255 255 / 14%);
+
+  .mat-mdc-list-item {
+    --mat-list-list-item-one-line-container-height: 40px;
+    --mat-list-list-item-label-text-size: 0.9rem;
+    --bb-icon-size: 18px;
+  }
+}
+
 // Count next to a nav label (e.g. new orders waiting for the restaurant).
 .nav-badge {
   align-self: center;

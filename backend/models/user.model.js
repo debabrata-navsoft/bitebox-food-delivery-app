@@ -1,13 +1,14 @@
 import mongoose from "mongoose";
+import {
+  ADMIN_ROLES,
+  ALL_ROLES,
+  MEMBER_ROLES,
+  ROLES,
+  STAFF_ADMIN_ROLES,
+} from "../config/roles.js";
+import { permissionsFor } from "../config/permissions.js";
 
-export const ROLES = Object.freeze({
-  CUSTOMER: "customer",
-  ADMIN: "admin",
-  RESTAURANT: "restaurant",
-  DELIVERY: "delivery",
-});
-
-export const ALL_ROLES = Object.values(ROLES);
+export { ADMIN_ROLES, ALL_ROLES, MEMBER_ROLES, ROLES, STAFF_ADMIN_ROLES };
 
 export const SELF_REGISTER_ROLES = [
   ROLES.CUSTOMER,
@@ -73,6 +74,8 @@ const userSchema = new mongoose.Schema(
         delete ret.tokenVersion;
         delete ret.passwordResetTokenHash;
         delete ret.passwordResetExpiresAt;
+        // Admin roles carry their permissions so the web app can shape its menu (the API still checks).
+        if (ADMIN_ROLES.includes(ret.role)) ret.permissions = permissionsFor(ret.role);
         return ret;
       },
     },

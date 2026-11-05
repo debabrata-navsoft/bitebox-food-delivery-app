@@ -1,3 +1,4 @@
+import { PERMISSIONS } from "../config/permissions.js";
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { env } from "../config/env.js";
@@ -19,7 +20,7 @@ const ROTATION_GRACE_MS = 15_000;
 // Used to keep login timing similar whether or not the email exists.
 const DUMMY_HASH = bcrypt.hashSync("bitebox-timing-equaliser", 4);
 
-const hashPassword = (password) => bcrypt.hash(password, env.bcryptRounds);
+export const hashPassword = (password) => bcrypt.hash(password, env.bcryptRounds);
 
 async function createSession(user, meta, family = crypto.randomUUID()) {
   const refreshToken = randomToken();
@@ -52,10 +53,15 @@ async function revokeAllSessions(userId, reason) {
 
 /** Partner sign-ups admins are told about (customers sign up too often to notify). */
 const PARTNER_SIGNUP = {
-  [ROLES.RESTAURANT]: { what: "restaurant partner", link: "/admin/users" },
+  [ROLES.RESTAURANT]: {
+    what: "restaurant partner",
+    link: "/admin/users",
+    permission: PERMISSIONS.USERS_MANAGE,
+  },
   [ROLES.DELIVERY]: {
     what: "delivery partner",
     link: "/admin/delivery-partners",
+    permission: PERMISSIONS.RIDERS_MANAGE,
   },
 };
 
@@ -89,7 +95,7 @@ export async function register(
       title: `New ${signup.what}: ${name}`,
       body: email,
       link: signup.link,
-    });
+    }, signup.permission);
   return issueTokens(user, meta);
 }
 

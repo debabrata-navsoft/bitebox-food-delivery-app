@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { NpIconPipe } from '../../shared/icons/np-icon-name';
 import { IconComponent } from 'nexprime';
 import { BreakpointObserver } from '@angular/cdk/layout';
@@ -8,6 +9,7 @@ import {
   computed,
   inject,
   input,
+  linkedSignal,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
@@ -26,9 +28,12 @@ import { BrandLogo } from '../../shared/components/brand-logo/brand-logo';
 export interface NavItem {
   label: string;
   icon: string;
-  link: string;
+  /** Page link; a group (with `children`) has none of its own. */
+  link?: string;
   exact?: boolean;
   badge?: Signal<number>;
+  /** Makes the item an expandable group of sub-links. */
+  children?: NavItem[];
 }
 
 import { initialsOf } from '../../shared/models/user.models';
@@ -36,6 +41,7 @@ import { initialsOf } from '../../shared/models/user.models';
 @Component({
   selector: 'bb-panel-shell',
   imports: [
+    NgTemplateOutlet,
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
@@ -66,6 +72,32 @@ export class PanelShell {
 
   protected readonly user = this.auth.user;
   protected readonly initials = computed(() => initialsOf(this.user()?.name) || '?');
+
+  private readonly url = toSignal(
+    this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      map(() => this.router.url),
+    ),
+    { initialValue: this.router.url },
+  );
+
+  /** Groups whose page is open; they start expanded (a manual toggle wins until the next navigation). */
+  protected readonly openGroups = linkedSignal(() => {
+    const path = this.url().split(/[?#]/)[0];
+    return new Set(
+      this.navItems()
+        .filter((g) => g.children?.some((c) => c.link && path.startsWith(c.link)))
+        .map((g) => g.label),
+    );
+  });
+
+  protected toggleGroup(label: string): void {
+    this.openGroups.update((open) => {
+      const next = new Set(open);
+      if (!next.delete(label)) next.add(label);
+      return next;
+    });
+  }
 
   protected readonly isDesktop = toSignal(
     inject(BreakpointObserver)

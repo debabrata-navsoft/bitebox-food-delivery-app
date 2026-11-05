@@ -57,6 +57,18 @@ export const CUSTOMER_ROUTES: Routes = [
     loadComponent: () => import('./addresses/addresses').then((m) => m.Addresses),
   },
   {
+    path: 'support',
+    title: 'Help & support | BiteBox',
+    canActivate: [roleGuard('customer')],
+    loadComponent: () => import('../support/my-tickets/my-tickets').then((m) => m.MyTickets),
+  },
+  {
+    path: 'support/:id',
+    title: 'Support ticket | BiteBox',
+    canActivate: [roleGuard('customer')],
+    loadComponent: () => import('../support/my-ticket/my-ticket').then((m) => m.MyTicket),
+  },
+  {
     path: 'forbidden',
     title: 'Access denied | BiteBox',
     loadComponent: () => import('../errors/forbidden/forbidden').then((m) => m.Forbidden),

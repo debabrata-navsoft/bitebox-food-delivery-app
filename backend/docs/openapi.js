@@ -1,4 +1,9 @@
 import {
+  adminRolesPaths,
+  adminRolesSchemas,
+  adminRolesTags,
+} from "./openapi.admin-roles.js";
+import {
   catalogPaths,
   catalogSchemas,
   catalogTags,
@@ -80,6 +85,7 @@ export const openApiDocument = {
     ...checkoutTags,
     ...ordersTags,
     ...paymentsTags,
+    ...adminRolesTags,
     ...reviewsTags,
   ],
   components: {
@@ -91,6 +97,7 @@ export const openApiDocument = {
       ...checkoutSchemas,
       ...ordersSchemas,
       ...paymentsSchemas,
+      ...adminRolesSchemas,
       ...reviewsSchemas,
       Role: {
         type: "string",
@@ -205,6 +212,7 @@ export const openApiDocument = {
     ...checkoutPaths,
     ...ordersPaths,
     ...paymentsPaths,
+    ...adminRolesPaths,
     ...reviewsPaths,
     "/health": {
       get: {

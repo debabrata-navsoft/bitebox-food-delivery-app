@@ -53,6 +53,8 @@ Production: `docker compose --env-file deploy/.env up -d --build` (see README §
   - A rotating refresh token lives in an HttpOnly cookie scoped to `/api/v1/auth`.
   - `authenticate` re-loads the user on every request and checks `status` and `tokenVersion`, so suspensions and password changes apply immediately. `authorize(...roles)` restricts by role.
   - Partner and rider endpoints (`/my/restaurant`, `/delivery`) resolve their scope from `req.user` and never trust ids from the client.
+  - **Admin roles:** `admin` is the super admin; `operations_admin`, `finance_admin` and `support_admin` share the admin panel (`config/roles.js`). Admin routes use `can(PERMISSIONS.X)` from `config/permissions.js`, not `authorize(ROLES.ADMIN)`. Add a permission there (and to the frontend `Permission` type) rather than checking roles. Admin users carry `permissions` in their JSON.
+  - **Audit log:** add `audited(action, resourceType, describe)` (`services/audit.service.js`) to admin routes that change data; it records after a successful response.
 - **Money:** always integer paise. Prices, fees, discounts and totals are computed server-side (`config/pricing.js`, `services/pricing.service.js`, the cart quote). Orders store snapshots of items, the address and the restaurant.
 - **Multi-document writes:** use `utils/transaction.js#withTransaction`. It uses a transaction on replica sets (Atlas). Otherwise it calls `work(null)`, and the caller must undo completed steps itself; `order.service.js#placeOrder` is the reference pattern. `DISABLE_TRANSACTIONS=true` forces the fallback path.
 - **Order lifecycle:** `services/order-workflow.service.js` is the single place where statuses change.
@@ -70,7 +72,8 @@ Production: `docker compose --env-file deploy/.env up -d --build` (see README §
   - **Visibility:** online orders have `submittedAt: null` until paid. Restaurant queries require `submittedAt`, and the response timer starts from it. The sweep cancels unpaid orders after `paymentWindowMinutes`.
   - **Settlement:** on delivery the workflow stores `order.settlement` from `earnings.service.js#settlementFor` (`config/earnings.js`). Earnings and admin reports (`reports.service.js`) aggregate it, grouping days in `env.reportTimezone`.
   - **Webhook:** mounted in `app.js` *before* `express.json`, because the signature covers the raw body.
-- **Notifications:** `notification.service.js#notify(userIds, {...})` stores the notification and emits `notification:new`; it is best-effort and never throws. Status-change messages live in `order-notifications.js`, called from the workflow.
+- **Notifications:** `notification.service.js#notify(userIds, {...})` stores the notification and emits `notification:new`; it is best-effort and never throws. `notifyAdmins(payload, permission)` reaches the super admin plus every admin role with that permission.
+- **Finance and support:** `services/finance.service.js` (dashboard, payouts claimed via `order.payouts.*`, refunds, commission), `services/operations.service.js` and `services/support.service.js` (tickets; requesters never see internal notes). Status-change messages live in `order-notifications.js`, called from the workflow.
 - **What each role sees:** `services/order-management.service.js` defines `presentForRestaurant` (no customer phone or exact address), `presentForRider` (full address only once carrying the order) and `presentWithRider` (customer and admin).
 - **Realtime (Socket.IO):** `sockets/`, attached to the HTTP server in `server.js`.
   - **Handshake:** the client sends `auth.token` (the access token).
@@ -96,6 +99,7 @@ Production: `docker compose --env-file deploy/.env up -d --build` (see README §
   - Never touch `window`, `navigator` or `localStorage` outside `isPlatformBrowser` / `afterNextRender`.
   - Leaflet is imported dynamically inside `afterNextRender`.
 - **Auth:**
+  - Admin pages are guarded with `permissionGuard('perm')` and menus come from `layout/admin-layout` per role; use `auth.can('perm')` to hide actions a role can't use.
   - `core/auth/auth.service.ts` restores the session at startup and exposes `user`, `initialised` and `displayUser`, a display-only localStorage hint that avoids a reload flicker and must never be used for access decisions.
   - `core/interceptors/auth.interceptor.ts` adds the token, sends cookies only to `/auth/*`, and refreshes on 401.
   - Pass `context: publicRequest()` on public catalogue calls so the SSR HTTP transfer cache can reuse them.

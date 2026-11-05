@@ -209,6 +209,10 @@
               <p class="bb-muted small">Status updates live.</p>
             }
           }
+          <a class="bb-link-button help-link" routerLink="/support" [queryParams]="{ order: o.orderNumber }">
+            <np-icon name="life-buoy" class="mat-icon" />
+            Get help with this order
+          </a>
         </section>
 
         <section class="bb-card" aria-labelledby="items-title">

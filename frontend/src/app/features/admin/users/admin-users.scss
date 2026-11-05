@@ -66,24 +66,6 @@ table {
   padding-inline: var(--bb-space-4) !important;
 }
 
-// Compact pill: green "Reactivate" by default, red "Suspend" with .danger.
-.row-action {
-  --tone: var(--bb-success);
-  --bb-icon-size: 16px;
-  --mat-button-outlined-container-height: 32px;
-  --mat-button-outlined-container-shape: 999px;
-  --mat-button-outlined-horizontal-padding: 12px;
-  --mat-button-outlined-label-text-size: 0.8rem;
-  --mat-button-outlined-label-text-color: var(--tone);
-  --mat-button-outlined-outline-color: color-mix(in srgb, var(--tone) 40%, transparent);
-  --mat-button-outlined-state-layer-color: var(--tone);
-  min-width: 112px;
-
-  &.danger {
-    --tone: var(--bb-danger);
-  }
-}
-
 .you-chip {
   display: inline-block;
   min-width: 112px;

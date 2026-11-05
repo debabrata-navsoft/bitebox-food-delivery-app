@@ -1,3 +1,4 @@
+import { PERMISSIONS } from "../config/permissions.js";
 import mongoose from "mongoose";
 import { REVIEW_POLICY } from "../config/reviews.js";
 import { DeliveryPartner } from "../models/delivery-partner.model.js";
@@ -581,7 +582,7 @@ export async function report(user, reviewId, { reason, note }) {
       title: "A review was reported",
       body: `Order ${review.orderNumber}: ${reason.replace("_", " ")}`,
       link: "/admin/reviews",
-    });
+    }, PERMISSIONS.REVIEWS_MODERATE);
   return { reported: true };
 }
 

@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { logger } from "../config/logger.js";
 import { Cart } from "../models/cart.model.js";
 import { Coupon, CouponRedemption } from "../models/coupon.model.js";
@@ -16,6 +15,7 @@ import {
   REVIEW_TARGETS,
   Review,
 } from "../models/review.model.js";
+import { randomCode } from "../utils/codes.js";
 import { ApiError } from "../utils/api-error.js";
 import { paginationMeta } from "../utils/pagination.js";
 import { withTransaction } from "../utils/transaction.js";
@@ -25,16 +25,6 @@ import * as couponService from "./coupon.service.js";
 import { notifyNewOrder } from "./order-notifications.js";
 import { providerFor } from "./payments/payment.service.js";
 
-/** e.g. BB-261102-7KQ4XZ (date + 6 random base32 characters). */
-function newOrderNumber() {
-  const date = new Date().toISOString().slice(2, 10).replaceAll("-", "");
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const random = Array.from(
-    crypto.randomBytes(6),
-    (b) => alphabet[b % alphabet.length],
-  ).join("");
-  return `BB-${date}-${random}`;
-}
 
 const conflict = (message, code, details) =>
   new ApiError(409, message, { code, details });
@@ -83,7 +73,7 @@ export async function placeOrder(
   if (foods.length !== quote.cart.items.length)
     throw conflict("Some dishes are no longer available", "CHECKOUT_BLOCKED");
 
-  const orderNumber = newOrderNumber();
+  const orderNumber = randomCode("BB");
   const now = new Date();
   const orderDoc = {
     orderNumber,

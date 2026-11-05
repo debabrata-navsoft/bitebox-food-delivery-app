@@ -66,14 +66,17 @@ SEED_PASSWORD='Choose-a-dev-pass1' npm run seed
 
 | Role | Email |
 |------|-------|
-| Admin | `admin@bitebox.test` |
+| Super admin | `admin@bitebox.test` |
+| Operations admin | `operations@bitebox.test` |
+| Finance admin | `finance@bitebox.test` |
+| Support admin | `support@bitebox.test` |
 | Customer | `customer@bitebox.test` |
 | Restaurant | `restaurant@bitebox.test` |
 | Delivery | `rider@bitebox.test` |
 
 Every role signs in on the same page, **`/login`**, and lands in its own panel (`/admin`, `/restaurant`, `/delivery`, or the customer site). The old addresses `/admin/login`, `/restaurant/login` and `/delivery/login` redirect there. Sign-up stays separate: `/register` for customers, `/restaurant/register` for restaurants, `/delivery/register` for riders.
 
-All four accounts use your `SEED_PASSWORD`. **They are for development only.** The script refuses to run when `NODE_ENV=production`.
+All seven accounts use your `SEED_PASSWORD`. **They are for development only.** The script refuses to run when `NODE_ENV=production`.
 
 The seed also creates:
 - 8 food categories
@@ -459,6 +462,27 @@ How it works:
 - **Delivery → Ratings:** the rider's summary and ratings; riders can report but not change them. The dashboard shows the rider's rating.
 - **Admin → Reviews:** a **Reported** queue and **All reviews**, one row per order. Clicking a row opens all of that order's reviews (restaurant, dishes, delivery) with their open reports and the hide / remove / restore / dismiss actions. **History** shows a review's earlier versions, every report and its moderation log. **Analytics**: averages per target, daily volume and average, report reasons, moderation counts, and the best- and worst-rated restaurants and riders (at least 3 reviews).
 - **Notifications:** restaurants and riders hear about new reviews. Customers hear about replies and moderation. Admins hear about the first report on a review.
+
+### Admin roles: operations, finance and support
+
+The `admin` role is the **super admin**. Three staff roles share the `/admin` panel, and each sees only its own menu and dashboard. Permissions live in one place, `backend/config/permissions.js`. The API checks them on every call with `can(permission)` (`middleware/auth.middleware.js`). The web app receives them as `user.permissions` and uses them only to shape menus and guards (`permissionGuard`).
+
+| Role | Home | Can |
+|---|---|---|
+| Super admin (`admin`) | `/admin` | Everything, plus admin management, users, categories, coupons and the audit log |
+| Operations (`operations_admin`) | `/admin/operations` | Orders (view, cancel, unassign), restaurant onboarding and approval, menu items, delivery partners, live monitoring, delivery performance |
+| Finance (`finance_admin`) | `/admin/finance` | Transactions, refunds, restaurant and rider payouts, commission, financial reports |
+| Support (`support_admin`) | `/admin/support` | Support tickets, review moderation, read-only order details |
+
+- **Admin management** (`/admin/admins`, super admin only): create, edit, activate or deactivate staff admins and change their role. A role change signs the admin out, so their next session gets the new permissions. Super admins cannot be created or edited here, and nobody changes their own role (the profile update ignores `role`).
+- **Audit log** (`/admin/audit-logs`): admin id, role, action, description, record id and time for approvals, cancellations, unassignments, account changes, refunds, payouts, review moderation and ticket changes. Writing it never fails the action itself.
+- **Operations** (`/admin/operations/*`): a dashboard (orders, restaurants, riders), a live board of orders in progress that flags ones stuck too long in a status, restaurant availability, and delivery performance (time per stage, by day, top riders).
+- **Finance** (`/admin/finance/*`): a dashboard, transaction details, refunds and commission. **Payouts:** delivered orders' settlement amounts become "owed". A payout claims them in one conditional update (`order.payouts.restaurant` / `.rider`), so no order is ever paid twice. Finance marks it paid with the bank/UPI reference; cancelling a pending payout releases its orders. The transaction list (`/admin/payments`) gains search by order number or customer.
+- **Support tickets** (`/support/tickets` for customers, restaurants and riders; `/admin/support/*` for staff):
+  - **Statuses:** open, in progress, waiting for response, resolved and closed. Priority is low, medium, high or urgent.
+  - **Handling:** staff assign tickets to support staff, reply, add internal notes (never shown to the requester) and escalate refund or payment issues to finance.
+  - **Requesters:** they can only attach their own orders, see staff as "BiteBox Support", and reopen a resolved ticket by replying.
+  - **History:** every change is kept in the ticket history.
 
 ### Quality: security, performance and accessibility
 

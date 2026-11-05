@@ -150,6 +150,11 @@ const orderSchema = new mongoose.Schema(
       platformPaise: Number,
       at: Date,
     },
+    // The payout batch that paid each side of the settlement (null until finance pays it out).
+    payouts: {
+      restaurant: { type: mongoose.Schema.Types.ObjectId, ref: "Payout", default: null },
+      rider: { type: mongoose.Schema.Types.ObjectId, ref: "Payout", default: null },
+    },
 
     idempotencyKey: { type: String, maxlength: 100 },
     deliveryPartner: {
@@ -191,6 +196,8 @@ orderSchema.index({ deliveryPartner: 1, status: 1, createdAt: -1 });
 orderSchema.index({ restaurant: 1, status: 1, "settlement.at": -1 });
 orderSchema.index({ deliveryPartner: 1, "settlement.at": -1 });
 orderSchema.index({ status: 1, "settlement.at": -1 });
+orderSchema.index({ status: 1, "payouts.restaurant": 1, restaurant: 1 });
+orderSchema.index({ status: 1, "payouts.rider": 1, deliveryPartner: 1 });
 orderSchema.index({ status: 1, "offer.expiresAt": 1 });
 orderSchema.index(
   { customer: 1, idempotencyKey: 1 },

@@ -68,7 +68,7 @@
             } @else {
               <button
                 mat-stroked-button
-                class="row-action"
+                class="bb-pill-action"
                 [class.danger]="u.status === 'active'"
                 [disabled]="busyId() === u.id"
                 (click)="toggleStatus(u)"
@@ -101,7 +101,7 @@
             <div class="card-actions">
               <button
                 mat-stroked-button
-                class="row-action"
+                class="bb-pill-action"
                 [class.danger]="u.status === 'active'"
                 [disabled]="busyId() === u.id"
                 (click)="toggleStatus(u)"
