@@ -58,7 +58,8 @@ export class RestaurantList {
   private readonly catalog = inject(CatalogService);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
-  protected readonly deliveryLocation = inject(DeliveryLocationService).location;
+  private readonly locations = inject(DeliveryLocationService);
+  protected readonly deliveryLocation = this.locations.location;
 
   readonly search = input<string>();
   readonly cuisine = input<string>();
@@ -136,6 +137,7 @@ export class RestaurantList {
 
   constructor() {
     effect(() => {
+      if (!this.locations.ready()) return; // wait for the saved location: one request, not two
       const query = this.query();
       untracked(() => {
         const box = this.filters.search().value;
