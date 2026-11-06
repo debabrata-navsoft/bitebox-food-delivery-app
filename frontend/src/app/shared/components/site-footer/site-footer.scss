@@ -13,8 +13,8 @@ $line: rgb(255 255 255 / 12%);
   background: var(--bb-plum);
   color: $text;
 
-  // Room for the phone tab bar (and the home indicator) under the page.
-  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  // Room for the phone tab bar under the page.
+  padding-bottom: calc(var(--bb-tab-bar, 0px) + 6px);
 
   @include bp.desktop-up {
     padding-bottom: 0;

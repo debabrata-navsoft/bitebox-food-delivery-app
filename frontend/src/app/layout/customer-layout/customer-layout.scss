@@ -4,6 +4,9 @@
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
+  // Height of the phone/tablet tab bar (58px + home indicator): the footer, the restaurant
+  // page's cart bar and the back-to-top button all sit relative to it.
+  --bb-tab-bar: calc(58px + env(safe-area-inset-bottom));
 }
 
 .site-header {
@@ -13,6 +16,7 @@
   // Solid, so iOS Safari tints the strip behind the status bar to match (not the page grey).
   background: var(--bb-surface);
   border-bottom: 1px solid var(--bb-border);
+  padding-top: env(safe-area-inset-top); // home-screen web app: clear the status bar
 }
 
 .header-inner {
@@ -198,7 +202,7 @@
     content: '';
     position: absolute;
     inset: 100% 0 auto;
-    height: 120px;
+    height: 100vh;
     background: var(--bb-surface);
   }
 
@@ -212,7 +216,7 @@
     align-items: center;
     gap: 2px;
     padding: var(--bb-space-2) 0;
-    min-height: 56px;
+    height: 57px; // + 1px border = the 58px in --bb-tab-bar
     justify-content: center;
     color: var(--bb-ink-muted);
     text-decoration: none;
@@ -232,7 +236,7 @@
 // Keep the back-to-top button above the bottom tab bar on phones/tablets.
 .scroll-top {
   @include bp.below-desktop {
-    bottom: calc(76px + env(safe-area-inset-bottom));
+    bottom: calc(var(--bb-tab-bar) + 18px);
     right: 16px;
   }
 }
