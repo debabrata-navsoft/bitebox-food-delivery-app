@@ -115,10 +115,16 @@
     margin-right: 8px;
   }
 
-  // Phones show the avatar alone.
+  // Phones show the avatar alone: drop the gap and Material's 64px minimum width so the
+  // hover/focus layer is a circle around the avatar, not a pill.
   @include bp.phone-only {
+    min-width: 0;
+
     np-icon {
       display: none;
+    }
+    .avatar {
+      margin-right: 0;
     }
   }
 }

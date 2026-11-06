@@ -80,6 +80,11 @@ export class RestaurantList {
     { value: '', label: 'All cuisines' },
     ...this.cuisines().map((c) => ({ value: c, label: c })),
   ]);
+  /** Phones and tablets pick a category from this dropdown; desktop uses the chips. */
+  protected readonly categoryOptions = computed<SelectOption[]>(() => [
+    { value: '', label: 'All categories' },
+    ...this.categories().map((c) => ({ value: c.id, label: c.name })),
+  ]);
   protected readonly sortOptions = computed(() =>
     (Object.keys(SORT_LABELS) as RestaurantSort[])
       .filter((s) => s !== 'distance' || this.nearby())

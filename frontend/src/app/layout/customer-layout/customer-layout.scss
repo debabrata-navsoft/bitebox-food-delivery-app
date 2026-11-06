@@ -22,6 +22,11 @@
   gap: var(--bb-space-4);
   height: 64px;
 
+  // Phones: tighter spacing so the location label gets the room.
+  @include bp.phone-only {
+    gap: var(--bb-space-2);
+  }
+
   @include bp.desktop-up {
     height: 72px;
   }
@@ -29,6 +34,20 @@
 
 .logo {
   display: inline-flex;
+  // Never squeezed by the location and the action buttons beside it.
+  flex-shrink: 0;
+}
+
+// Phones show only the logo icon, leaving the room for the delivery location.
+.logo-full {
+  @include bp.phone-only {
+    display: none;
+  }
+}
+.logo-mark {
+  @include bp.tablet-up {
+    display: none;
+  }
 }
 
 .location-button {
@@ -56,6 +75,13 @@
 
   .caret {
     color: var(--bb-ink-muted);
+  }
+
+  // Phones: fill the space between the logo and the action buttons.
+  @include bp.phone-only {
+    flex: 1 1 auto;
+    max-width: none;
+    padding-inline: 4px;
   }
 
   @include bp.desktop-up {
@@ -105,6 +131,18 @@
   align-items: center;
   // Room for the count badges that stick out of the round icons.
   gap: var(--bb-space-3);
+  flex-shrink: 0;
+
+  // Phones: smaller round buttons (40px, still a comfortable tap target), closer together.
+  @include bp.phone-only {
+    gap: var(--bb-space-2);
+
+    // The bell lives in a child component, hence ::ng-deep (still scoped to .header-actions).
+    ::ng-deep .bb-icon-circle {
+      --mat-icon-button-state-layer-size: 40px;
+      --bb-icon-size: 20px;
+    }
+  }
 }
 
 // Bottom bar: a plain icon, so the badge sits further out to keep the icon visible.
@@ -208,7 +246,9 @@
 
   // Phones show the avatar alone.
   @include bp.phone-only {
-    padding-inline: 2px;
+    height: 40px;
+    min-width: 0;
+    padding-inline: 0;
 
     .avatar {
       margin-right: 0;
