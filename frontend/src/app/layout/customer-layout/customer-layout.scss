@@ -6,13 +6,12 @@
   min-height: 100dvh;
 }
 
-
 .site-header {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgb(255 255 255 / 94%);
-  backdrop-filter: blur(10px);
+  // Solid, so iOS Safari tints the strip behind the status bar to match (not the page grey).
+  background: var(--bb-surface);
   border-bottom: 1px solid var(--bb-border);
 }
 
@@ -190,8 +189,18 @@
   grid-auto-columns: 1fr;
   background: var(--bb-surface);
   border-top: 1px solid var(--bb-border);
-  padding-bottom: env(safe-area-inset-bottom);
+  // Runs under the home indicator and, sideways, the notch (viewport-fit=cover in index.html).
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   box-shadow: 0 -4px 16px rgb(46 26 61 / 6%);
+
+  // Carries the white down behind iOS Safari's see-through bottom toolbar (no page seam).
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 100% 0 auto;
+    height: 120px;
+    background: var(--bb-surface);
+  }
 
   @include bp.desktop-up {
     display: none;

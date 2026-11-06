@@ -89,8 +89,8 @@
   // The content column is a flex box: without this, long pages (e.g. the dashboard) squash the bar.
   flex-shrink: 0;
   gap: var(--bb-space-2);
-  background: rgb(255 255 255 / 92%);
-  backdrop-filter: blur(8px);
+  // Solid, so iOS Safari tints the strip behind the status bar to match (not the page grey).
+  background: var(--bb-surface);
   border-bottom: 1px solid var(--bb-border);
   padding-inline: var(--bb-space-2) var(--bb-page-gutter);
 

@@ -12,8 +12,9 @@ $line: rgb(255 255 255 / 12%);
 .site-footer {
   background: var(--bb-plum);
   color: $text;
-  // Room for the phone tab bar under the page.
-  padding-bottom: 64px;
+
+  // Room for the phone tab bar (and the home indicator) under the page.
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
 
   @include bp.desktop-up {
     padding-bottom: 0;

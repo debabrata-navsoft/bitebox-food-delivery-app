@@ -117,6 +117,8 @@ body {
 
 body {
   margin: 0;
+  // viewport-fit=cover (index.html) lets the page run under the notch when a phone is sideways.
+  padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
   font-family: var(--bb-font);
   color: var(--bb-ink);
   background: var(--bb-bg);
