@@ -46,6 +46,9 @@ npm install
 | `RAZORPAY_WEBHOOK_SECRET` | Optional. Secret of the Razorpay webhook pointed at `/api/v1/payments/webhooks/razorpay`. |
 | `PAYMENTS_MOCK` | `true` (default outside production) offers the **simulated test payment** when Razorpay is not configured. It is never available in production. |
 | `REPORT_TIMEZONE` | Time zone used to group reports and earnings by day (default `Asia/Kolkata`) |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Optional. Browser push notifications are on only when both are set. Generate a pair once with `npx web-push generate-vapid-keys` (in `backend/`). The private key stays on the server. |
+| `VAPID_SUBJECT` | Contact the push services can reach (`mailto:` or `https:` URL) |
+| `PUSH_ALLOWED_HOSTS` | Optional. Push services a subscription may point at (default: FCM, Mozilla, Windows, Apple). |
 
 `.env` is git-ignored. Never commit real credentials.
 
@@ -167,10 +170,11 @@ Data lives in the `mongo-data` and `uploads` volumes. Each service has a health 
 | API | `CLIENT_URL`, `PUBLIC_BASE_URL` | Your public URL (CORS, emails, locally stored image URLs). |
 | API | `TRUST_PROXY=1` | Behind a proxy, so rate limits see real client IPs. |
 | API | `RAZORPAY_*`, `CLOUDINARY_*`, `SMTP_*` | Payments, image hosting and email (see section 2). |
+| API | `VAPID_*` | Browser push notifications (see section 2). Keep the same key pair across deploys: changing it invalidates every subscription. |
 | Web | `API_INTERNAL_URL` | How the SSR server reaches the API (e.g. `http://api:5000`); calls from the browser stay same-origin. |
 | Web | `NG_ALLOWED_HOSTS` | Your domain (Angular's SSRF protection rejects other hosts). |
 
-**Checklist:** HTTPS in front; a strong `JWT_SECRET`; Cloudinary (or a persistent `uploads` volume); Razorpay **live** keys and the webhook (`/api/v1/payments/webhooks/razorpay`); a production map tile provider and routing server (the public OpenStreetMap/OSRM servers are for light use only); MongoDB backups; never run the seed in production (it refuses to).
+**Checklist:** HTTPS in front (service workers and push only work on HTTPS, or `localhost`); serve `ngsw-worker.js`, `ngsw.json` and `manifest.webmanifest` with `Cache-Control: no-cache` (the SSR server, `vercel.json` and `public/_headers` already do); a strong `JWT_SECRET`; Cloudinary (or a persistent `uploads` volume); Razorpay **live** keys and the webhook (`/api/v1/payments/webhooks/razorpay`); a production map tile provider and routing server (the public OpenStreetMap/OSRM servers are for light use only); MongoDB backups; never run the seed in production (it refuses to).
 
 ## Architecture
 
@@ -517,6 +521,26 @@ A loyalty programme run entirely on the server. Coins are a platform reward, kep
   - **Editing:** running campaigns can only change their wording, end date and limits.
 - **Background sweep** (`services/rewards-jobs.service.js`, every 2 minutes, started in `server.js`): finishes pending ledger rows, settles coin holds of closed orders, expires coins, expires referral windows, schedules and ends campaigns, and pays birthdays. Every step is idempotent and safe on several API instances.
 - **Endpoints:** `/coins/*`, `/cart/coins`, `/referrals/*`, `/rewards/*` (customers) and `/admin/rewards/*` (configuration, campaigns, claims, transactions and reversals, wallets, reports, referrals). See Swagger.
+
+### Progressive Web App (install, offline, updates, push)
+
+BiteBox is installable and works offline for what was already seen. Everything is in production builds only (`ng serve` does not register the service worker); test with `npm run build` and `npm run serve:ssr:frontend`.
+
+- **Install:** `public/manifest.webmanifest` (name, standalone display, theme and splash colours, 192/512 icons plus maskable versions, shortcuts). `core/services/install-prompt.service.ts` keeps the browser's `beforeinstallprompt` for the **Install** button (floating card on the home and restaurant list pages, plus "Install app" in the account menus), handles `appinstalled`, and never asks again once installed. "Not now" rests the card for 30 days. Safari and Firefox keep their own "Add to Home Screen" menus.
+- **Service worker** (`@angular/service-worker`, `ngsw-config.json`, registered in `app.config.ts` when stable or after 30 s):
+  - App shell (`index.csr.html`, all JS and CSS, a few icons) is precached, so the app opens offline and every page's code is available.
+  - Images, fonts and UI icons are cached as they are used.
+  - **API:** only the public catalogue (`/restaurants`, `/categories`, `/foods`) is cached, network-first with a 5 s timeout and a 1 day limit. Auth, cart, orders, payments, push and all panel/admin calls always go to the network. No tokens or private data are ever stored by the worker.
+- **Updates:** `core/services/app-update.service.ts` checks for a new deployment when the app settles, every 6 hours and when the tab comes back (at most every 30 minutes). A "New version available" card offers **Update now** (it reloads once, only when the user asks) or **Later**.
+- **Offline:** `core/services/connection-status.service.ts` drives an offline indicator and a "Back online" confirmation (`shared/components/app-status`, deferred so it stays out of the first download). Checkout and "Pay" are disabled offline with an explanation; nothing is queued. A page whose code is missing offline shows `/offline`, which continues automatically when the connection returns.
+- **Push notifications** (Web Push with VAPID, no paid service):
+  - Every in-app notification (`notification.service.js#notify`) is also pushed to the person's subscribed browsers, in the background and filtered by their preferences: **order updates** (confirmed, being prepared, picked up, out for delivery, delivered, refunds), **account and support**, and **offers and promotions** (customers only, off by default).
+  - **Permission** is only requested from the "Turn on notifications" button (Notifications page, or the card on an active order), after explaining what will be sent. Signing out unsubscribes the browser, so a shared device never gets the previous person's alerts; signing back in on the same browser resumes silently.
+  - **Security:** subscriptions are validated, tied to the signed-in account, limited to 10 per person and to known push services (`PUSH_ALLOWED_HOSTS`, an SSRF guard); their keys are never returned. Expired ones (404/410) are deleted; ones failing 5 times in a row are dropped.
+  - **Promotions:** the super admin sends offers from **Push promotions** (`promotions:send`, audited, rate limited) to customers who opted in.
+  - **iPhone/iPad:** push works only in the app added to the Home Screen (iOS 16.4+); the settings card explains this.
+- **Endpoints:** `GET /push/public-key` (public), `POST`/`DELETE /push/subscriptions`, `GET`/`PUT /push/preferences`, `POST /admin/push/promotions`. See Swagger.
+- **Checking it:** Chrome DevTools, **Application** tab: Manifest (installability), Service workers (status, "Offline" checkbox, **Push** button to send a test message), Cache storage. The worker's own status page is `/ngsw/state`. Lighthouse 12+ no longer has a PWA category; installability is reported in the Application tab.
 
 ### Quality: security, performance and accessibility
 

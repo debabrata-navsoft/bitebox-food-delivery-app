@@ -96,6 +96,12 @@
           <np-icon name="user-cog" class="mat-icon" matButtonIcon />
           <span>Profile</span>
         </a>
+        @if (installer.canInstall()) {
+          <button mat-menu-item (click)="installer.install()">
+            <np-icon name="download" class="mat-icon" matButtonIcon />
+            <span>Install app</span>
+          </button>
+        }
         <button mat-menu-item (click)="logout()">
           <np-icon name="log-out" class="mat-icon" matButtonIcon />
           <span>Sign out</span>

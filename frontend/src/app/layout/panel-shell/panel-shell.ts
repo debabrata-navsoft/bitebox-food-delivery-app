@@ -25,6 +25,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { currentUrl } from '../../core/services/current-url';
 import { NotificationBell } from '../../shared/components/notification-bell/notification-bell';
 import { BrandLogo } from '../../shared/components/brand-logo/brand-logo';
+import { InstallPromptService } from '../../core/services/install-prompt.service';
 
 export interface NavItem {
   label: string;
@@ -72,6 +73,7 @@ export class PanelShell {
   private readonly sidenav = viewChild.required(MatSidenav);
 
   protected readonly user = this.auth.user;
+  protected readonly installer = inject(InstallPromptService);
   protected readonly initials = computed(() => initialsOf(this.user()?.name) || '?');
 
   private readonly url = currentUrl();

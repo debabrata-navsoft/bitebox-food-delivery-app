@@ -597,13 +597,15 @@ describe("payments, notifications and earnings", () => {
     assert.deepEqual(inboxTypes.filter((t) => t.startsWith("order.")), [
       "order.placed",
       "order.confirmed",
+      "order.preparing",
       "order.assigned",
       "order.picked_up",
+      "order.on_the_way",
       "order.delivered",
     ]);
     // Plus the coins this delivered order earned (rewards programme).
     assert.deepEqual(inboxTypes.filter((t) => !t.startsWith("order.")), ["coins.earned"]);
-    assert.equal(inbox.body.data.unread, 6);
+    assert.equal(inbox.body.data.unread, 8);
     // Every other role heard about its part of the order.
     const types = async (token) =>
       (
@@ -630,7 +632,7 @@ describe("payments, notifications and earnings", () => {
       .set(auth(customer.token));
     assert.equal(
       unreadOnly.body.data.items.length,
-      5, // six notifications (five order updates and the coins earned), one just read
+      7, // eight notifications (seven order updates and the coins earned), one just read
       "the Unread tab leaves out the one just read",
     );
     assert.ok(unreadOnly.body.data.items.every((n) => !n.readAt));
@@ -656,7 +658,7 @@ describe("payments, notifications and earnings", () => {
     const cleared = await request(app)
       .delete("/api/v1/notifications")
       .set(auth(customer.token));
-    assert.equal(cleared.body.data.deleted, 6); // five order updates and the coins earned
+    assert.equal(cleared.body.data.deleted, 8); // seven order updates and the coins earned
     assert.equal(
       (
         await request(app)

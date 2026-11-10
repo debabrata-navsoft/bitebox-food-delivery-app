@@ -72,6 +72,13 @@
   }
 }
 
+// Height of the customer site's phone/tablet tab bar (58px + home indicator). The footer, the
+// restaurant page's cart bar, the back-to-top button and app-wide messages sit relative to it;
+// pages without the tab bar (panels, auth) leave it unset.
+:root:has(bb-customer-layout) {
+  --bb-tab-bar: calc(58px + env(safe-area-inset-bottom));
+}
+
 // ---------------------------------------------------------------------------
 // Angular Material (M3) theme generated from the BiteBox logo colours
 // ---------------------------------------------------------------------------

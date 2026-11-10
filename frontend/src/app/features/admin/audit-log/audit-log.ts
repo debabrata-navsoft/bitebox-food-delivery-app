@@ -30,6 +30,7 @@ const ACTIONS: Record<string, string> = {
   'review.moderate': 'Review moderated',
   'ticket.update': 'Ticket updated',
   'ticket.escalate': 'Ticket escalated',
+  'push.promotion': 'Promotion pushed',
 };
 
 @Component({

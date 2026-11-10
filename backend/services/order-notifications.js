@@ -118,6 +118,12 @@ export async function notifyStatusChange(order, actor, previous) {
         `${r} accepted`,
         `${restaurantName} is getting your food ready.`,
       );
+    case S.PREPARING:
+      return toCustomer(
+        order,
+        `${r} is being prepared`,
+        `${restaurantName} has started cooking your food.`,
+      );
     case S.REJECTED:
       return Promise.all([
         toCustomer(
@@ -158,11 +164,17 @@ export async function notifyStatusChange(order, actor, previous) {
       return Promise.all([
         toCustomer(
           order,
-          `${r} is on its way`,
-          "Track your rider live on the order page.",
+          `${r} picked up`,
+          "Your rider has collected your food from the restaurant.",
         ),
         toRestaurant(order, `${r} picked up`, "The rider has collected it."),
       ]);
+    case S.ON_THE_WAY:
+      return toCustomer(
+        order,
+        `${r} is out for delivery`,
+        "Track your rider live on the order page.",
+      );
     case S.DELIVERED:
       return Promise.all([
         toCustomer(order, `${r} delivered`, "Enjoy your meal!"),

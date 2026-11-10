@@ -23,6 +23,8 @@ import { EMPTY, catchError, firstValueFrom, map } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
 import { OrderService } from '../../../core/services/checkout-api.service';
 import { PaymentService } from '../../../core/services/payment.service';
+import { ConnectionStatus } from '../../../core/services/connection-status.service';
+import { PushSettings } from '../../../shared/components/push-settings/push-settings';
 import { NotificationService } from '../../../core/services/notification.service';
 import { etaMinutes } from '../../../core/services/routing.service';
 import { liveRefresh } from '../../../core/services/poll';
@@ -73,6 +75,7 @@ const JOURNEY: { status: OrderStatus; icon: string }[] = [
     DecimalPipe,
     OrderReviews,
     Stars,
+    PushSettings,
   ],
   templateUrl: './order-detail.html',
   styleUrl: './order-detail.scss',
@@ -83,6 +86,7 @@ export class OrderDetail {
   private readonly dialog = inject(MatDialog);
   private readonly notify = inject(NotificationService);
   private readonly payments = inject(PaymentService);
+  protected readonly connection = inject(ConnectionStatus);
 
   readonly id = input.required<string>();
   readonly placed = input<string>();

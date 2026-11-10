@@ -24,6 +24,7 @@ import {
   rewardsSchemas,
   rewardsTags,
 } from "./openapi.rewards.js";
+import { pushPaths, pushSchemas, pushTags } from "./openapi.push.js";
 import {
   reviewsPaths,
   reviewsSchemas,
@@ -93,6 +94,7 @@ export const openApiDocument = {
     ...adminRolesTags,
     ...reviewsTags,
     ...rewardsTags,
+    ...pushTags,
   ],
   components: {
     securitySchemes: {
@@ -106,6 +108,7 @@ export const openApiDocument = {
       ...adminRolesSchemas,
       ...reviewsSchemas,
       ...rewardsSchemas,
+      ...pushSchemas,
       Role: {
         type: "string",
         enum: ["customer", "admin", "restaurant", "delivery"],
@@ -226,6 +229,7 @@ export const openApiDocument = {
     ...adminRolesPaths,
     ...reviewsPaths,
     ...rewardsPaths,
+    ...pushPaths,
     "/health": {
       get: {
         tags: ["Health"],
