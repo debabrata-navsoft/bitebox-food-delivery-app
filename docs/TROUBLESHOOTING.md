@@ -34,13 +34,13 @@ Each entry is **symptom → cause → fix**. Start with the health checks:
 | Symptom | Cause | Fix |
 |---|---|---|
 | Backend tests fail with `Instance closed unexpectedly` / `mongod` killed | The in-memory MongoDB can't start in this environment | Run against a real database: `TEST_MONGO_URI='mongodb://127.0.0.1:27017/bitebox_test' npm test`. The name **must end in `_test`** (the tests wipe it). |
-| `documents every API route in OpenAPI` fails | A route was added or changed without updating the docs | Add it to the matching `backend/src/docs/openapi.*.js` file (the test lists what's missing). |
+| `documents every API route in OpenAPI` fails | A route was added or changed without updating the docs | Add it to the matching `backend/docs/openapi.*.js` file (the test lists what's missing). |
 
 ## Orders, riders and maps
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| New orders become "rejected" | The restaurant didn't answer within 10 minutes | Expected. Tune `restaurantResponseMinutes` in `backend/src/config/dispatch.js`. |
+| New orders become "rejected" | The restaurant didn't answer within 10 minutes | Expected. Tune `restaurantResponseMinutes` in `backend/config/dispatch.js`. |
 | Ready orders become "cancelled" | No rider picked them up within 30 minutes | Expected (paid orders are refunded). Tune `pickupWindowMinutes`. |
 | A rider gets no delivery requests | The rider must be online, with a vehicle and a location under 15 minutes old, within 10 km of the restaurant | Check `/admin/delivery-partners`. A rider who ignores an offer is set offline. |
 | "Can't pinpoint where you are" when going online | The device location is vaguer than 1 km (desktops) | Use a phone with GPS, or Chrome DevTools → Sensors. |

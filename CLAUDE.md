@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-BiteBox is a food delivery platform: an Angular 22 frontend (`frontend/`) and a Node/Express 5 + MongoDB backend (`backend/`, JavaScript ES modules). It has four role-based panels: customer, admin, restaurant and delivery. The README is the detailed reference for setup, endpoints and business rules.
+BiteBox is a food delivery platform: an Angular 22 frontend (`frontend/`) and a Node/Express 5 + MongoDB backend (`backend/`, JavaScript ES modules). It has four role-based panels: customer, admin, restaurant and delivery. The README is the quick start; `docs/DOCUMENTATION.md` is the detailed reference for setup, endpoints, data model and business rules.
 
 ## Working agreement
 
@@ -40,9 +40,9 @@ npm test -- --watch=false --include src/app/core/services/rider-gps.service.spec
 npx ng build --configuration development   # fast type/template check (prefix NG_BUILD_SASS_EMBEDDED=0 if it hangs)
 ```
 
-Production: `docker compose --env-file deploy/.env up -d --build` (see README §6). CI is `.github/workflows/ci.yml`. Problems and fixes: `docs/TROUBLESHOOTING.md`.
+Production: `docker compose --env-file deploy/.env up -d --build` (see `docs/DOCUMENTATION.md` §19). CI is `.github/workflows/ci.yml`. Problems and fixes: `docs/TROUBLESHOOTING.md`.
 
-## Backend architecture (`backend/src`)
+## Backend architecture (`backend/`, no `src/` folder)
 
 - **Layering:** routes → `validate(...)` (express-validator) → controllers → services → Mongoose models.
   - `validate` puts the sanitised body in `req.body` and the query in `req.validatedQuery`, built from `matchedData`, so unknown fields are dropped.
@@ -73,7 +73,7 @@ Production: `docker compose --env-file deploy/.env up -d --build` (see README §
   - **Settlement:** on delivery the workflow stores `order.settlement` from `earnings.service.js#settlementFor` (`config/earnings.js`). Earnings and admin reports (`reports.service.js`) aggregate it, grouping days in `env.reportTimezone`.
   - **Webhook:** mounted in `app.js` *before* `express.json`, because the signature covers the raw body.
 - **Notifications:** `notification.service.js#notify(userIds, {...})` stores the notification, emits `notification:new` and hands it to `push.service.js#pushToUsers` (Web Push, background, filtered by `user.pushPreferences`: `orders` for `order.*`/`payment.*` types, `promotions` for `promo.*`, `account` otherwise); it is best-effort and never throws. Push is off unless both `VAPID_*` keys are set; tests swap the sender with `usePushSender` and await `flushPush()`. Subscription endpoints must be on `PUSH_ALLOWED_HOSTS` (SSRF guard). `notifyAdmins(payload, permission)` reaches the super admin plus every admin role with that permission.
-- **Coins & rewards:** see README "Coins, referrals and special rewards" and `docs/COINS_REWARDS_PLAN.md`.
+- **Coins & rewards:** see `docs/DOCUMENTATION.md` §10.9 and `docs/COINS_REWARDS_PLAN.md`.
   - **Ledger:** only `services/coin-wallet.service.js` changes wallets: `credit`, `reserve`/`commitReservation`/`releaseReservation`/`refundRedemption`, `reverseCredit`, `expireBatch`. Every call needs a deterministic idempotency key (e.g. `order-reward:<orderId>`). Never write `CoinWallet` or `CoinTransaction` directly; ledger rows are immutable (model middleware rejects edits and deletes).
   - **Events:** order, review and sign-up events reach the programme only through `services/reward-events.js` (best-effort, logged, never fails the caller). Settings come from `reward-config.service.js#getRewardConfig()` (defaults in `config/rewards.js`).
   - **Sweep:** `rewards-jobs.service.js#rewardsSweep(now)`; tests call it directly.
