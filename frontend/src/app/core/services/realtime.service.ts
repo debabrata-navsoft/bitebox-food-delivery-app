@@ -58,7 +58,7 @@ export class RealtimeService {
   private connect(): void {
     if (this.socket$.value) return;
     this.retries = 0;
-    const origin = new URL(environment.apiUrl, window.location.origin).origin;
+    const origin = new URL(environment.baseUrl, window.location.origin).origin;
     const socket = io(origin, {
       path: '/socket.io',
       auth: (cb) => cb({ token: this.auth.accessToken }),

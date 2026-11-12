@@ -257,13 +257,13 @@ Each document has its own status (`pending`, `accepted`, `rejected` + reason, `e
 | Concern | Decision |
 |---|---|
 | Contract | Keep camelCase. `djangorestframework-camel-case` for the parser and renderer, wrapped by a custom `EnvelopeRenderer` that outputs `{ success, message, data }`. |
-| Errors | A custom `EXCEPTION_HANDLER` maps `ApiError(status, message, code, details)`, DRF `ValidationError` (→ 422 `VALIDATION_ERROR`, `details: [{ field: 'a.b', message }]` with camelCase dotted paths), `NotAuthenticated` (401), `PermissionDenied` (403), `Http404` (404) and throttling (429 `RATE_LIMITED`). Anything else becomes a generic 500 with a Sentry event. |
+| Errors | A custom `EXCEPTION_HANDLER` maps `ApiError(status, message, code, details)`, DRF `ValidationError` (→ 422 `VALIDATION_ERROR`, `error.details: [{ field: 'a.b', message }]` with camelCase dotted paths and `items[1].x` for list items; the body is `{ success: false, message, error: { code, details? } }`), `NotAuthenticated` (401), `PermissionDenied` (403), `Http404` (404) and throttling (429 `RATE_LIMITED`). Anything else becomes a generic 500 with a Sentry event. |
 | Validation | Input serializers per action (`OrderCreateInput`), output serializers per audience (`OrderForCustomer`, `OrderForRestaurant`, `OrderForRider`, `OrderForAdmin`), replacing `presentFor*`. Unknown fields are ignored (same as `matchedData`). |
 | Views | `APIView`/`GenericAPIView` plus small mixins. **No `ModelViewSet` on business resources**, because the actions are domain operations, not CRUD. ViewSets only for plain admin CRUD (categories, coupons, banners). |
 | Services and selectors | `services.py` holds writes (in transactions). `selectors.py` holds reads and query-building. Views call one of each at most. |
 | Permissions | `IsRole('customer')`, `HasPermission('orders:manage')` (the `can()` equivalent, reading `rbac.PERMISSIONS`), and object-level `IsOwner` checks in selectors (scope comes from `request.user`, never from ids in the URL). |
 | Audit | `@audited(action, resource_type, describe)` decorator on admin views. It writes after a 2xx response in `transaction.on_commit`. |
-| Pagination | `page`/`limit` query parameters with `{ items, total, page, limit }` (the existing shape the frontend's `pagedList` expects). |
+| Pagination | `page`/`limit` query parameters with `{ items, pagination: { page, limit, total, totalPages } }` (the existing Node shape, `Paginated<T>` in the frontend). |
 | Filtering | `django-filter` FilterSets for admin lists. Explicit query serializers for public search. |
 | Rate limiting | DRF throttles backed by Redis (auth, OTP, geo search, location updates, push subscribe, promotions), and nginx `limit_req` as an outer guard. |
 | Idempotency | `Idempotency-Key` header on order placement, stored in a unique column. Webhook event ids and refund keys are unique. |

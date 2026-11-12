@@ -20,7 +20,7 @@ export interface MyRestaurantState {
 @Injectable({ providedIn: 'root' })
 export class MyRestaurantService {
   private readonly http = inject(HttpClient);
-  private readonly url = `${environment.apiUrl}/my/restaurant`;
+  private readonly url = `${environment.baseUrl}/my/restaurant`;
 
   get(): Observable<MyRestaurantState> {
     return this.http.get<ApiResponse<MyRestaurantState>>(this.url).pipe(map((res) => res.data));

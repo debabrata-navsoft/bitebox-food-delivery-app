@@ -40,6 +40,13 @@ npm test -- --watch=false --include src/app/core/services/rider-gps.service.spec
 npx ng build --configuration development   # fast type/template check (prefix NG_BUILD_SASS_EMBEDDED=0 if it hangs)
 ```
 
+```bash
+# Django API (cd backend-django), replacing backend/ phase by phase (docs/django-migration/)
+.venv/bin/pytest                  # tests (config.settings.test; TEST_DATABASE_URL must end in _test, else in-memory SQLite)
+.venv/bin/ruff format . && .venv/bin/ruff check . && .venv/bin/mypy .
+.venv/bin/uvicorn config.asgi:application --reload --port 8000   # API on :8000 (Node keeps :5000)
+```
+
 Production: `docker compose --env-file deploy/.env up -d --build` (see `docs/DOCUMENTATION.md` §19). CI is `.github/workflows/ci.yml`. Problems and fixes: `docs/TROUBLESHOOTING.md`.
 
 ## Backend architecture (`backend/`, no `src/` folder)
@@ -106,6 +113,7 @@ Production: `docker compose --env-file deploy/.env up -d --build` (see `docs/DOC
   - Admin pages are guarded with `permissionGuard('perm')` and menus come from `layout/admin-layout` per role; use `auth.can('perm')` to hide actions a role can't use.
   - `core/auth/auth.service.ts` restores the session at startup and exposes `user`, `initialised` and `displayUser`, a display-only localStorage hint that avoids a reload flicker and must never be used for access decisions.
   - `core/interceptors/auth.interceptor.ts` adds the token, sends cookies only to `/auth/*`, and refreshes on 401.
+  - **Node → Django switch:** `core/interceptors/api-router.interceptor.ts` (registered last) sends API paths listed in `environment.djangoRoutes` to `environment.djangoUrl` (Django, :8000); everything else stays on Node :5000. Add a phase's paths there once its Django endpoints pass their tests. In production nginx does this routing, so `environment.prod.ts` lists none. API base: `environment.baseUrl`.
   - Pass `context: publicRequest()` on public catalogue calls so the SSR HTTP transfer cache can reuse them.
 - **Live data:**
   - `core/services/realtime.service.ts` owns the socket: it connects while signed in, refreshes the token on handshake failure, and exposes `orderUpdates$`, `track(orderId)` and `sendRiderLocation()`.

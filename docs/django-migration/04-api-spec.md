@@ -3,10 +3,10 @@
 Phase 1 deliverable F.
 
 - **Base:** `/api/v1`.
-- **Envelope:** `{ "success": true, "message": "…", "data": … }`. Errors: `{ "success": false, "message": "…", "code": "…", "details": [ { "field": "a.b", "message": "…" } ] }`.
-- **Auth:** `Authorization: Bearer <access>`. The refresh cookie `bb_rt` (HttpOnly, Secure, SameSite=Lax, Path=`/api/v1/auth`).
+- **Envelope:** `{ "success": true, "message": "…", "data": … }`. Errors: `{ "success": false, "message": "…", "error": { "code": "…", "details": [ { "field": "a.b", "message": "…" } ] } }` (`details` only on 422). This is the Node shape, checked in Phase 3.
+- **Auth:** `Authorization: Bearer <access>`. The refresh cookie `bb_refresh` (HttpOnly, Secure in production, SameSite=Strict, Path=`/api/v1/auth`), as in Node.
 - **JSON** is camelCase. Money is in paise (integers). Times are ISO 8601 UTC.
-- **Lists:** `?page=1&limit=20` returns `{ items, total, page, limit }`.
+- **Lists:** `?page=1&limit=20` (clamped, maximum 100) returns `{ items, pagination: { page, limit, total, totalPages } }`.
 
 ## 4.1 Existing endpoints: unchanged contract
 

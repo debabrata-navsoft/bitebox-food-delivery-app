@@ -27,7 +27,7 @@ export class PaymentService {
   private readonly http = inject(HttpClient);
   private readonly dialog = inject(MatDialog);
   private readonly document = inject(DOCUMENT);
-  private readonly url = `${environment.apiUrl}/payments`;
+  private readonly url = `${environment.baseUrl}/payments`;
   private razorpay?: Promise<RazorpayCtor>;
 
   readonly methods$: Observable<PaymentMethodOption[]> = this.http

@@ -1,6 +1,8 @@
 export const environment = {
   production: true,
-  apiUrl: '/api/v1',
+  baseUrl: '/api/v1', // same origin; nginx sends each path to Node or Django
+  djangoUrl: '/api/v1',
+  djangoRoutes: [] as string[],
 
   map: {
     tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -9,10 +11,7 @@ export const environment = {
     maxZoom: 19,
   },
 
-  /**
-   * Public links shown in the site footer. Leave a value empty until the official URL exists:
-   * empty links are not shown. Never put secrets here (this file is bundled into the browser).
-   */
+  // Footer links; empty ones are hidden. No secrets in this file (it ships to the browser).
   links: {
     social: { facebook: '', instagram: '', youtube: '', linkedin: '', x: '' },
     apps: { googlePlay: '', appStore: '' },

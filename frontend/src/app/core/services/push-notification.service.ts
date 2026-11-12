@@ -50,7 +50,7 @@ export class PushNotificationService {
   private readonly swPush = inject(SwPush);
   private readonly auth = inject(AuthService);
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
-  private readonly url = `${environment.apiUrl}/push`;
+  private readonly url = `${environment.baseUrl}/push`;
   private config?: Promise<{ enabled: boolean; publicKey: string | null }>;
 
   /** The Push API and the service worker are available in this browser. */

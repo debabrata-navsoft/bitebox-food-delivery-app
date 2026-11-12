@@ -19,7 +19,7 @@ export type EarningsScope = 'restaurant' | 'rider';
 @Injectable({ providedIn: 'root' })
 export class ReportsService {
   private readonly http = inject(HttpClient);
-  private readonly api = environment.apiUrl;
+  private readonly api = environment.baseUrl;
 
   earnings(scope: EarningsScope, days: number): Observable<Earnings> {
     const path = scope === 'restaurant' ? 'my/restaurant/earnings' : 'delivery/earnings';

@@ -459,3 +459,26 @@ The MongoDB design embeds batches and allocations in arrays. Here they are norma
 3. Verify and report: row counts per collection vs. table; sums of `total_paise`, `amount_paise` and coin `available` per wallet; spot-checked orders that are byte-equal after a JSON round trip through the API serializers.
 4. Re-running is idempotent (upsert on `legacy_id`).
 5. Never point it at the developer's real database without an explicit `--target` that is not the default settings database. Rehearse on a copy.
+
+## 3.5 Phase 4 implementation notes (what changed from the plan above)
+
+Built: the **parity schema**, 45 tables in 17 apps under `backend-django/apps/` with migrations, constraints, indexes, a seed command and tests. Tables for new features (KYC documents, bank accounts, variants and add-ons, OTP, favourites, banners, invoices, ledger entries, commission rules, tracking points, app settings, login history) come with the phases that build those features.
+
+| Planned | Built | Why |
+|---|---|---|
+| GeoDjango `PointField` (GDAL/GEOS) | `common.geo.PointField`, still a PostGIS `geography(Point,4326)` column on PostgreSQL | GeoDjango needs the GDAL and GEOS C libraries just to import, and they aren't on the development machine. The database still does all geometry (ST_DWithin, ST_Distance, `<->` with GiST indexes). Spatial queries are written as database functions in Phases 6 and 7. The Docker image no longer needs GDAL. |
+| `varchar[]` arrays (cuisines, tags, review images, risk flags) | `JSONField` lists, with GIN `jsonb_path_ops` indexes on PostgreSQL | They work the same on SQLite (local tests), and `@>` containment filters stay indexed |
+| `restaurant_hours` replaces opening/closing times | `opening_time`/`closing_time` kept for now | Parity first. Weekly hours, with a data migration, come in release 2. |
+| `reward_configuration` with typed columns | One row with `coins_enabled`, `timezone`, `revision` and a `value` JSON in the Node document shape | Validated by a serializer on write (Phase 9). Defaults stay in code, as in Node. |
+| Order `coins.discountPaise` and `pricing.coinDiscountPaise` | One column, `coin_discount_paise` | Node stored the same number twice. The API exposes it in both places. |
+| `order_cancellations.reason_code` | Free-text `reason` + `by` (parity) | Reason codes arrive with delivery-failure handling (release 1, Phase 12) |
+| `payments.status` gains `partially_refunded` | Not yet | Added with partial refunds (Phase 8) |
+| User email unique on `lower(email)` | `email` stored lower-case in `save()`, plain `UNIQUE` | Django requires `USERNAME_FIELD` to be plainly unique. The behaviour is the same as Node's lower-casing. |
+| `dispatch.delivery_assignments.partner_id` → `delivery_partners` | `rider_id` → `users` | Matches `orders.delivery_partner_id` (a user id, as in Node). The profile is one join away. |
+
+**PostgreSQL-only parts** (`common/migration_ops.py`, skipped on SQLite):
+- the `postgis` and `pg_trgm` extensions (`common.0001_extensions`, a dependency of every app with a point column)
+- GiST, GIN and trigram indexes (each app's `0002_postgres`)
+- the coin-ledger triggers (`coins.0002_postgres`)
+
+Tests run against SQLite locally and against PostGIS in CI.

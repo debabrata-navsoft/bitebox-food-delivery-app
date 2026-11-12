@@ -16,7 +16,7 @@ import { toParams } from '../http-params';
 @Injectable({ providedIn: 'root' })
 export class AdminStaffService {
   private readonly http = inject(HttpClient);
-  private readonly url = `${environment.apiUrl}/admin/admins`;
+  private readonly url = `${environment.baseUrl}/admin/admins`;
 
   list(query: StaffQuery): Observable<Paginated<User>> {
     return this.http
@@ -48,7 +48,7 @@ export class AdminStaffService {
     limit?: number;
   }): Observable<Paginated<AuditEntry>> {
     return this.http
-      .get<ApiResponse<Paginated<AuditEntry>>>(`${environment.apiUrl}/admin/audit-logs`, {
+      .get<ApiResponse<Paginated<AuditEntry>>>(`${environment.baseUrl}/admin/audit-logs`, {
         params: toParams(query),
       })
       .pipe(map((r) => r.data));

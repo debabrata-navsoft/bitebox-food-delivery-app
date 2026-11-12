@@ -27,7 +27,10 @@ Phase 1 output for [MASTER_PROMPT.md](../MASTER_PROMPT.md) (Part C). **No applic
 | Phase | State |
 |---|---|
 | 1. Analysis | Done. The decisions below were accepted as recommended when the user said "continue" (12 Nov 2026). Q1–Q4 are still open. |
-| 2. UI/UX + theme | Done: dark theme, `ThemeService`, `BbDialog` (CDK) proved on the shared confirm dialog, NexPrime API check, wireframes. Awaiting approval for Phase 3. |
+| 2. UI/UX + theme | Done: dark theme, `ThemeService`, `BbDialog` (CDK) used for every confirm dialog, NexPrime API check, wireframes. |
+| 3. Django skeleton | Done: `backend-django/` (settings, envelope and errors, pagination, permissions, health, OpenAPI, `/ws/` protocol, Celery, Docker, CI job). Docker and the PostgreSQL/Redis CI job could not be run locally (see the Phase 3 report). Done. |
+| 4. Parity schema | Done: 45 tables in 17 apps, migrations, constraints and indexes, `manage.py seed`, 83 tests, all passing on PostgreSQL 16 + PostGIS 3.4 (local install), including 15 PostgreSQL-only tests: geography columns, KNN, indexes and the ledger trigger. Changes from the plan: [03 §3.5](03-data-model.md#35-phase-4-implementation-notes-what-changed-from-the-plan-above). Done. |
+| 5. Auth + RBAC | Done: register, login (with portal check), rotating refresh cookie with reuse detection, logout, forgot/reset/change password, `/auth/me`, admin users, staff admins, audit log, permission classes, WebSocket sign-in. Ported Node `auth.test.js` and the admin-management part of `admin-roles.test.js`: 141 tests pass on PostgreSQL. **Not switched in the frontend:** Django tokens name PostgreSQL users that Node (MongoDB) doesn't know, so `/auth` moves together with the features that use the signed-in user (see the Phase 5 report). OTP login and email verification stay in release 2. Awaiting approval for Phase 6. |
 
 ## Key findings
 

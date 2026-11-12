@@ -22,7 +22,7 @@ import { toParams } from './http-params';
 @Injectable({ providedIn: 'root' })
 export class RestaurantOrdersService {
   private readonly http = inject(HttpClient);
-  private readonly url = `${environment.apiUrl}/my/restaurant/orders`;
+  private readonly url = `${environment.baseUrl}/my/restaurant/orders`;
 
   active(): Observable<RestaurantActiveOrders> {
     return this.http
@@ -51,7 +51,7 @@ export class RestaurantOrdersService {
 @Injectable({ providedIn: 'root' })
 export class RiderService {
   private readonly http = inject(HttpClient);
-  private readonly url = `${environment.apiUrl}/delivery`;
+  private readonly url = `${environment.baseUrl}/delivery`;
 
   dashboard(): Observable<RiderDashboard> {
     return this.http.get<ApiResponse<RiderDashboard>>(`${this.url}/me`).pipe(map((r) => r.data));
@@ -127,7 +127,7 @@ export class RiderService {
 @Injectable({ providedIn: 'root' })
 export class AdminOrdersService {
   private readonly http = inject(HttpClient);
-  private readonly api = `${environment.apiUrl}/admin`;
+  private readonly api = `${environment.baseUrl}/admin`;
 
   list(query: {
     status?: OrderStatus | 'active';
