@@ -19,6 +19,7 @@ import { BbDialog } from '../../../shared/dialog/bb-dialog';
 const RIDER_EVENTS: OrderStatus[] = [
   'ready_for_pickup',
   'assigned',
+  'arrived_at_restaurant',
   'picked_up',
   'on_the_way',
   'delivered',

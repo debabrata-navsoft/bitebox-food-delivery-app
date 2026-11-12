@@ -52,7 +52,7 @@
   }
   np-icon {
     --bb-icon-size: 40px;
-    color: var(--bb-plum);
+    color: var(--bb-on-accent); // stays dark on amber in both themes
     background: var(--bb-amber);
     border-radius: 12px;
     padding: 8px;

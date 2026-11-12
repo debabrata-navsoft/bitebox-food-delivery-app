@@ -177,6 +177,12 @@
               }}
             </p>
           }
+          @if (o.readyBy && (o.status === 'confirmed' || o.status === 'preparing')) {
+            <p class="deadline">
+              <np-icon name="chef-hat" class="mat-icon" matButtonIcon />
+              Ready by {{ o.readyBy | date: 'h:mm a' }} ({{ o.prepMinutes }} min)
+            </p>
+          }
 
           @if (next[o.status]; as step) {
             <div class="actions">

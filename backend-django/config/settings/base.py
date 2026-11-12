@@ -233,6 +233,9 @@ UPSTREAM_MIN_GAP_SECONDS = 1.1
 GEO_RATE_LIMIT = env.str("GEO_RATE_LIMIT", default="30/60s")
 COUPON_RATE_LIMIT = env.str("COUPON_RATE_LIMIT", default="30/900s")
 ORDER_RATE_LIMIT = env.str("ORDER_RATE_LIMIT", default="10/60s")
+# Delivery OTP: a 4-digit code made at pickup, shown to the customer, required to mark delivered.
+DELIVERY_OTP_REQUIRED = env.bool("DELIVERY_OTP_REQUIRED", default=True)
+DELIVERY_OTP_MAX_ATTEMPTS = env.int("DELIVERY_OTP_MAX_ATTEMPTS", default=5)
 LOCATION_RATE_LIMIT = env.str("LOCATION_RATE_LIMIT", default="30/60s")
 
 # Rate-limit counters. Production uses Redis so every API instance shares them.

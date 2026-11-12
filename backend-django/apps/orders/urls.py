@@ -6,6 +6,7 @@ urlpatterns = [
     path("orders", views.OrdersView.as_view()),
     path("orders/<str:id>", views.OrderView.as_view()),
     path("orders/<str:id>/cancel", views.OrderCancelView.as_view()),
+    path("orders/<str:id>/timeline", views.OrderTimelineView.as_view()),
     path("my/restaurant/orders", views.MyOrdersView.as_view()),
     path("my/restaurant/stats", views.MyStatsView.as_view()),
     path("my/restaurant/orders/<str:id>", views.MyOrderView.as_view()),
@@ -19,4 +20,7 @@ urlpatterns = [
     path("admin/orders/<str:id>", views.AdminOrderView.as_view()),
     path("admin/orders/<str:id>/cancel", views.AdminOrderCancelView.as_view()),
     path("admin/orders/<str:id>/unassign", views.AdminOrderUnassignView.as_view()),
+    path("admin/orders/<str:id>/assign", views.AdminOrderAssignView.as_view()),
+    path("admin/orders/<str:id>/delivery-code", views.AdminOrderDeliveryCodeView.as_view()),
+    path("admin/orders/<str:id>/timeline", views.AdminOrderTimelineView.as_view()),
 ]

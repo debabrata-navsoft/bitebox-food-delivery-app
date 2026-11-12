@@ -1,4 +1,5 @@
 import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { askPrepTime } from './accept-dialog/accept-dialog';
 import {
   ButtonComponent,
   ButtonToggleComponent,
@@ -38,7 +39,11 @@ type Tab = 'new' | 'preparing' | 'ready' | 'out' | 'history';
 const TABS: { id: Tab; label: string; statuses: OrderStatus[] }[] = [
   { id: 'new', label: 'New', statuses: ['pending'] },
   { id: 'preparing', label: 'Preparing', statuses: ['confirmed', 'preparing'] },
-  { id: 'ready', label: 'Ready for pickup', statuses: ['ready_for_pickup', 'assigned'] },
+  {
+    id: 'ready',
+    label: 'Ready for pickup',
+    statuses: ['ready_for_pickup', 'assigned', 'arrived_at_restaurant'],
+  },
   { id: 'out', label: 'Out for delivery', statuses: ['picked_up', 'on_the_way'] },
   { id: 'history', label: 'History', statuses: [] },
 ];
@@ -133,7 +138,11 @@ export class RestaurantOrders {
 
   protected advance(order: RestaurantOrder): void {
     const step = NEXT[order.status];
-    if (step) this.setStatus(order, step.action);
+    if (!step) return;
+    if (step.action !== 'confirmed') return this.setStatus(order, step.action);
+    askPrepTime(this.dialog, order).subscribe((prepMinutes) =>
+      this.setStatus(order, 'confirmed', { prepMinutes }),
+    );
   }
 
   protected reject(order: RestaurantOrder): void {
@@ -147,10 +156,14 @@ export class RestaurantOrders {
         danger: true,
       },
       '460px',
-    ).subscribe((reason) => this.setStatus(order, 'rejected', reason as string));
+    ).subscribe((reason) => this.setStatus(order, 'rejected', { reason: reason as string }));
   }
 
-  private setStatus(order: RestaurantOrder, status: RestaurantAction, reason?: string): void {
+  private setStatus(
+    order: RestaurantOrder,
+    status: RestaurantAction,
+    extra?: { reason?: string; prepMinutes?: number },
+  ): void {
     this.busy.update((s) => new Set(s).add(order.id));
     const done = () =>
       this.busy.update((s) => {
@@ -158,7 +171,7 @@ export class RestaurantOrders {
         copy.delete(order.id);
         return copy;
       });
-    this.api.setStatus(order.id, status, reason).subscribe({
+    this.api.setStatus(order.id, status, extra).subscribe({
       next: (updated) => {
         done();
         this.board.applyChange(updated);

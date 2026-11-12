@@ -44,6 +44,7 @@ LATE_AFTER_MINUTES: dict[str, int] = {
     S.PREPARING: 45,
     S.READY_FOR_PICKUP: 15,
     S.ASSIGNED: 20,
+    S.ARRIVED_AT_RESTAURANT: 10,  # the rider is waiting at the counter
     S.PICKED_UP: 30,
     S.ON_THE_WAY: 45,
 }

@@ -279,9 +279,9 @@ def sweep(now: datetime | None = None) -> dict[str, int]:
             Q(submitted_at__isnull=True),  # lost the race to a payment: leave the paid order
         ),
         (
-            Order.objects.filter(status__in=[S.READY_FOR_PICKUP, S.ASSIGNED]).filter(
-                ready_too_long
-            ),
+            Order.objects.filter(
+                status__in=[S.READY_FOR_PICKUP, S.ASSIGNED, S.ARRIVED_AT_RESTAURANT]
+            ).filter(ready_too_long),
             S.CANCELLED,
             "No delivery partner picked up the order in time",
             "pickup_expired",

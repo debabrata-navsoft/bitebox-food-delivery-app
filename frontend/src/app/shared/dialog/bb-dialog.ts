@@ -1,6 +1,7 @@
 import { DIALOG_DATA, Dialog, DialogRef } from '@angular/cdk/dialog';
 import { ComponentType } from '@angular/cdk/portal';
 import { Directive, Injectable, InjectionToken, inject } from '@angular/core';
+import { Observable, filter } from 'rxjs';
 
 /**
  * Dialogs without Angular Material: the CDK dialog (overlay, focus trap, Escape, backdrop,
@@ -53,6 +54,13 @@ export class BbDialog {
       restoreFocus: true,
       providers: [{ provide: BB_DIALOG_TITLE_ID, useValue: titleId }],
     });
+  }
+
+  /** Opens the dialog and emits its result once, only if it closed with one (not dismissed). */
+  result<C, D, R>(component: ComponentType<C>, config: BbDialogConfig<D> = {}): Observable<R> {
+    return this.open<C, D, R>(component, config).closed.pipe(
+      filter((r): r is R => r !== undefined && r !== null),
+    );
   }
 }
 

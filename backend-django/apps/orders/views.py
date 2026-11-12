@@ -40,6 +40,7 @@ STATUS_MESSAGE = {
     S.READY_FOR_PICKUP: "Marked ready for pickup",
     S.PICKED_UP: "Marked as picked up",
     S.ON_THE_WAY: "On the way",
+    S.ARRIVED_AT_RESTAURANT: "Marked as arrived. Collect the order when it is ready.",
     S.DELIVERED: "Delivered. Nice work!",
 }
 
@@ -186,6 +187,15 @@ class RestaurantStatusInput(serializers.Serializer):
         "Status must be confirmed, rejected, preparing or ready_for_pickup",
     )
     reason = reason_field()
+    # With "confirmed": how long the food takes (the restaurant's usual time when left out).
+    prep_minutes = serializers.IntegerField(
+        required=False,
+        min_value=5,
+        max_value=120,
+        error_messages=dict.fromkeys(
+            ("invalid", "min_value", "max_value"), "Preparation time must be 5 to 120 minutes"
+        ),
+    )
 
 
 PARTNER = [role_required(Role.RESTAURANT)]
@@ -240,7 +250,11 @@ class MyOrderStatusView(APIView):
         order_id = parse_id(id)
         data = validated(RestaurantStatusInput, request.data)
         order = services.restaurant_set_status(
-            current_user(request), order_id, data["status"], data.get("reason")
+            current_user(request),
+            order_id,
+            data["status"],
+            data.get("reason"),
+            data.get("prep_minutes"),
         )
         return ok({"order": order}, message=STATUS_MESSAGE[data["status"]])
 
@@ -322,3 +336,73 @@ class AdminOrderUnassignView(APIView):
         data = validated(AdminUnassignInput, request.data)
         order = services.admin_unassign(current_user(request), order_id, data.get("reason"))
         return ok({"order": order}, message="Rider unassigned; looking for another rider")
+
+
+# ---------------------------------------------------------------------------
+# Phase 11: timeline, manual assignment, delivery code reset
+# ---------------------------------------------------------------------------
+TIMELINE = envelope("OrderTimeline")
+
+
+class OrderTimelineView(APIView):
+    permission_classes = [role_required(Role.CUSTOMER)]
+
+    @extend_schema(
+        tags=["Orders"],
+        operation_id="orders_timeline",
+        responses={200: TIMELINE, **errors(401, 403, 404, 422)},
+    )
+    def get(self, request: Request, id: str) -> Response:
+        return ok(services.customer_timeline(current_user(request), parse_id(id)))
+
+
+class AdminOrderTimelineView(APIView):
+    permission_classes = [permission_required(Permission.ORDERS_VIEW)]
+
+    @extend_schema(
+        tags=["Admin: orders"],
+        operation_id="admin_orders_timeline",
+        responses={200: TIMELINE, **errors(401, 403, 404, 422)},
+    )
+    def get(self, request: Request, id: str) -> Response:
+        return ok(services.admin_timeline(parse_id(id)))
+
+
+class AdminAssignInput(serializers.Serializer):
+    rider_id = UUIDRef(
+        message="Choose a delivery partner",
+        error_messages={
+            "required": "Choose a delivery partner",
+            "null": "Choose a delivery partner",
+        },
+    )
+
+
+class AdminOrderAssignView(APIView):
+    permission_classes = [permission_required(Permission.ORDERS_MANAGE)]
+
+    @extend_schema(
+        tags=["Admin: orders"],
+        request=AdminAssignInput,
+        responses={200: ORDER, **errors(401, 403, 404, 409, 422)},
+    )
+    @audited("order.assign", "order", lambda req: "Assigned a rider manually")
+    def post(self, request: Request, id: str) -> Response:
+        order_id = parse_id(id)
+        data = validated(AdminAssignInput, request.data)
+        order = services.admin_assign(current_user(request), order_id, data["rider_id"])
+        return ok({"order": order}, message="Rider assigned")
+
+
+class AdminOrderDeliveryCodeView(APIView):
+    permission_classes = [permission_required(Permission.ORDERS_MANAGE)]
+
+    @extend_schema(
+        tags=["Admin: orders"],
+        request=None,
+        responses={200: ORDER, **errors(401, 403, 404, 409, 422)},
+    )
+    @audited("order.delivery_code", "order", lambda req: "Issued a new delivery code")
+    def post(self, request: Request, id: str) -> Response:
+        order = services.admin_reset_delivery_otp(current_user(request), parse_id(id))
+        return ok({"order": order}, message="New delivery code sent to the customer")

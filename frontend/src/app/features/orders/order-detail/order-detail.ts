@@ -1,4 +1,5 @@
 import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { AT_OR_TO_RESTAURANT } from '../../../shared/models/order-management.models';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -127,7 +128,7 @@ export class OrderDetail {
     if (!status) return -1;
     if (status === 'delivered') return JOURNEY.length; // every step done, none pulsing
     return JOURNEY.findIndex(
-      (s) => s.status === (status === 'assigned' ? 'ready_for_pickup' : status),
+      (s) => s.status === (AT_OR_TO_RESTAURANT.includes(status) ? 'ready_for_pickup' : status),
     );
   });
 

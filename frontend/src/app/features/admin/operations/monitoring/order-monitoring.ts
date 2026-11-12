@@ -82,6 +82,7 @@ export class OrderMonitoring {
         'preparing',
         'ready_for_pickup',
         'assigned',
+        'arrived_at_restaurant',
         'picked_up',
         'on_the_way',
       ] as OrderStatus[]

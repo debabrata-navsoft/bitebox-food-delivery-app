@@ -6,6 +6,7 @@ services/order-management.service.js). Status changes always go through `workflo
 import logging
 import secrets
 import uuid
+from datetime import timedelta
 from typing import Any
 
 from django.db import IntegrityError, transaction
@@ -285,7 +286,7 @@ def customer_get(user: User, order_id: uuid.UUID) -> dict[str, Any]:
     order = presenters.load(order_id, customer=user)
     if order is None:
         raise ApiError.not_found("Order not found")
-    return presenters.present_with_rider(order)
+    return presenters.present_with_rider(order, for_customer=True)
 
 
 def customer_cancel(user: User, order_id: uuid.UUID, reason: str | None) -> dict[str, Any]:
@@ -298,7 +299,7 @@ def customer_cancel(user: User, order_id: uuid.UUID, reason: str | None) -> dict
         scope=Q(customer=user),
         reason=reason or "Cancelled by customer",
     )
-    return presenters.present_with_rider(result.order)
+    return presenters.present_with_rider(result.order, for_customer=True)
 
 
 # ---------------------------------------------------------------------------
@@ -345,21 +346,35 @@ def restaurant_get(owner: User, order_id: uuid.UUID) -> dict[str, Any]:
 
 
 def restaurant_set_status(
-    owner: User, order_id: uuid.UUID, status: str, reason: str | None
+    owner: User,
+    order_id: uuid.UUID,
+    status: str,
+    reason: str | None,
+    prep_minutes: int | None = None,
 ) -> dict[str, Any]:
-    """Accept, reject, start preparing, mark ready. "Ready" immediately looks for a rider."""
+    """
+    Accept (with a preparation time; the restaurant's usual one when not given), reject, start
+    preparing, mark ready. "Ready" immediately looks for a rider.
+    """
     from apps.dispatch.services import dispatch_safely
 
-    restaurant_id = _own_restaurant_id(owner)
+    restaurant = Restaurant.objects.filter(owner=owner).first()
+    if restaurant is None:
+        raise ApiError.not_found("Create your restaurant first")
     if status == S.REJECTED and not reason:
         raise ApiError.bad_request("Tell the customer why the order is rejected")
+    update: dict[str, Any] = {}
+    if status == S.CONFIRMED:
+        minutes = prep_minutes or restaurant.avg_prep_time_minutes
+        update = {"prep_minutes": minutes, "ready_by": timezone.now() + timedelta(minutes=minutes)}
     result = transition(
         order_id,
         to=status,
         actor=Actor.RESTAURANT,
         user=owner,
-        scope=Q(restaurant_id=restaurant_id, submitted_at__isnull=False),
+        scope=Q(restaurant_id=restaurant.pk, submitted_at__isnull=False),
         reason=reason if status == S.REJECTED else None,
+        update=update,
     )
     order = result.order
     if result.changed and status == S.READY_FOR_PICKUP and dispatch_safely(order.pk):
@@ -370,13 +385,61 @@ def restaurant_set_status(
 # ---------------------------------------------------------------------------
 # Rider
 # ---------------------------------------------------------------------------
-RIDER_STATUSES = (S.PICKED_UP, S.ON_THE_WAY, S.DELIVERED)
+RIDER_STATUSES = (S.ARRIVED_AT_RESTAURANT, S.PICKED_UP, S.ON_THE_WAY, S.DELIVERED)
 
 
-def rider_set_status(user: User, order_id: uuid.UUID, status: str) -> dict[str, Any]:
-    """Picked up → on the way → delivered, only on the rider's own order."""
+def _check_delivery_otp(user: User, order_id: uuid.UUID, otp: str | None) -> None:
+    """
+    "Delivered" needs the code the customer got at pickup. Wrong tries are counted (in their own
+    committed transaction, so they stick) and capped; then only support can complete the order.
+    """
+    from django.conf import settings
+
+    order = (
+        Order.objects.filter(pk=order_id, delivery_partner=user)
+        .values("status", "delivery_otp", "delivery_otp_attempts")
+        .first()
+    )
+    if order is None:
+        raise ApiError.not_found("Order not found")
+    if order["status"] == S.DELIVERED or not order["delivery_otp"]:
+        return  # a repeat (no-op), or picked up before codes existed
+    if order["delivery_otp_attempts"] >= settings.DELIVERY_OTP_MAX_ATTEMPTS:
+        raise ApiError(
+            409,
+            "Too many wrong codes. Contact BiteBox support to complete this delivery.",
+            code="OTP_LOCKED",
+        )
+    if otp and secrets.compare_digest(otp, order["delivery_otp"]):
+        return
+    with transaction.atomic():
+        Order.objects.filter(pk=order_id).update(
+            delivery_otp_attempts=F("delivery_otp_attempts") + 1
+        )
+    left = settings.DELIVERY_OTP_MAX_ATTEMPTS - order["delivery_otp_attempts"] - 1
+    raise ApiError(
+        422,
+        "Validation failed",
+        code="VALIDATION_ERROR",
+        details=[
+            {
+                "field": "otp",
+                "message": "Ask the customer for their delivery code"
+                if not otp
+                else f"That code is not right. {left} {'try' if left == 1 else 'tries'} left.",
+            }
+        ],
+    )
+
+
+def rider_set_status(
+    user: User, order_id: uuid.UUID, status: str, otp: str | None = None
+) -> dict[str, Any]:
+    """Arrived → picked up → on the way → delivered (with the customer's code), own orders only."""
     if status not in RIDER_STATUSES:
         raise ApiError.bad_request("Unknown delivery status")
+    if status == S.DELIVERED:
+        _check_delivery_otp(user, order_id, otp)
     result = transition(
         order_id, to=status, actor=Actor.DELIVERY, user=user, scope=Q(delivery_partner=user)
     )
@@ -424,6 +487,8 @@ def admin_get(order_id: uuid.UUID) -> dict[str, Any]:
         if offer
         else None
     )
+    # Manual assignment (master prompt §3D) is possible while the order waits for a rider.
+    data["can_assign"] = order.status == S.READY_FOR_PICKUP
     return data
 
 
@@ -503,3 +568,134 @@ def restaurant_stats(owner: User) -> dict[str, Any]:
         "average_order_paise": round(sales / completed) if completed else 0,
         "rating": {"average": float(restaurant.rating_average), "count": restaurant.rating_count},
     }
+
+
+def admin_assign(admin: User, order_id: uuid.UUID, rider_id: uuid.UUID) -> dict[str, Any]:
+    """
+    Gives a ready order to a chosen rider directly (manual assignment; also how support reassigns
+    after an unassign). The rider must be active, online and free; any open offer is withdrawn.
+    """
+    from apps.accounts.models import UserStatus
+    from apps.delivery.models import DeliveryPartner
+    from apps.dispatch.models import AssignmentStatus, DeliveryAssignment
+    from apps.rbac.roles import Role
+
+    rider = DeliveryPartner.objects.filter(
+        user_id=rider_id, user__role=Role.DELIVERY, user__status=UserStatus.ACTIVE
+    ).first()
+    if rider is None:
+        raise ApiError.not_found("Delivery partner not found")
+    now = timezone.now()
+    with transaction.atomic():
+        order = Order.objects.select_for_update().filter(pk=order_id).first()
+        if order is None:
+            raise ApiError.not_found("Order not found")
+        if order.status != S.READY_FOR_PICKUP:
+            raise _conflict("Only orders waiting for a rider can be assigned", "INVALID_TRANSITION")
+        # Withdraw an open offer (and free that rider) before taking the order.
+        for offer in DeliveryAssignment.objects.filter(
+            order=order, status=AssignmentStatus.OFFERED
+        ):
+            DeliveryAssignment.objects.filter(pk=offer.pk).update(
+                status=AssignmentStatus.CANCELLED, responded_at=now
+            )
+            DeliveryPartner.objects.filter(user_id=offer.rider_id, current_offer=order).update(
+                current_offer=None
+            )
+        locked = DeliveryPartner.objects.filter(
+            pk=rider.pk, is_online=True, active_order__isnull=True, current_offer__isnull=True
+        ).update(active_order=order, last_assigned_at=now, updated_at=now)
+        if not locked:
+            raise _conflict(
+                "This rider is offline or already busy. Choose another rider.", "RIDER_UNAVAILABLE"
+            )
+
+        def record(o: Order) -> None:
+            DeliveryAssignment.objects.create(
+                order=o,
+                rider_id=rider_id,
+                status=AssignmentStatus.ACCEPTED,
+                responded_at=now,
+                assigned_by=admin,
+            )
+
+        transition(
+            order.pk,
+            to=S.ASSIGNED,
+            actor=Actor.ADMIN,
+            user=admin,
+            update={"delivery_partner_id": rider_id},
+            note="Assigned by BiteBox support",
+            on_change=record,
+        )
+    return admin_get(order_id)
+
+
+def admin_reset_delivery_otp(admin: User, order_id: uuid.UUID) -> dict[str, Any]:
+    """A new delivery code for an order whose rider ran out of tries; the customer gets it."""
+    from .notifications import notify_new_delivery_otp
+    from .workflow import new_delivery_otp
+
+    with transaction.atomic():
+        order = Order.objects.select_for_update().filter(pk=order_id).first()
+        if order is None:
+            raise ApiError.not_found("Order not found")
+        if order.status not in (S.PICKED_UP, S.ON_THE_WAY) or not order.delivery_otp:
+            raise _conflict("This order has no delivery code to reset", "INVALID_TRANSITION")
+        order.delivery_otp = new_delivery_otp()
+        order.delivery_otp_attempts = 0
+        order.save(update_fields=["delivery_otp", "delivery_otp_attempts", "updated_at"])
+    notify_new_delivery_otp(presenters.reload(order))
+    return admin_get(order_id)
+
+
+# ---------------------------------------------------------------------------
+# Timeline (master prompt §7: GET /orders/{id}/timeline)
+# ---------------------------------------------------------------------------
+TIMELINE_LABEL: dict[str, str] = {
+    S.PENDING: "Order placed",
+    S.CONFIRMED: "Accepted by the restaurant",
+    S.REJECTED: "Rejected by the restaurant",
+    S.PREPARING: "Being prepared",
+    S.READY_FOR_PICKUP: "Ready for pickup",
+    S.ASSIGNED: "Rider assigned",
+    S.ARRIVED_AT_RESTAURANT: "Rider at the restaurant",
+    S.PICKED_UP: "Picked up",
+    S.ON_THE_WAY: "On the way",
+    S.DELIVERED: "Delivered",
+    S.CANCELLED: "Cancelled",
+}
+
+
+def timeline(order: Order) -> dict[str, Any]:
+    events = [
+        {
+            "status": h.to_status,
+            "label": TIMELINE_LABEL.get(h.to_status, h.to_status),
+            "at": h.created_at,
+            "by": h.actor_role or None,
+            **({"note": h.note} if h.note else {}),
+        }
+        for h in order.status_history.all()
+    ]
+    return {
+        "order": str(order.pk),
+        "order_number": order.order_number,
+        "status": order.status,
+        "ready_by": order.ready_by,
+        "events": events,
+    }
+
+
+def customer_timeline(user: User, order_id: uuid.UUID) -> dict[str, Any]:
+    order = presenters.load(order_id, customer=user)
+    if order is None:
+        raise ApiError.not_found("Order not found")
+    return timeline(order)
+
+
+def admin_timeline(order_id: uuid.UUID) -> dict[str, Any]:
+    order = presenters.load(order_id)
+    if order is None:
+        raise ApiError.not_found("Order not found")
+    return timeline(order)

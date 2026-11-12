@@ -315,3 +315,34 @@ address {
   --bb-icon-size: 18px;
   color: var(--bb-ink-muted);
 }
+
+// The delivery code: large, spaced digits, in a tinted card that stands out from the rest.
+.otp {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--bb-space-4);
+  background: var(--bb-info-bg);
+  border-color: transparent;
+
+  p {
+    margin: 4px 0 0;
+  }
+}
+
+.otp-code {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.35em;
+  color: var(--bb-info-ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ready-by {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-space-2);
+  margin: 0;
+  --bb-icon-size: 20px;
+}

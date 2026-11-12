@@ -39,11 +39,16 @@ export class RestaurantOrdersService {
       .pipe(map((r) => r.data));
   }
 
-  setStatus(id: string, status: RestaurantAction, reason?: string): Observable<RestaurantOrder> {
+  /** `extra.prepMinutes`: with "confirmed", how long the food takes (the Node API ignores it). */
+  setStatus(
+    id: string,
+    status: RestaurantAction,
+    extra: { reason?: string; prepMinutes?: number } = {},
+  ): Observable<RestaurantOrder> {
     return this.http
       .patch<ApiResponse<{ order: RestaurantOrder }>>(
         `${this.url}/${encodeURIComponent(id)}/status`,
-        { status, reason },
+        { status, ...extra },
       )
       .pipe(map((r) => r.data.order));
   }
@@ -112,11 +117,12 @@ export class RiderService {
       .pipe(map((r) => r.data));
   }
 
-  setStatus(orderId: string, status: RiderAction): Observable<RiderDashboard> {
+  /** `otp`: the customer's delivery code, with "delivered" when the order needs one. */
+  setStatus(orderId: string, status: RiderAction, otp?: string): Observable<RiderDashboard> {
     return this.http
       .patch<ApiResponse<RiderDashboard>>(
         `${this.url}/orders/${encodeURIComponent(orderId)}/status`,
-        { status },
+        { status, otp },
       )
       .pipe(map((r) => r.data));
   }
@@ -152,20 +158,18 @@ export class AdminOrdersService {
       .pipe(map((r) => r.data.order));
   }
 
-  cancel(id: string, reason: string): Observable<AdminOrder> {
-    return this.http
-      .post<ApiResponse<{ order: AdminOrder }>>(
-        `${this.api}/orders/${encodeURIComponent(id)}/cancel`,
-        { reason },
-      )
-      .pipe(map((r) => r.data.order));
-  }
+  cancel = (id: string, reason: string) => this.act(id, 'cancel', { reason });
+  unassign = (id: string, reason?: string) => this.act(id, 'unassign', { reason });
+  /** Manual assignment of a free, online rider (Django API). */
+  assign = (id: string, riderId: string) => this.act(id, 'assign', { riderId });
+  /** A new delivery code, sent to the customer (Django API). */
+  resetDeliveryCode = (id: string) => this.act(id, 'delivery-code', {});
 
-  unassign(id: string, reason?: string): Observable<AdminOrder> {
+  private act(id: string, action: string, body: object): Observable<AdminOrder> {
     return this.http
       .post<ApiResponse<{ order: AdminOrder }>>(
-        `${this.api}/orders/${encodeURIComponent(id)}/unassign`,
-        { reason },
+        `${this.api}/orders/${encodeURIComponent(id)}/${action}`,
+        body,
       )
       .pipe(map((r) => r.data.order));
   }

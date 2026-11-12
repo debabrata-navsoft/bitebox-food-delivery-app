@@ -2,7 +2,7 @@
 
 The Django + DRF + Channels + Celery backend that replaces the Node API in `../backend`, phase by phase. The plan, decisions and data model are in [`docs/django-migration/`](../docs/django-migration/README.md). Until the switch-over, the Node API remains the one the web app uses.
 
-**Status: Phase 10 (admin dashboard).** Phases follow the user's 19-phase list from Phase 8 on (see the migration README).
+**Status: Phase 11 (order lifecycle and dispatch).** Phases follow the user's 19-phase list from Phase 8 on (see the migration README).
 - **Built:** the skeleton (settings, envelope and errors, pagination, permissions, health, OpenAPI, Celery, Docker, CI), the parity schema (45 tables, see [03 §3.5](../docs/django-migration/03-data-model.md#35-phase-4-implementation-notes-what-changed-from-the-plan-above)), sign-in and admin accounts, the catalogue and cart, and orders: placing them, the status workflow, dispatch to riders, the sweep (Celery Beat) and live updates over `/ws/`.
 - **Not yet:** online payments (Phase 8; cash on delivery works), coins, reviews, notifications inbox and push.
 
@@ -105,6 +105,8 @@ This creates the same fictional accounts as the Node seed (`admin@`, `customer@`
 | GET, PUT, DELETE | `/api/v1/my/restaurant/reviews/orders[/{orderId}]` · `/reviews/summary` · `/reviews/{id}/response` | Partner reviews grouped per order, rating summary, public replies |
 | GET | `/api/v1/admin/dashboard` (any admin role; money only with `finance:view`) · `/admin/reports?days=` (`finance:view`) · `/admin/operations/dashboard\|monitoring\|restaurants\|performance` (`operations:view`) | Platform summary (people, orders by state, GMV, platform revenue, settlements not yet paid out), analytics, live order board (late first), restaurant availability, delivery performance (aggregated in SQL) |
 | GET | `/api/v1/admin/users/{id}/logins` (`users:manage`) · `/admin/admins/{id}/logins` (`admins:manage`) | Login history: one row per sign-in (session family), with device, IP and whether it is still active |
+| GET | `/api/v1/orders/{id}/timeline` (customer) · `/admin/orders/{id}/timeline` | The order's history with readable labels and the expected ready time |
+| POST | `/api/v1/admin/orders/{id}/assign` `{riderId}` · `/admin/orders/{id}/delivery-code` (`orders:manage`, audited) | Manual assignment of an online, free rider (withdraws any open offer); a new delivery code after too many wrong tries |
 | GET, POST | `/api/v1/admin/orders[/{id}[/cancel\|/unassign]]` · `/admin/delivery-partners[/{id}/status]` | Order monitoring (`orders:view`/`orders:manage`), riders (`riders:manage`); changes are audited |
 | WS | `/ws/` | Realtime socket (protocol below) |
 
@@ -116,6 +118,8 @@ This creates the same fictional accounts as the Node seed (`admin@`, `customer@`
 - **Server events:** `{"type":"order:updated"|"order:location"|"notification:new","data"}`. Order events carry ids and statuses only; clients re-read over REST. Everything is sent after the database commit (`apps/realtime/events.py`).
 
 ### Orders and dispatch
+
+- **Lifecycle (Phase 11):** `assigned → arrived_at_restaurant → picked_up` (arrival is optional, so riders' apps without it still work). At pickup the order gets a 4-digit `delivery_otp`; only the customer sees it (`deliveryOtp`), the rider sees `deliveryOtpRequired`, and `PATCH /delivery/orders/{id}/status {status: "delivered", otp}` checks it with a cap of `DELIVERY_OTP_MAX_ATTEMPTS` wrong tries (409 `OTP_LOCKED`; support issues a new code). `DELIVERY_OTP_REQUIRED=false` switches it off. Accepting takes `prepMinutes` (5–120; default the restaurant's usual time) and sets `readyBy`. Rider order views list `nextStatuses`.
 
 - `apps/orders/workflow.py#transition` is the only place an order's status changes: a conditional update ("still in status X"), 409 `ORDER_CHANGED` for the loser of a race, a no-op for a repeat. Side effects (coupon release, payment, freeing the rider, the settlement split on delivery) run in savepoints and never undo the move.
 - `apps/dispatch/services.py`: nearest free rider by PostGIS within 10 km, 500 m bands then longest idle; one offer at a time (`DeliveryAssignment`, one live row per order), compare-and-set locks on `DeliveryPartner.current_offer`/`active_order`. `sweep(now)` runs every 15 s from Celery Beat (`dispatch.sweep`): expires offers (that rider goes offline), re-dispatches, auto-rejects after 10 min, cancels unpaid online orders after 15 min and unpicked orders after 30 min. Tunables: `apps/dispatch/config.py`.

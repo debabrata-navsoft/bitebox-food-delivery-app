@@ -560,8 +560,11 @@ np-icon[matChipAvatar] {
   }
   &--danger {
     --btn: var(--ui-danger);
+    // Solid fill: --bb-danger-solid stays a deep red in dark mode (--bb-danger turns light there,
+    // for text), so white text keeps its contrast.
     &:not(.bb-btn--outlined, .bb-btn--text, .bb-btn--soft) {
-      background: var(--ui-danger);
+      color: #fff;
+      background: var(--bb-danger-solid);
     }
   }
   &--small {
@@ -588,6 +591,23 @@ np-button .np-button:is(.np-button--solid, .np-button--outlined, .np-button--tex
 
 np-button .np-button.np-button--solid {
   box-shadow: none;
+}
+
+// Solid red and green np-buttons (Reject, Accept, Delivered): the solid tokens stay deep in dark
+// mode, where --ui-danger/--ui-success turn light for text and white labels would wash out.
+np-button .np-button.np-button--solid:is(.np-button--danger, .np-button--success) {
+  color: #fff;
+  background: var(--solid-fill);
+
+  &.np-button--danger {
+    --solid-fill: var(--bb-danger-solid);
+  }
+  &.np-button--success {
+    --solid-fill: var(--bb-success-solid);
+  }
+  &:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
 }
 
 // Same height as .bb-btn (submit buttons, links), so Cancel and Save line up in a dialog.

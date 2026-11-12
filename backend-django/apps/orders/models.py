@@ -22,6 +22,7 @@ class OrderStatus(models.TextChoices):
     PREPARING = "preparing"
     READY_FOR_PICKUP = "ready_for_pickup"
     ASSIGNED = "assigned"
+    ARRIVED_AT_RESTAURANT = "arrived_at_restaurant"  # the rider is at the restaurant (D3)
     PICKED_UP = "picked_up"
     ON_THE_WAY = "on_the_way"
     DELIVERED = "delivered"
@@ -35,11 +36,12 @@ ACTIVE_STATUSES = (
     S.PREPARING,
     S.READY_FOR_PICKUP,
     S.ASSIGNED,
+    S.ARRIVED_AT_RESTAURANT,
     S.PICKED_UP,
     S.ON_THE_WAY,
 )
 FINAL_STATUSES = (S.DELIVERED, S.REJECTED, S.CANCELLED)
-TRACKED_STATUSES = (S.ASSIGNED, S.PICKED_UP, S.ON_THE_WAY)
+TRACKED_STATUSES = (S.ASSIGNED, S.ARRIVED_AT_RESTAURANT, S.PICKED_UP, S.ON_THE_WAY)
 
 
 class PaymentMethod(models.TextChoices):
@@ -94,7 +96,7 @@ class Order(BaseModel):
     note = models.CharField(max_length=300, blank=True, default="")
 
     status = models.CharField(
-        max_length=20, choices=OrderStatus.choices, default=OrderStatus.PENDING
+        max_length=24, choices=OrderStatus.choices, default=OrderStatus.PENDING
     )
     status_changed_at = models.DateTimeField(auto_now_add=True)  # the sweeps time out from this
     payment_method = models.CharField(max_length=8, choices=PaymentMethod.choices)
@@ -113,6 +115,15 @@ class Order(BaseModel):
         related_name="deliveries",
     )
     idempotency_key = models.CharField(max_length=100, null=True, blank=True)
+
+    # Set by the restaurant when it accepts: how long the food takes, and when it should be ready.
+    prep_minutes = models.PositiveSmallIntegerField(null=True, blank=True)
+    ready_by = models.DateTimeField(null=True, blank=True)
+
+    # Delivery OTP (master prompt §6 step 23): created when the rider picks the order up, shown to
+    # the customer only, and required to mark it delivered. Wrong tries are counted and capped.
+    delivery_otp = models.CharField(max_length=6, blank=True, default="")
+    delivery_otp_attempts = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         db_table = "orders"
@@ -199,9 +210,9 @@ class OrderItem(BaseModel):
 class OrderStatusHistory(AppendOnlyModel):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="status_history")
     from_status = models.CharField(
-        max_length=20, choices=OrderStatus.choices, null=True, blank=True
+        max_length=24, choices=OrderStatus.choices, null=True, blank=True
     )
-    to_status = models.CharField(max_length=20, choices=OrderStatus.choices)
+    to_status = models.CharField(max_length=24, choices=OrderStatus.choices)
     actor_role = models.CharField(
         max_length=12, blank=True, default=""
     )  # customer, restaurant, delivery, admin, system

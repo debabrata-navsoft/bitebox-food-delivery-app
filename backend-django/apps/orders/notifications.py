@@ -125,9 +125,16 @@ def notify_status_change(order: Order, actor: str, previous_rider: Any, reason: 
             order, "A rider is on the way to the restaurant", f"{r} has a delivery partner."
         )
         _to_restaurant(order, f"Rider assigned to {r}", "Keep the order ready for pickup.")
+    elif status == S.ARRIVED_AT_RESTAURANT:
+        _to_restaurant(order, f"Rider has arrived for {r}", "Hand the order to the rider.")
     elif status == S.PICKED_UP:
         _to_customer(
-            order, f"{r} picked up", "Your rider has collected your food from the restaurant."
+            order,
+            f"{r} picked up",
+            f"Your rider has collected your food. Your delivery code is {order.delivery_otp}: "
+            "share it with the rider only when you have your order."
+            if order.delivery_otp
+            else "Your rider has collected your food from the restaurant.",
         )
         _to_restaurant(order, f"{r} picked up", "The rider has collected it.")
     elif status == S.ON_THE_WAY:
@@ -151,3 +158,13 @@ def notify_status_change(order: Order, actor: str, previous_rider: Any, reason: 
             )
         if previous_rider:
             _to_rider(previous_rider, order, f"{r} cancelled", "You no longer need to deliver it.")
+
+
+def notify_new_delivery_otp(order: Order) -> None:
+    """Support reset the delivery code (the rider ran out of tries)."""
+    _to_customer(
+        order,
+        f"New delivery code for {_ref(order)}",
+        f"Your new code is {order.delivery_otp}. Share it with the rider at your door.",
+        "order.delivery_code",
+    )

@@ -114,10 +114,20 @@ class World:
             "/api/v1/delivery/me/availability", {"isOnline": True, **where}, format="json"
         )
 
-    def rider_set(self, client: APIClient, order_id: str, status: str) -> Any:
-        return client.patch(
-            f"/api/v1/delivery/orders/{order_id}/status", {"status": status}, format="json"
-        )
+    def rider_set(
+        self, client: APIClient, order_id: str, status: str, otp: str | None = None
+    ) -> Any:
+        """For "delivered", sends the customer's code from the database unless `otp` is given."""
+        body: dict[str, Any] = {"status": status}
+        if status == "delivered":
+            code = otp
+            if code is None:
+                code = (
+                    Order.objects.filter(pk=order_id).values_list("delivery_otp", flat=True).first()
+                )
+            if code:
+                body["otp"] = code
+        return client.patch(f"/api/v1/delivery/orders/{order_id}/status", body, format="json")
 
     def dashboard(self, client: APIClient) -> Any:
         return client.get("/api/v1/delivery/me")
@@ -714,7 +724,7 @@ def test_only_lets_the_carrying_rider_update_a_delivery(w: World) -> None:
     bad = w.rider_set(w.r, order_id, "cancelled")
     assert bad.status_code == 422
     assert bad.json()["error"]["details"][0]["message"] == (
-        "Status must be picked_up, on_the_way or delivered"
+        "Status must be arrived_at_restaurant, picked_up, on_the_way or delivered"
     )
 
 

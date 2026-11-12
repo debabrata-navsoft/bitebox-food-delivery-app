@@ -1,4 +1,5 @@
 import { ButtonComponent, IconComponent } from 'nexprime';
+import { pickRider } from './assign-rider-dialog/assign-rider-dialog';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Observable, filter } from 'rxjs';
@@ -37,6 +38,7 @@ const CANCELLABLE: OrderStatus[] = [
   'preparing',
   'ready_for_pickup',
   'assigned',
+  'arrived_at_restaurant',
 ];
 
 @Component({
@@ -122,27 +124,51 @@ export class AdminOrderDialog {
     );
   }
 
+  protected assign(o: AdminOrder): void {
+    pickRider(this.dialog, o).subscribe((riderId) =>
+      this.run(this.api.assign(o.id, riderId), 'Rider assigned'),
+    );
+  }
+
+  protected resetCode(o: AdminOrder): void {
+    this.confirm(
+      {
+        title: 'Send a new delivery code?',
+        message: `The customer gets a new 4-digit code for ${o.orderNumber}, and the rider can try again${
+          o.deliveryOtpAttempts ? ` (${o.deliveryOtpAttempts} wrong so far)` : ''
+        }.`,
+        confirmLabel: 'Send new code',
+      },
+      () => this.api.resetDeliveryCode(o.id),
+      'New delivery code sent to the customer',
+    );
+  }
+
   private confirm(
     data: ConfirmDialogData,
     action: (reason?: string) => Observable<AdminOrder>,
     message: string,
   ): void {
-    confirmed(this.dialog, data, '460px').subscribe((result) => {
-      const reason = typeof result === 'string' ? result : undefined;
-      this.busy.set(true);
-      action(reason).subscribe({
-        next: (o) => {
-          this.order.set(o);
-          this.busy.set(false);
-          this.changed.set(true);
-          this.notify.success(message);
-        },
-        error: (err: unknown) => {
-          this.busy.set(false);
-          this.notify.error(errorMessage(err));
-          this.load();
-        },
-      });
+    confirmed(this.dialog, data, '460px').subscribe((result) =>
+      this.run(action(typeof result === 'string' ? result : undefined), message),
+    );
+  }
+
+  /** Runs an order action: busy while it runs, then the updated order, or the error and a reload. */
+  private run(request: Observable<AdminOrder>, message: string): void {
+    this.busy.set(true);
+    request.subscribe({
+      next: (o) => {
+        this.order.set(o);
+        this.busy.set(false);
+        this.changed.set(true);
+        this.notify.success(message);
+      },
+      error: (err: unknown) => {
+        this.busy.set(false);
+        this.notify.error(errorMessage(err));
+        this.load();
+      },
     });
   }
 }

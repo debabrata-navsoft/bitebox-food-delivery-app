@@ -151,7 +151,27 @@
     </div>
   </div>
   <div class="bb-dialog__actions">
-    @if (canManage && o.status === 'assigned') {
+    @if (canManage && o.canAssign) {
+      <np-button
+        variant="outlined"
+        severity="primary"
+        icon="bike"
+        label="Assign rider"
+        [disabled]="busy()"
+        (clicked)="assign(o)"
+      />
+    }
+    @if (canManage && o.deliveryOtpPending) {
+      <np-button
+        variant="outlined"
+        severity="primary"
+        icon="key-round"
+        label="New delivery code"
+        [disabled]="busy()"
+        (clicked)="resetCode(o)"
+      />
+    }
+    @if (canManage && (o.status === 'assigned' || o.status === 'arrived_at_restaurant')) {
       <np-button
         variant="outlined"
         severity="primary"

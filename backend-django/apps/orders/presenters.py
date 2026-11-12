@@ -127,6 +127,9 @@ def order_json(order: Order) -> dict[str, Any]:
         "payment": str(payment.pk) if payment else None,
         "submitted_at": order.submitted_at,
         "delivery_partner": str(order.delivery_partner_id) if order.delivery_partner_id else None,
+        # Set when the restaurant accepts: its preparation time and the expected ready time.
+        "prep_minutes": order.prep_minutes,
+        "ready_by": order.ready_by,
         "created_at": order.created_at,
         "updated_at": order.updated_at,
     }
@@ -221,11 +224,21 @@ def rider_card(user_id: Any) -> dict[str, Any] | None:
     }
 
 
-def present_with_rider(order: Order) -> dict[str, Any]:
+def present_with_rider(order: Order, *, for_customer: bool = False) -> dict[str, Any]:
+    """
+    Customer and admin view. Only the customer sees the delivery OTP (they read it to the rider);
+    admins see whether one is pending and how many wrong tries there were.
+    """
     data = order_json(order)
     payment = payment_of(order)
     data["rider"] = rider_card(order.delivery_partner_id)
     data["payment"] = payment_view(payment) if payment else None
+    otp_pending = bool(order.delivery_otp) and order.status in (S.PICKED_UP, S.ON_THE_WAY)
+    if for_customer:
+        data["delivery_otp"] = order.delivery_otp if otp_pending else None
+    else:
+        data["delivery_otp_pending"] = otp_pending
+        data["delivery_otp_attempts"] = order.delivery_otp_attempts
     return data
 
 
@@ -242,7 +255,9 @@ def present_for_restaurant(order: Order) -> dict[str, Any]:
         data["respond_by"] = order.submitted_at + timedelta(
             minutes=DISPATCH["restaurant_response_minutes"]
         )
-    if order.status in (S.READY_FOR_PICKUP, S.ASSIGNED) and (at := ready_at(order)):
+    if order.status in (S.READY_FOR_PICKUP, S.ASSIGNED, S.ARRIVED_AT_RESTAURANT) and (
+        at := ready_at(order)
+    ):
         data["pickup_by"] = at + timedelta(minutes=DISPATCH["pickup_window_minutes"])
     return data
 
@@ -261,5 +276,18 @@ def present_for_rider(order: Order, user_id: Any) -> dict[str, Any]:
     data["offer_window_seconds"] = DISPATCH["offer_timeout_seconds"]
     # What the rider earns for this delivery (fixed by distance, before they accept).
     data["estimated_earnings_paise"] = settlement_for(order)["rider_paise"]
+    # The rider's next allowed moves, in order (the app shows the first as its main button), and
+    # whether "delivered" needs the customer's code. Never the code itself.
+    carrying = str(order.delivery_partner_id) == str(user_id)
+    data["next_statuses"] = RIDER_NEXT.get(order.status, []) if carrying else []
+    data["delivery_otp_required"] = carrying and bool(order.delivery_otp)
     data.pop("cancellation", None)
     return data
+
+
+RIDER_NEXT: dict[str, list[str]] = {
+    S.ASSIGNED: [S.ARRIVED_AT_RESTAURANT, S.PICKED_UP],
+    S.ARRIVED_AT_RESTAURANT: [S.PICKED_UP],
+    S.PICKED_UP: [S.ON_THE_WAY],
+    S.ON_THE_WAY: [S.DELIVERED],
+}

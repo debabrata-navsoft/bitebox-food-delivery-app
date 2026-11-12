@@ -11,12 +11,14 @@ order's status changes.
 """
 
 import logging
+import secrets
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import F, Q
 from django.utils import timezone
@@ -68,8 +70,16 @@ TRANSITIONS: dict[str, dict[str, tuple[Actor, ...]]] = {
     },
     S.CONFIRMED: {S.PREPARING: (A.RESTAURANT,), S.CANCELLED: (A.ADMIN,)},
     S.PREPARING: {S.READY_FOR_PICKUP: (A.RESTAURANT,), S.CANCELLED: (A.ADMIN,)},
-    S.READY_FOR_PICKUP: {S.ASSIGNED: (A.DELIVERY,), S.CANCELLED: (A.ADMIN, A.SYSTEM)},
+    # A rider accepts an offer, or an admin assigns one directly (manual assignment).
+    S.READY_FOR_PICKUP: {S.ASSIGNED: (A.DELIVERY, A.ADMIN), S.CANCELLED: (A.ADMIN, A.SYSTEM)},
     S.ASSIGNED: {
+        S.ARRIVED_AT_RESTAURANT: (A.DELIVERY,),
+        # Kept for riders' apps that skip the arrival step (the Node API has none).
+        S.PICKED_UP: (A.DELIVERY,),
+        S.READY_FOR_PICKUP: (A.ADMIN,),
+        S.CANCELLED: (A.ADMIN, A.SYSTEM),
+    },
+    S.ARRIVED_AT_RESTAURANT: {
         S.PICKED_UP: (A.DELIVERY,),
         S.READY_FOR_PICKUP: (A.ADMIN,),
         S.CANCELLED: (A.ADMIN, A.SYSTEM),
@@ -88,6 +98,7 @@ LABEL: dict[str, str] = {
     S.PREPARING: "being prepared",
     S.READY_FOR_PICKUP: "ready for pickup",
     S.ASSIGNED: "assigned to a rider",
+    S.ARRIVED_AT_RESTAURANT: "with the rider at the restaurant",
     S.PICKED_UP: "picked up",
     S.ON_THE_WAY: "on the way",
     S.DELIVERED: "delivered",
@@ -95,6 +106,11 @@ LABEL: dict[str, str] = {
 }
 
 __all__ = ["ACTIVE_STATUSES", "FINAL_STATUSES", "TRANSITIONS", "Actor", "transition"]
+
+
+def new_delivery_otp() -> str:
+    """Four random digits (leading zeros kept)."""
+    return f"{secrets.randbelow(10_000):04d}"
 
 
 def can_transition(from_status: str, to: str, actor: str) -> bool:
@@ -159,6 +175,10 @@ def transition(
     if to == S.DELIVERED:
         # Cash is collected on delivery; online orders were paid already.
         fields["payment_status"] = PaymentStatus.PAID
+    if to == S.PICKED_UP and settings.DELIVERY_OTP_REQUIRED:
+        # The customer reads this code to the rider at the door (orders.services#rider_set_status).
+        fields["delivery_otp"] = new_delivery_otp()
+        fields["delivery_otp_attempts"] = 0
 
     with transaction.atomic():
         written = Order.objects.filter(

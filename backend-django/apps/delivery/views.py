@@ -82,8 +82,15 @@ class RiderStatusInput(serializers.Serializer):
         choices=list(orders.RIDER_STATUSES),
         error_messages=dict.fromkeys(
             ("invalid_choice", "required", "null", "blank"),
-            "Status must be picked_up, on_the_way or delivered",
+            "Status must be arrived_at_restaurant, picked_up, on_the_way or delivered",
         ),
+    )
+    # The customer's delivery code, needed with "delivered".
+    otp = serializers.RegexField(
+        r"^\d{4}$",
+        required=False,
+        allow_blank=True,
+        error_messages=dict.fromkeys(("invalid", "blank"), "Enter the 4-digit code"),
     )
 
 
@@ -179,7 +186,7 @@ class RiderOrderStatusView(APIView):
         order_id = parse_id(id)
         data = validated(RiderStatusInput, request.data)
         user = current_user(request)
-        orders.rider_set_status(user, order_id, data["status"])
+        orders.rider_set_status(user, order_id, data["status"], data.get("otp") or None)
         return ok(services.dashboard(user), message=STATUS_MESSAGE[data["status"]])
 
 
