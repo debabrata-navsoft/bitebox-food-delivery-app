@@ -590,6 +590,11 @@ np-button .np-button.np-button--solid {
   box-shadow: none;
 }
 
+// Same height as .bb-btn (submit buttons, links), so Cancel and Save line up in a dialog.
+np-button .np-button.np-button--medium {
+  min-height: 40px;
+}
+
 np-button .np-button.np-button--solid.np-button--primary {
   color: var(--bb-on-brand);
   background: var(--bb-brand);
@@ -609,37 +614,6 @@ np-pagination {
   --pg-active-bg: var(--bb-brand);
   --pg-active-fg: var(--bb-on-brand);
   --pg-glow: transparent;
-}
-
-// Data tables with custom cells (chips, buttons): np-table renders only data-driven cells, so these
-// are plain semantic tables in NexPrime's look (tokens only, so dark mode follows).
-.bb-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--ui-surface);
-  font-size: 0.9rem;
-
-  th {
-    height: 48px;
-    padding: 0 var(--bb-space-3);
-    text-align: left;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--bb-ink-muted);
-    border-bottom: 1px solid var(--bb-border);
-    white-space: nowrap;
-  }
-  td {
-    padding: var(--bb-space-3);
-    border-bottom: 1px solid var(--bb-border);
-    vertical-align: middle;
-  }
-  tbody tr:last-child td {
-    border-bottom: 0;
-  }
-  tbody tr:hover td {
-    background: color-mix(in srgb, var(--ui-primary) 4%, transparent);
-  }
 }
 
 // np-tabs used as a tab strip only: its panel takes text content, so screens render their own
@@ -684,8 +658,10 @@ np-menu.bb-menu-compact .menu.mi-panel {
   --mat-button-filled-container-shape: 12px;
   --mat-button-outlined-container-shape: 12px;
   --mat-button-text-container-shape: 12px;
-  --mat-button-filled-container-height: 44px;
-  --mat-button-outlined-container-height: 44px;
+  // 40px like .bb-btn and np-button, for dialogs that still mix Material and NexPrime buttons.
+  --mat-button-filled-container-height: 40px;
+  --mat-button-outlined-container-height: 40px;
+  --mat-button-text-container-height: 40px;
 }
 
 // The simulated payment page: edge-to-edge header, clipped to the dialog's rounded corners.
@@ -781,7 +757,7 @@ np-menu.bb-menu-compact .menu.mi-panel {
 // Dialog actions: "Cancel" (a text button) is outlined and as tall as the primary action beside it.
 .mat-mdc-dialog-actions .mat-mdc-button-base,
 .bb-dialog__actions .mat-mdc-button-base {
-  --mat-button-text-container-height: 44px;
+  --mat-button-text-container-height: 40px;
   --mat-button-text-horizontal-padding: 18px;
 
   &.mat-mdc-button {
@@ -1147,7 +1123,8 @@ np-time-picker .time-picker-field {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
-  font-variant-numeric: tabular-nums;
+  // Proportional digits: this font's tabular "1" has serifs and reads like a typewriter digit.
+  // Number columns are right-aligned (.num), so they still line up.
 
   th,
   td {
