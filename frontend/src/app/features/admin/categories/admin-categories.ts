@@ -1,9 +1,6 @@
 import { NpIconPipe } from '../../../shared/icons/np-icon-name';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { IconComponent, ToggleComponent } from 'nexprime';
-import { MatDialog } from '@angular/material/dialog';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { ButtonComponent, IconComponent, ToggleComponent } from 'nexprime';
 import { filter } from 'rxjs';
 import { AdminCatalogService } from '../../../core/services/admin/admin-catalog.service';
 import { errorMessage } from '../../../core/services/api-error';
@@ -20,14 +17,13 @@ import { BbDialog } from '../../../shared/dialog/bb-dialog';
   selector: 'bb-admin-categories',
   imports: [
     ToggleComponent,
-    MatButtonModule,
     IconComponent,
     NpIconPipe,
-    MatTooltipModule,
     EmptyState,
     PageHeader,
     ImageFallback,
     UsableImagePipe,
+    ButtonComponent,
   ],
   templateUrl: './admin-categories.html',
   styleUrl: './admin-categories.scss',
@@ -35,7 +31,6 @@ import { BbDialog } from '../../../shared/dialog/bb-dialog';
 })
 export class AdminCategories {
   private readonly service = inject(AdminCatalogService);
-  private readonly dialog = inject(MatDialog);
   private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
 
@@ -63,14 +58,12 @@ export class AdminCategories {
   }
 
   protected open(category?: FoodCategory): void {
-    this.dialog
+    this.bbDialog
       .open<CategoryFormDialog, FoodCategory | null, FoodCategory>(CategoryFormDialog, {
         data: category ?? null,
         width: '520px',
-        maxWidth: '95vw',
       })
-      .afterClosed()
-      .pipe(filter(Boolean))
+      .closed.pipe(filter(Boolean))
       .subscribe(() => {
         this.notify.success(category ? 'Category saved' : 'Category created');
         this.load();

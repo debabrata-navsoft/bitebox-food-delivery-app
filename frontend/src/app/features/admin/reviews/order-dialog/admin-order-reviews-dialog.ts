@@ -130,7 +130,7 @@ export class AdminOrderReviewsDialog {
   }
 
   protected openOrder(): void {
-    openAdminOrder(this.dialog, this.orderId).subscribe();
+    openAdminOrder(this.bbDialog, this.orderId).subscribe();
   }
 
   /** The API answers with the moderated review; swap it in instead of reloading the order. */

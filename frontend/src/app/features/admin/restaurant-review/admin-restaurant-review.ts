@@ -12,7 +12,6 @@ import {
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AdminCatalogService } from '../../../core/services/admin/admin-catalog.service';
 import { errorMessage } from '../../../core/services/api-error';
@@ -76,7 +75,6 @@ const ACTIONS: Record<RestaurantStatus, StatusAction[]> = {
   imports: [
     DatePipe,
     RouterLink,
-    MatButtonModule,
     IconComponent,
     NpIconPipe,
     EmptyState,

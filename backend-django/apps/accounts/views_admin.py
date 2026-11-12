@@ -17,7 +17,7 @@ from common.api import ok
 from common.pagination import Page
 from common.permissions import permission_required
 from common.schema import envelope, errors
-from common.validation import parse_id, validated
+from common.validation import PageQuery, parse_id, validated
 
 from . import admin_services as admin
 from .authentication import current_user
@@ -238,3 +238,44 @@ class AuditLogView(APIView):
     def get(self, request: Request) -> Response:
         query = validated(AuditQuery, request.query_params)
         return ok(list_entries(query, Page.from_query(query)))
+
+
+class _LoginHistoryView(APIView):
+    roles: tuple[Role, ...] = ()
+
+    def get(self, request: Request, id: str) -> Response:
+        user_id = parse_id(id)
+        query = validated(PageQuery, request.query_params)
+        return ok(admin.login_history(user_id, self.roles, Page.from_query(query)))
+
+
+class MemberLoginsView(_LoginHistoryView):
+    """Sign-ins of a customer, restaurant partner or rider."""
+
+    permission_classes = [permission_required(Permission.USERS_MANAGE)]
+    roles = MEMBER_ROLES
+
+    @extend_schema(
+        tags=["Admin: users"],
+        operation_id="admin_users_logins",
+        parameters=[PageQuery],
+        responses={200: envelope("LoginHistory"), **errors(401, 403, 404, 422)},
+    )
+    def get(self, request: Request, id: str) -> Response:
+        return super().get(request, id)
+
+
+class StaffLoginsView(_LoginHistoryView):
+    """Sign-ins of a staff admin (admin security: login history)."""
+
+    permission_classes = [permission_required(Permission.ADMINS_MANAGE)]
+    roles = ADMIN_ROLES
+
+    @extend_schema(
+        tags=["Admin: staff"],
+        operation_id="admin_admins_logins",
+        parameters=[PageQuery],
+        responses={200: envelope("StaffLoginHistory"), **errors(401, 403, 404, 422)},
+    )
+    def get(self, request: Request, id: str) -> Response:
+        return super().get(request, id)

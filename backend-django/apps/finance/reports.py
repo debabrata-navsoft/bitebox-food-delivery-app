@@ -120,3 +120,98 @@ def rider_stats(user: User) -> dict[str, Any]:
             "count": profile.rating_count if profile else 0,
         },
     }
+
+
+def admin_report(days: int = 30) -> dict[str, Any]:
+    """
+    Platform analytics over orders placed in the window (Node: reports.service.js#adminReport):
+    per-day orders, deliveries and GMV; cancellations, platform revenue and refunds; payment mix
+    and top restaurants among delivered orders; status counts; new customers.
+    """
+    from django.db.models import Q
+
+    from apps.accounts.models import User
+    from apps.orders.models import Order, OrderStatus, PaymentStatus
+    from apps.rbac.roles import Role
+
+    now = timezone.now()
+    since = now - timedelta(days=days)
+    tz = ZoneInfo(settings.REPORT_TIMEZONE)
+    placed = Order.objects.filter(created_at__gte=since)
+    delivered_q = Q(status=OrderStatus.DELIVERED)
+
+    daily_rows = (
+        placed.annotate(day=TruncDate("created_at", tzinfo=tz))
+        .values("day")
+        .annotate(
+            orders=Count("pk"),
+            delivered=Count("pk", filter=delivered_q),
+            gmv_paise=Sum("total_paise", filter=delivered_q),
+        )
+        .order_by()
+    )
+    by_day = {row["day"].isoformat(): row for row in daily_rows}
+    daily = [
+        {
+            "date": key,
+            "orders": by_day.get(key, {}).get("orders", 0),
+            "delivered": by_day.get(key, {}).get("delivered", 0),
+            "gmv_paise": by_day.get(key, {}).get("gmv_paise") or 0,
+        }
+        for key in day_keys(days, now)
+    ]
+    totals = {
+        field: sum((row[field] or 0) for row in by_day.values())
+        for field in ("orders", "delivered", "gmv_paise")
+    }
+    money = placed.aggregate(
+        cancelled=Count("pk", filter=Q(status__in=[OrderStatus.CANCELLED, OrderStatus.REJECTED])),
+        platform_revenue_paise=Sum("settlement__platform_paise"),
+        refunded_paise=Sum("total_paise", filter=Q(payment_status=PaymentStatus.REFUNDED)),
+    )
+    delivered = placed.filter(delivered_q)
+    payment_mix = (
+        delivered.values("payment_method")
+        .annotate(orders=Count("pk"), paise=Sum("total_paise"))
+        .order_by("payment_method")
+    )
+    top = (
+        delivered.values("restaurant_id")
+        .annotate(orders=Count("pk"), gmv_paise=Sum("total_paise"))
+        .order_by("-gmv_paise")[:5]
+    )
+    names = dict(
+        Restaurant.objects.filter(pk__in=[t["restaurant_id"] for t in top]).values_list(
+            "pk", "name"
+        )
+    )
+    return {
+        "days": days,
+        "totals": {
+            **totals,
+            "cancelled": money["cancelled"] or 0,
+            "platform_revenue_paise": money["platform_revenue_paise"] or 0,
+            "refunded_paise": money["refunded_paise"] or 0,
+            "average_order_paise": round(totals["gmv_paise"] / totals["delivered"])
+            if totals["delivered"]
+            else 0,
+            "new_customers": User.objects.filter(role=Role.CUSTOMER, created_at__gte=since).count(),
+        },
+        "daily": daily,
+        "payment_mix": [
+            {"method": p["payment_method"], "orders": p["orders"], "paise": p["paise"]}
+            for p in payment_mix
+        ],
+        "status_counts": dict(
+            placed.values("status").annotate(n=Count("pk")).order_by().values_list("status", "n")
+        ),
+        "top_restaurants": [
+            {
+                "id": str(t["restaurant_id"]),
+                "name": names.get(t["restaurant_id"], ""),
+                "orders": t["orders"],
+                "gmv_paise": t["gmv_paise"],
+            }
+            for t in top
+        ],
+    }

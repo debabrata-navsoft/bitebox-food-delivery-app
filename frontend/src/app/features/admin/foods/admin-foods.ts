@@ -10,9 +10,7 @@ import {
 import { form } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { MatButtonModule } from '@angular/material/button';
-import { IconComponent, ToggleComponent } from 'nexprime';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { ButtonComponent, IconComponent, PaginationComponent, ToggleComponent } from 'nexprime';
 import { Subscription, debounceTime, distinctUntilChanged, filter, skip } from 'rxjs';
 import {
   AdminCatalogService,
@@ -35,13 +33,13 @@ import { BbDialog } from '../../../shared/dialog/bb-dialog';
     ToggleComponent,
     NP_FORM_FIELDS,
     RouterLink,
-    MatButtonModule,
     IconComponent,
-    MatPaginatorModule,
+    PaginationComponent,
     EmptyState,
     PageHeader,
     VegBadge,
     InrPipe,
+    ButtonComponent,
   ],
   templateUrl: './admin-foods.html',
   styleUrl: './admin-foods.scss',
@@ -81,9 +79,10 @@ export class AdminFoods implements OnInit {
     void this.router.navigate([], { queryParams: {} }).then(() => this.load(1));
   }
 
-  protected onPage(event: PageEvent): void {
-    this.pagination.update((p) => ({ ...p, limit: event.pageSize }));
-    this.load(event.pageIndex + 1);
+  /** np-pagination: `(pageChange)` → goTo(page); `(rowsChange)` → goTo(1, rows). */
+  protected goTo(page: number, rows?: number): void {
+    if (rows) this.pagination.update((p) => ({ ...p, limit: rows }));
+    this.load(page);
   }
 
   protected load(page: number): void {

@@ -127,3 +127,50 @@ def update_staff(actor: User, user_id: uuid.UUID, data: dict[str, Any]) -> User:
     elif fields:
         user.save(update_fields=[*fields, "updated_at"])
     return user
+
+
+def login_history(user_id: uuid.UUID, roles: tuple[Role, ...], page: Page) -> dict[str, Any]:
+    """
+    Sign-ins of one account, newest first (master prompt §3D "login history"). A sign-in is a
+    session family: refreshes rotate the token inside it, so its first row is the sign-in and its
+    newest row says whether it is still active.
+    """
+    from django.db.models import Max, Min
+    from django.utils import timezone
+
+    from .models import Session
+
+    if not User.objects.filter(pk=user_id, role__in=roles).exists():
+        raise ApiError.not_found("User not found")
+    families = (
+        Session.objects.filter(user_id=user_id)
+        .values("family")
+        .annotate(started=Min("created_at"), last=Max("created_at"))
+        .order_by("-started")
+    )
+    rows, meta = paginate(families, page)
+    firsts: dict[str, Session] = {}
+    latest: dict[str, Session] = {}
+    for s in Session.objects.filter(
+        user_id=user_id, family__in=[r["family"] for r in rows]
+    ).order_by("created_at"):
+        firsts.setdefault(s.family, s)  # the sign-in
+        latest[s.family] = s  # its newest refresh
+    now = timezone.now()
+    items = []
+    for r in rows:
+        first, last = firsts.get(r["family"]), latest.get(r["family"])
+        if first is None or last is None:
+            continue
+        active = last.revoked_at is None and last.expires_at > now
+        items.append(
+            {
+                "signed_in_at": r["started"],
+                "last_active_at": r["last"],
+                "ip": first.ip,
+                "user_agent": first.user_agent,
+                "active": active,
+                "ended_reason": None if active else (last.revoked_reason or "expired"),
+            }
+        )
+    return {"items": items, "pagination": meta}

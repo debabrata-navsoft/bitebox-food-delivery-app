@@ -16,9 +16,11 @@ auth_urls = [
 admin_urls = [
     path("admin/users", views_admin.MembersView.as_view()),
     path("admin/users/<str:id>/status", views_admin.MemberStatusView.as_view()),
+    path("admin/users/<str:id>/logins", views_admin.MemberLoginsView.as_view()),
     path("admin/admins", views_admin.StaffListView.as_view()),
     path("admin/admins/<str:id>", views_admin.StaffDetailView.as_view()),
     path("admin/admins/<str:id>/status", views_admin.StaffStatusView.as_view()),
+    path("admin/admins/<str:id>/logins", views_admin.StaffLoginsView.as_view()),
     path("admin/audit-logs", views_admin.AuditLogView.as_view()),
 ]
 

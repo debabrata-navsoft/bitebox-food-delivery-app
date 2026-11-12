@@ -64,11 +64,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--bb-space-2);
-
-  .danger {
-    --mat-button-filled-container-color: var(--bb-danger-solid);
-    --mat-button-filled-label-text-color: #fff;
-  }
 }
 
 .grid {

@@ -1,10 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { form } from '@angular/forms/signals';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
-import { MatPaginatorModule } from '@angular/material/paginator';
-import { IconComponent, ToggleComponent } from 'nexprime';
+import { IconComponent, PaginationComponent, ToggleComponent } from 'nexprime';
 import { errorMessage } from '../../../core/services/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AdminOrdersService } from '../../../core/services/order-management.service';
@@ -33,9 +30,8 @@ const RIDER_EVENTS: OrderStatus[] = [
   imports: [
     DatePipe,
     NP_FORM_FIELDS,
-    MatButtonModule,
     IconComponent,
-    MatPaginatorModule,
+    PaginationComponent,
     ToggleComponent,
     EmptyState,
     OrderStatusChip,
@@ -47,7 +43,6 @@ const RIDER_EVENTS: OrderStatus[] = [
 })
 export class AdminDeliveryPartners {
   private readonly api = inject(AdminOrdersService);
-  private readonly dialog = inject(MatDialog);
   private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
 
@@ -75,7 +70,7 @@ export class AdminDeliveryPartners {
   );
 
   protected openOrder(id: string): void {
-    openAdminOrder(this.dialog, id).subscribe(() => this.list.reload());
+    openAdminOrder(this.bbDialog, id).subscribe(() => this.list.reload());
   }
 
   protected toggleStatus(rider: AdminRider): void {

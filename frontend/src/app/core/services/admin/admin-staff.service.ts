@@ -4,6 +4,8 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
   AuditEntry,
+  LoginEntry,
+  PlatformSummary,
   StaffAdminInput,
   StaffAdminUpdate,
   StaffQuery,
@@ -25,13 +27,31 @@ export class AdminStaffService {
   }
 
   create(input: StaffAdminInput): Observable<User> {
-    return this.http.post<ApiResponse<{ user: User }>>(this.url, input).pipe(map((r) => r.data.user));
+    return this.http
+      .post<ApiResponse<{ user: User }>>(this.url, input)
+      .pipe(map((r) => r.data.user));
   }
 
   update(id: string, input: StaffAdminUpdate): Observable<User> {
     return this.http
       .patch<ApiResponse<{ user: User }>>(`${this.url}/${id}`, input)
       .pipe(map((r) => r.data.user));
+  }
+
+  /** Sign-ins of a staff admin, newest first (Django API only: the Node API answers 404). */
+  logins(id: string, page = 1, limit = 20): Observable<Paginated<LoginEntry>> {
+    return this.http
+      .get<ApiResponse<Paginated<LoginEntry>>>(`${this.url}/${encodeURIComponent(id)}/logins`, {
+        params: toParams({ page, limit }),
+      })
+      .pipe(map((r) => r.data));
+  }
+
+  /** The admin home page's platform figures (Django API only: the Node API answers 404). */
+  summary(): Observable<PlatformSummary> {
+    return this.http
+      .get<ApiResponse<PlatformSummary>>(`${environment.baseUrl}/admin/dashboard`)
+      .pipe(map((r) => r.data));
   }
 
   setStatus(id: string, status: UserStatus): Observable<User> {

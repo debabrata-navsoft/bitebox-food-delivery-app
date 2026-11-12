@@ -1,8 +1,6 @@
-import { IconComponent } from 'nexprime';
+import { ButtonComponent, IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { MAT_DIALOG_DATA, MatDialog, MatDialogConfig, MatDialogModule } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
 import { Observable, filter } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { errorMessage } from '../../../../core/services/api-error';
@@ -26,7 +24,12 @@ import {
 import { AdminOrder, TRACKED_STATUSES } from '../../../../shared/models/order-management.models';
 import { InrPipe } from '../../../../shared/pipes/money.pipes';
 import { PAYMENT_STATUS_LABEL, PROVIDER_LABEL } from '../../../../shared/models/payment.models';
-import { BbDialog } from '../../../../shared/dialog/bb-dialog';
+import {
+  BB_DIALOG_DATA,
+  BbDialog,
+  BbDialogRef,
+  BbDialogTitle,
+} from '../../../../shared/dialog/bb-dialog';
 
 const CANCELLABLE: OrderStatus[] = [
   'pending',
@@ -41,8 +44,8 @@ const CANCELLABLE: OrderStatus[] = [
   imports: [
     DatePipe,
     DecimalPipe,
-    MatDialogModule,
-    MatButtonModule,
+    BbDialogTitle,
+    ButtonComponent,
     IconComponent,
     BillSummary,
     OrderStatusChip,
@@ -55,7 +58,8 @@ const CANCELLABLE: OrderStatus[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminOrderDialog {
-  private readonly id = inject<string>(MAT_DIALOG_DATA);
+  private readonly id = inject<string>(BB_DIALOG_DATA);
+  protected readonly ref = inject<BbDialogRef<boolean>>(BbDialogRef);
   private readonly api = inject(AdminOrdersService);
   private readonly dialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
@@ -143,15 +147,8 @@ export class AdminOrderDialog {
   }
 }
 
-export function openAdminOrder(dialog: MatDialog, orderId: string): Observable<true> {
-  const config: MatDialogConfig<string> = {
-    data: orderId,
-    width: '820px',
-    maxWidth: '95vw',
-    autoFocus: 'dialog',
-  };
+export function openAdminOrder(dialog: BbDialog, orderId: string): Observable<true> {
   return dialog
-    .open<AdminOrderDialog, string, boolean>(AdminOrderDialog, config)
-    .afterClosed()
-    .pipe(filter((changed): changed is true => changed === true));
+    .open<AdminOrderDialog, string, boolean>(AdminOrderDialog, { data: orderId, width: '820px' })
+    .closed.pipe(filter((changed): changed is true => changed === true));
 }

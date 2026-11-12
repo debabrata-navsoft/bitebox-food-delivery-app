@@ -611,6 +611,48 @@ np-pagination {
   --pg-glow: transparent;
 }
 
+// Data tables with custom cells (chips, buttons): np-table renders only data-driven cells, so these
+// are plain semantic tables in NexPrime's look (tokens only, so dark mode follows).
+.bb-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--ui-surface);
+  font-size: 0.9rem;
+
+  th {
+    height: 48px;
+    padding: 0 var(--bb-space-3);
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--bb-ink-muted);
+    border-bottom: 1px solid var(--bb-border);
+    white-space: nowrap;
+  }
+  td {
+    padding: var(--bb-space-3);
+    border-bottom: 1px solid var(--bb-border);
+    vertical-align: middle;
+  }
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  tbody tr:hover td {
+    background: color-mix(in srgb, var(--ui-primary) 4%, transparent);
+  }
+}
+
+// np-tabs used as a tab strip only: its panel takes text content, so screens render their own
+// content below and the built-in (empty) panel is hidden.
+np-tabs.bb-tab-strip .tab-panel {
+  display: none;
+}
+
+np-tabs.bb-tab-strip {
+  display: block;
+  margin-bottom: var(--bb-space-4);
+}
+
 // A narrower np-menu popup for short action lists (e.g. Edit / Delete). Keep the width in sync with
 // COMPACT_MENU_WIDTH in shared/menu/end-aligned-menu.ts, which aligns the panel to its trigger.
 np-menu.bb-menu-compact .menu.mi-panel {
@@ -1148,17 +1190,15 @@ np-time-picker .time-picker-field {
 }
 
 // Small rounded action in a table row (suspend, activate): green, or red with .danger.
+// A small outlined status action on a .bb-btn (Suspend / Reactivate): green, or red with .danger.
 .bb-pill-action {
   --tone: var(--bb-success);
+  --btn: var(--tone);
   --bb-icon-size: 16px;
-  --mat-button-outlined-container-height: 32px;
-  --mat-button-outlined-container-shape: 999px;
-  --mat-button-outlined-horizontal-padding: 12px;
-  --mat-button-outlined-label-text-size: 0.8rem;
-  --mat-button-outlined-label-text-color: var(--tone);
-  --mat-button-outlined-outline-color: color-mix(in srgb, var(--tone) 40%, transparent);
-  --mat-button-outlined-state-layer-color: var(--tone);
   min-width: 104px;
+  min-height: 32px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
 
   &.danger {
     --tone: var(--bb-danger);

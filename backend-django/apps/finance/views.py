@@ -7,9 +7,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.authentication import current_user
-from apps.rbac.roles import Role
+from apps.rbac.roles import Permission, Role
 from common.api import ok
-from common.permissions import role_required
+from common.permissions import permission_required, role_required
 from common.schema import envelope, errors
 from common.validation import validated
 
@@ -36,3 +36,16 @@ class RestaurantEarningsView(APIView):
     def get(self, request: Request) -> Response:
         days = validated(DaysQuery, request.query_params).get("days", 30)
         return ok(reports.restaurant_earnings(current_user(request), days))
+
+
+class AdminReportsView(APIView):
+    permission_classes = [permission_required(Permission.FINANCE_VIEW)]
+
+    @extend_schema(
+        tags=["Admin: reports"],
+        parameters=[DaysQuery],
+        responses={200: envelope("AdminReport"), **errors(401, 403, 422)},
+    )
+    def get(self, request: Request) -> Response:
+        days = validated(DaysQuery, request.query_params).get("days", 30)
+        return ok(reports.admin_report(days))

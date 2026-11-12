@@ -1,8 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { IconComponent, ToggleComponent } from 'nexprime';
-import { MatButtonModule } from '@angular/material/button';
+import { ButtonComponent, IconComponent, ToggleComponent } from 'nexprime';
 import { filter } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
 import { AdminCouponService } from '../../../core/services/checkout-api.service';
@@ -20,12 +18,11 @@ import { BbDialog } from '../../../shared/dialog/bb-dialog';
   imports: [
     ToggleComponent,
     DatePipe,
-    MatButtonModule,
     IconComponent,
-    MatDialogModule,
     EmptyState,
     PageHeader,
     InrPipe,
+    ButtonComponent,
   ],
   templateUrl: './admin-coupons.html',
   styleUrl: './admin-coupons.scss',
@@ -33,7 +30,6 @@ import { BbDialog } from '../../../shared/dialog/bb-dialog';
 })
 export class AdminCoupons {
   private readonly service = inject(AdminCouponService);
-  private readonly dialog = inject(MatDialog);
   private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
 
@@ -63,14 +59,12 @@ export class AdminCoupons {
   }
 
   protected open(coupon?: AdminCoupon): void {
-    this.dialog
+    this.bbDialog
       .open<CouponFormDialog, AdminCoupon | null, AdminCoupon>(CouponFormDialog, {
         data: coupon ?? null,
         width: '560px',
-        maxWidth: '95vw',
       })
-      .afterClosed()
-      .pipe(filter(Boolean))
+      .closed.pipe(filter(Boolean))
       .subscribe(() => {
         this.notify.success(coupon ? 'Coupon saved' : 'Coupon created');
         this.load();

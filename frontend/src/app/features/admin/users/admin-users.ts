@@ -11,10 +11,7 @@ import {
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { form } from '@angular/forms/signals';
-import { MatButtonModule } from '@angular/material/button';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatTableModule } from '@angular/material/table';
-import { IconComponent, SelectOption } from 'nexprime';
+import { IconComponent, PaginationComponent, SelectOption } from 'nexprime';
 import { debounceTime, distinctUntilChanged, map, skip } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AdminUsersService } from '../../../core/services/admin/admin-users.service';
@@ -29,15 +26,7 @@ import { BbDialog } from '../../../shared/dialog/bb-dialog';
 
 @Component({
   selector: 'bb-admin-users',
-  imports: [
-    DatePipe,
-    NP_FORM_FIELDS,
-    MatButtonModule,
-    IconComponent,
-    MatPaginatorModule,
-    MatTableModule,
-    PageHeader,
-  ],
+  imports: [DatePipe, NP_FORM_FIELDS, IconComponent, PaginationComponent, PageHeader],
   templateUrl: './admin-users.html',
   styleUrl: './admin-users.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -54,7 +43,6 @@ export class AdminUsers implements OnInit {
   protected readonly roleLabel = (role: Role) => ROLE_META[role].label;
   /** Admin accounts are managed in Admin management, not here. */
   protected readonly roles: Role[] = ['customer', 'restaurant', 'delivery'];
-  protected readonly columns = ['name', 'phone', 'role', 'status', 'createdAt', 'actions'];
 
   protected readonly currentUserId = computed(() => this.auth.user()?.id);
   protected readonly busyId = signal<string | null>(null);
@@ -109,9 +97,10 @@ export class AdminUsers implements OnInit {
     this.load(1);
   }
 
-  protected onPage(event: PageEvent): void {
-    this.pagination.update((p) => ({ ...p, limit: event.pageSize }));
-    this.load(event.pageIndex + 1);
+  /** np-pagination: `(pageChange)` → goTo(page); `(rowsChange)` → goTo(1, rows). */
+  protected goTo(page: number, rows?: number): void {
+    if (rows) this.pagination.update((p) => ({ ...p, limit: rows }));
+    this.load(page);
   }
 
   protected load(page: number): void {
@@ -162,7 +151,9 @@ export class AdminUsers implements OnInit {
           this.busyId.set(null);
           this.notify.success(suspend ? 'User suspended' : 'User reactivated');
           this.users.update((list) =>
-            list.map((item) => (item.id === updatedUser.id ? { ...item, status: updatedUser.status } : item)),
+            list.map((item) =>
+              item.id === updatedUser.id ? { ...item, status: updatedUser.status } : item,
+            ),
           );
         },
         error: (err: unknown) => {
