@@ -114,6 +114,7 @@ Production: `docker compose --env-file deploy/.env up -d --build` (see `docs/DOC
   - `core/auth/auth.service.ts` restores the session at startup and exposes `user`, `initialised` and `displayUser`, a display-only localStorage hint that avoids a reload flicker and must never be used for access decisions.
   - `core/interceptors/auth.interceptor.ts` adds the token, sends cookies only to `/auth/*`, and refreshes on 401.
   - **Node → Django switch:** `core/interceptors/api-router.interceptor.ts` (registered last) sends API paths listed in `environment.djangoRoutes` to `environment.djangoUrl` (Django, :8000); everything else stays on Node :5000. Add a phase's paths there once its Django endpoints pass their tests. In production nginx does this routing, so `environment.prod.ts` lists none. API base: `environment.baseUrl`.
+  - **Live updates switch:** `environment.realtime` (`'node'` = Socket.IO, `'django'` = the Django `/ws/` WebSocket) picks the transport behind `RealtimeService` (`core/services/realtime-transport.ts`). Move it with `/auth`: the socket signs in with the same access token.
   - Pass `context: publicRequest()` on public catalogue calls so the SSR HTTP transfer cache can reuse them.
 - **Live data:**
   - `core/services/realtime.service.ts` owns the socket: it connects while signed in, refreshes the token on handshake failure, and exposes `orderUpdates$`, `track(orderId)` and `sendRiderLocation()`.

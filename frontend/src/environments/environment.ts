@@ -7,6 +7,9 @@ export const environment = {
   djangoUrl: 'http://localhost:8000/api/v1',
   // djangoUrl: 'http://192.168.0.12:8000/api/v1',
   djangoRoutes: ['/health'] as string[],
+  // Live updates: 'node' (Socket.IO on baseUrl) or 'django' (WebSocket at djangoUrl's /ws/).
+  // Switch together with /auth: the socket signs in with the same access token.
+  realtime: 'node' as 'node' | 'django',
 
   map: {
     tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',

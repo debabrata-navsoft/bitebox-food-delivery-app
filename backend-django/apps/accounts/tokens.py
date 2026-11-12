@@ -49,6 +49,7 @@ def sign_access_token(user: "User") -> str:
 class AccessClaims:
     user_id: str
     token_version: int
+    expires_at: int = 0  # Unix seconds (the socket closes when the token it opened with expires)
 
 
 class TokenExpired(Exception):
@@ -76,4 +77,6 @@ def verify_access_token(token: str) -> AccessClaims:
     tv = payload.get("tv", 0)
     if not isinstance(tv, int):
         raise TokenInvalid
-    return AccessClaims(user_id=str(payload["sub"]), token_version=tv)
+    return AccessClaims(
+        user_id=str(payload["sub"]), token_version=tv, expires_at=int(payload["exp"])
+    )

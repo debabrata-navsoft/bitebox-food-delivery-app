@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -58,9 +59,13 @@ async def test_no_auth_frame_times_out(monkeypatch: pytest.MonkeyPatch) -> None:
 
 async def test_valid_token_is_ready(monkeypatch: pytest.MonkeyPatch) -> None:
     async def accept_all(token: Any) -> object:
-        return object()
+        return SimpleNamespace(pk="u1", role="customer"), 0
 
-    monkeypatch.setattr(consumers, "user_from_token", accept_all)
+    async def no_groups(user: Any) -> list[str]:
+        return []
+
+    monkeypatch.setattr(consumers, "session_from_token", accept_all)
+    monkeypatch.setattr(consumers, "initial_groups", no_groups)
     ws = await connect()
     await ws.send_json_to({"type": "auth", "token": "t"})
     assert (await ws.receive_json_from())["type"] == "ready"

@@ -72,19 +72,14 @@ def set_account_status(
 
 
 def _take_rider_offline(user: User) -> None:
-    profile = DeliveryPartner.objects.select_for_update().filter(user=user).first()
-    if profile is None:
-        return
-    if profile.active_order_id:
-        raise ApiError(
-            409,
-            "This rider is carrying an order. Unassign or finish it first.",
-            code="DELIVERY_IN_PROGRESS",
-        )
-    # An open offer simply lapses; dispatch (Phase 7) offers the order to the next rider.
-    profile.is_online = False
-    profile.current_offer = None
-    profile.save(update_fields=["is_online", "current_offer", "updated_at"])
+    """Same rule as the riders page: never mid-delivery; an open offer goes to the next rider."""
+    from apps.delivery.services import take_offline
+
+    take_offline(
+        user,
+        DeliveryPartner.objects.filter(user=user).first(),
+        "This rider is carrying an order. Unassign or finish it first.",
+    )
 
 
 def get_staff(user_id: uuid.UUID) -> User:

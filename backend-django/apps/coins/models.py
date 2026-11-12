@@ -513,9 +513,10 @@ class RewardClaim(BaseModel):
 
 class RewardConfiguration(BaseModel):
     """
-    The programme settings, one row (`key="global"`). `value` has the same nested camelCase shape
-    as the Node document (earning, redemption, expiry, referral, birthday, welcome); it is validated
-    by a serializer on write (Phase 9), and missing values fall back to the defaults in code.
+    The programme settings, one row (`key="global"`). `value` holds the nested settings in
+    snake_case (earning, redemption, expiry, referral, birthday, welcome; the API shows them in
+    camelCase); missing values fall back to the defaults in apps/coins/quote.py. Validated by a
+    serializer on write (Phase 9).
     """
 
     key = models.CharField(max_length=20, unique=True, default="global", editable=False)

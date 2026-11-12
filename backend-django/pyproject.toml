@@ -44,7 +44,7 @@ disallow_untyped_defs = true
 exclude = ["\\.venv/", "/migrations/", "/tests/"]
 
 [[tool.mypy.overrides]]
-module = ["environ.*", "djangorestframework_camel_case.*", "channels.*", "channels_redis.*", "drf_spectacular.*", "corsheaders.*"]
+module = ["environ.*", "djangorestframework_camel_case.*", "channels.*", "channels_redis.*", "drf_spectacular.*", "corsheaders.*", "cloudinary", "cloudinary.*"]
 ignore_missing_imports = true
 
 [tool.django-stubs]

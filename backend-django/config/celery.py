@@ -13,4 +13,11 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.development")
 app = Celery("bitebox")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
-app.conf.beat_schedule = {}
+app.conf.beat_schedule = {
+    # Expire rider offers, re-dispatch waiting orders, apply the order timeouts.
+    "dispatch-sweep": {
+        "task": "dispatch.sweep",
+        "schedule": 15.0,  # apps/dispatch/config.py DISPATCH["sweep_interval_seconds"]
+        "options": {"expires": 14},  # a backlog never runs stale sweeps
+    },
+}

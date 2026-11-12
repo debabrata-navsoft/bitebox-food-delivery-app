@@ -23,7 +23,7 @@ from django.db import models
 from django.db.backends.base.base import BaseDatabaseWrapper
 
 SRID = 4326
-EARTH_RADIUS_M = 6_371_008.8
+EARTH_RADIUS_M = 6_371_000  # same as the Node API (utils/geo.js)
 _EWKT = re.compile(r"^(?:SRID=4326;)?POINT\(\s*(-?[\d.eE+-]+)\s+(-?[\d.eE+-]+)\s*\)$")
 
 
@@ -67,12 +67,12 @@ def parse_point(value: str | bytes | memoryview) -> GeoPoint:
     return GeoPoint(lat=lat, lng=lng)
 
 
-def haversine_m(a: GeoPoint, b: GeoPoint) -> float:
-    """Straight-line distance in metres (same formula as the Node API's utils/geo.js)."""
+def haversine_m(a: GeoPoint, b: GeoPoint) -> int:
+    """Straight-line distance in whole metres (same formula and rounding as utils/geo.js)."""
     p1, p2 = math.radians(a.lat), math.radians(b.lat)
     dp, dl = p2 - p1, math.radians(b.lng - a.lng)
     h = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
-    return 2 * EARTH_RADIUS_M * math.asin(math.sqrt(h))
+    return round(2 * EARTH_RADIUS_M * math.asin(math.sqrt(h)))
 
 
 class PointField(models.Field):

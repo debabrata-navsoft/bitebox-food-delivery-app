@@ -2,9 +2,9 @@
 
 The Django + DRF + Channels + Celery backend that replaces the Node API in `../backend`, phase by phase. The plan, decisions and data model are in [`docs/django-migration/`](../docs/django-migration/README.md). Until the switch-over, the Node API remains the one the web app uses.
 
-**Status: Phase 5 (sign-in and permissions).**
-- **Built:** settings per environment, the response envelope and error contract, pagination, role and permission classes, health endpoints, OpenAPI, the WebSocket endpoint (with no sign-in yet), Celery, Docker files and CI. Also the full parity schema (45 tables in 17 apps, see [03 §3.5](../docs/django-migration/03-data-model.md#35-phase-4-implementation-notes-what-changed-from-the-plan-above)) and `manage.py seed`.
-- **Not yet:** business endpoints, which start with sign-in in Phase 5.
+**Status: Phase 7 (orders, dispatch, realtime).**
+- **Built:** the skeleton (settings, envelope and errors, pagination, permissions, health, OpenAPI, Celery, Docker, CI), the parity schema (45 tables, see [03 §3.5](../docs/django-migration/03-data-model.md#35-phase-4-implementation-notes-what-changed-from-the-plan-above)), sign-in and admin accounts, the catalogue and cart, and orders: placing them, the status workflow, dispatch to riders, the sweep (Celery Beat) and live updates over `/ws/`.
+- **Not yet:** online payments (Phase 8; cash on delivery works), coins, reviews, notifications inbox and push.
 
 ## Quick start (without Docker)
 
@@ -90,7 +90,30 @@ This creates the same fictional accounts as the Node seed (`admin@`, `customer@`
 | GET | `/api/v1/admin/users` · PATCH `/admin/users/{id}/status` | Members (`users:manage`) |
 | GET, POST | `/api/v1/admin/admins` · GET, PATCH `/admin/admins/{id}` · PATCH `/admin/admins/{id}/status` | Staff admins (`admins:manage`) |
 | GET | `/api/v1/admin/audit-logs` | Audit log (`audit:view`) |
-| WS | `/ws/` | Realtime socket. The first frame must be `{"type":"auth","token":"<access token>"}` within 5 s, otherwise it closes with 4401. `{"type":"ping"}` gets a pong. |
+| GET | `/api/v1/restaurants`, `/restaurants/cuisines`, `/restaurants/{slugOrId}`, `/restaurants/{slugOrId}/menu`, `/categories`, `/foods`, `/foods/{id}` | Public catalogue (CDN-cacheable for 60 s) |
+| GET, POST, PATCH | `/api/v1/my/restaurant` · PATCH `/my/restaurant/accepting-orders` · `/my/restaurant/foods[/{id}[/availability]]` | Partner restaurant and menu |
+| GET, PATCH | `/api/v1/admin/restaurants[/counts\|/{id}[/status]]` · `/admin/categories[/{id}]` · `/admin/foods[/{id}[/availability]]` · `/admin/coupons[/{id}]` | Admin catalogue and coupons |
+| POST | `/api/v1/uploads/images` (partner, admin), `/uploads/review-images` (customer) | Image upload (bytes checked; 2 MB) |
+| GET | `/api/v1/geo/search`, `/geo/reverse`, `/geo/route` (signed in) | Place search and road routes (cached, rate limited) |
+| GET, DELETE, POST, PATCH, PUT | `/api/v1/cart`, `/cart/items[/{foodItemId}]`, `/cart/coupon`, `/cart/coins` | The cart; every change returns the server-priced quote |
+| GET, POST, PATCH, DELETE | `/api/v1/addresses[/{id}[/default]]` · GET `/coupons/available` | Saved addresses and coupons on offer |
+| GET, POST | `/api/v1/orders` · GET `/orders/{id}` · POST `/orders/{id}/cancel` | Customer: place (`Idempotency-Key` header; cash on delivery), list, read, cancel before acceptance |
+| GET, PATCH | `/api/v1/my/restaurant/orders[?view=active\|history]` · `/my/restaurant/orders/{id}[/status]` | Partner order board: accept, reject (reason), preparing, ready (dispatches a rider) |
+| GET, PUT, PATCH, POST | `/api/v1/delivery/me[/vehicle\|/availability\|/location]` · `/delivery/offers/{id}/accept\|decline` · `/delivery/orders/{id}/status` · `/delivery/orders/history` | Rider app; actions answer with the fresh dashboard |
+| GET, POST | `/api/v1/admin/orders[/{id}[/cancel\|/unassign]]` · `/admin/delivery-partners[/{id}/status]` | Order monitoring (`orders:view`/`orders:manage`), riders (`riders:manage`); changes are audited |
+| WS | `/ws/` | Realtime socket (protocol below) |
+
+### The `/ws/` protocol
+
+- **Sign-in:** the first frame must be `{"type":"auth","token":"<access token>"}` within 5 s; a missing, bad or (later) expired token closes the socket with 4401, and the client refreshes and reconnects. `{"type":"ping"}` gets a pong.
+- **Rooms** come only from the server-side identity: `user.<id>`, `restaurant.<id>` (the owner's restaurant) and `admins` (roles with `orders:view`), plus `order.<id>` after `track:join` passes a database check.
+- **Requests with an answer** carry an `id`; the server replies `{"type":"ack","id","data"}`: `track:join` / `track:leave` `{orderId}`, and `rider:location` `{latitude, longitude, accuracy?}` (riders only; rate limited, imprecise or impossible jumps refused, stored at most every 5 s, broadcast to the active order's room).
+- **Server events:** `{"type":"order:updated"|"order:location"|"notification:new","data"}`. Order events carry ids and statuses only; clients re-read over REST. Everything is sent after the database commit (`apps/realtime/events.py`).
+
+### Orders and dispatch
+
+- `apps/orders/workflow.py#transition` is the only place an order's status changes: a conditional update ("still in status X"), 409 `ORDER_CHANGED` for the loser of a race, a no-op for a repeat. Side effects (coupon release, payment, freeing the rider, the settlement split on delivery) run in savepoints and never undo the move.
+- `apps/dispatch/services.py`: nearest free rider by PostGIS within 10 km, 500 m bands then longest idle; one offer at a time (`DeliveryAssignment`, one live row per order), compare-and-set locks on `DeliveryPartner.current_offer`/`active_order`. `sweep(now)` runs every 15 s from Celery Beat (`dispatch.sweep`): expires offers (that rider goes offline), re-dispatches, auto-rejects after 10 min, cancels unpaid online orders after 15 min and unpicked orders after 30 min. Tunables: `apps/dispatch/config.py`.
 
 ## Conventions (same contract as the Node API)
 
@@ -108,7 +131,7 @@ This creates the same fictional accounts as the Node seed (`admin@`, `customer@`
 
 ## Tests and databases
 
-- `pytest` uses `config.settings.test`, which never touches a real database.
+- `pytest` uses `config.settings.test`, which never touches a real database. **It requires `TEST_DATABASE_URL`** (PostgreSQL + PostGIS): the catalogue uses PostGIS and JSON operators SQLite doesn't have.
 - With `TEST_DATABASE_URL` set, the database name **must end in `_test`**, or the run refuses to start. Without it, tests use in-memory SQLite.
 - Redis, Celery (eager) and Channels (in-memory layer) run in-process.
 - CI runs the suite against real PostGIS and Redis service containers (`.github/workflows/ci.yml`, job `backend-django`).

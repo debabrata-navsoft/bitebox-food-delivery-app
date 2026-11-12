@@ -55,6 +55,8 @@ INSTALLED_APPS = [
     "apps.audit",
     "apps.coins",
     "apps.newsletter",
+    "apps.uploads",
+    "apps.geo",
 ]
 
 # Argon2id first; bcrypt only verifies hashes imported from the Node API (re-hashed on next login).
@@ -203,6 +205,36 @@ EMAIL_BACKEND = (
     else "django.core.mail.backends.console.EmailBackend"
 )
 
+# Uploaded images: Cloudinary when all three keys are set, otherwise local disk under UPLOAD_DIR,
+# served at PUBLIC_BASE_URL/uploads/images/<random name> (Node: services/upload.service.js).
+PUBLIC_BASE_URL = env.str("PUBLIC_BASE_URL", default="http://localhost:8000").rstrip("/")
+UPLOAD_DIR = Path(env.str("UPLOAD_DIR", default=str(BASE_DIR / "uploads")))
+MAX_IMAGE_BYTES = 2 * 1024 * 1024
+CLOUDINARY_CLOUD_NAME = env.str("CLOUDINARY_CLOUD_NAME", default="")
+CLOUDINARY_API_KEY = env.str("CLOUDINARY_API_KEY", default="")
+CLOUDINARY_API_SECRET = env.str("CLOUDINARY_API_SECRET", default="")
+CLOUDINARY_FOLDER = env.str("CLOUDINARY_FOLDER", default="bitebox")
+IMAGE_UPLOAD_RATE_LIMIT = env.str("IMAGE_UPLOAD_RATE_LIMIT", default="60/3600s")
+REVIEW_IMAGE_UPLOAD_RATE_LIMIT = env.str("REVIEW_IMAGE_UPLOAD_RATE_LIMIT", default="30/3600s")
+# Files bigger than this are rejected before they are fully read into memory.
+FILE_UPLOAD_MAX_MEMORY_SIZE = MAX_IMAGE_BYTES + 64 * 1024
+
+# Free map services (Node: GEOCODER_URL, ROUTING_URL...). Their usage policies ask for an
+# identifying User-Agent and about one request per second; self-host them for real traffic.
+GEOCODER_URL = env.str("GEOCODER_URL", default="https://nominatim.openstreetmap.org")
+# An empty value in .env (as .env.example ships it) falls back to the default.
+GEOCODER_USER_AGENT = env.str("GEOCODER_USER_AGENT", default="") or (
+    "BiteBoxApp/1.0 (BiteBox Food Delivery Platform; contact: support@bitebox.local)"
+)
+GEOCODER_COUNTRY_CODES = env.str("GEOCODER_COUNTRY_CODES", default="in")
+ROUTING_URL = env.str("ROUTING_URL", default="https://router.project-osrm.org")
+ROUTING_PROFILE = env.str("ROUTING_PROFILE", default="driving")
+UPSTREAM_MIN_GAP_SECONDS = 1.1
+GEO_RATE_LIMIT = env.str("GEO_RATE_LIMIT", default="30/60s")
+COUPON_RATE_LIMIT = env.str("COUPON_RATE_LIMIT", default="30/900s")
+ORDER_RATE_LIMIT = env.str("ORDER_RATE_LIMIT", default="10/60s")
+LOCATION_RATE_LIMIT = env.str("LOCATION_RATE_LIMIT", default="30/60s")
+
 # Rate-limit counters. Production uses Redis so every API instance shares them.
 CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 
@@ -228,7 +260,8 @@ REST_FRAMEWORK = {
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
 
-JSON_UNDERSCOREIZE = {"no_underscore_before_number": True}
+# line1 stays line1 (not line_1) in both directions, like the Node field names.
+JSON_CAMEL_CASE = {"JSON_UNDERSCOREIZE": {"no_underscore_before_number": True}}
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "BiteBox API",
