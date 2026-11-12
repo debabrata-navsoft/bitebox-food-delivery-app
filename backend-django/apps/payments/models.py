@@ -1,7 +1,8 @@
 """
 Payments (Node: the Payment model in models/order.model.js). Only payments.service changes payment
 state. Webhook events are stored once each, which makes replays harmless; refunds are rows of their
-own so an order can be refunded in parts (release 1 adds partial refunds).
+own so an order can be refunded in parts. `refunded_paise` counts refunds that are done or
+under way, so the CHECK below stops two refunds from returning more than was paid.
 """
 
 from django.conf import settings
@@ -28,7 +29,7 @@ class Payment(BaseModel):
     refunded_paise = models.BigIntegerField(default=0)
     currency = models.CharField(max_length=3, default="INR")
     status = models.CharField(
-        max_length=12, choices=PaymentStatus.choices, default=PaymentStatus.PENDING
+        max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.PENDING
     )
     provider_order_id = models.CharField(max_length=100, null=True, blank=True)
     provider_payment_id = models.CharField(max_length=100, null=True, blank=True)

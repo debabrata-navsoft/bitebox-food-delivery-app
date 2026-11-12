@@ -33,6 +33,7 @@ import {
   adminDeliveryPartnersRouter,
   adminOrdersRouter,
   adminPaymentsRouter,
+  adminRefundsRouter,
   adminReportsRouter,
 } from "./routes/admin-orders.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
@@ -56,7 +57,10 @@ import { adminRewardsRouter } from "./routes/admin-rewards.routes.js";
 import { newsletterRouter } from "./routes/newsletter.routes.js";
 import { adminPushRouter, pushRouter } from "./routes/push.routes.js";
 import { adminFinanceRouter } from "./routes/admin-finance.routes.js";
-import { adminOperationsRouter } from "./routes/admin-operations.routes.js";
+import {
+  adminDashboardRouter,
+  adminOperationsRouter,
+} from "./routes/admin-operations.routes.js";
 import { adminAuditRouter, adminStaffRouter } from "./routes/admin-staff.routes.js";
 import { adminSupportRouter, supportRouter } from "./routes/support.routes.js";
 
@@ -129,11 +133,13 @@ export function createApp(options = {}) {
   app.use("/api/v1/admin/orders", adminOrdersRouter);
   app.use("/api/v1/admin/delivery-partners", adminDeliveryPartnersRouter);
   app.use("/api/v1/admin/payments", adminPaymentsRouter);
+  app.use("/api/v1/admin/refunds", adminRefundsRouter);
   app.use("/api/v1/admin/reports", adminReportsRouter);
   app.use("/api/v1/admin/reviews", adminReviewsRouter);
   app.use("/api/v1/admin/admins", adminStaffRouter);
   app.use("/api/v1/admin/audit-logs", adminAuditRouter);
   app.use("/api/v1/admin/operations", adminOperationsRouter);
+  app.use("/api/v1/admin/dashboard", adminDashboardRouter);
   app.use("/api/v1/admin/finance", adminFinanceRouter);
   app.use("/api/v1/admin/support", adminSupportRouter);
   app.use("/api/v1/admin/rewards", adminRewardsRouter);

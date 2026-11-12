@@ -115,6 +115,12 @@ export const env = Object.freeze({
 
   reportTimezone: process.env.REPORT_TIMEZONE || "Asia/Kolkata",
 
+  // Delivery OTP: a 4-digit code made at pickup, shown to the customer, needed to mark delivered.
+  deliveryOtp: {
+    required: process.env.DELIVERY_OTP_REQUIRED !== "false",
+    maxAttempts: Number(process.env.DELIVERY_OTP_MAX_ATTEMPTS) || 5,
+  },
+
   // Web Push (browser notifications). Push is on only when both VAPID keys are set; generate
   // them once with `npx web-push generate-vapid-keys`. The private key never leaves the API.
   // Tests never use real keys: they swap in a fake sender (services/push.service.js#usePushSender).

@@ -68,7 +68,10 @@
   }
 }
 
-.body.mat-mdc-dialog-content {
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   padding: var(--bb-space-4) var(--bb-space-5) var(--bb-space-2);
 }
 
@@ -142,7 +145,9 @@ h2 {
   padding: 8px var(--bb-space-3);
   border-radius: var(--bb-radius-sm);
   background: var(--bb-surface-alt);
-  font: 0.82rem ui-monospace, monospace;
+  font:
+    0.82rem ui-monospace,
+    monospace;
 }
 
 .gateway-foot {
@@ -155,8 +160,8 @@ h2 {
 
 .pay {
   width: 100%;
+  min-height: 48px;
   font-size: 1rem;
-  --mat-button-filled-container-height: 48px;
 }
 
 .fail {

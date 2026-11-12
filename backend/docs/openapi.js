@@ -246,6 +246,23 @@ export const openApiDocument = {
         },
       },
     },
+    "/health/live": {
+      get: {
+        tags: ["Health"],
+        summary: "Liveness probe: the process is running",
+        responses: { 200: ok({ type: "object", properties: { status: { type: "string" } } }) },
+      },
+    },
+    "/health/ready": {
+      get: {
+        tags: ["Health"],
+        summary: "Readiness probe: the database answers",
+        responses: {
+          200: ok({ type: "object", properties: { status: { type: "string" } } }),
+          503: { description: "Not ready" },
+        },
+      },
+    },
     "/auth/register": {
       post: {
         tags: ["Auth"],

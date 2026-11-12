@@ -5,6 +5,7 @@ from django.core.exceptions import ImproperlyConfigured
 from .base import *
 
 DEBUG = False
+PAYMENTS_MOCK_ENABLED = False  # simulated payments never run in production
 
 if len(SECRET_KEY) < 32:
     raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set (32+ characters)")

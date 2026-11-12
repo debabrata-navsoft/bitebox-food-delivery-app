@@ -368,7 +368,8 @@ def test_rejects_empty_carts_blocked_carts_and_other_peoples_addresses(w: World)
         "field": "paymentMethod",
         "message": "Choose a payment method",
     }
-    assert w.place(paymentMethod="online").status_code == 400  # online payments: Phase 8
+    # Online payment is checked the same way (the cart is still below the minimum).
+    assert w.place(paymentMethod="online").json()["error"]["code"] == "CHECKOUT_BLOCKED"
 
 
 def test_lists_only_the_customers_own_orders(w: World) -> None:

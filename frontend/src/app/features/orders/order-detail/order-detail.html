@@ -294,6 +294,19 @@
           @if (o.payment?.simulated) {
             <p class="bb-muted small simulated">Test payment: no real money was charged.</p>
           }
+          @if (o.payment?.refunds?.length) {
+            <ul class="refunds" aria-label="Refunds">
+              @for (r of o.payment!.refunds!; track r.id) {
+                <li>
+                  <span>
+                    Refund {{ r.amountPaise | inr }}
+                    <span class="bb-muted small">{{ r.reason }} · {{ r.createdAt | date: 'd MMM' }}</span>
+                  </span>
+                  <span class="bb-badge {{ tone(r.status) }}">{{ refundLabel[r.status] }}</span>
+                </li>
+              }
+            </ul>
+          }
         </section>
         @if (o.rider; as r) {
           <section class="bb-card rider" aria-labelledby="rider-title">

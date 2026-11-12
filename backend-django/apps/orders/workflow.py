@@ -74,7 +74,7 @@ TRANSITIONS: dict[str, dict[str, tuple[Actor, ...]]] = {
     S.READY_FOR_PICKUP: {S.ASSIGNED: (A.DELIVERY, A.ADMIN), S.CANCELLED: (A.ADMIN, A.SYSTEM)},
     S.ASSIGNED: {
         S.ARRIVED_AT_RESTAURANT: (A.DELIVERY,),
-        # Kept for riders' apps that skip the arrival step (the Node API has none).
+        # Arrival is optional: riders' apps without that step go straight to "picked up".
         S.PICKED_UP: (A.DELIVERY,),
         S.READY_FOR_PICKUP: (A.ADMIN,),
         S.CANCELLED: (A.ADMIN, A.SYSTEM),
@@ -278,22 +278,10 @@ def release_coupon(order: Order) -> None:
 
 
 def settle_cancelled_payment(order: Order) -> None:
-    """
-    An unpaid payment is cancelled. Refunding a paid online order belongs to the payments
-    service (Phase 8); until then no online order can be paid, so none needs a refund here.
-    """
-    if order.payment_status == PaymentStatus.PAID and order.payment_method == PaymentMethod.ONLINE:
-        logger.warning(
-            "Paid online order cancelled; refund pending", extra={"order": str(order.pk)}
-        )
-        return
-    unpaid = [PaymentStatus.PENDING, PaymentStatus.FAILED]
-    Payment.objects.filter(order=order, status__in=unpaid).update(
-        status=PaymentStatus.CANCELLED, updated_at=timezone.now()
-    )
-    Order.objects.filter(pk=order.pk, payment_status__in=unpaid).update(
-        payment_status=PaymentStatus.CANCELLED
-    )
+    """Refunds a paid online order, or closes the unpaid payment (apps/payments/services.py)."""
+    from apps.payments.services import settle_cancelled_payment as settle
+
+    settle(order)
 
 
 def release_rider(order: Order) -> None:

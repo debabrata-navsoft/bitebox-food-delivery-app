@@ -168,3 +168,32 @@ def notify_new_delivery_otp(order: Order) -> None:
         f"Your new code is {order.delivery_otp}. Share it with the rider at your door.",
         "order.delivery_code",
     )
+
+
+def notify_refund(order: Order, amount_paise: int, ok: bool) -> None:
+    """A refund went through (customer and finance told) or failed (finance retries it)."""
+    link = "/admin/payments"
+    if not ok:
+        notify_admins(
+            Permission.REFUNDS_MANAGE,
+            type="payment.refund_failed",
+            title=f"Refund failed for {order.order_number}",
+            body=f"{rupees(amount_paise)} could not be refunded. Retry it from Payments.",
+            link=link,
+            order=order,
+        )
+        return
+    _to_customer(
+        order,
+        f"Refund of {rupees(amount_paise)} processed",
+        f"For {_ref(order)}. It reaches your account in a few working days.",
+        "payment.refunded",
+    )
+    notify_admins(
+        Permission.REFUNDS_MANAGE,
+        type="payment.refunded",
+        title=f"Refunded {order.order_number}",
+        body=rupees(amount_paise),
+        link=link,
+        order=order,
+    )

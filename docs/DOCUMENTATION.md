@@ -509,14 +509,19 @@ The cart page lists anything that blocks checkout: unavailable dishes, a closed 
 | Pending | Cancelled | Customer, admin |
 | Confirmed | Preparing | Restaurant |
 | Preparing | Ready for pickup | Restaurant. This starts dispatch. |
-| Ready for pickup | Assigned | Rider accepting an offer |
-| Assigned | Picked up | Rider |
-| Assigned | Ready for pickup | Admin "unassign", which re-dispatches the order |
+| Ready for pickup | Assigned | Rider accepting an offer, or an admin assigning a chosen rider |
+| Assigned | Arrived at restaurant | Rider (optional step; the restaurant is told) |
+| Assigned, Arrived at restaurant | Picked up | Rider. A 4-digit delivery code is made for the customer. |
+| Assigned, Arrived at restaurant | Ready for pickup | Admin "unassign", which re-dispatches the order |
 | Picked up | On the way | Rider |
-| On the way | Delivered | Rider. Cash on delivery is marked paid. |
+| On the way | Delivered | Rider, with the customer's delivery code. Cash on delivery is marked paid. |
 | Confirmed, Preparing, Ready, Assigned | Cancelled | Admin (reason required) |
 
 - **No cancelling after pickup:** nobody can cancel an order once it has been picked up.
+- **Preparation time:** accepting takes `prepMinutes` (5–120; default the restaurant's usual time) and sets `readyBy`, which the customer sees.
+- **Delivery code:** made at pickup (`DELIVERY_OTP_REQUIRED`, on by default). Only the customer sees it (`deliveryOtp`); the rider sees `deliveryOtpRequired` and sends `otp` with "delivered". After `DELIVERY_OTP_MAX_ATTEMPTS` wrong tries (default 5) the order is locked (`409 OTP_LOCKED`) until support sends a new code (`POST /admin/orders/{id}/delivery-code`).
+- **Rider app hints:** rider order views list `nextStatuses` and `estimatedEarningsPaise`; offers add `pickupDistanceMeters` (straight line).
+- **Timeline:** `GET /orders/{id}/timeline` (and the admin one) lists each status change with a label and who made it.
 - **Final statuses:** rejected, cancelled and delivered.
 - **Concurrent changes:** each transition is a conditional update ("only if still in status X"). The loser of a race gets `409 ORDER_CHANGED`, and repeating a move that already happened is a no-op.
 - **Side effects:** these run in `afterTransition` and each one is idempotent:
@@ -576,6 +581,10 @@ Other cases:
 - **Abandon:** closing or failing the payment page (`/abandon`) cancels the attempt, puts the dishes back in the cart and hides the attempt from "My orders".
 - **Retry:** `POST /payments/orders/:id/start` reuses or creates the gateway order ("Pay ₹…" on the order page).
 - **Refunds:** cancelling or rejecting a paid online order refunds it automatically, as does a payment that arrives after expiry. A failed refund shows **Retry refund** on the admin Payments page.
+- **Refund records:** each refund is a `Refund` document (`pending → processing → processed | failed`; cash refunds `manual_pending → manual_done`). Opening one reserves its amount on `payment.refundedPaise`, so two refunds can never return more than was paid. Finance can refund any amount up to what is left (`POST /admin/payments/{id}/refunds`, with an optional `Idempotency-Key`); the payment becomes `partially_refunded` or `refunded`. Cash refunds are paid by hand and marked with `POST /admin/refunds/{id}/paid`.
+- **Refund status:** Razorpay `refund.processed` / `refund.failed` webhooks settle refunds the bank confirms later.
+- **Reconciliation:** every 5 minutes the API checks unpaid online payments the gateway reports as captured, refunds whose gateway call never finished, and refunds still waiting for the bank.
+- **History:** customers see their payments and refunds at `GET /payments/mine` (the account menu's **Payments** page).
 
 ### 10.7 Earnings, settlement, payouts and reports
 
@@ -799,6 +808,7 @@ The service worker only runs in **production builds** (`npm run build`, then `np
 | Method | Path | Access | Purpose |
 |---|---|---|---|
 | GET | `/health` | public | API and database health |
+| GET | `/health/live`, `/health/ready` | public | Liveness and readiness probes |
 | POST | `/auth/register` | public, rate limited | Register a customer, restaurant or rider (optional `referralCode`) |
 | POST | `/auth/login` | public, rate limited | Sign in. Returns the access token and sets the refresh cookie. |
 | POST | `/auth/refresh` | refresh cookie + `X-Requested-With: BiteBox` | Rotate the refresh token, get a new access token |
@@ -860,7 +870,8 @@ The service worker only runs in **production builds** (`npm run build`, then `np
 | PATCH | `/addresses/{id}/default` | Make default |
 | GET | `/coupons/available` | Coupons on offer |
 | POST | `/orders` | Place an order (`Idempotency-Key` header, `expectedTotalPaise`, `paymentMethod`) |
-| GET | `/orders`, `/orders/{id}` | My orders / one order (with the rider once assigned) |
+| GET | `/orders`, `/orders/{id}` | My orders / one order (with the rider once assigned, the delivery code, refunds) |
+| GET | `/orders/{id}/timeline` | My order's status changes |
 | POST | `/orders/{id}/cancel` | Cancel before the restaurant accepts |
 
 Admin coupons (`catalog:manage`): `GET/POST /admin/coupons`, `PATCH/DELETE /admin/coupons/{id}`.
@@ -871,16 +882,18 @@ Admin coupons (`catalog:manage`): `GET/POST /admin/coupons`, `PATCH/DELETE /admi
 |---|---|---|---|
 | GET | `/my/restaurant/orders` | restaurant | `?view=active\|history` |
 | GET | `/my/restaurant/orders/{id}` | restaurant | One order (no customer phone or exact address) |
-| PATCH | `/my/restaurant/orders/{id}/status` | restaurant | Accept, reject, preparing, ready |
+| PATCH | `/my/restaurant/orders/{id}/status` | restaurant | Accept (`prepMinutes`), reject, preparing, ready |
+| GET | `/my/restaurant/stats` | restaurant | Dashboard figures (orders, today, sales, average order, rating) |
 | GET | `/my/restaurant/earnings` | restaurant | Earnings (`?days=`) |
 | GET | `/delivery/me` | rider | Profile, current offer, active delivery |
 | PUT | `/delivery/me/vehicle` | rider | Vehicle (needed before going online) |
 | PATCH | `/delivery/me/availability` | rider | Online (with location) / offline |
 | PUT | `/delivery/me/location` | rider, rate limited | Report position |
 | POST | `/delivery/offers/{id}/accept`, `/decline` | rider | Answer an offer |
-| PATCH | `/delivery/orders/{id}/status` | rider | Picked up → on the way → delivered |
+| PATCH | `/delivery/orders/{id}/status` | rider | Arrived → picked up → on the way → delivered (with `otp`) |
 | GET | `/delivery/orders/history` | rider | Finished deliveries |
 | GET | `/delivery/earnings` | rider | Earnings (`?days=`) |
+| GET | `/delivery/stats` | rider | Today, this week and all-time deliveries and earnings, rating |
 
 ### Admin: orders, riders, payments, reports
 
@@ -889,10 +902,18 @@ Admin coupons (`catalog:manage`): `GET/POST /admin/coupons`, `PATCH/DELETE /admi
 | GET | `/admin/orders`, `/admin/orders/{id}` | `orders:view` | Orders with counts / one order with rider and offer |
 | POST | `/admin/orders/{id}/cancel` | `orders:manage` | Cancel (not after pickup) |
 | POST | `/admin/orders/{id}/unassign` | `orders:manage` | Take back from the rider and re-dispatch |
+| POST | `/admin/orders/{id}/assign` | `orders:manage` | Give a ready order to a chosen online rider |
+| POST | `/admin/orders/{id}/delivery-code` | `orders:manage` | Send the customer a new delivery code |
+| GET | `/admin/orders/{id}/timeline` | `orders:view` | Status changes with labels |
+| GET | `/admin/dashboard` | any admin role | Platform figures (money with `finance:view`) |
+| GET | `/admin/users/{id}/logins`, `/admin/admins/{id}/logins` | `users:manage` / `admins:manage` | Sign-in history |
 | GET | `/admin/delivery-partners` | `riders:manage` | Riders with availability |
 | PATCH | `/admin/delivery-partners/{id}/status` | `riders:manage` | Suspend or reactivate (not while carrying an order) |
 | GET | `/admin/payments` | `finance:view` | All payments (search by order number or customer) |
 | POST | `/admin/payments/{id}/refund` | `refunds:manage` | Retry a failed refund |
+| GET | `/admin/payments/{id}` | `finance:view` | One payment with refunds and gateway events |
+| POST | `/admin/payments/{id}/refunds` | `refunds:manage` | Full or partial refund |
+| POST | `/admin/refunds/{id}/paid` | `refunds:manage` | Mark a cash refund as paid |
 | GET | `/admin/reports` | `finance:view` | Platform analytics (`?days=`) |
 
 ### Payments
@@ -900,6 +921,7 @@ Admin coupons (`catalog:manage`): `GET/POST /admin/coupons`, `PATCH/DELETE /admi
 | Method | Path | Access | Purpose |
 |---|---|---|---|
 | GET | `/payments/methods` | public | Methods offered at checkout |
+| GET | `/payments/mine` | customer | My payments and refunds |
 | POST | `/payments/orders/{orderId}/start` | customer | Create or reuse the gateway order |
 | POST | `/payments/orders/{orderId}/confirm` | customer | Confirm Razorpay (signature and amount verified) |
 | POST | `/payments/orders/{orderId}/abandon` | customer | Cancel the unpaid order, restore the cart |

@@ -184,6 +184,7 @@ def payment_view(payment: Payment) -> dict[str, Any]:
         "provider": payment.provider,
         "simulated": payment.provider == "mock",
         "amount_paise": payment.amount_paise,
+        "refunded_paise": payment.refunded_paise,
         "paid_at": payment.paid_at,
         "refunded_at": payment.refunded_at,
         "failure_reason": payment.failure_reason or None,
@@ -233,6 +234,18 @@ def present_with_rider(order: Order, *, for_customer: bool = False) -> dict[str,
     payment = payment_of(order)
     data["rider"] = rider_card(order.delivery_partner_id)
     data["payment"] = payment_view(payment) if payment else None
+    if payment is not None:
+        data["payment"]["refunds"] = [
+            {
+                "id": str(r.pk),
+                "amount_paise": r.amount_paise,
+                "status": r.status,
+                "reason": r.reason or None,
+                "created_at": r.created_at,
+                "processed_at": r.processed_at,
+            }
+            for r in payment.refunds.order_by("created_at")
+        ]
     otp_pending = bool(order.delivery_otp) and order.status in (S.PICKED_UP, S.ON_THE_WAY)
     if for_customer:
         data["delivery_otp"] = order.delivery_otp if otp_pending else None

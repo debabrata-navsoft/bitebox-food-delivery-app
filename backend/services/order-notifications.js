@@ -160,12 +160,20 @@ export async function notifyStatusChange(order, actor, previous) {
           "Keep the order ready for pickup.",
         ),
       ]);
+    case S.ARRIVED_AT_RESTAURANT:
+      return toRestaurant(
+        order,
+        `Rider has arrived for ${r}`,
+        "Hand the order to the rider.",
+      );
     case S.PICKED_UP:
       return Promise.all([
         toCustomer(
           order,
           `${r} picked up`,
-          "Your rider has collected your food from the restaurant.",
+          order.deliveryOtp
+            ? `Your rider has collected your food. Your delivery code is ${order.deliveryOtp}: share it with the rider only when you have your order.`
+            : "Your rider has collected your food from the restaurant.",
         ),
         toRestaurant(order, `${r} picked up`, "The rider has collected it."),
       ]);
@@ -230,3 +238,12 @@ export async function notifyStatusChange(order, actor, previous) {
       return undefined;
   }
 }
+
+/** Support reset the delivery code (the rider ran out of tries). */
+export const notifyNewDeliveryOtp = (order) =>
+  toCustomer(
+    order,
+    `New delivery code for ${ref(order)}`,
+    `Your new code is ${order.deliveryOtp}. Share it with the rider at your door.`,
+    "order.delivery_code",
+  );

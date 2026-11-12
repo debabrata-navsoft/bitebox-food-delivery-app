@@ -20,4 +20,10 @@ app.conf.beat_schedule = {
         "schedule": 15.0,  # apps/dispatch/config.py DISPATCH["sweep_interval_seconds"]
         "options": {"expires": 14},  # a backlog never runs stale sweeps
     },
+    # Payments and refunds the browser and the webhooks missed (apps/payments/services.py).
+    "payments-reconcile": {
+        "task": "payments.reconcile",
+        "schedule": 300.0,
+        "options": {"expires": 290},
+    },
 }

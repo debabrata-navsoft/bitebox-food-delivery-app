@@ -121,7 +121,8 @@
   color: var(--bb-warning-ink);
 
   &.pay-paid,
-  &.pay-refunded {
+  &.pay-refunded,
+  &.pay-partially_refunded {
     background: var(--bb-success-bg);
     color: var(--bb-success);
   }

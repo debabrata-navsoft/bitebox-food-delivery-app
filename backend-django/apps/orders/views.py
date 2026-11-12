@@ -14,6 +14,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.authentication import current_user
 from apps.audit.services import audited
+from apps.payments.services import start_payment
 from apps.rbac.roles import Permission, Role
 from common.api import ApiError, ok
 from common.fields import UUIDRef
@@ -142,9 +143,17 @@ class OrdersView(APIView):
     def post(self, request: Request) -> Response:
         key = _idempotency_key(request)
         data = validated(PlaceOrderInput, request.data)
-        order, created = services.place_order(current_user(request), data, key)
+        user = current_user(request)
+        order, created = services.place_order(user, data, key)
+        # Online: hand back the gateway checkout right away (the order page can retry "Pay now").
+        checkout = None
+        if order.payment_method == PaymentMethod.ONLINE and order.payment_status != "paid":
+            try:
+                checkout = start_payment(user, order.pk)
+            except ApiError:
+                checkout = None
         return ok(
-            {"order": order_json(order), "checkout": None},
+            {"order": order_json(order), "checkout": checkout},
             message="Order placed" if created else "Order already placed",
             status=201 if created else 200,
         )

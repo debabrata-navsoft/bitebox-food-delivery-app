@@ -134,7 +134,8 @@ export type OrderStatus =
   | 'delivered'
   | 'cancelled';
 
-export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled';
+export type PaymentStatus =
+  'pending' | 'paid' | 'failed' | 'refunded' | 'partially_refunded' | 'cancelled';
 
 export interface OrderItem {
   foodItem: string;

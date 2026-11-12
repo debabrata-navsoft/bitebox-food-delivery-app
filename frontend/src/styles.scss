@@ -685,7 +685,7 @@ np-menu.bb-menu-compact .menu.mi-panel {
 }
 
 // The simulated payment page: edge-to-edge header, clipped to the dialog's rounded corners.
-.bb-gateway-dialog .mat-mdc-dialog-surface {
+.bb-gateway-dialog .cdk-dialog-container {
   overflow: hidden;
 }
 

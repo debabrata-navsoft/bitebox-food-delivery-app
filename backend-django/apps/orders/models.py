@@ -54,6 +54,7 @@ class PaymentStatus(models.TextChoices):
     PAID = "paid"
     FAILED = "failed"
     REFUNDED = "refunded"
+    PARTIALLY_REFUNDED = "partially_refunded"  # decision D3
     CANCELLED = "cancelled"
 
 
@@ -101,7 +102,7 @@ class Order(BaseModel):
     status_changed_at = models.DateTimeField(auto_now_add=True)  # the sweeps time out from this
     payment_method = models.CharField(max_length=8, choices=PaymentMethod.choices)
     payment_status = models.CharField(
-        max_length=12, choices=PaymentStatus.choices, default=PaymentStatus.PENDING
+        max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.PENDING
     )
     # Null until an online order is paid: restaurants never see unpaid orders, and their
     # response timer starts here.

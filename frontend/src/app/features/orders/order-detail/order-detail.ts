@@ -44,7 +44,12 @@ import {
   awaitingPayment,
   customerStatusLabel,
 } from '../../../shared/models/checkout.models';
-import { PAYMENT_STATUS_LABEL, PROVIDER_LABEL } from '../../../shared/models/payment.models';
+import {
+  PAYMENT_STATUS_LABEL,
+  PROVIDER_LABEL,
+  REFUND_STATUS_LABEL,
+  paymentTone,
+} from '../../../shared/models/payment.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 
@@ -101,6 +106,8 @@ export class OrderDetail {
   protected readonly statusLabel = customerStatusLabel;
   protected readonly paymentLabel = PAYMENT_STATUS_LABEL;
   protected readonly providerLabel = PROVIDER_LABEL;
+  protected readonly refundLabel = REFUND_STATUS_LABEL;
+  protected readonly tone = paymentTone;
   protected readonly paying = signal(false);
   protected readonly awaitingPayment = computed(() => {
     const o = this.order();

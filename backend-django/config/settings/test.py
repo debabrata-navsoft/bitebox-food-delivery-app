@@ -30,6 +30,9 @@ COUPON_RATE_LIMIT = "1000/900s"
 ORDER_RATE_LIMIT = "1000/60s"
 LOCATION_RATE_LIMIT = "1000/60s"
 DEBUG = False
+# Tests choose their provider (apps/payments/providers.py#use_online_provider); never real keys.
+RAZORPAY_KEY_ID = RAZORPAY_KEY_SECRET = RAZORPAY_WEBHOOK_SECRET = ""
+PAYMENTS_MOCK_ENABLED = True
 ALLOWED_HOSTS = ["testserver", "localhost"]
 
 # From Phase 6 the catalogue uses PostGIS and JSON operators, so tests need PostgreSQL.

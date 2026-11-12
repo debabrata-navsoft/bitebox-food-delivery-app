@@ -20,7 +20,7 @@ from apps.coupons.models import Coupon, CouponRedemption
 from apps.coupons.services import assert_eligible
 from apps.customers.services import get_own
 from apps.menus.models import FoodItem
-from apps.payments.models import Payment, Provider
+from apps.payments.models import Payment
 from apps.restaurants.models import Restaurant
 from apps.restaurants.presenters import geo_json
 from apps.reviews.models import Review, ReviewStatus, ReviewTarget
@@ -59,13 +59,9 @@ def order_number(now: Any = None) -> str:
 
 
 def provider_for(method: str) -> str:
-    """
-    Cash on delivery only for now: the online providers (Razorpay, the simulated one) arrive with
-    the payments phase, and until then online payment answers like Node without a provider.
-    """
-    if method == PaymentMethod.COD:
-        return Provider.CASH_ON_DELIVERY
-    raise ApiError.bad_request("Online payment is not available right now")
+    from apps.payments.services import provider_for as for_method
+
+    return for_method(method)
 
 
 # ---------------------------------------------------------------------------
