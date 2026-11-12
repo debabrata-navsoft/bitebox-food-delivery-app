@@ -14,9 +14,14 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { FormRoot, TreeValidationResult, form, required } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { IconComponent, SelectOption, ToggleComponent } from 'nexprime';
+import { HttpErrorResponse } from '@angular/common/http';
+import {
+  ButtonComponent,
+  IconComponent,
+  ProgressBarComponent,
+  SelectOption,
+  ToggleComponent,
+} from 'nexprime';
 import { EMPTY, catchError, firstValueFrom, interval, of, switchMap } from 'rxjs';
 import { errorMessage, fieldErrors } from '../../../core/services/api-error';
 import {
@@ -33,6 +38,7 @@ import { TrackingMap } from '../../../shared/components/tracking-map/tracking-ma
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { OrderStatusChip } from '../../../shared/components/order-status-chip/order-status-chip';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
+import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
 import { serverErrors, shownError } from '../../../shared/forms/form-errors';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { VEHICLE_LABEL, VehicleType } from '../../../shared/models/checkout.models';
@@ -40,6 +46,7 @@ import {
   RiderAction,
   RiderDashboard,
   RiderOrder,
+  RiderStats,
 } from '../../../shared/models/order-management.models';
 import { ItemCountPipe } from '../../../shared/pipes/item-count.pipe';
 import { InrPipe, formatDistance } from '../../../shared/pipes/money.pipes';
@@ -76,10 +83,11 @@ const NEXT_STEP: Partial<
     FormRoot,
     NP_FORM_FIELDS,
     RouterLink,
-    MatButtonModule,
+    ButtonComponent,
     IconComponent,
     NpIconPipe,
-    MatProgressBarModule,
+    ProgressBarComponent,
+    StatTile,
     ToggleComponent,
     EmptyState,
     OrderStatusChip,
@@ -104,6 +112,9 @@ export class DeliveryDashboard {
   protected readonly acting = signal(false);
   protected readonly availabilityError = signal<string | null>(null);
   protected readonly now = signal(Date.now());
+  protected readonly stats = signal<RiderStats | null>(null);
+  /** The API has no /delivery/stats (the Node API; Django has it): hide the figures. */
+  protected readonly statsUnavailable = signal(false);
 
   protected readonly profile = computed(() => this.data()?.profile ?? null);
   protected readonly online = computed(() => this.profile()?.isOnline ?? false);
@@ -127,6 +138,23 @@ export class DeliveryDashboard {
     return step;
   });
   protected readonly vehicleLabel = VEHICLE_LABEL;
+
+  private readonly statsOnDelivery = effect(() => {
+    const completed = this.profile()?.completedDeliveries;
+    if (completed === undefined) return;
+    untracked(() => this.loadStats());
+  });
+
+  private loadStats(): void {
+    if (this.statsUnavailable()) return;
+    this.rider.stats().subscribe({
+      next: (stats) => this.stats.set(stats),
+      error: (err: unknown) => {
+        // 404: the Node API (no figures endpoint). Other errors: keep the last figures.
+        if (err instanceof HttpErrorResponse && err.status === 404) this.statsUnavailable.set(true);
+      },
+    });
+  }
 
   protected readonly stops = computed(() => {
     const o = this.active();

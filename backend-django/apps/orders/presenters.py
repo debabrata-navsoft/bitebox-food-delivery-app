@@ -16,6 +16,7 @@ from django.db.models import Prefetch, QuerySet
 from apps.delivery.models import DeliveryPartner
 from apps.dispatch.config import DISPATCH
 from apps.dispatch.models import AssignmentStatus, DeliveryAssignment
+from apps.finance.earnings import settlement_for
 from apps.payments.models import Payment
 
 from .models import Order, OrderCancellation, OrderStatus
@@ -258,5 +259,7 @@ def present_for_rider(order: Order, user_id: Any) -> dict[str, Any]:
     offer = open_offer(order)
     data["offer_expires_at"] = offer.expires_at if offer else None
     data["offer_window_seconds"] = DISPATCH["offer_timeout_seconds"]
+    # What the rider earns for this delivery (fixed by distance, before they accept).
+    data["estimated_earnings_paise"] = settlement_for(order)["rider_paise"]
     data.pop("cancellation", None)
     return data

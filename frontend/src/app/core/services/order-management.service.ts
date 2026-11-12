@@ -16,6 +16,7 @@ import {
   RiderDashboard,
   RiderOrder,
   RiderProfile,
+  RiderStats,
 } from '../../shared/models/order-management.models';
 import { toParams } from './http-params';
 
@@ -55,6 +56,11 @@ export class RiderService {
 
   dashboard(): Observable<RiderDashboard> {
     return this.http.get<ApiResponse<RiderDashboard>>(`${this.url}/me`).pipe(map((r) => r.data));
+  }
+
+  /** Today, this week and all-time figures (Django API only: the Node API answers 404). */
+  stats(): Observable<RiderStats> {
+    return this.http.get<ApiResponse<RiderStats>>(`${this.url}/stats`).pipe(map((r) => r.data));
   }
 
   saveVehicle(vehicleType: VehicleType, vehicleNumber: string): Observable<RiderProfile> {

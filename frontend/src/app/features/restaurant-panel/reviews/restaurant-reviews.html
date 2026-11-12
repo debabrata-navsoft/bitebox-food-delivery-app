@@ -111,7 +111,7 @@
       [rows]="list.data()!.pagination.limit"
       [totalRecords]="list.data()!.pagination.total"
       [rowsOptions]="[10, 20, 50]"
-      [showSummary]="true"
+      variant="compact"
       (pageChange)="list.goTo($event)"
       (rowsChange)="list.goTo(1, $event)"
     />

@@ -52,6 +52,18 @@ export interface RiderOrder extends Omit<Order, 'deliveryAddress' | 'rider' | 'c
   };
   offerExpiresAt: string | null;
   offerWindowSeconds: number;
+  /** What the delivery pays the rider (Django API; absent from the Node API). */
+  estimatedEarningsPaise?: number;
+  /** Straight-line metres from the rider's last GPS fix to the restaurant (offers only; Django). */
+  pickupDistanceMeters?: number | null;
+}
+
+/** GET /delivery/stats (Django API only). Money in paise. */
+export interface RiderStats {
+  today: { deliveries: number; earningsPaise: number };
+  week: { deliveries: number; earningsPaise: number };
+  total: { deliveries: number; earningsPaise: number };
+  rating: { average: number; count: number };
 }
 
 export interface RiderDashboard {

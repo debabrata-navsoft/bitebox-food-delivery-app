@@ -19,7 +19,7 @@ from apps.orders.models import Order, OrderStatus
 from apps.rbac.roles import Role
 from apps.restaurants.presenters import geo_json, rating_json
 from common.api import ApiError
-from common.geo import GeoPoint
+from common.geo import GeoPoint, haversine_m
 from common.pagination import Page, paginate
 
 from .models import DeliveryPartner, RiderVehicle
@@ -94,13 +94,24 @@ def dashboard(user: User) -> dict[str, Any]:
         if profile.active_order_id
         else None
     )
+    offer_json = presenters.present_for_rider(offer, user.pk) if offer else None
+    if offer is not None and offer_json is not None:
+        offer_json["pickup_distance_meters"] = _pickup_distance(profile, offer)
     return {
         "profile": profile_json(
             DeliveryPartner.objects.select_related("vehicle").get(pk=profile.pk)
         ),
-        "offer": presenters.present_for_rider(offer, user.pk) if offer else None,
+        "offer": offer_json,
         "active_order": presenters.present_for_rider(active, user.pk) if active else None,
     }
+
+
+def _pickup_distance(profile: DeliveryPartner, order: Order) -> int | None:
+    """Straight-line metres from the rider's last GPS fix to the restaurant (None without a fix)."""
+    coordinates = ((order.restaurant_snapshot or {}).get("location") or {}).get("coordinates")
+    if profile.location is None or not coordinates:
+        return None
+    return haversine_m(profile.location, GeoPoint(lat=coordinates[1], lng=coordinates[0]))
 
 
 def update_vehicle(user: User, vehicle_type: str, vehicle_number: str | None) -> dict[str, Any]:

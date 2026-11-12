@@ -288,3 +288,49 @@ def delete_response(owner: User, review_id: uuid.UUID) -> dict[str, Any]:
     ReviewResponse.objects.filter(review=review).delete()
     fresh = Review.objects.select_related("response").get(pk=review.pk)
     return present_for_restaurant(fresh, _reported_by(owner, [fresh]))
+
+
+# ---------------------------------------------------------------------------
+# Rider
+# ---------------------------------------------------------------------------
+REVIEW_SORTS = {
+    "newest": ("-created_at", "-id"),
+    "oldest": ("created_at", "id"),
+    "highest": ("-rating", "-created_at", "-id"),
+    "lowest": ("rating", "-created_at", "-id"),
+}
+
+
+def present_for_rider(review: Review, reported: set[str]) -> dict[str, Any]:
+    """Riders see the rating and words, the author's name and the order number. Nothing else."""
+    return {
+        "id": str(review.pk),
+        "rating": review.rating,
+        "comment": review.comment,
+        "author_name": short_name(review.customer_name),
+        "order_number": review.order_number,
+        "created_at": review.created_at,
+        "edited_at": review.edited_at,
+        "reported_by_you": str(review.pk) in reported,
+    }
+
+
+def rider_list(user: User, query: dict[str, Any], page: Page) -> dict[str, Any]:
+    qs = Review.objects.filter(target=T.RIDER, delivery_partner=user, status=ReviewStatus.PUBLISHED)
+    if query.get("rating"):
+        qs = qs.filter(rating=query["rating"])
+    qs = qs.order_by(*REVIEW_SORTS.get(query.get("sort") or "newest", REVIEW_SORTS["newest"]))
+    total = qs.count()
+    items = list(qs[page.offset : page.offset + page.limit])
+    profile = DeliveryPartner.objects.filter(user=user).first()
+    summary = (
+        rating_json(profile)
+        if profile
+        else {"average": 0, "count": 0, "distribution": [0, 0, 0, 0, 0]}
+    )
+    reported = _reported_by(user, items)
+    return {
+        "summary": summary,
+        "items": [present_for_rider(r, reported) for r in items],
+        "pagination": page.meta(total),
+    }

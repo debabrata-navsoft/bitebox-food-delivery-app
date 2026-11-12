@@ -1,8 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
-import { MatPaginatorModule } from '@angular/material/paginator';
-import { IconComponent } from 'nexprime';
+import { ButtonComponent, IconComponent, PaginationComponent } from 'nexprime';
 import { NotificationService } from '../../../core/services/notification.service';
 import { ReviewService } from '../../../core/services/review.service';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
@@ -17,8 +15,8 @@ import { RiderReview } from '../../../shared/models/review.models';
 @Component({
   selector: 'bb-delivery-reviews',
   imports: [
-    MatButtonModule,
-    MatPaginatorModule,
+    ButtonComponent,
+    PaginationComponent,
     IconComponent,
     EmptyState,
     PageHeader,

@@ -75,7 +75,7 @@
           [rows]="h.pagination.limit"
           [totalRecords]="h.pagination.total"
           [rowsOptions]="[15, 30, 50]"
-          [showSummary]="true"
+          variant="compact"
           (pageChange)="history.goTo($event)"
           (rowsChange)="history.goTo(1, $event)"
         />

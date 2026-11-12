@@ -16,9 +16,12 @@ from apps.accounts.models import UserStatus
 from apps.accounts.serializers import user_json
 from apps.audit.services import audited
 from apps.dispatch import services as dispatch
+from apps.finance import reports
+from apps.finance.views import DaysQuery
 from apps.orders import services as orders
 from apps.orders.views import STATUS_MESSAGE
 from apps.rbac.roles import Permission, Role
+from apps.reviews import services as review_services
 from common.api import ok
 from common.fields import QueryBoolean
 from common.pagination import Page
@@ -189,6 +192,56 @@ class RiderHistoryView(APIView):
     def get(self, request: Request) -> Response:
         query = validated(PageQuery, request.query_params)
         return ok(orders.rider_history(current_user(request), Page.from_query(query)))
+
+
+class RiderReviewQuery(PageQuery):
+    rating = serializers.IntegerField(
+        required=False,
+        min_value=1,
+        max_value=5,
+        error_messages=dict.fromkeys(("invalid", "min_value", "max_value"), "Invalid value"),
+    )
+    sort = serializers.ChoiceField(
+        choices=["newest", "oldest", "highest", "lowest"],
+        required=False,
+        error_messages=dict.fromkeys(("invalid_choice", "null", "blank"), "Invalid value"),
+    )
+
+
+class RiderReviewsView(APIView):
+    permission_classes = RIDER
+
+    @extend_schema(
+        tags=["Delivery"],
+        parameters=[RiderReviewQuery],
+        responses={200: envelope("RiderReviews"), **errors(401, 403, 422)},
+    )
+    def get(self, request: Request) -> Response:
+        query = validated(RiderReviewQuery, request.query_params)
+        page = Page.from_query(query, default_limit=10)
+        return ok(review_services.rider_list(current_user(request), query, page))
+
+
+class RiderEarningsView(APIView):
+    permission_classes = RIDER
+
+    @extend_schema(
+        tags=["Delivery"],
+        operation_id="delivery_earnings",
+        parameters=[DaysQuery],
+        responses={200: envelope("RiderEarnings"), **errors(401, 403, 422)},
+    )
+    def get(self, request: Request) -> Response:
+        days = validated(DaysQuery, request.query_params).get("days", 30)
+        return ok(reports.rider_earnings(current_user(request), days))
+
+
+class RiderStatsView(APIView):
+    permission_classes = RIDER
+
+    @extend_schema(tags=["Delivery"], responses={200: envelope("RiderStats"), **errors(401, 403)})
+    def get(self, request: Request) -> Response:
+        return ok(reports.rider_stats(current_user(request)))
 
 
 # ---------------------------------------------------------------------------

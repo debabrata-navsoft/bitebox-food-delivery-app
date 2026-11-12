@@ -90,3 +90,33 @@ def restaurant_earnings(owner: User, days: int = 30) -> dict[str, Any]:
 
 def rider_earnings(user: User, days: int = 30) -> dict[str, Any]:
     return _earnings("rider_paise", days, order__delivery_partner=user)
+
+
+def rider_stats(user: User) -> dict[str, Any]:
+    """
+    The rider dashboard's figures: today and this week (Monday onwards), in REPORT_TIMEZONE,
+    from the settlements of delivered orders; all-time totals; the rating.
+    """
+    from apps.delivery.models import DeliveryPartner
+
+    tz = ZoneInfo(settings.REPORT_TIMEZONE)
+    local_now = timezone.now().astimezone(tz)
+    start_of_today = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    start_of_week = start_of_today - timedelta(days=start_of_today.weekday())
+    mine = OrderSettlement.objects.filter(order__delivery_partner=user, order__status="delivered")
+
+    def window(since: datetime | None) -> dict[str, int]:
+        qs = mine.filter(settled_at__gte=since) if since else mine
+        row = qs.aggregate(deliveries=Count("pk"), earnings=Sum("rider_paise"))
+        return {"deliveries": row["deliveries"] or 0, "earnings_paise": row["earnings"] or 0}
+
+    profile = DeliveryPartner.objects.filter(user=user).first()
+    return {
+        "today": window(start_of_today),
+        "week": window(start_of_week),
+        "total": window(None),
+        "rating": {
+            "average": float(profile.rating_average) if profile else 0.0,
+            "count": profile.rating_count if profile else 0,
+        },
+    }

@@ -600,6 +600,17 @@ np-button .np-button.np-button--solid.np-button--primary {
   }
 }
 
+// np-pagination's current page in the same solid plum as the buttons (not the gradient).
+// Lists use variant="compact" (Items per page · 1 – 10 of 240 · arrows), at the list's right edge.
+np-pagination {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--bb-space-2) var(--bb-space-3) var(--bb-space-3);
+  --pg-active-bg: var(--bb-brand);
+  --pg-active-fg: var(--bb-on-brand);
+  --pg-glow: transparent;
+}
+
 // A narrower np-menu popup for short action lists (e.g. Edit / Delete). Keep the width in sync with
 // COMPACT_MENU_WIDTH in shared/menu/end-aligned-menu.ts, which aligns the panel to its trigger.
 np-menu.bb-menu-compact .menu.mi-panel {
