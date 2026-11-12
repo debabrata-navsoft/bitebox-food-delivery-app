@@ -1,5 +1,10 @@
 import { NpIconPipe } from '../../../shared/icons/np-icon-name';
-import { IconComponent } from 'nexprime';
+import {
+  ButtonComponent,
+  ButtonToggleComponent,
+  IconComponent,
+  PaginationComponent,
+} from 'nexprime';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -11,9 +16,6 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatPaginatorModule } from '@angular/material/paginator';
 import { interval } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -54,11 +56,11 @@ const NEXT: Partial<
   imports: [
     DatePipe,
     RouterLink,
-    MatButtonModule,
-    MatButtonToggleModule,
+    ButtonComponent,
+    ButtonToggleComponent,
     IconComponent,
     NpIconPipe,
-    MatPaginatorModule,
+    PaginationComponent,
     EmptyState,
     OrderStatusChip,
     PageHeader,
@@ -91,6 +93,14 @@ export class RestaurantOrders {
   protected readonly countFor = (tab: (typeof TABS)[number]) =>
     tab.statuses.reduce((sum, s) => sum + (this.board.board()?.counts[s] ?? 0), 0);
 
+  /** The stage tabs, with live counts in the labels ("New (2)"). */
+  protected readonly tabOptions = computed(() =>
+    TABS.map((t) => {
+      const n = t.id === 'history' ? 0 : this.countFor(t);
+      return { value: t.id, label: n ? `${t.label} (${n})` : t.label };
+    }),
+  );
+
   protected readonly shown = computed(() => {
     const statuses = TABS.find((t) => t.id === this.tab())?.statuses ?? [];
     return (this.board.board()?.items ?? []).filter((o) => statuses.includes(o.status));
@@ -103,7 +113,10 @@ export class RestaurantOrders {
       .subscribe(() => this.now.set(Date.now()));
   }
 
-  protected selectTab(tab: Tab): void {
+  /** np-button-toggle emits a value, an array (multiple mode) or null (deselected): keep the tab. */
+  protected selectTab(value: Tab | Tab[] | null): void {
+    const tab = Array.isArray(value) ? value[0] : value;
+    if (!tab) return;
     this.tab.set(tab);
     if (tab === 'history' && !this.history.data()) this.history.load(1);
   }

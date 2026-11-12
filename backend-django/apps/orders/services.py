@@ -459,3 +459,47 @@ def admin_unassign(admin: User, order_id: uuid.UUID, reason: str | None) -> dict
     if result.changed:
         dispatch_safely(result.order.pk)
     return admin_get(result.order.pk)
+
+
+def restaurant_stats(owner: User) -> dict[str, Any]:
+    """
+    The partner dashboard's figures. Only orders the restaurant has received count (online
+    orders appear once paid). Sales are the food value after the coupon on delivered orders;
+    "today" is the current day in settings.REPORT_TIMEZONE.
+    """
+    from zoneinfo import ZoneInfo
+
+    from django.conf import settings
+    from django.db.models import ExpressionWrapper, IntegerField, Sum
+
+    restaurant = Restaurant.objects.filter(owner=owner).first()
+    if restaurant is None:
+        raise ApiError.not_found("Create your restaurant first")
+    received = Order.objects.filter(restaurant=restaurant, submitted_at__isnull=False)
+    tz = ZoneInfo(settings.REPORT_TIMEZONE)
+    start_of_today = (
+        timezone.now().astimezone(tz).replace(hour=0, minute=0, second=0, microsecond=0)
+    )
+    counts = dict(received.values("status").annotate(n=Count("pk")).values_list("status", "n"))
+    delivered = received.filter(status=S.DELIVERED)
+    sales = (
+        delivered.aggregate(
+            total=Sum(
+                ExpressionWrapper(
+                    F("subtotal_paise") - F("discount_paise"), output_field=IntegerField()
+                )
+            )
+        )["total"]
+        or 0
+    )
+    completed = counts.get(S.DELIVERED, 0)
+    return {
+        "total_orders": sum(counts.values()),
+        "today_orders": received.filter(submitted_at__gte=start_of_today).count(),
+        "pending_orders": sum(counts.get(s, 0) for s in ACTIVE_STATUSES),
+        "completed_orders": completed,
+        "cancelled_orders": counts.get(S.CANCELLED, 0) + counts.get(S.REJECTED, 0),
+        "sales_paise": sales,
+        "average_order_paise": round(sales / completed) if completed else 0,
+        "rating": {"average": float(restaurant.rating_average), "count": restaurant.rating_count},
+    }

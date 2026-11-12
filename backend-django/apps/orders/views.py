@@ -205,6 +205,17 @@ class MyOrdersView(APIView):
         return ok(services.restaurant_list(current_user(request), query, Page.from_query(query)))
 
 
+class MyStatsView(APIView):
+    permission_classes = PARTNER
+
+    @extend_schema(
+        tags=["My restaurant"],
+        responses={200: envelope("RestaurantStats"), **errors(401, 403, 404)},
+    )
+    def get(self, request: Request) -> Response:
+        return ok(services.restaurant_stats(current_user(request)))
+
+
 class MyOrderView(APIView):
     permission_classes = PARTNER
 

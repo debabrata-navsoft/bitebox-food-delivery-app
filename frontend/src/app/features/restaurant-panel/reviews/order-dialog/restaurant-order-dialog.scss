@@ -1,5 +1,11 @@
+// The title and its meta line share the dialog's title padding.
+.head {
+  padding: var(--bb-space-5) var(--bb-space-5) var(--bb-space-2);
+}
+
 .head h2 {
   margin: 0;
+  padding: 0;
   font-size: 1.15rem;
 }
 

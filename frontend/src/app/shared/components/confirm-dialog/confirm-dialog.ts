@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormRoot, form, maxLength, validate } from '@angular/forms/signals';
 import { Observable, filter } from 'rxjs';
-import { MatButtonModule } from '@angular/material/button';
+import { ButtonComponent } from 'nexprime';
 import { NP_FORM_FIELDS } from '../../forms/np-form-fields';
 import { BB_DIALOG_DATA, BbDialog, BbDialogRef, BbDialogTitle } from '../../dialog/bb-dialog';
 
@@ -17,7 +17,7 @@ export interface ConfirmDialogData {
 
 @Component({
   selector: 'bb-confirm-dialog',
-  imports: [FormRoot, NP_FORM_FIELDS, BbDialogTitle, MatButtonModule],
+  imports: [FormRoot, NP_FORM_FIELDS, BbDialogTitle, ButtonComponent],
   templateUrl: './confirm-dialog.html',
   styleUrl: './confirm-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

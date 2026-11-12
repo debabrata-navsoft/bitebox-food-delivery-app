@@ -892,3 +892,36 @@ def test_order_admin_is_permission_checked(w: World) -> None:
         == 403
     )  # no orders:manage
     assert support.get("/api/v1/admin/delivery-partners").status_code == 403
+
+
+# --- partner dashboard figures -----------------------------------------------------------------
+
+
+def test_restaurant_stats_count_received_orders_and_sales(w: World) -> None:
+    empty = w.o.get("/api/v1/my/restaurant/stats").json()["data"]
+    assert empty["totalOrders"] == 0
+    assert empty["averageOrderPaise"] == 0
+
+    w.go_online(w.r, NEAR)
+    delivered = w.ready_order(coupon="WELCOME50")
+    w.accept(w.r, delivered)
+    for status in ("picked_up", "on_the_way", "delivered"):
+        w.rider_set(w.r, delivered, status)
+    rejected = w.place_order()
+    w.restaurant_set(rejected, "rejected", "Too busy")
+    w.place_order()  # still pending
+
+    stats = w.o.get("/api/v1/my/restaurant/stats").json()["data"]
+    order = Order.objects.get(pk=delivered)
+    sales = order.subtotal_paise - order.discount_paise
+    assert stats == {
+        "totalOrders": 3,
+        "todayOrders": 3,
+        "pendingOrders": 1,
+        "completedOrders": 1,
+        "cancelledOrders": 1,
+        "salesPaise": sales,
+        "averageOrderPaise": sales,
+        "rating": {"average": 0.0, "count": 0},
+    }
+    assert w.c.get("/api/v1/my/restaurant/stats").status_code == 403

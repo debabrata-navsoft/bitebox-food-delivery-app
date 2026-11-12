@@ -10,9 +10,6 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
-import { MatMenuModule } from '@angular/material/menu';
 import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, filter, of } from 'rxjs';
 import { CatalogService } from '../../../core/services/catalog.service';
@@ -30,7 +27,14 @@ import { FoodFormDialog, FoodFormData } from '../food-form-dialog/food-form-dial
 type AvailabilityFilter = 'all' | 'available' | 'unavailable';
 
 import { form } from '@angular/forms/signals';
-import { IconComponent, SelectOption, ToggleComponent } from 'nexprime';
+import {
+  ButtonComponent,
+  IconComponent,
+  MenuComponent,
+  type MenuItem,
+  SelectOption,
+  ToggleComponent,
+} from 'nexprime';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
@@ -41,10 +45,10 @@ import { BbDialog } from '../../../shared/dialog/bb-dialog';
     ToggleComponent,
     NP_FORM_FIELDS,
     RouterLink,
-    MatButtonModule,
+    ButtonComponent,
     IconComponent,
     NpIconPipe,
-    MatMenuModule,
+    MenuComponent,
     EmptyState,
     PageHeader,
     VegBadge,
@@ -58,7 +62,6 @@ import { BbDialog } from '../../../shared/dialog/bb-dialog';
 })
 export class RestaurantMenu implements OnInit {
   private readonly service = inject(MyRestaurantService);
-  private readonly dialog = inject(MatDialog);
   private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
 
@@ -71,6 +74,19 @@ export class RestaurantMenu implements OnInit {
     { initialValue: [] },
   );
   protected readonly items = signal<FoodItem[]>([]);
+  /** Each dish's actions menu (built once per list change, not on every render). */
+  protected readonly menus = computed(
+    () =>
+      new Map<string, MenuItem[]>(
+        this.items().map((item) => [
+          item.id,
+          [
+            { label: 'Edit', icon: 'pencil', command: () => this.openForm(item) },
+            { label: 'Delete', icon: 'trash-2', command: () => this.remove(item) },
+          ],
+        ]),
+      ),
+  );
   protected readonly loading = signal(true);
   protected readonly noRestaurant = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -130,14 +146,12 @@ export class RestaurantMenu implements OnInit {
   }
 
   protected openForm(item?: FoodItem): void {
-    this.dialog
+    this.bbDialog
       .open<FoodFormDialog, FoodFormData, FoodItem>(FoodFormDialog, {
         data: { item, categories: this.categories() },
         width: '560px',
-        maxWidth: '95vw',
-        autoFocus: 'first-tabbable',
       })
-      .afterClosed()
+      .closed
       .pipe(filter((saved): saved is FoodItem => !!saved))
       .subscribe((saved) => {
         this.items.update((list) =>

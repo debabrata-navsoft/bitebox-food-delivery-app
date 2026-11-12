@@ -7,6 +7,7 @@ urlpatterns = [
     path("orders/<str:id>", views.OrderView.as_view()),
     path("orders/<str:id>/cancel", views.OrderCancelView.as_view()),
     path("my/restaurant/orders", views.MyOrdersView.as_view()),
+    path("my/restaurant/stats", views.MyStatsView.as_view()),
     path("my/restaurant/orders/<str:id>", views.MyOrderView.as_view()),
     path("my/restaurant/orders/<str:id>/status", views.MyOrderStatusView.as_view()),
     path("admin/orders", views.AdminOrdersView.as_view()),

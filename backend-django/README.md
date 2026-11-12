@@ -2,7 +2,7 @@
 
 The Django + DRF + Channels + Celery backend that replaces the Node API in `../backend`, phase by phase. The plan, decisions and data model are in [`docs/django-migration/`](../docs/django-migration/README.md). Until the switch-over, the Node API remains the one the web app uses.
 
-**Status: Phase 7 (orders, dispatch, realtime).**
+**Status: Phase 8 (restaurant dashboard).** Phases follow the user's 19-phase list from Phase 8 on (see the migration README).
 - **Built:** the skeleton (settings, envelope and errors, pagination, permissions, health, OpenAPI, Celery, Docker, CI), the parity schema (45 tables, see [03 §3.5](../docs/django-migration/03-data-model.md#35-phase-4-implementation-notes-what-changed-from-the-plan-above)), sign-in and admin accounts, the catalogue and cart, and orders: placing them, the status workflow, dispatch to riders, the sweep (Celery Beat) and live updates over `/ws/`.
 - **Not yet:** online payments (Phase 8; cash on delivery works), coins, reviews, notifications inbox and push.
 
@@ -100,6 +100,8 @@ This creates the same fictional accounts as the Node seed (`admin@`, `customer@`
 | GET, POST | `/api/v1/orders` · GET `/orders/{id}` · POST `/orders/{id}/cancel` | Customer: place (`Idempotency-Key` header; cash on delivery), list, read, cancel before acceptance |
 | GET, PATCH | `/api/v1/my/restaurant/orders[?view=active\|history]` · `/my/restaurant/orders/{id}[/status]` | Partner order board: accept, reject (reason), preparing, ready (dispatches a rider) |
 | GET, PUT, PATCH, POST | `/api/v1/delivery/me[/vehicle\|/availability\|/location]` · `/delivery/offers/{id}/accept\|decline` · `/delivery/orders/{id}/status` · `/delivery/orders/history` | Rider app; actions answer with the fresh dashboard |
+| GET | `/api/v1/my/restaurant/stats` · `/my/restaurant/earnings?days=` | Partner dashboard figures (orders received, today, pending, delivered, cancelled, sales, average order, rating) and earnings from settlements. `stats` exists only in Django. |
+| GET, PUT, DELETE | `/api/v1/my/restaurant/reviews/orders[/{orderId}]` · `/reviews/summary` · `/reviews/{id}/response` | Partner reviews grouped per order, rating summary, public replies |
 | GET, POST | `/api/v1/admin/orders[/{id}[/cancel\|/unassign]]` · `/admin/delivery-partners[/{id}/status]` | Order monitoring (`orders:view`/`orders:manage`), riders (`riders:manage`); changes are audited |
 | WS | `/ws/` | Realtime socket (protocol below) |
 

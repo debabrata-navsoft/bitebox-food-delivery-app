@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
+import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { IconComponent } from 'nexprime';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -31,7 +31,7 @@ import { RiderReview } from '../../../shared/models/review.models';
 })
 export class DeliveryReviews {
   private readonly reviews = inject(ReviewService);
-  private readonly dialog = inject(MatDialog);
+  private readonly dialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
 
   protected readonly rating = signal<number | null>(null);
