@@ -29,20 +29,20 @@
   padding: 1px 8px;
   border-radius: 999px;
   background: var(--bb-amber-100);
-  color: #7a4b00;
+  color: var(--bb-warning-ink);
   font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
 
   &.pay-paid,
   &.pay-refunded {
-    background: #e6f5ec;
+    background: var(--bb-success-bg);
     color: var(--bb-success);
   }
 
   &.pay-failed,
   &.pay-cancelled {
-    background: #fdecee;
+    background: var(--bb-danger-bg);
     color: var(--bb-danger);
   }
 }
@@ -184,7 +184,7 @@ p {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: var(--bb-plum);
+      background: var(--bb-brand);
     }
 
     &:not(:last-child)::after {

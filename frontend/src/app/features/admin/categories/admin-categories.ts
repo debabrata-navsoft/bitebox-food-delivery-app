@@ -8,15 +8,13 @@ import { filter } from 'rxjs';
 import { AdminCatalogService } from '../../../core/services/admin/admin-catalog.service';
 import { errorMessage } from '../../../core/services/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
-import {
-  ConfirmDialog,
-  ConfirmDialogData,
-} from '../../../shared/components/confirm-dialog/confirm-dialog';
+import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { FoodCategory } from '../../../shared/models/catalog.models';
 import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
 import { CategoryFormDialog } from './category-form-dialog/category-form-dialog';
+import { BbDialog } from '../../../shared/dialog/bb-dialog';
 
 @Component({
   selector: 'bb-admin-categories',
@@ -38,6 +36,7 @@ import { CategoryFormDialog } from './category-form-dialog/category-form-dialog'
 export class AdminCategories {
   private readonly service = inject(AdminCatalogService);
   private readonly dialog = inject(MatDialog);
+  private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
 
   protected readonly categories = signal<FoodCategory[]>([]);
@@ -93,26 +92,23 @@ export class AdminCategories {
   }
 
   protected remove(category: FoodCategory): void {
-    this.dialog
-      .open<ConfirmDialog, ConfirmDialogData, true>(ConfirmDialog, {
-        data: {
-          title: `Delete “${category.name}”?`,
-          message: 'This cannot be undone.',
-          confirmLabel: 'Delete',
-          danger: true,
+    confirmed(
+      this.bbDialog,
+      {
+        title: `Delete “${category.name}”?`,
+        message: 'This cannot be undone.',
+        confirmLabel: 'Delete',
+        danger: true,
+      },
+      '420px',
+    ).subscribe(() =>
+      this.service.deleteCategory(category.id).subscribe({
+        next: () => {
+          this.categories.update((list) => list.filter((c) => c.id !== category.id));
+          this.notify.success('Category deleted');
         },
-        width: '420px',
-      })
-      .afterClosed()
-      .pipe(filter(Boolean))
-      .subscribe(() =>
-        this.service.deleteCategory(category.id).subscribe({
-          next: () => {
-            this.categories.update((list) => list.filter((c) => c.id !== category.id));
-            this.notify.success('Category deleted');
-          },
-          error: (err: unknown) => this.notify.error(errorMessage(err)),
-        }),
-      );
+        error: (err: unknown) => this.notify.error(errorMessage(err)),
+      }),
+    );
   }
 }

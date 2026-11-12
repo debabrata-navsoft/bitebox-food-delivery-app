@@ -46,7 +46,7 @@
   }
 
   &.online {
-    background: var(--bb-success);
+    background: var(--bb-success-solid);
     color: #fff;
   }
 
@@ -63,7 +63,7 @@
   gap: var(--bb-space-2) var(--bb-space-3);
   padding: var(--bb-space-3) var(--bb-space-4);
   border-radius: var(--bb-radius);
-  background: var(--bb-plum);
+  background: var(--bb-brand);
   color: #fff;
   box-shadow: var(--bb-shadow);
 

@@ -19,10 +19,7 @@ import { CatalogService } from '../../../core/services/catalog.service';
 import { errorMessage } from '../../../core/services/api-error';
 import { MyRestaurantService } from '../../../core/services/my-restaurant.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import {
-  ConfirmDialog,
-  ConfirmDialogData,
-} from '../../../shared/components/confirm-dialog/confirm-dialog';
+import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
@@ -36,6 +33,7 @@ import { form } from '@angular/forms/signals';
 import { IconComponent, SelectOption, ToggleComponent } from 'nexprime';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
+import { BbDialog } from '../../../shared/dialog/bb-dialog';
 
 @Component({
   selector: 'bb-restaurant-menu',
@@ -61,6 +59,7 @@ import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-im
 export class RestaurantMenu implements OnInit {
   private readonly service = inject(MyRestaurantService);
   private readonly dialog = inject(MatDialog);
+  private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
 
   readonly available = input<string>();
@@ -166,31 +165,28 @@ export class RestaurantMenu implements OnInit {
   }
 
   protected remove(item: FoodItem): void {
-    this.dialog
-      .open<ConfirmDialog, ConfirmDialogData, true>(ConfirmDialog, {
-        data: {
-          title: `Delete “${item.name}”?`,
-          message: 'Customers will no longer see this dish.',
-          confirmLabel: 'Delete',
-          danger: true,
+    confirmed(
+      this.bbDialog,
+      {
+        title: `Delete “${item.name}”?`,
+        message: 'Customers will no longer see this dish.',
+        confirmLabel: 'Delete',
+        danger: true,
+      },
+      '420px',
+    ).subscribe(() => {
+      this.busyId.set(item.id);
+      this.service.deleteFood(item.id).subscribe({
+        next: () => {
+          this.items.update((list) => list.filter((i) => i.id !== item.id));
+          this.notify.success('Dish deleted');
+          this.busyId.set(null);
         },
-        width: '420px',
-      })
-      .afterClosed()
-      .pipe(filter(Boolean))
-      .subscribe(() => {
-        this.busyId.set(item.id);
-        this.service.deleteFood(item.id).subscribe({
-          next: () => {
-            this.items.update((list) => list.filter((i) => i.id !== item.id));
-            this.notify.success('Dish deleted');
-            this.busyId.set(null);
-          },
-          error: (err: unknown) => {
-            this.notify.error(errorMessage(err));
-            this.busyId.set(null);
-          },
-        });
+        error: (err: unknown) => {
+          this.notify.error(errorMessage(err));
+          this.busyId.set(null);
+        },
       });
+    });
   }
 }

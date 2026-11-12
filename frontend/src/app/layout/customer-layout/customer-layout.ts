@@ -15,6 +15,7 @@ import { BrandLogo } from '../../shared/components/brand-logo/brand-logo';
 import { SiteFooter } from '../../shared/components/site-footer/site-footer';
 import { InstallBanner } from '../../shared/components/install-banner/install-banner';
 import { InstallPromptService } from '../../core/services/install-prompt.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { ROLE_META } from '../../shared/models/user.models';
 
 import { initialsOf } from '../../shared/models/user.models';
@@ -44,6 +45,7 @@ export class CustomerLayout {
 
   protected readonly cart = inject(CartService);
   protected readonly installer = inject(InstallPromptService);
+  protected readonly themes = inject(ThemeService);
   protected readonly deliveryLocation = inject(DeliveryLocationService).location;
   private readonly dialog = inject(MatDialog);
   protected readonly shown = this.auth.displayUser;

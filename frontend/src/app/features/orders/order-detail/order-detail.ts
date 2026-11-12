@@ -18,7 +18,6 @@ import { ConfettiComponent, IconComponent, TimelineComponent, type TimelineEvent
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
 import { EMPTY, catchError, firstValueFrom, map } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
 import { OrderService } from '../../../core/services/checkout-api.service';
@@ -46,6 +45,7 @@ import {
 } from '../../../shared/models/checkout.models';
 import { PAYMENT_STATUS_LABEL, PROVIDER_LABEL } from '../../../shared/models/payment.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
+import { BbDialog } from '../../../shared/dialog/bb-dialog';
 
 const JOURNEY: { status: OrderStatus; icon: string }[] = [
   { status: 'pending', icon: 'receipt' },
@@ -83,7 +83,7 @@ const JOURNEY: { status: OrderStatus; icon: string }[] = [
 })
 export class OrderDetail {
   private readonly orders = inject(OrderService);
-  private readonly dialog = inject(MatDialog);
+  private readonly dialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
   private readonly payments = inject(PaymentService);
   protected readonly connection = inject(ConnectionStatus);

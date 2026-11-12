@@ -12,7 +12,6 @@ import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-i
 import { DatePipe } from '@angular/common';
 import { form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
 import { IconComponent, SelectOption } from 'nexprime';
@@ -26,6 +25,7 @@ import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { Pagination } from '../../../shared/models/api.models';
 import { ROLE_META, Role, User, UserStatus } from '../../../shared/models/user.models';
+import { BbDialog } from '../../../shared/dialog/bb-dialog';
 
 @Component({
   selector: 'bb-admin-users',
@@ -45,7 +45,7 @@ import { ROLE_META, Role, User, UserStatus } from '../../../shared/models/user.m
 export class AdminUsers implements OnInit {
   private readonly service = inject(AdminUsersService);
   private readonly auth = inject(AuthService);
-  private readonly dialog = inject(MatDialog);
+  private readonly dialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
 
   readonly role = input<Role>();

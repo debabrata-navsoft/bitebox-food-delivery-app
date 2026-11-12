@@ -3,6 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { PageLoader } from './core/services/page-loader';
 import { InstallPromptService } from './core/services/install-prompt.service';
 import { PushNotificationService } from './core/services/push-notification.service';
+import { ThemeService } from './core/services/theme.service';
 import { AppStatus } from './shared/components/app-status/app-status';
 
 @Component({
@@ -20,5 +21,7 @@ export class App {
     // and signing out must always unsubscribe this browser from push.
     inject(InstallPromptService);
     inject(PushNotificationService);
+    // Keeps <html data-theme> in step with the stored choice and the device setting.
+    inject(ThemeService);
   }
 }

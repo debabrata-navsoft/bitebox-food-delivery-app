@@ -16,6 +16,7 @@ import {
   subjectLabel,
 } from '../../../../shared/models/review.models';
 import { ReplyForm } from '../reply-form/reply-form';
+import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 
 /** Every review of one order: the restaurant's and each dish's, with replies and reporting. */
 @Component({
@@ -29,6 +30,7 @@ export class RestaurantOrderDialog {
   private readonly orderId = inject<string>(MAT_DIALOG_DATA);
   private readonly reviews = inject(ReviewService);
   private readonly dialog = inject(MatDialog);
+  private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
 
   protected readonly data = signal<RestaurantOrderReviews | null>(null);
@@ -67,7 +69,7 @@ export class RestaurantOrderDialog {
   }
 
   protected deleteReply(review: RestaurantReview): void {
-    confirmed(this.dialog, {
+    confirmed(this.bbDialog, {
       title: 'Remove your reply?',
       message: `Your public reply to ${review.authorName} will be removed. The review stays.`,
       confirmLabel: 'Remove reply',

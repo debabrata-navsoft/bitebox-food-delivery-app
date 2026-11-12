@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormRoot, TreeValidationResult, form, pattern } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
 import { IconComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
 import { AdminPushService } from '../../../core/services/admin/admin-push.service';
@@ -12,6 +11,7 @@ import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { serverErrors, shownError } from '../../../shared/forms/form-errors';
 import { requiredText } from '../../../shared/forms/form-rules';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
+import { BbDialog } from '../../../shared/dialog/bb-dialog';
 
 /** A page on this site, e.g. /restaurants (matches the API rule). */
 const SITE_PATH = /^$|^\/(?!\/)\S{0,199}$/;
@@ -30,7 +30,7 @@ const EMPTY = { title: '', body: '', link: '/restaurants' };
 })
 export class PushPromotionsPage {
   private readonly api = inject(AdminPushService);
-  private readonly dialog = inject(MatDialog);
+  private readonly dialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
   protected readonly shownError = shownError;
   protected readonly error = signal<string | null>(null);

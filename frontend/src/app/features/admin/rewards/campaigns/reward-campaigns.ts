@@ -26,6 +26,7 @@ import {
 } from '../../../../shared/models/rewards.models';
 import { CampaignDetailDialog } from '../campaign-detail-dialog/campaign-detail-dialog';
 import { CampaignFormDialog } from '../campaign-form-dialog/campaign-form-dialog';
+import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 
 type Action = 'activate' | 'pause' | 'end';
 
@@ -41,6 +42,7 @@ type Action = 'activate' | 'pause' | 'end';
 export class RewardCampaignsPage {
   private readonly api = inject(AdminRewardsService);
   private readonly dialog = inject(MatDialog);
+  private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
   protected readonly canManage = inject(AuthService).can('rewards:manage');
   protected readonly statusLabel = CAMPAIGN_STATUS_LABEL;
@@ -118,7 +120,7 @@ export class RewardCampaignsPage {
       pause: 'Customers cannot get it until you activate it again.',
       end: 'It stops for good. Rewards already given are kept.',
     };
-    confirmed(this.dialog, {
+    confirmed(this.bbDialog, {
       title: `${this.actionLabel[action]} “${c.name}”?`,
       message: messages[action],
       confirmLabel: this.actionLabel[action],

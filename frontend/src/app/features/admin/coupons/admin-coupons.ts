@@ -7,15 +7,13 @@ import { filter } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
 import { AdminCouponService } from '../../../core/services/checkout-api.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import {
-  ConfirmDialog,
-  ConfirmDialogData,
-} from '../../../shared/components/confirm-dialog/confirm-dialog';
+import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { AdminCoupon } from '../../../shared/models/checkout.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { CouponFormDialog } from './coupon-form-dialog/coupon-form-dialog';
+import { BbDialog } from '../../../shared/dialog/bb-dialog';
 
 @Component({
   selector: 'bb-admin-coupons',
@@ -36,6 +34,7 @@ import { CouponFormDialog } from './coupon-form-dialog/coupon-form-dialog';
 export class AdminCoupons {
   private readonly service = inject(AdminCouponService);
   private readonly dialog = inject(MatDialog);
+  private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
 
   protected readonly coupons = signal<AdminCoupon[]>([]);
@@ -91,26 +90,23 @@ export class AdminCoupons {
   }
 
   protected remove(coupon: AdminCoupon): void {
-    this.dialog
-      .open<ConfirmDialog, ConfirmDialogData, true>(ConfirmDialog, {
-        data: {
-          title: `Delete ${coupon.code}?`,
-          message: 'Customers will no longer be able to use it.',
-          confirmLabel: 'Delete',
-          danger: true,
+    confirmed(
+      this.bbDialog,
+      {
+        title: `Delete ${coupon.code}?`,
+        message: 'Customers will no longer be able to use it.',
+        confirmLabel: 'Delete',
+        danger: true,
+      },
+      '420px',
+    ).subscribe(() =>
+      this.service.remove(coupon.id).subscribe({
+        next: () => {
+          this.coupons.update((list) => list.filter((c) => c.id !== coupon.id));
+          this.notify.success('Coupon deleted');
         },
-        width: '420px',
-      })
-      .afterClosed()
-      .pipe(filter(Boolean))
-      .subscribe(() =>
-        this.service.remove(coupon.id).subscribe({
-          next: () => {
-            this.coupons.update((list) => list.filter((c) => c.id !== coupon.id));
-            this.notify.success('Coupon deleted');
-          },
-          error: (err: unknown) => this.notify.error(errorMessage(err)),
-        }),
-      );
+        error: (err: unknown) => this.notify.error(errorMessage(err)),
+      }),
+    );
   }
 }

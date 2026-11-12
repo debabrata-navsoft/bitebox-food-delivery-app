@@ -13,7 +13,6 @@ import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { interval } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
@@ -30,6 +29,7 @@ import { OrderStatus } from '../../../shared/models/checkout.models';
 import { RestaurantAction, RestaurantOrder } from '../../../shared/models/order-management.models';
 import { ItemCountPipe } from '../../../shared/pipes/item-count.pipe';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
+import { BbDialog } from '../../../shared/dialog/bb-dialog';
 
 type Tab = 'new' | 'preparing' | 'ready' | 'out' | 'history';
 
@@ -73,7 +73,7 @@ const NEXT: Partial<
 export class RestaurantOrders {
   protected readonly board = inject(RestaurantOrderBoard);
   private readonly api = inject(RestaurantOrdersService);
-  private readonly dialog = inject(MatDialog);
+  private readonly dialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
 
   protected readonly tabs = TABS;

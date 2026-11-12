@@ -17,6 +17,7 @@ import { pagedList } from '../../../shared/list/paged-list';
 import { OrderStatus, VEHICLE_LABEL } from '../../../shared/models/checkout.models';
 import { AdminRider } from '../../../shared/models/order-management.models';
 import { openAdminOrder } from '../orders/admin-order-dialog/admin-order-dialog';
+import { BbDialog } from '../../../shared/dialog/bb-dialog';
 
 const RIDER_EVENTS: OrderStatus[] = [
   'ready_for_pickup',
@@ -47,6 +48,7 @@ const RIDER_EVENTS: OrderStatus[] = [
 export class AdminDeliveryPartners {
   private readonly api = inject(AdminOrdersService);
   private readonly dialog = inject(MatDialog);
+  private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
 
   protected readonly filterModel = signal({ search: '', onlineOnly: false });
@@ -79,7 +81,7 @@ export class AdminDeliveryPartners {
   protected toggleStatus(rider: AdminRider): void {
     const suspend = rider.status === 'active';
     confirmed(
-      this.dialog,
+      this.bbDialog,
       suspend
         ? {
             title: `Suspend ${rider.name}?`,

@@ -1,12 +1,7 @@
 import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import {
-  MAT_DIALOG_DATA,
-  MatDialog,
-  MatDialogConfig,
-  MatDialogModule,
-} from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogConfig, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { Observable, filter } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -31,6 +26,7 @@ import {
 import { AdminOrder, TRACKED_STATUSES } from '../../../../shared/models/order-management.models';
 import { InrPipe } from '../../../../shared/pipes/money.pipes';
 import { PAYMENT_STATUS_LABEL, PROVIDER_LABEL } from '../../../../shared/models/payment.models';
+import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 
 const CANCELLABLE: OrderStatus[] = [
   'pending',
@@ -61,7 +57,7 @@ const CANCELLABLE: OrderStatus[] = [
 export class AdminOrderDialog {
   private readonly id = inject<string>(MAT_DIALOG_DATA);
   private readonly api = inject(AdminOrdersService);
-  private readonly dialog = inject(MatDialog);
+  private readonly dialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
   /** Support can read orders; only operations (and the super admin) cancel or unassign. */
   protected readonly canManage = inject(AuthService).can('orders:manage');

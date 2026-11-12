@@ -25,6 +25,7 @@ import {
   UserStatus,
 } from '../../../shared/models/user.models';
 import { openStaffForm } from './staff-form-dialog/staff-form-dialog';
+import { BbDialog } from '../../../shared/dialog/bb-dialog';
 
 /** Super admin: create operations, finance and support admins and manage their access. */
 @Component({
@@ -47,6 +48,7 @@ import { openStaffForm } from './staff-form-dialog/staff-form-dialog';
 export class AdminStaff {
   private readonly api = inject(AdminStaffService);
   private readonly dialog = inject(MatDialog);
+  private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
   private readonly auth = inject(AuthService);
   protected readonly me = computed(() => this.auth.user()?.id);
@@ -98,7 +100,7 @@ export class AdminStaff {
 
   protected toggle(user: User): void {
     const activate = user.status !== 'active';
-    confirmed(this.dialog, {
+    confirmed(this.bbDialog, {
       title: activate ? `Activate ${user.name}?` : `Deactivate ${user.name}?`,
       message: activate
         ? 'They can sign in again with their existing password.'
