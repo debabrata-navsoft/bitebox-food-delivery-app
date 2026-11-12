@@ -38,6 +38,10 @@ import {
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
+import {
+  COMPACT_MENU_WIDTH,
+  toggleEndAligned,
+} from '../../../shared/menu/end-aligned-menu';
 
 @Component({
   selector: 'bb-restaurant-menu',
@@ -74,6 +78,8 @@ export class RestaurantMenu implements OnInit {
     { initialValue: [] },
   );
   protected readonly items = signal<FoodItem[]>([]);
+  protected readonly toggleMenu = (menu: MenuComponent, event: Event) =>
+    toggleEndAligned(menu, event, COMPACT_MENU_WIDTH);
   /** Each dish's actions menu (built once per list change, not on every render). */
   protected readonly menus = computed(
     () =>

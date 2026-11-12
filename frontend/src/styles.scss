@@ -500,7 +500,7 @@ np-icon[matChipAvatar] {
   min-height: 40px;
   padding: 11px 22px;
   border: 0;
-  border-radius: var(--ui-radius-full);
+  border-radius: var(--bb-btn-radius);
   font-family: var(--ui-font);
   font-size: 14px;
   font-weight: 600;
@@ -509,9 +509,9 @@ np-icon[matChipAvatar] {
   white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
-  color: var(--btn-fg);
-  background: var(--ui-gradient);
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--btn) 32%, transparent);
+  color: var(--bb-on-brand);
+  background: var(--bb-brand);
+  box-shadow: none;
   transition:
     transform var(--ui-ease),
     background var(--ui-ease),
@@ -521,7 +521,7 @@ np-icon[matChipAvatar] {
   --bb-icon-size: 18px;
 
   &:hover:not(:disabled, [aria-disabled='true']) {
-    filter: brightness(1.05);
+    filter: brightness(1.15);
   }
   &:active:not(:disabled) {
     transform: scale(0.97);
@@ -572,6 +572,52 @@ np-icon[matChipAvatar] {
   &--icon {
     padding: 10px;
     min-width: 40px;
+  }
+}
+
+// np-button in the BiteBox look: rounded rectangle (not a pill), solid brand plum (not the
+// gradient), no coloured glow. NexPrime's emulated styles carry an attribute selector, so these
+// rules need two classes to win. --bb-brand stays plum in dark mode; text on it is --bb-on-brand.
+:root {
+  --bb-btn-radius: 12px;
+}
+
+np-button .np-button:is(.np-button--solid, .np-button--outlined, .np-button--text, .np-button--soft) {
+  border-radius: var(--bb-btn-radius);
+}
+
+np-button .np-button.np-button--solid {
+  box-shadow: none;
+}
+
+np-button .np-button.np-button--solid.np-button--primary {
+  color: var(--bb-on-brand);
+  background: var(--bb-brand);
+
+  &:hover:not(:disabled) {
+    background: var(--bb-brand);
+    filter: brightness(1.15);
+  }
+}
+
+// A narrower np-menu popup for short action lists (e.g. Edit / Delete). Keep the width in sync with
+// COMPACT_MENU_WIDTH in shared/menu/end-aligned-menu.ts, which aligns the panel to its trigger.
+np-menu.bb-menu-compact .menu.mi-panel {
+  width: 160px;
+}
+
+// NexPrime colours any `.ui-control[aria-invalid='true']` red, and Signal Forms sets `invalid` as
+// soon as a form opens. Keep untouched fields neutral (NpFieldTouch adds .bb-untouched); errors
+// appear after blur or a submit attempt, like <bb-field-error> and np-text-input's [error].
+.bb-untouched .ui-control[aria-invalid='true'] {
+  border-color: var(--ui-border-strong);
+
+  &:hover:not(:disabled) {
+    border-color: var(--ui-text-subtle);
+  }
+  &:focus {
+    border-color: var(--ui-primary);
+    box-shadow: var(--ui-ring);
   }
 }
 
@@ -665,6 +711,7 @@ np-icon[matChipAvatar] {
 .bb-dialog__content {
   flex: 1 1 auto;
   min-height: 0;
+  max-height: 65vh; // as Material's dialog content: long forms scroll inside, actions stay visible
   overflow: auto;
   padding: var(--bb-space-2) var(--bb-space-5);
   color: var(--bb-ink-muted);

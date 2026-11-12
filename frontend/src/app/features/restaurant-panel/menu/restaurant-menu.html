@@ -84,9 +84,9 @@
           label=""
           [ariaLabel]="'Actions for ' + item.name"
           [disabled]="busyId() === item.id"
-          (clicked)="itemMenu.toggle($event)"
+          (clicked)="toggleMenu(itemMenu, $event)"
         />
-        <np-menu #itemMenu [popup]="true" [model]="menus().get(item.id) ?? []" />
+        <np-menu #itemMenu class="bb-menu-compact" [popup]="true" [model]="menus().get(item.id) ?? []" />
       </li>
     } @empty {
       <li class="none bb-muted">No dishes match these filters.</li>
