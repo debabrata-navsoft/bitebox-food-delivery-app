@@ -24,6 +24,7 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.cart.models import Cart, CartItem
+from apps.coins import events as reward_events
 from apps.menus.models import FoodItem
 from apps.orders import presenters
 from apps.orders.models import (
@@ -250,7 +251,7 @@ def abandon_unpaid(user: User, order_id: uuid.UUID) -> dict[str, bool]:
                 return {"restored": False}
             cart.restaurant_id = order.restaurant_id
             cart.coupon_code = order.coupon_code
-            cart.coins_to_redeem = 0
+            cart.coins_to_redeem = order.coins_redeemed or 0  # asked for again at checkout
             cart.save()
             CartItem.objects.bulk_create(
                 [CartItem(cart=cart, food_item_id=f, quantity=q) for f, q in lines if f in live]
@@ -292,6 +293,7 @@ def mark_paid(payment_id: uuid.UUID, provider_payment_id: str) -> Payment:
                 "Online payment received; order sent to the restaurant",
                 extra={"order_id": str(order.pk)},
             )
+            reward_events.order_paid(order)  # spend the coins it held (best-effort)
             notify_new_order(order, "paid online")
         else:
             Order.objects.filter(pk=payment.order_id).update(payment_status=P.PAID, updated_at=now)

@@ -238,6 +238,9 @@ CLOUDINARY_API_SECRET = env.str("CLOUDINARY_API_SECRET", default="")
 CLOUDINARY_FOLDER = env.str("CLOUDINARY_FOLDER", default="bitebox")
 IMAGE_UPLOAD_RATE_LIMIT = env.str("IMAGE_UPLOAD_RATE_LIMIT", default="60/3600s")
 REVIEW_IMAGE_UPLOAD_RATE_LIMIT = env.str("REVIEW_IMAGE_UPLOAD_RATE_LIMIT", default="30/3600s")
+# Writing and reporting reviews (Node: review.routes.js limiters).
+REVIEW_RATE_LIMIT = env.str("REVIEW_RATE_LIMIT", default="20/60s")
+REVIEW_REPORT_RATE_LIMIT = env.str("REVIEW_REPORT_RATE_LIMIT", default="20/900s")
 # Files bigger than this are rejected before they are fully read into memory.
 FILE_UPLOAD_MAX_MEMORY_SIZE = MAX_DOCUMENT_BYTES + 64 * 1024
 
@@ -254,7 +257,11 @@ ROUTING_PROFILE = env.str("ROUTING_PROFILE", default="driving")
 UPSTREAM_MIN_GAP_SECONDS = 1.1
 GEO_RATE_LIMIT = env.str("GEO_RATE_LIMIT", default="30/60s")
 COUPON_RATE_LIMIT = env.str("COUPON_RATE_LIMIT", default="30/900s")
+# POST /referrals/validate is public (the sign-up form): slow down code guessing.
+REFERRAL_RATE_LIMIT = env.str("REFERRAL_RATE_LIMIT", default="30/900s")
 ORDER_RATE_LIMIT = env.str("ORDER_RATE_LIMIT", default="10/60s")
+# Newsletter sign-up from the site footer (Node: newsletter.routes.js limiter).
+NEWSLETTER_RATE_LIMIT = env.str("NEWSLETTER_RATE_LIMIT", default="10/900s")
 # Delivery OTP: a 4-digit code made at pickup, shown to the customer, required to mark delivered.
 DELIVERY_OTP_REQUIRED = env.bool("DELIVERY_OTP_REQUIRED", default=True)
 DELIVERY_OTP_MAX_ATTEMPTS = env.int("DELIVERY_OTP_MAX_ATTEMPTS", default=5)
@@ -341,7 +348,7 @@ REST_FRAMEWORK = {
 JSON_CAMEL_CASE = {
     "JSON_UNDERSCOREIZE": {
         "no_underscore_before_number": True,
-        "ignore_fields": ("counts", "by_status"),
+        "ignore_fields": ("counts", "by_status", "moderation_actions"),
     }
 }
 

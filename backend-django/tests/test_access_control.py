@@ -45,14 +45,18 @@ PUBLIC = {
     ("api/v1/restaurants/cuisines", "get"),
     ("api/v1/restaurants/<str:slug_or_id>", "get"),
     ("api/v1/restaurants/<str:slug_or_id>/menu", "get"),
+    ("api/v1/restaurants/<str:slug_or_id>/reviews", "get"),
     ("api/v1/categories", "get"),
     ("api/v1/foods", "get"),
     ("api/v1/foods/<str:id>", "get"),
+    ("api/v1/foods/<str:id>/reviews", "get"),
     ("api/v1/geo/search", "get"),
     ("api/v1/geo/reverse", "get"),
+    ("api/v1/referrals/validate", "post"),  # the sign-up form; rate limited
     ("api/v1/payments/methods", "get"),
     ("api/v1/payments/webhooks/razorpay", "post"),  # signed by Razorpay (HMAC), not a user
     ("api/v1/push/public-key", "get"),
+    ("api/v1/newsletter/subscriptions", "post"),
 }
 
 METHODS = ("get", "post", "put", "patch", "delete")

@@ -509,6 +509,12 @@ class RewardClaim(BaseModel):
         constraints = [
             one_of("reward_type", RewardType, "reward_claims_type_valid"),
             one_of("status", ClaimStatus, "reward_claims_status_valid"),
+            # One reward per campaign per order.
+            models.UniqueConstraint(
+                fields=["campaign", "order"],
+                condition=models.Q(campaign__isnull=False, order__isnull=False),
+                name="reward_claims_campaign_order",
+            ),
         ]
         indexes = [
             models.Index(fields=["user", "-created_at"], name="reward_claims_user"),
@@ -522,8 +528,8 @@ class RewardConfiguration(BaseModel):
     """
     The programme settings, one row (`key="global"`). `value` holds the nested settings in
     snake_case (earning, redemption, expiry, referral, birthday, welcome; the API shows them in
-    camelCase); missing values fall back to the defaults in apps/coins/quote.py. Validated by a
-    serializer on write (Phase 9).
+    camelCase); missing values fall back to the defaults in apps/coins/quote.py. Validated on
+    write by apps/coins/config.py.
     """
 
     key = models.CharField(max_length=20, unique=True, default="global", editable=False)

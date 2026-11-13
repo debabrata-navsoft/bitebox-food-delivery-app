@@ -16,6 +16,8 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.cart import services as cart_services
 from apps.cart.models import Cart
+from apps.coins import events as reward_events
+from apps.coins import orders as coin_hooks
 from apps.coupons.models import Coupon, CouponRedemption
 from apps.coupons.services import assert_eligible
 from apps.customers.services import get_own
@@ -31,6 +33,7 @@ from . import presenters
 from .models import (
     ACTIVE_STATUSES,
     FINAL_STATUSES,
+    CoinState,
     Order,
     OrderItem,
     OrderStatus,
@@ -102,17 +105,10 @@ def place_order(
             "Prices changed since you last looked. Please review your order.", "PRICE_CHANGED"
         )
     coins = quote["coins"] or {}
-    if coins.get("applied"):
-        if method not in coins.get("payment_methods", []):
-            raise _conflict(
-                "Coins can't be used with this payment method. "
-                "Remove the coins or pay another way.",
-                "COINS_NOT_ALLOWED",
-            )
-        # The coin wallet (reserve/commit) is ported with the rewards phase; never discount
-        # coins that cannot be held.
+    if coins.get("applied") and method not in coins.get("payment_methods", []):
         raise _conflict(
-            "Coins can't be used right now. Remove them to continue.", "COINS_NOT_ALLOWED"
+            "Coins can't be used with this payment method. Remove the coins or pay another way.",
+            "COINS_NOT_ALLOWED",
         )
 
     cart = quote["cart"]
@@ -161,6 +157,15 @@ def place_order(
                     "platform_fee_paise": pricing["platform_fee_paise"],
                     "tax_paise": pricing["tax_paise"],
                     "coin_discount_paise": pricing["coin_discount_paise"],
+                    "coins_redeemed": coins.get("applied") or 0,
+                    # Cash orders spend the coins now; online orders hold them until paid.
+                    "coins_state": (
+                        None
+                        if not coins.get("applied")
+                        else CoinState.COMMITTED
+                        if method == PaymentMethod.COD
+                        else CoinState.RESERVED
+                    ),
                     "total_paise": pricing["total_paise"],
                     "coupon_code": quote["coupon"]["code"] if quote["coupon"] else "",
                     "distance_m": quote["delivery"]["distance_meters"],
@@ -185,6 +190,7 @@ def place_order(
     logger.info(
         "Order placed", extra={"order_id": str(order.pk), "order_number": order.order_number}
     )
+    reward_events.order_placed(order)
     order = presenters.reload(order)
     if order.submitted_at:
         notify_new_order(order, "cash on delivery")
@@ -249,6 +255,10 @@ def _commit_order(
         CouponRedemption.objects.create(
             coupon=coupon, user=user, order=order, discount_paise=order.discount_paise
         )
+
+    # 4. Hold the redeemed coins (cash orders spend them straight away); a short balance stops
+    # the whole order.
+    coin_hooks.reserve_for_order(order, cash=method == PaymentMethod.COD)
     return order
 
 

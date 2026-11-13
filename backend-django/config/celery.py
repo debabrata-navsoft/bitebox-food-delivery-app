@@ -37,4 +37,11 @@ app.conf.beat_schedule = {
         "schedule": 300.0,
         "options": {"expires": 290},
     },
+    # Coin expiry, unclosed coin holds, referral windows, campaign dates, birthdays
+    # (apps/coins/tasks.py; Node REWARDS_JOBS.sweepIntervalMs).
+    "coins-rewards-sweep": {
+        "task": "coins.rewards_sweep",
+        "schedule": 120.0,
+        "options": {"expires": 110},
+    },
 }

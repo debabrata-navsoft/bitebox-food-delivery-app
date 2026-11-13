@@ -56,6 +56,10 @@ class IssuedSession:
 # sign-up.
 RegistrationHook = Callable[[User, dict[str, Any], RequestMeta], None]
 registration_hooks: list[RegistrationHook] = []
+# Checks that run before the account is created and may refuse it with an ApiError, or note what
+# they resolved in `data` for the hooks (a referral code: apps/coins/apps.py).
+RegistrationCheck = Callable[[dict[str, Any]], None]
+registration_checks: list[RegistrationCheck] = []
 
 
 def _create_session(user: User, meta: RequestMeta, family: str | None = None) -> str:
@@ -122,6 +126,8 @@ def request_signup_code(email: str, phone: str, ip: str | None) -> dict[str, Any
 def register(data: dict[str, Any], meta: RequestMeta) -> IssuedSession:
     role = data.get("role") or Role.CUSTOMER
     email, phone = data["email"], data.get("phone") or None
+    for check in registration_checks:
+        check(data)
     _check_new_account(email, phone)
     phone_verified_at = None
     if signup_needs_code():
