@@ -292,8 +292,12 @@ request → helmet / cors / compression → json (100 kB) → cookie-parser → 
 |---|---|---|
 | `dispatch.service#sweep` | 15 s | Expire rider offers, re-dispatch waiting orders, auto-reject unanswered orders, cancel unpaid online orders and orders never picked up |
 | `rewards-jobs.service#rewardsSweep` | 2 min | Finish pending ledger rows, settle coin holds, expire coins and referral windows, start and end campaigns, pay birthdays |
+| `payment.service#reconcile` | 5 min | Payments the browser and webhooks missed, refunds never sent or not yet confirmed |
+| `notification.service#retryDue` | 1 min | Notification deliveries whose retry time has come, and queued ones nobody picked up |
 
-Both are idempotent and safe to run on several API instances at once. Tests call `sweep(now)` and `rewardsSweep(now)` directly.
+The Django API runs the same work as Celery Beat tasks (`config/celery.py`): `dispatch.sweep` (15 s), `payments.reconcile` (5 min), `notifications.retry` (1 min), `notifications.purge` and `tracking.purge` (daily). MongoDB removes old notifications, deliveries and tracking points itself (TTL indexes).
+
+All are idempotent and safe to run on several API instances at once. Tests call `sweep(now)` and `rewardsSweep(now)` directly.
 
 ### Multi-document writes
 
@@ -722,11 +726,27 @@ Everyone leaves an order's room when the order finishes.
 
 `notification.service.js#notify(userIds, { type, title, body, link, order })` does three things:
 
-1. Stores the notification (kept 90 days).
+1. Stores the notification (the in-app inbox, kept 90 days).
 2. Emits `notification:new`.
-3. Hands it to `push.service.js#pushToUsers`.
+3. Plans one **delivery** per external channel the type uses, the person allows and can be reached on, and sends each in the background.
 
-It is best-effort and never throws. `notifyAdmins(payload, permission)` reaches the super admin plus every admin role that has that permission.
+It is best-effort and never throws.
+
+**Channels** (`notification-channels.js`; Django: `apps/notifications/{content,senders}.py`):
+
+| Channel | Carries | Default | On when |
+|---|---|---|---|
+| In-app | every type | always | always |
+| Web Push | every type, by category | orders and account on, promotions off | both VAPID keys are set |
+| App push (FCM) | every type, by the push switches | as Web Push | `FCM_CREDENTIALS_FILE` is set (for future native apps; tokens via `/push/devices`) |
+| Email | welcome, order placed/rejected/cancelled/delivered, payment failed, refund started/processed/failed | orders and account on | SMTP is set (`NOTIFICATION_EMAILS=false` turns it off) |
+| SMS | delivery code (picked up, new code), rider approaching, order cancelled/rejected | off (opt-in) | `SMS_PROVIDER=msg91` (or `console` to log) and the person has a phone |
+
+People choose per channel and category in Notifications, **Email and SMS** (`GET`/`PUT /notifications/preferences`); push keeps its own card.
+
+**Delivery log, retries and dead letters:** every external send is a `NotificationDelivery` (`queued`, `sent`, `failed`, `dead`, `skipped`). One attempt at a time, with a short lease so two workers never send the same one. A temporary failure waits 1, 5, 15 and 60 minutes; after 5 tries the delivery is **dead** (a dead letter). Nothing to send to (no browser, no phone) is `skipped`. Operations see the log at **Admin, Operations, Notification log** (`GET /admin/notifications/deliveries`) and send a dead one again (`POST …/{id}/retry`, audited).
+
+**Events added with the notification channels:** a welcome note on sign-up, "payment did not go through", "refund started", and "your rider is almost there" (once per order, when the rider on the way is within `APPROACH_NOTIFY_METERS`, 500 m, with the delivery code). `notifyAdmins(payload, permission)` reaches the super admin plus every admin role that has that permission.
 
 **Who hears what:**
 
@@ -992,6 +1012,10 @@ Requesters (customer, restaurant or rider) use `GET/POST /support/tickets`, `GET
 | GET | `/push/public-key` | public | VAPID public key and whether push is on |
 | POST, DELETE | `/push/subscriptions` | signed in (POST rate limited) | Subscribe / unsubscribe this browser |
 | GET, PUT | `/push/preferences` | signed in | Categories, devices / change switches |
+| GET, PUT | `/notifications/preferences` | signed in | Every channel's switches (push, email, SMS) and what is available |
+| POST, DELETE | `/push/devices` | signed in | Register / forget a native app's FCM token |
+| GET | `/admin/notifications/deliveries` | `operations:view` | Delivery log (`?status=dead`, `?channel=email`) with counts |
+| POST | `/admin/notifications/deliveries/{id}/retry` | `operations:view` (audited) | Send a failed or dead delivery again |
 | POST | `/admin/push/promotions` | `promotions:send` (rate limited, audited) | Push an offer to opted-in customers |
 | POST | `/newsletter/subscriptions` | public, rate limited | Subscribe an email |
 

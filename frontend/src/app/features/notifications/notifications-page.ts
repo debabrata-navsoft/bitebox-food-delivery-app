@@ -10,6 +10,7 @@ import { InboxService } from '../../core/services/inbox.service';
 import { RealtimeService } from '../../core/services/realtime.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../shared/components/page-header/page-header';
+import { ChannelSettings } from '../../shared/components/channel-settings/channel-settings';
 import { PushSettings } from '../../shared/components/push-settings/push-settings';
 import { pagedList } from '../../shared/list/paged-list';
 import { AppNotification, notificationIcon } from '../../shared/models/payment.models';
@@ -26,6 +27,7 @@ import { AppNotification, notificationIcon } from '../../shared/models/payment.m
     EmptyState,
     PageHeader,
     PushSettings,
+    ChannelSettings,
   ],
   templateUrl: './notifications-page.html',
   styleUrl: './notifications-page.scss',

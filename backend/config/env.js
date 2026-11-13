@@ -125,6 +125,19 @@ export const env = Object.freeze({
     arrivalFarMeters: Number(process.env.ARRIVAL_FAR_METERS) || 200,
   },
 
+  // Notification channels beside in-app and Web Push. Email uses SMTP (NOTIFICATION_EMAILS=false
+  // turns notification emails off); SMS uses MSG91 or the log ("console"); FCM (future native
+  // apps) needs a Firebase service account JSON file. Each is off until configured.
+  notifications: {
+    emails: process.env.NOTIFICATION_EMAILS !== "false",
+    smsProvider: isTest ? "" : (process.env.SMS_PROVIDER || "").trim(),
+    msg91AuthKey: process.env.MSG91_AUTH_KEY || "",
+    msg91TemplateId: process.env.MSG91_TEMPLATE_ID || "",
+    fcmCredentialsFile: isTest ? "" : (process.env.FCM_CREDENTIALS_FILE || "").trim(),
+    // "Your rider is almost there" when the rider on the way comes this close to the customer.
+    approachMeters: Number(process.env.APPROACH_NOTIFY_METERS) || 500,
+  },
+
   // Delivery OTP: a 4-digit code made at pickup, shown to the customer, needed to mark delivered.
   deliveryOtp: {
     required: process.env.DELIVERY_OTP_REQUIRED !== "false",

@@ -1,11 +1,12 @@
 import { env } from "../config/env.js";
 import { PERMISSIONS, hasPermission } from "../config/permissions.js";
 import { DeliveryPartner } from "../models/delivery-partner.model.js";
-import { Order, TRACKED_STATUSES } from "../models/order.model.js";
+import { ORDER_STATUS, Order, TRACKED_STATUSES } from "../models/order.model.js";
+import { notifyApproaching } from "./order-notifications.js";
 import { TrackingPoint } from "../models/tracking-point.model.js";
 import { ROLES } from "../models/user.model.js";
 import { ApiError } from "../utils/api-error.js";
-import { fromPoint, toPoint } from "../utils/geo.js";
+import { fromPoint, haversineMeters, toPoint } from "../utils/geo.js";
 
 /** The newest points of a delivery sent to the map. */
 const PATH_LIMIT = 200;
@@ -22,6 +23,32 @@ export async function record(riderId, orderId, { latitude, longitude, accuracy =
     recordedAt: at,
   });
   return true;
+}
+
+/** A fix of a rider carrying an order: store it (sampled) and tell the customer when close. */
+export async function onPosition(riderId, orderId, fix, at) {
+  await record(riderId, orderId, fix, at);
+  await notifyIfApproaching(orderId, fix, at);
+}
+
+/** Once per order: the rider on the way is within env.notifications.approachMeters of the customer. */
+export async function notifyIfApproaching(orderId, { latitude, longitude }, at) {
+  const order = await Order.findOne({
+    _id: orderId,
+    status: ORDER_STATUS.ON_THE_WAY,
+    approachNotifiedAt: null,
+  });
+  const home = order?.deliveryAddress?.location?.coordinates;
+  if (!home) return false;
+  const meters = haversineMeters([longitude, latitude], home);
+  if (meters > env.notifications.approachMeters) return false;
+  const claimed = await Order.findOneAndUpdate(
+    { _id: order._id, approachNotifiedAt: null },
+    { $set: { approachNotifiedAt: at } },
+    { returnDocument: "after" },
+  );
+  if (claimed) await notifyApproaching(claimed);
+  return Boolean(claimed);
 }
 
 /** The order this rider is carrying in a tracked status (assigned → on the way), if any. */

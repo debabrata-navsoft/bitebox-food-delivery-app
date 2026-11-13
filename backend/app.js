@@ -36,7 +36,7 @@ import {
   adminRefundsRouter,
   adminReportsRouter,
 } from "./routes/admin-orders.routes.js";
-import notificationRoutes from "./routes/notification.routes.js";
+import notificationRoutes, { adminNotificationsRouter } from "./routes/notification.routes.js";
 import {
   paymentsRouter,
   razorpayWebhookRouter,
@@ -145,6 +145,7 @@ export function createApp(options = {}) {
   app.use("/api/v1/admin/support", adminSupportRouter);
   app.use("/api/v1/admin/rewards", adminRewardsRouter);
   app.use("/api/v1/admin/push", adminPushRouter);
+  app.use("/api/v1/admin/notifications", adminNotificationsRouter);
   app.use("/api/v1/admin", adminCatalogRoutes);
   app.use("/api/v1/restaurants", restaurantsRouter);
   app.use("/api/v1/categories", categoriesRouter);

@@ -115,6 +115,13 @@ export const ADMIN_ROUTES: Routes = [
       import('./operations/performance/delivery-performance').then((m) => m.DeliveryPerformancePage),
   },
   {
+    path: 'operations/notifications',
+    title: 'Notification log | BiteBox Admin',
+    canActivate: [can('operations:view')],
+    loadComponent: () =>
+      import('./operations/notification-log/notification-log').then((m) => m.NotificationLog),
+  },
+  {
     path: 'orders',
     title: 'Orders | BiteBox Admin',
     canActivate: [can('orders:view')],

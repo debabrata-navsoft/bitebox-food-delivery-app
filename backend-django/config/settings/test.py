@@ -33,6 +33,10 @@ DEBUG = False
 # Tests choose their provider (apps/payments/providers.py#use_online_provider); never real keys.
 RAZORPAY_KEY_ID = RAZORPAY_KEY_SECRET = RAZORPAY_WEBHOOK_SECRET = ""
 PAYMENTS_MOCK_ENABLED = True
+# Notification channels: tests turn them on with fake senders (apps/notifications/senders.py).
+VAPID_PUBLIC_KEY = VAPID_PRIVATE_KEY = FCM_CREDENTIALS_FILE = MSG91_AUTH_KEY = ""
+SMS_PROVIDER = ""
+PUSH_RATE_LIMIT = PROMOTION_RATE_LIMIT = "1000/60s"
 ALLOWED_HOSTS = ["testserver", "localhost"]
 
 # From Phase 6 the catalogue uses PostGIS and JSON operators, so tests need PostgreSQL.

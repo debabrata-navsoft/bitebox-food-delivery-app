@@ -44,6 +44,42 @@ def record(
     return True
 
 
+def on_position(
+    rider_id: Any,
+    order_id: Any,
+    latitude: float,
+    longitude: float,
+    accuracy: float | None,
+    at: datetime,
+) -> None:
+    """A fix of a rider carrying an order: store it (sampled) and tell the customer when close."""
+    record(rider_id, order_id, latitude, longitude, accuracy, at)
+    notify_if_approaching(order_id, latitude, longitude, at)
+
+
+def notify_if_approaching(order_id: Any, latitude: float, longitude: float, at: datetime) -> bool:
+    """Once per order: the rider on the way is within APPROACH_NOTIFY_METERS of the customer."""
+    from apps.orders.models import OrderStatus
+    from apps.orders.notifications import notify_approaching
+    from common.geo import haversine_m
+
+    order = Order.objects.filter(
+        pk=order_id, status=OrderStatus.ON_THE_WAY, approach_notified_at__isnull=True
+    ).first()
+    if order is None or order.delivery_location is None:
+        return False
+    if haversine_m(GeoPoint(lat=latitude, lng=longitude), order.delivery_location) > (
+        settings.APPROACH_NOTIFY_METERS
+    ):
+        return False
+    claimed = Order.objects.filter(pk=order.pk, approach_notified_at__isnull=True).update(
+        approach_notified_at=at
+    )
+    if claimed:
+        notify_approaching(order)
+    return bool(claimed)
+
+
 def tracked_order_id(rider_id: Any) -> uuid.UUID | None:
     """The order this rider is carrying in a tracked status (assigned → on the way), if any."""
     return (

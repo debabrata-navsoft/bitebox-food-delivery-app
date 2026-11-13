@@ -253,6 +253,37 @@ TRACKING_SAMPLE_SECONDS = env.int("TRACKING_SAMPLE_SECONDS", default=15)
 TRACKING_RETENTION_DAYS = env.int("TRACKING_RETENTION_DAYS", default=30)
 TRACKING_STALE_SECONDS = env.int("TRACKING_STALE_SECONDS", default=90)
 ARRIVAL_FAR_METERS = env.int("ARRIVAL_FAR_METERS", default=200)
+# "Your rider is almost there" when the rider on the way comes this close to the customer.
+APPROACH_NOTIFY_METERS = env.int("APPROACH_NOTIFY_METERS", default=500)
+
+# Notifications (apps/notifications). Web Push needs both VAPID keys (`npx web-push
+# generate-vapid-keys`; the same keys as the Node API, so browsers stay subscribed). Push
+# endpoints must be on PUSH_ALLOWED_HOSTS (SSRF guard). Email goes through the SMTP settings
+# below; SMS through MSG91 (SMS_PROVIDER=msg91) or the log (console); FCM needs a service
+# account JSON file. Each external channel is off until configured.
+VAPID_PUBLIC_KEY = env.str("VAPID_PUBLIC_KEY", default="").strip()
+VAPID_PRIVATE_KEY = env.str("VAPID_PRIVATE_KEY", default="").strip()
+VAPID_SUBJECT = env.str("VAPID_SUBJECT", default="mailto:support@bitebox.local")
+PUSH_ALLOWED_HOSTS: list[str] = [
+    h.strip().lower()
+    for h in env.list(
+        "PUSH_ALLOWED_HOSTS",
+        default=[
+            "fcm.googleapis.com",
+            "push.services.mozilla.com",
+            "notify.windows.com",
+            "push.apple.com",
+        ],
+    )
+    if h.strip()
+]
+NOTIFICATION_EMAILS = env.bool("NOTIFICATION_EMAILS", default=True)
+SMS_PROVIDER = env.str("SMS_PROVIDER", default="")  # "", "console" or "msg91"
+MSG91_AUTH_KEY = env.str("MSG91_AUTH_KEY", default="")
+MSG91_TEMPLATE_ID = env.str("MSG91_TEMPLATE_ID", default="")
+FCM_CREDENTIALS_FILE = env.str("FCM_CREDENTIALS_FILE", default="")
+PUSH_RATE_LIMIT = "30/900s"
+PROMOTION_RATE_LIMIT = "10/3600s"
 LOCATION_RATE_LIMIT = env.str("LOCATION_RATE_LIMIT", default="30/60s")
 
 # Rate-limit counters. Production uses Redis so every API instance shares them.

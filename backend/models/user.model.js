@@ -75,6 +75,19 @@ const userSchema = new mongoose.Schema(
       account: { type: Boolean, default: true }, // support, reviews, coins, panel alerts
       promotions: { type: Boolean, default: false }, // offers: opt-in only
     },
+    // Email and SMS switches per category (served by GET /notifications/preferences).
+    channelPreferences: {
+      email: {
+        orders: { type: Boolean, default: true },
+        account: { type: Boolean, default: true },
+        promotions: { type: Boolean, default: false },
+      },
+      sms: {
+        orders: { type: Boolean, default: false },
+        account: { type: Boolean, default: false },
+        promotions: { type: Boolean, default: false },
+      },
+    },
   },
   {
     timestamps: true,
@@ -88,6 +101,7 @@ const userSchema = new mongoose.Schema(
         delete ret.passwordResetTokenHash;
         delete ret.passwordResetExpiresAt;
         delete ret.pushPreferences; // served by GET /push/preferences
+        delete ret.channelPreferences; // served by GET /notifications/preferences
         // Admin roles carry their permissions so the web app can shape its menu (the API still checks).
         if (ADMIN_ROLES.includes(ret.role)) ret.permissions = permissionsFor(ret.role);
         return ret;

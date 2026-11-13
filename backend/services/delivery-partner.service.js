@@ -10,7 +10,7 @@ import {
   findWaitingOrders,
 } from "./dispatch.service.js";
 import { endSessions } from "./auth.service.js";
-import { record, trackedOrderId } from "./tracking.service.js";
+import { onPosition, trackedOrderId } from "./tracking.service.js";
 import {
   pickupDistanceMeters,
   presentForRider,
@@ -125,7 +125,7 @@ export async function updateLocation(userId, { latitude, longitude }) {
     });
   const orderId = await trackedOrderId(userId);
   if (orderId)
-    await record(userId, orderId, { latitude, longitude }, updated.locationUpdatedAt);
+    await onPosition(userId, orderId, { latitude, longitude }, updated.locationUpdatedAt);
   return { locationUpdatedAt: updated.locationUpdatedAt };
 }
 

@@ -20,6 +20,7 @@ const NAV: Record<AdminRole, NavItem[]> = {
         { label: 'Delivery partners', icon: 'two_wheeler', link: '/admin/delivery-partners' },
         { label: 'Order monitoring', icon: 'monitor', link: '/admin/operations/monitoring' },
         { label: 'Delivery reports', icon: 'insights', link: '/admin/operations/reports' },
+        { label: 'Notification log', icon: 'bell', link: '/admin/operations/notifications' },
       ],
     },
     {
@@ -87,6 +88,7 @@ const NAV: Record<AdminRole, NavItem[]> = {
     { label: 'Delivery management', icon: 'two_wheeler', link: '/admin/delivery-partners' },
     { label: 'Order monitoring', icon: 'monitor', link: '/admin/operations/monitoring' },
     { label: 'Reports', icon: 'insights', link: '/admin/operations/reports' },
+    { label: 'Notification log', icon: 'bell', link: '/admin/operations/notifications' },
     ...PROFILE,
   ],
   finance_admin: [

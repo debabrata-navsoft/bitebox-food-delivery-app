@@ -174,10 +174,10 @@ def update_location(user: User, latitude: float, longitude: float) -> dict[str, 
     )
     if not updated:
         raise ApiError(409, "Go online to share your location", code="OFFLINE")
-    from apps.tracking.services import record, tracked_order_id
+    from apps.tracking.services import on_position, tracked_order_id
 
     if order_id := tracked_order_id(user.pk):
-        record(user.pk, order_id, latitude, longitude, None, now)
+        on_position(user.pk, order_id, latitude, longitude, None, now)
     return {"location_updated_at": now}
 
 

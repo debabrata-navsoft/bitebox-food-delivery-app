@@ -177,6 +177,8 @@ const orderSchema = new mongoose.Schema(
     // Straight-line metres from the rider's last fix to the restaurant when they marked
     // "arrived" (null without a fix). Admins only; far arrivals are flagged, not refused.
     arrivalDistanceMeters: { type: Number, default: null },
+    // When the customer was told the rider is close (once per order).
+    approachNotifiedAt: { type: Date, default: null },
     settlement: {
       restaurantPaise: Number,
       riderPaise: Number,

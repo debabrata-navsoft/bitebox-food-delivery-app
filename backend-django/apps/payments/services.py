@@ -27,7 +27,12 @@ from apps.cart.models import Cart, CartItem
 from apps.menus.models import FoodItem
 from apps.orders import presenters
 from apps.orders.models import Order, OrderStatus, PaymentMethod, PaymentStatus
-from apps.orders.notifications import notify_new_order, notify_refund
+from apps.orders.notifications import (
+    notify_new_order,
+    notify_payment_failed,
+    notify_refund,
+    notify_refund_started,
+)
 from apps.orders.notifications import rupees as _rupees
 from apps.orders.workflow import Actor, transition
 from apps.realtime.events import emit_order_updated
@@ -305,6 +310,9 @@ def mark_failed(payment_id: uuid.UUID, reason: str | None) -> Payment:
             Order.objects.filter(pk=payment.order_id, payment_status=P.PENDING).update(
                 payment_status=P.FAILED
             )
+            notify_payment_failed(
+                Order.objects.get(pk=payment.order_id), payment.failure_reason or "Payment failed"
+            )
     return payment
 
 
@@ -457,6 +465,7 @@ def _open_refund(
         return Refund.objects.get(idempotency_key=key)
     if not manual:
         transaction.on_commit(lambda: process_refund(refund.pk))
+        notify_refund_started(Order.objects.get(pk=payment.order_id), amount_paise)
     return refund
 
 

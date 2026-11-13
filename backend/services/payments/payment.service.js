@@ -13,7 +13,13 @@ import { User } from "../../models/user.model.js";
 import { emitOrderUpdated } from "../../sockets/events.js";
 import { ApiError } from "../../utils/api-error.js";
 import { escapeRegex, paginationMeta } from "../../utils/pagination.js";
-import { notifyNewOrder, notifyRefund, rupees } from "../order-notifications.js";
+import {
+  notifyNewOrder,
+  notifyPaymentFailed,
+  notifyRefund,
+  notifyRefundStarted,
+  rupees,
+} from "../order-notifications.js";
 import { startSweepLoop } from "../../utils/sweep-loop.js";
 import * as rewardEvents from "../reward-events.js";
 import { mockProvider } from "./mock.provider.js";
@@ -345,11 +351,14 @@ async function markFailed(paymentId, reason) {
     { $set: { status: P.FAILED, failureReason: reason || "Payment failed" } },
     { returnDocument: "after" },
   );
-  if (payment)
-    await Order.updateOne(
+  if (payment) {
+    const order = await Order.findOneAndUpdate(
       { _id: payment.order, paymentStatus: P.PENDING },
       { $set: { paymentStatus: P.FAILED } },
+      { returnDocument: "after" },
     );
+    if (order) await notifyPaymentFailed(order, payment.failureReason);
+  }
   return payment ?? Payment.findById(paymentId);
 }
 
@@ -432,7 +441,11 @@ async function openRefund(payment, amountPaise, { key, reason, by = null }) {
     if (error.code === 11000) return Refund.findOne({ idempotencyKey: key }); // a racing twin
     throw error;
   }
-  if (!manual) await processRefund(refund._id);
+  if (!manual) {
+    const order = await Order.findById(payment.order);
+    if (order) await notifyRefundStarted(order, amountPaise);
+    await processRefund(refund._id);
+  }
   return refund;
 }
 

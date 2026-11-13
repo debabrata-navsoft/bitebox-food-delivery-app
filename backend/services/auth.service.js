@@ -13,7 +13,7 @@ import {
 import { ApiError } from "../utils/api-error.js";
 import { hashToken, randomToken, signAccessToken } from "../utils/tokens.js";
 import { sendMail } from "./mail.service.js";
-import { notifyAdmins } from "./notification.service.js";
+import { notify, notifyAdmins } from "./notification.service.js";
 import * as referralService from "./referral.service.js";
 import * as rewardEvents from "./reward-events.js";
 
@@ -106,6 +106,8 @@ export async function register(
     passwordHash: await hashPassword(password),
   });
   logger.info({ userId: user.id, role }, "User registered");
+  const [title, welcomeBody, link] = WELCOME[role] ?? WELCOME.customer;
+  await notify(user._id, { type: "account.welcome", title: title(name), body: welcomeBody, link });
   if (role === ROLES.CUSTOMER)
     await rewardEvents.customerRegistered(user, { referral, ip: meta?.ip });
   const signup = PARTNER_SIGNUP[role];
@@ -118,6 +120,17 @@ export async function register(
     }, signup.permission);
   return issueTokens(user, meta);
 }
+
+/** The welcome notification (in-app, and email when allowed) per role. */
+const WELCOME = {
+  customer: [(n) => `Welcome to BiteBox, ${n}!`, "Find a restaurant near you and order in minutes.", "/"],
+  restaurant: [
+    (n) => `Welcome to BiteBox, ${n}!`,
+    "Add your restaurant details to start receiving orders.",
+    "/restaurant/details",
+  ],
+  delivery: [(n) => `Welcome to BiteBox, ${n}!`, "Add your vehicle, go online and start earning.", "/delivery"],
+};
 
 export async function login({ email, password, portal }, meta) {
   const user = await User.findOne({ email }).select(
