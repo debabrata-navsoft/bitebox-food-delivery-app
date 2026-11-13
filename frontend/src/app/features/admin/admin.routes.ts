@@ -175,6 +175,12 @@ export const ADMIN_ROUTES: Routes = [
     loadComponent: () => import('./finance/refunds/refunds').then((m) => m.RefundsPage),
   },
   {
+    path: 'finance/ledger',
+    title: 'Ledger | BiteBox Admin',
+    canActivate: [can('finance:view')],
+    loadComponent: () => import('./finance/ledger/ledger').then((m) => m.LedgerPage),
+  },
+  {
     path: 'finance/commission',
     title: 'Commission | BiteBox Admin',
     canActivate: [can('finance:view')],

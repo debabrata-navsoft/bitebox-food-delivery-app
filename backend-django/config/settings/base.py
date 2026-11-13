@@ -161,6 +161,7 @@ CLIENT_URLS: list[str] = env.list("CLIENT_URL", default=["http://localhost:4200"
 CORS_ALLOWED_ORIGINS = CLIENT_URLS
 CORS_ALLOW_CREDENTIALS = True  # the refresh-token cookie (Phase 5)
 CORS_URLS_REGEX = r"^/api/.*$"
+CORS_EXPOSE_HEADERS = ["Content-Disposition"]  # the file name of PDF and CSV downloads
 CORS_ALLOW_HEADERS = [
     "accept",
     "authorization",

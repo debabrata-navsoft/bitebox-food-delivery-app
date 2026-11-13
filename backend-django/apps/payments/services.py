@@ -26,7 +26,13 @@ from apps.accounts.models import User
 from apps.cart.models import Cart, CartItem
 from apps.menus.models import FoodItem
 from apps.orders import presenters
-from apps.orders.models import Order, OrderStatus, PaymentMethod, PaymentStatus
+from apps.orders.models import (
+    ACTIVE_STATUSES,
+    Order,
+    OrderStatus,
+    PaymentMethod,
+    PaymentStatus,
+)
 from apps.orders.notifications import (
     notify_new_order,
     notify_payment_failed,
@@ -520,6 +526,10 @@ def _finish_refund(refund: Refund, *, ok: bool) -> None:
             )
         _sync_payment_status(refund.payment_id, now)
     order = Order.objects.get(pk=Payment.objects.get(pk=refund.payment_id).order_id)
+    if ok and order.status == OrderStatus.DELIVERED:
+        from apps.finance.services import apply_refund
+
+        apply_refund(order, refund.pk, refund.amount_paise)
     logger.info(
         "Refund processed" if ok else "Refund failed",
         extra={"order_id": str(order.pk), "refund_id": str(refund.pk)},
@@ -667,13 +677,22 @@ def _admin_row(p: Payment) -> dict[str, Any]:
     }
 
 
+ORDER_STATES: dict[str, tuple[str, ...]] = {
+    "active": ACTIVE_STATUSES,
+    "delivered": (OrderStatus.DELIVERED,),
+    "cancelled": (OrderStatus.CANCELLED, OrderStatus.REJECTED),
+}
+
+
 def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
-    """Newest first; filters by status, method, provider, dates and a search over the order
-    number and the customer's name, email or phone."""
+    """Newest first; filters by status, method, provider, the order's state, dates and a search
+    over the order number and the customer's name, email or phone."""
     qs = Payment.objects.select_related("order", "user")
     for field in ("status", "method", "provider"):
         if query.get(field):
             qs = qs.filter(**{field: query[field]})
+    if query.get("order_state"):
+        qs = qs.filter(order__status__in=ORDER_STATES[query["order_state"]])
     if query.get("from"):
         qs = qs.filter(created_at__gte=query["from"])
     if query.get("to"):

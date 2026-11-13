@@ -295,7 +295,7 @@ def present_for_rider(order: Order, user_id: Any) -> dict[str, Any]:
     data["offer_expires_at"] = offer.expires_at if offer else None
     data["offer_window_seconds"] = DISPATCH["offer_timeout_seconds"]
     # What the rider earns for this delivery (fixed by distance, before they accept).
-    data["estimated_earnings_paise"] = settlement_for(order)["rider_paise"]
+    data["estimated_earnings_paise"] = settlement_for(order, commission_bp=0)["rider_paise"]
     # The rider's next allowed moves, in order (the app shows the first as its main button), and
     # whether "delivered" needs the customer's code. Never the code itself.
     carrying = str(order.delivery_partner_id) == str(user_id)

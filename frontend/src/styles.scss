@@ -591,6 +591,12 @@ np-button .np-button:is(.np-button--solid, .np-button--outlined, .np-button--tex
 
 np-button .np-button.np-button--solid {
   box-shadow: none;
+
+  // NexPrime adds a coloured glow on hover (a more specific rule, hence the extra pseudo-classes);
+  // keep the keyboard focus ring.
+  &:hover:not(:disabled):not(:focus-visible) {
+    box-shadow: none;
+  }
 }
 
 // Solid red and green np-buttons (Reject, Accept, Delivered): the solid tokens stay deep in dark

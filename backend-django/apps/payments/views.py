@@ -180,6 +180,8 @@ class AdminPaymentQuery(PageQuery):
     status = _choice(PaymentStatus.values, "Invalid value", required=False)
     method = _choice(PaymentMethod.values, "Invalid value", required=False)
     provider = _choice(Provider.values, "Invalid value", required=False)
+    # Where the order stands, so finance can find cancelled orders that still hold money.
+    order_state = _choice(list(services.ORDER_STATES), "Invalid value", required=False)
     to = serializers.DateTimeField(required=False)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:

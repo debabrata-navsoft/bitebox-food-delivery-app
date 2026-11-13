@@ -104,6 +104,11 @@ dd {
   }
 }
 
+// Below the details, on their left edge (not indented like a text button).
+.menu-link {
+  margin-top: var(--bb-space-2);
+}
+
 address {
   font-style: normal;
   line-height: 1.6;

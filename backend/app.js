@@ -87,6 +87,8 @@ export function createApp(options = {}) {
         "Idempotency-Key",
       ],
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      // The file name of PDF and CSV downloads.
+      exposedHeaders: ["Content-Disposition"],
     }),
   );
   app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));

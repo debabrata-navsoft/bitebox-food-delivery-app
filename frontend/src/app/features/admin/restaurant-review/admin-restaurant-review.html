@@ -166,8 +166,8 @@
           <dd>{{ r.reviewedAt ? (r.reviewedAt | date: 'medium') : 'Not yet' }}</dd>
         </div>
       </dl>
-      <a class="bb-btn bb-btn--text" routerLink="/admin/foods" [queryParams]="{ restaurant: r.id }"
-        ><np-icon name="book-open" />View menu items</a
+      <a class="bb-btn bb-btn--outlined bb-btn--small menu-link" routerLink="/admin/foods" [queryParams]="{ restaurant: r.id }"
+        ><np-icon name="book-open" class="mat-icon" matButtonIcon />View menu items</a
       >
     </section>
   </div>

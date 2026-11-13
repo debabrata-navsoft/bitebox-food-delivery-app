@@ -183,6 +183,10 @@ const orderSchema = new mongoose.Schema(
       restaurantPaise: Number,
       riderPaise: Number,
       platformPaise: Number,
+      // The commission rate in effect at delivery, and refunds after delivery taken from the
+      // restaurant's share while not yet paid out.
+      commissionBp: Number,
+      refundAdjustmentPaise: Number,
       at: Date,
     },
     // The payout batch that paid each side of the settlement (null until finance pays it out).

@@ -202,7 +202,11 @@ def transition(
             OrderCancellation.objects.create(order_id=order.pk, by=str(actor), reason=reason or "")
         order.refresh_from_db()
         if to == S.DELIVERED:
-            OrderSettlement.objects.create(order=order, settled_at=now, **settlement_for(order))
+            from apps.finance.ledger import post_settlement
+
+            post_settlement(
+                OrderSettlement.objects.create(order=order, settled_at=now, **settlement_for(order))
+            )
         if on_change is not None:
             on_change(order)
         _after_transition(order, now)

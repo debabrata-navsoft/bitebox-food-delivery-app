@@ -600,6 +600,11 @@ Other cases:
   - **Restaurant:** food value after discounts, minus a 15% commission.
   - **Rider:** ₹20 per delivery plus ₹6 per started kilometre (straight line).
   - **Platform:** the rest. Coin discounts reduce only the platform's share.
+  - **Commission rate:** the restaurant's own rule if it has one, else the global rule, else 15%. Rules have `effectiveFrom`/`effectiveTo`; setting a rate closes the open one, so history is kept. The rate used is stored on the settlement (`commissionBp`), so later changes never alter past orders.
+  - **Refunds after delivery** reduce the restaurant's share (`refundAdjustmentPaise`, never below zero). Payouts and statements use the net amount.
+- **Ledger:** every settlement, payout and post-delivery refund is posted as balanced double-entry rows (`LedgerEntry`: customer payments, restaurant and rider payables, platform revenue, refunds, bank). Rows are immutable and keyed (`settlement:<orderId>`, `payout:<id>`, `refund:<id>`), so a retry never posts twice. `GET /admin/finance/ledger?days=` shows balances per account and the latest entries.
+- **Invoices and statements (PDF):** a customer downloads a tax invoice for a delivered order (`GET /orders/{id}/invoice`; admins `/admin/orders/{id}/invoice`). Restaurants, riders and finance download a statement per payout. Each document gets a number on first download from a series per Indian financial year (`BB/INV/2026-27/000001`, `BB/STM/...`); later downloads show the same number. GSTIN, HSN/SAC and the CGST/SGST split are added once restaurant KYC exists (the PDF says so).
+- **Partner history:** restaurants and riders see each settled order (amount, whether paid out) and their payouts on the Earnings page (`/my/restaurant/settlements`, `/payouts`; `/delivery/settlements`, `/payouts`). Finance exports settlements as CSV (`GET /admin/finance/settlements.csv?days=&type=`).
 - **Earnings pages:** restaurants and riders see totals, a daily chart and recent orders for 7, 30 or 90 days.
 - **Payouts (finance):** delivered settlements become "owed". A payout claims them in one conditional update on `order.payouts.restaurant` / `.rider`, so no order is paid twice. Finance marks a payout paid with a bank/UPI reference. Cancelling a pending payout makes its orders due again.
 - **Reports** (`GET /admin/reports`):
@@ -933,7 +938,7 @@ Admin coupons (`catalog:manage`): `GET/POST /admin/coupons`, `PATCH/DELETE /admi
 | GET | `/admin/users/{id}/logins`, `/admin/admins/{id}/logins` | `users:manage` / `admins:manage` | Sign-in history |
 | GET | `/admin/delivery-partners` | `riders:manage` | Riders with availability |
 | PATCH | `/admin/delivery-partners/{id}/status` | `riders:manage` | Suspend or reactivate (not while carrying an order) |
-| GET | `/admin/payments` | `finance:view` | All payments (search by order number or customer) |
+| GET | `/admin/payments` | `finance:view` | All payments (search by order number or customer; `orderState` (`active`, `delivered` or `cancelled`) finds cancelled or rejected orders that still hold money) |
 | POST | `/admin/payments/{id}/refund` | `refunds:manage` | Retry a failed refund |
 | GET | `/admin/payments/{id}` | `finance:view` | One payment with refunds and gateway events |
 | POST | `/admin/payments/{id}/refunds` | `refunds:manage` | Full or partial refund |
@@ -960,6 +965,10 @@ Admin coupons (`catalog:manage`): `GET/POST /admin/coupons`, `PATCH/DELETE /admi
 | GET | `/admin/finance/dashboard`, `/transactions/{id}`, `/commission`, `/refunds` | `finance:view` |
 | GET | `/admin/finance/payouts/due`, `/admin/finance/payouts` | `payouts:manage` (plus `finance:view`, required for every `/admin/finance` route) |
 | POST | `/admin/finance/payouts`, `/payouts/{id}/paid`, `/payouts/{id}/cancel` | `payouts:manage` |
+| GET | `/admin/finance/commission/rules`, `/ledger`, `/settlements.csv`, `/payouts/{id}/statement` | `finance:view` |
+| PUT, DELETE | `/admin/finance/commission/rules` (`{restaurantId?, ratePercent}`), `/commission/rules/{id}` | `payouts:manage` |
+| GET | `/admin/orders/{id}/invoice`; customer `/orders/{id}/invoice` | admin orders / the order's customer |
+| GET | `/my/restaurant/settlements`, `/payouts`, `/payouts/{id}/statement`; `/delivery/settlements`, `/payouts`, `/payouts/{id}/statement` | restaurant / rider |
 | GET | `/admin/support/dashboard`, `/staff`, `/tickets`, `/tickets/{id}` | `support:manage` |
 | PATCH | `/admin/support/tickets/{id}` (status, priority, assignee) | `support:manage` |
 | POST | `/admin/support/tickets/{id}/messages` (reply or internal note), `/escalate` | `support:manage` |
