@@ -436,10 +436,35 @@ def rider_set_status(
         raise ApiError.bad_request("Unknown delivery status")
     if status == S.DELIVERED:
         _check_delivery_otp(user, order_id, otp)
+    update = (
+        {"arrival_distance_m": _distance_to_restaurant(user, order_id)}
+        if status == S.ARRIVED_AT_RESTAURANT
+        else None
+    )
     result = transition(
-        order_id, to=status, actor=Actor.DELIVERY, user=user, scope=Q(delivery_partner=user)
+        order_id,
+        to=status,
+        actor=Actor.DELIVERY,
+        user=user,
+        scope=Q(delivery_partner=user),
+        update=update,
     )
     return presenters.present_for_rider(result.order, user.pk)
+
+
+def _distance_to_restaurant(user: User, order_id: uuid.UUID) -> int | None:
+    """Straight-line metres from the rider's last fix to the restaurant (None if unknown)."""
+    from apps.delivery.models import DeliveryPartner
+    from common.geo import GeoPoint, haversine_m
+
+    fix = DeliveryPartner.objects.filter(user=user).values_list("location", flat=True).first()
+    snapshot = (
+        Order.objects.filter(pk=order_id).values_list("restaurant_snapshot", flat=True).first()
+    )
+    coordinates = ((snapshot or {}).get("location") or {}).get("coordinates")
+    if fix is None or not coordinates:
+        return None
+    return haversine_m(fix, GeoPoint(lat=coordinates[1], lng=coordinates[0]))
 
 
 def rider_history(user: User, page: Page) -> dict[str, Any]:

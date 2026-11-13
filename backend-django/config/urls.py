@@ -22,6 +22,7 @@ api_v1: list[URLPattern | URLResolver] = [
     path("", include("apps.reviews.urls")),
     path("", include("apps.finance.urls")),
     path("", include("apps.payments.urls")),
+    path("", include("apps.tracking.urls")),
 ]
 
 urlpatterns = [

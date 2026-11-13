@@ -554,6 +554,10 @@ A rider is offered at most one order and carries at most one. Both are guarded b
 - **Place search:** `GET /geo/search` and `GET /geo/reverse` go through Nominatim, cached for 24 hours.
 - **Rider GPS:** shared about every 4 s while moving on a delivery, and at least every 15 s. When idle, about once a minute.
 - **Customer map:** shows "Arriving in about N min · X km by road", plus "last update … ago" when the position is older than 90 s.
+- **Trail:** while a rider carries an order (assigned → on the way), their position is stored as a tracking point at most every `TRACKING_SAMPLE_SECONDS` (15 s), never while they are just online. Points are deleted after `TRACKING_RETENTION_DAYS` (30; a TTL index in MongoDB, the `tracking.purge` Celery task in Django). The customer and admin maps draw the trail under the route.
+- **Restoring the map:** `GET /tracking/orders/{id}` (the order's customer, its rider, or `orders:view`) returns `{ tracking, lastPoint, ageSeconds, stale, recentPath }`. The map loads it when it opens and after every socket reconnect, so it shows the rider even if the socket is down.
+- **Arrival check:** marking "arrived at restaurant" stores the straight-line distance from the rider's last fix (`arrivalDistanceMeters`, admins only). Arrivals further than `ARRIVAL_FAR_METERS` (200 m) are allowed but flagged in the admin order view.
+- **Navigation:** the rider app opens directions in the phone's map app (an external link); BiteBox never promises a delivery time from distance alone.
 - **Explained problems:** the app tells the user about these instead of failing silently:
   - Location permission denied.
   - No GPS.
@@ -1202,8 +1206,20 @@ docker compose --env-file deploy/.env up -d --build
 - [ ] SMTP for password-reset emails.
 - [ ] VAPID keys, kept the same across deploys. Changing them invalidates every subscription.
 - [ ] `ngsw-worker.js`, `ngsw.json`, `worker-basic.min.js` and `manifest.webmanifest` served with `Cache-Control: no-cache`, including on any CDN.
-- [ ] A production map tile provider, geocoder and OSRM server. The public ones are for light use only.
+- [ ] A production map tile provider, geocoder and OSRM server. The public ones are for light use only (see "Self-hosting maps" below).
 - [ ] Never run the seed in production (it refuses to).
+
+### Self-hosting maps
+
+The public OpenStreetMap tile server, Nominatim and OSRM demo servers forbid heavy or commercial use. Before launch, point BiteBox at your own servers or a hosted provider; only settings change:
+
+| Service | Setting | Self-hosting |
+|---|---|---|
+| Tiles | `environment.map.tileUrl` and `attribution` (frontend) | A commercial tile provider, or a tile server (e.g. `openstreetmap-tile-server`) with an India extract |
+| Geocoding | `GEOCODER_URL`, `GEOCODER_USER_AGENT` | Nominatim in Docker with the India extract from Geofabrik (about 4 to 8 GB RAM, a day to import) |
+| Routing | `ROUTING_URL`, `ROUTING_PROFILE` | `osrm-backend` in Docker: `osrm-extract` + `osrm-contract` on the India extract with the car or bike profile |
+
+Both APIs keep caching, merging identical requests and about 1 request per second per upstream, so a small self-hosted server is enough. When an upstream fails, the API answers 503 and the app falls back to straight-line distances.
 
 ---
 

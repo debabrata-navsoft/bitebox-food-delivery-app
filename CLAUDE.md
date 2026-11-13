@@ -144,7 +144,7 @@ Production: `docker compose --env-file deploy/.env up -d --build` (see `docs/DOC
 - **Maps:**
   - `shared/components/map-picker` is the pin picker.
   - `shared/components/tracking-map` is the read-only delivery map.
-  - `tracking-map/delivery-tracking.ts#deliveryTracking(order)` provides rider position, staleness, routes and ETA, and is shared by the customer and admin views.
+  - `tracking-map/delivery-tracking.ts#deliveryTracking(order)` provides rider position, staleness, the trail, routes and ETA, and is shared by the customer and admin views. It loads `GET /tracking/orders/{id}` (`core/services/order-tracking.service.ts`) when it starts and after every socket reconnect.
   - The rider's device GPS is shared through `core/services/rider-gps.service.ts`.
 
 ## Verification tips

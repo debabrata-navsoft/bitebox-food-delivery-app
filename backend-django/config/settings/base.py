@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "apps.newsletter",
     "apps.uploads",
     "apps.geo",
+    "apps.tracking",
 ]
 
 # Argon2id first; bcrypt only verifies hashes imported from the Node API (re-hashed on next login).
@@ -243,6 +244,15 @@ RAZORPAY_KEY_ID = env.str("RAZORPAY_KEY_ID", default="")
 RAZORPAY_KEY_SECRET = env.str("RAZORPAY_KEY_SECRET", default="")
 RAZORPAY_WEBHOOK_SECRET = env.str("RAZORPAY_WEBHOOK_SECRET", default="")
 PAYMENTS_MOCK_ENABLED = env.bool("PAYMENTS_MOCK", default=True)
+
+# Delivery tracking: a rider's position is stored at most every TRACKING_SAMPLE_SECONDS while
+# they carry an order, kept TRACKING_RETENTION_DAYS, and shown as stale after
+# TRACKING_STALE_SECONDS (the frontend uses the same 90 s). An arrival further than
+# ARRIVAL_FAR_METERS from the restaurant is allowed but flagged for admins.
+TRACKING_SAMPLE_SECONDS = env.int("TRACKING_SAMPLE_SECONDS", default=15)
+TRACKING_RETENTION_DAYS = env.int("TRACKING_RETENTION_DAYS", default=30)
+TRACKING_STALE_SECONDS = env.int("TRACKING_STALE_SECONDS", default=90)
+ARRIVAL_FAR_METERS = env.int("ARRIVAL_FAR_METERS", default=200)
 LOCATION_RATE_LIMIT = env.str("LOCATION_RATE_LIMIT", default="30/60s")
 
 # Rate-limit counters. Production uses Redis so every API instance shares them.

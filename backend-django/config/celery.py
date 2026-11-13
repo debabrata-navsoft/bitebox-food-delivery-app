@@ -20,6 +20,8 @@ app.conf.beat_schedule = {
         "schedule": 15.0,  # apps/dispatch/config.py DISPATCH["sweep_interval_seconds"]
         "options": {"expires": 14},  # a backlog never runs stale sweeps
     },
+    # Tracking points past their retention period (apps/tracking/services.py).
+    "tracking-purge": {"task": "tracking.purge", "schedule": 24 * 60 * 60.0},
     # Payments and refunds the browser and the webhooks missed (apps/payments/services.py).
     "payments-reconcile": {
         "task": "payments.reconcile",

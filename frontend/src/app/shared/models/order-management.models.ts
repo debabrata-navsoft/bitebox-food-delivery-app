@@ -101,6 +101,9 @@ export interface AdminOrder extends Order {
   /** Django API: the customer holds a delivery code; wrong tries so far. */
   deliveryOtpPending?: boolean;
   deliveryOtpAttempts?: number;
+  /** Straight-line metres from the restaurant when the rider marked "arrived"; flagged if far. */
+  arrivalDistanceMeters?: number | null;
+  arrivedFar?: boolean;
 }
 
 export interface AdminRider {

@@ -112,6 +112,7 @@
               [rider]="t.rider()"
               [riderStale]="t.riderStale()"
               [route]="t.remaining()?.path ?? t.plannedRoute()?.path ?? null"
+              [trail]="t.trail()"
               [lineFrom]="t.rider() ?? t.restaurant()"
               [label]="
                 'Map of your delivery from ' +

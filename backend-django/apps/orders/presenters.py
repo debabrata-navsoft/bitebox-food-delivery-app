@@ -11,6 +11,7 @@ Orders in the Node API's JSON shape (Order.toJSON), and what each role may see
 from datetime import timedelta
 from typing import Any
 
+from django.conf import settings
 from django.db.models import Prefetch, QuerySet
 
 from apps.delivery.models import DeliveryPartner
@@ -252,6 +253,12 @@ def present_with_rider(order: Order, *, for_customer: bool = False) -> dict[str,
     else:
         data["delivery_otp_pending"] = otp_pending
         data["delivery_otp_attempts"] = order.delivery_otp_attempts
+        # Where the rider was when they marked "arrived" (far arrivals are flagged, not refused).
+        data["arrival_distance_meters"] = order.arrival_distance_m
+        data["arrived_far"] = (
+            order.arrival_distance_m is not None
+            and order.arrival_distance_m > settings.ARRIVAL_FAR_METERS
+        )
     return data
 
 

@@ -115,6 +115,16 @@ export const env = Object.freeze({
 
   reportTimezone: process.env.REPORT_TIMEZONE || "Asia/Kolkata",
 
+  // Delivery tracking: a rider's position is stored at most every sampleSeconds while they carry
+  // an order, kept retentionDays, and shown as stale after staleSeconds. An arrival further than
+  // arrivalFarMeters from the restaurant is allowed but flagged for admins.
+  tracking: {
+    sampleSeconds: Number(process.env.TRACKING_SAMPLE_SECONDS) || 15,
+    retentionDays: Number(process.env.TRACKING_RETENTION_DAYS) || 30,
+    staleSeconds: Number(process.env.TRACKING_STALE_SECONDS) || 90,
+    arrivalFarMeters: Number(process.env.ARRIVAL_FAR_METERS) || 200,
+  },
+
   // Delivery OTP: a 4-digit code made at pickup, shown to the customer, needed to mark delivered.
   deliveryOtp: {
     required: process.env.DELIVERY_OTP_REQUIRED !== "false",
