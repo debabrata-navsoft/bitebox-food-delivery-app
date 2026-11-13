@@ -807,14 +807,23 @@ np-menu.bb-menu-compact .menu.mi-panel {
   padding: var(--bb-space-3) var(--bb-space-5) var(--bb-space-5);
 }
 
-// Dialog actions: "Cancel" (a text button) is outlined and as tall as the primary action beside it.
+// Dialog actions: "Cancel"/"Close" (a text button) is as tall as the primary action beside it and
+// filled like NexPrime's soft secondary button, so Material and NexPrime dialogs match.
 .mat-mdc-dialog-actions .mat-mdc-button-base,
 .bb-dialog__actions .mat-mdc-button-base {
   --mat-button-text-container-height: 40px;
   --mat-button-text-horizontal-padding: 18px;
 
   &.mat-mdc-button {
-    border: 1px solid var(--bb-border);
+    --soft: var(--ui-text-muted);
+    --mat-button-text-hover-state-layer-opacity: 0; // the fill below changes instead
+    border-radius: var(--bb-btn-radius);
+    color: var(--ui-text);
+    background: color-mix(in srgb, var(--soft) 14%, var(--ui-surface));
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--soft) 22%, var(--ui-surface));
+    }
   }
 }
 

@@ -640,7 +640,7 @@ The super admin configures the programme at `/admin/rewards/*`. Defaults are in 
 | Order reward | 10 coins per ₹100 of food value after discounts, on delivered orders; at most 500 per order |
 | Review reward | 5 coins for the restaurant review, once. Taken back if the review is removed or deleted. |
 | Redemption | 100 coins = ₹10. Minimum 100 coins; at most 2,000 coins and 20% of the food value; orders of ₹199 or more |
-| Expiry | 180 days per source (0 = never). Coins that expire soonest are spent first. Returned coins stay valid for at least 7 more days. |
+| Expiry | 180 days per source (0 = never). Coins that expire soonest are spent first. Returned coins stay valid for at least 7 more days. A campaign can set its own coin expiry date (`coinsExpireAt`, after its end); a campaign "Expired" status only means its claim window is over. |
 | Referral | Referrer 50 coins, friend 25, once the friend's first order (₹199+) is delivered within 30 days. Up to 50 referrals per customer and 10 rewarded per month. |
 | Birthday / welcome | 100 coins on the birthday (once a year); 25 on sign-up or the first delivered order |
 
