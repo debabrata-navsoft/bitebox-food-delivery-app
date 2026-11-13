@@ -223,24 +223,33 @@ sms_outbox: list[dict[str, str]] = []  # the "test" provider (tests only)
 
 
 def sms_enabled() -> bool:
-    return bool(_override.get(Channel.SMS)) or settings.SMS_PROVIDER in ("console", "msg91", "test")
+    if _override.get(Channel.SMS):
+        return True
+    if settings.SMS_PROVIDER == "msg91":
+        return bool(settings.MSG91_AUTH_KEY)
+    return settings.SMS_PROVIDER in ("console", "test")
 
 
 def send_sms(delivery: NotificationDelivery) -> None:
     phone = delivery.user.phone
     if not phone:
         raise Skip("No phone number")
-    text = content.render_sms(delivery.notification)
+    deliver_sms(phone, content.render_sms(delivery.notification))
+
+
+def deliver_sms(phone: str, text: str, template_id: str | None = None) -> None:
+    """One SMS through the configured provider (notifications and sign-in codes)."""
     provider = settings.SMS_PROVIDER
     if provider == "test":
         sms_outbox.append({"to": phone, "text": text})
     elif provider == "console":
-        logger.info("SMS (console provider, not sent)", extra={"to": phone[-4:], "text": text})
+        # Development only: the text is shown so sign-in codes can be read from the log.
+        logger.info("SMS to ...%s (console provider, not sent): %s", phone[-4:], text)
     elif provider == "msg91":
         res = requests.post(
             "https://control.msg91.com/api/v5/flow",
             json={
-                "template_id": settings.MSG91_TEMPLATE_ID,
+                "template_id": template_id or settings.MSG91_TEMPLATE_ID,
                 "short_url": "0",
                 "recipients": [{"mobiles": phone.lstrip("+"), "message": text}],
             },

@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 
 from apps.rbac.roles import Role
 from common.api import ApiError, ok
-from common.permissions import role_required
+from common.permissions import IsSignedIn, role_required
 from common.schema import envelope, errors
 from common.throttling import rate_limit
 
@@ -83,3 +83,13 @@ def serve_image(request: HttpRequest, name: str) -> Any:
         "public, max-age=31536000, immutable"  # names are random and never reused
     )
     return response
+
+
+class AvatarUploadView(_ImageUpload):
+    """A profile photo, for anyone signed in (saved with PATCH /auth/me avatarUrl)."""
+
+    permission_classes = [IsSignedIn]
+    throttle_classes = [
+        rate_limit("REVIEW_IMAGE_UPLOAD_RATE_LIMIT", "Too many photo uploads. Try again later.")
+    ]
+    noun = "Photo"

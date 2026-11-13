@@ -29,6 +29,8 @@ app.conf.beat_schedule = {
     "notifications-purge": {"task": "notifications.purge", "schedule": 24 * 60 * 60.0},
     # Tracking points past their retention period (apps/tracking/services.py).
     "tracking-purge": {"task": "tracking.purge", "schedule": 24 * 60 * 60.0},
+    # Expired refresh sessions and old sign-in codes (apps/accounts/tasks.py).
+    "accounts-purge": {"task": "accounts.purge", "schedule": 24 * 60 * 60.0},
     # Payments and refunds the browser and the webhooks missed (apps/payments/services.py).
     "payments-reconcile": {
         "task": "payments.reconcile",

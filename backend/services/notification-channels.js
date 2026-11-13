@@ -163,22 +163,27 @@ export const testSmsOutbox = [];
 
 async function sendSms(notification, user) {
   if (!user.phone) throw new Skip("No phone number");
-  const text = renderSms(notification);
+  await deliverSms(user.phone, renderSms(notification));
+}
+
+/** One SMS through the configured provider (notifications and sign-in codes). */
+export async function deliverSms(phone, text, templateId) {
   switch (smsProvider()) {
     case "test":
-      testSmsOutbox.push({ to: user.phone, text });
+      testSmsOutbox.push({ to: phone, text });
       return;
     case "console":
-      logger.info({ to: user.phone.slice(-4), text }, "SMS (console provider, not sent)");
+      // Development only: the text is shown so sign-in codes can be read from the log.
+      logger.info(`SMS to ...${phone.slice(-4)} (console provider, not sent): ${text}`);
       return;
     case "msg91": {
       const res = await fetch("https://control.msg91.com/api/v5/flow", {
         method: "POST",
         headers: { authkey: env.notifications.msg91AuthKey, "Content-Type": "application/json" },
         body: JSON.stringify({
-          template_id: env.notifications.msg91TemplateId,
+          template_id: templateId || env.notifications.msg91TemplateId,
           short_url: "0",
-          recipients: [{ mobiles: user.phone.replace(/^\+/, ""), message: text }],
+          recipients: [{ mobiles: phone.replace(/^\+/, ""), message: text }],
         }),
       });
       if ([400, 401, 403].includes(res.status))
@@ -204,7 +209,10 @@ export const senderFor = (channel) => overrides.get(channel) ?? SENDERS[channel]
 export function channelEnabled(channel) {
   if (channel === CHANNELS.PUSH) return isPushEnabled();
   if (channel === CHANNELS.FCM) return overrides.has(CHANNELS.FCM) || Boolean(env.notifications.fcmCredentialsFile);
-  if (channel === CHANNELS.SMS) return ["console", "msg91", "test"].includes(smsProvider());
+  if (channel === CHANNELS.SMS) {
+    const provider = smsProvider();
+    return provider === "msg91" ? Boolean(env.notifications.msg91AuthKey) : ["console", "test"].includes(provider);
+  }
   return env.notifications.emails;
 }
 

@@ -9,4 +9,5 @@ staticfiles/
 *.sqlite3
 # Local image storage (UPLOAD_DIR), not the apps/uploads source code.
 /uploads/
+/private-uploads/
 .test-uploads/

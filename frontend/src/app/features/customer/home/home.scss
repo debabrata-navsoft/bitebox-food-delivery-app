@@ -123,6 +123,41 @@ h1 {
     padding-inline: var(--bb-space-5);
   }
 
+  .phone-icon {
+    display: none;
+  }
+
+  // Phones: a slimmer pill, and an arrow button that leaves the placeholder room to read.
+  @include bp.phone-only {
+    padding: 4px;
+    border-radius: 14px;
+
+    ::ng-deep np-text-input .ui-control {
+      min-height: 38px;
+      height: 38px;
+      font-size: 0.9rem;
+    }
+
+    button {
+      width: 38px;
+      min-width: 38px;
+      min-height: 38px;
+      height: 38px;
+      padding: 0;
+      border-radius: 11px;
+      --bb-icon-size: 18px;
+    }
+
+    .label {
+      display: none;
+    }
+
+    .phone-icon {
+      display: inline-flex;
+      margin: 0;
+    }
+  }
+
   &:focus-within {
     outline: 3px solid var(--bb-amber);
   }

@@ -46,8 +46,11 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       EMAIL_FROM: ${EMAIL_FROM:-BiteBox <no-reply@example.com>}
+      FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:?set FIELD_ENCRYPTION_KEY in deploy/.env}
     volumes:
       - uploads:/app/uploads
+      # KYC documents: never served by URL, only through the API.
+      - private-uploads:/app/private-uploads
     depends_on:
       mongo:
         condition: service_healthy
@@ -80,3 +83,4 @@ services:
 volumes:
   mongo-data:
   uploads:
+  private-uploads:

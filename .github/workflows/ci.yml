@@ -93,6 +93,7 @@ jobs:
           DJANGO_SECRET_KEY: ci-only-not-a-real-secret-0123456789abcdefghij
           DJANGO_ALLOWED_HOSTS: api.bitebox.example
           JWT_SECRET: ci-only-jwt-secret-not-real-0123456789abcdef
+          FIELD_ENCRYPTION_KEY: Y2ktb25seS1ub3QtYS1yZWFsLWtleS0wMTIzNDU2Nzg=
           SMTP_HOST: smtp.example.invalid
           DATABASE_URL: postgres://bitebox:bitebox@localhost:5432/bitebox_test
         run: python manage.py check --deploy --fail-level WARNING

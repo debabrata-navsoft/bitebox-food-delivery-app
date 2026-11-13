@@ -31,6 +31,8 @@ router.patch(
   validate(restaurantRules.updateRestaurantRules),
   restaurants.updateMine,
 );
+// After "documents needed" (or a rejection): send the restaurant for review again.
+router.post("/resubmit", restaurants.resubmit);
 router.patch(
   "/accepting-orders",
   validate(restaurantRules.acceptingOrdersRules),

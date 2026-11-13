@@ -150,6 +150,19 @@ class MyRestaurantView(APIView):
         return ok({"restaurant": restaurant_json(restaurant)}, message="Restaurant details saved")
 
 
+class ResubmitView(APIView):
+    """After "documents needed" (or a rejection): send the restaurant for review again."""
+
+    permission_classes = PARTNER
+
+    @extend_schema(
+        tags=["Partner"], request=None, responses={200: ANY, **errors(401, 403, 404, 409)}
+    )
+    def post(self, request: Request) -> Response:
+        restaurant = services.resubmit(current_user(request))
+        return ok({"restaurant": restaurant_json(restaurant)}, message="Sent for review")
+
+
 class AcceptingOrdersView(APIView):
     permission_classes = PARTNER
 

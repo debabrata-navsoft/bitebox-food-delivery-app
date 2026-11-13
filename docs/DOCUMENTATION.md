@@ -202,6 +202,15 @@ Use four browser profiles, or normal and private windows.
 | `JWT_EXPIRES_IN` | `15m` | Access token lifetime |
 | `REFRESH_TOKEN_TTL_DAYS` | `7` | Refresh session lifetime |
 | `PASSWORD_RESET_TTL_MINUTES` | `30` | Reset link lifetime |
+| `EMAIL_VERIFICATION_TTL_HOURS` | `24` | Email verification link lifetime |
+| `FIELD_ENCRYPTION_KEY` | | **Required in production.** 32 random bytes, base64: encrypts bank account and document numbers. Never change it once data exists |
+| `PRIVATE_UPLOAD_DIR` | `private-uploads` | KYC documents (mount a persistent volume; never serve it) |
+| `RESTAURANT_KYC_REQUIRED` | `true` | Approval needs the FSSAI number, approved documents and a bank account |
+| `RIDER_KYC_REQUIRED` | `true` | New riders go online only after verification (documents, bank account, address) |
+| `SIGNUP_OTP_REQUIRED` | `true` | Sign-up confirms the mobile number with an SMS code first (only while an SMS provider is on; otherwise sign-up is one step) |
+| `OTP_TTL_SECONDS`, `OTP_RESEND_SECONDS` | `300`, `30` | SMS code lifetime and wait before a new one (5 wrong tries lock a code) |
+| `OTP_PER_PHONE_PER_HOUR`, `OTP_PER_IP_PER_HOUR` | `5`, `20` | SMS code limits |
+| `MSG91_OTP_TEMPLATE_ID` | | DLT template for sign-in codes (falls back to `MSG91_TEMPLATE_ID`) |
 | `BCRYPT_ROUNDS` | `12` (`4` in tests) | Password hashing cost |
 | `COOKIE_SAMESITE` | `strict` | Set `none` (HTTPS only) when the web app and API are on different sites |
 | `TRUST_PROXY` | unset | Set `1` behind a reverse proxy, so rate limits see real client IPs |
@@ -468,12 +477,16 @@ Rating summaries (`rating-summary.schema.js`: `average`, `count`, `distribution[
 ### 10.1 Restaurants and menus
 
 - **Approval:** a partner creates their restaurant, which starts as `pending` and is invisible to customers. An admin then moves it along the allowed transitions:
-  - pending → approved or rejected
+  - pending → approved, rejected or `resubmission_requested` ("documents needed")
+  - resubmission_requested → approved or rejected
   - approved → suspended
   - suspended → approved
   - rejected → approved
-- **Reasons:** rejecting or suspending requires a reason, which the owner sees.
-- **Resubmission:** if the owner edits a rejected restaurant, it is resubmitted as `pending`.
+- **Reasons:** rejecting, suspending or asking for documents requires a reason, which the owner sees.
+- **Resubmission:** after "documents needed" (or a rejection) the owner fixes things on the Verification page and sends it back with `POST /my/restaurant/resubmit`. Editing a rejected restaurant also resubmits it.
+- **Verification (KYC):** a restaurant is approved only when it has an FSSAI number, its required documents are approved (FSSAI licence, PAN, cancelled cheque, and the GST certificate when GST-registered) and a bank account is added (`RESTAURANT_KYC_REQUIRED`). Documents are PDF, JPEG, PNG or WebP up to 5 MB, kept in private storage (`PRIVATE_UPLOAD_DIR`, never served by URL): only the owner and admins who review that partner type can open them, and every admin view is audited. Document and bank account numbers are encrypted (AES-256-GCM, `FIELD_ENCRYPTION_KEY`); only the last 4 digits are shown. Riders use the same documents and bank account endpoints.
+- **Rider verification:** a new rider starts `pending` and cannot go online (403 `RIDER_NOT_VERIFIED`) until an admin approves them (`RIDER_KYC_REQUIRED`). Approval needs approved documents (driving licence, vehicle registration, identity proof), a bank account and a home address (`PATCH /delivery/me/details`); otherwise it fails with 409 listing what is missing. Transitions: pending → approved, rejected or `resubmission_requested`; resubmission_requested → approved or rejected; rejected → approved; approved → resubmission_requested (takes the rider offline). Rejecting or asking for documents needs a reason, which the rider is notified about; they send it back with `POST /delivery/me/resubmit`. Riders who existed before verification was added count as approved.
+- **Hours:** one daily slot, or weekly hours (`weeklyHours`, per day; a slot may run past midnight). Up to 8 gallery photos; the FSSAI number is shown to customers.
 - **Concurrent changes:** status changes are conditional updates, so two admins acting at once cannot both succeed.
 - **Pausing:** partners can pause orders (`accepting-orders`).
 - **Menu:** partners can mark dishes unavailable. Deleting a dish is a soft delete.
@@ -846,6 +859,11 @@ The service worker only runs in **production builds** (`npm run build`, then `np
 | POST | `/auth/reset-password` | public, rate limited | Reset the password with the emailed token |
 | GET, PATCH | `/auth/me` | signed in | Current user / update own profile |
 | POST | `/auth/change-password` | signed in | Change password (signs out every session) |
+| POST | `/auth/register/code` | public | Sign-up step 1: checks the email and number are free, texts a 6-digit code. `POST /auth/register` then needs `code` (while `SIGNUP_OTP_REQUIRED` and SMS are on) and creates the account with the number verified |
+| POST | `/auth/otp/request`, `/auth/otp/login` | public | Sign in with a mobile number: text a code (same answer whether or not the number has an account), then sign in with it |
+| POST | `/auth/phone/verification`, `/auth/phone/verify` | signed in | Confirm your own number with an SMS code (changing the number clears it) |
+| POST | `/auth/email/verification` (signed in), `/auth/email/verify` (public) | | New accounts get a link (`/verify-email?token=`, 24 hours, works once); ask for a new one |
+| POST | `/uploads/avatars` | signed in | Profile photo (saved with `PATCH /auth/me` `avatarUrl`; `null` removes it) |
 | GET | `/admin/users` | `users:manage` | List accounts (role, status, search, paging) |
 | PATCH | `/admin/users/{id}/status` | `users:manage` | Suspend or reactivate |
 | GET, POST | `/admin/admins` | `admins:manage` | List or create staff admins |
@@ -869,7 +887,14 @@ The service worker only runs in **production builds** (`npm run build`, then `np
 | PATCH, DELETE | `/my/restaurant/foods/{id}` | restaurant | Edit / soft delete |
 | PATCH | `/my/restaurant/foods/{id}/availability` | restaurant | Available or not |
 | GET | `/admin/restaurants`, `/admin/restaurants/counts`, `/admin/restaurants/{id}` | `restaurants:manage` | Any status, counts, details |
-| PATCH | `/admin/restaurants/{id}/status` | `restaurants:manage` | Approve, reject, suspend, reinstate |
+| PATCH | `/admin/restaurants/{id}/status` | `restaurants:manage` | Approve (409 `KYC_INCOMPLETE` until verified), reject, ask for documents, suspend, reinstate |
+| POST | `/my/restaurant/resubmit` | restaurant | Send for review again after "documents needed" or a rejection |
+| GET | `/kyc` | restaurant, rider | My documents, checklist and bank account (masked) |
+| POST, DELETE | `/kyc/documents`, `/kyc/documents/{id}` | restaurant, rider | Upload (multipart `kind`, `number`, `file`; replaces the same kind) or remove one that is not approved |
+| GET | `/kyc/documents/{id}/file` | restaurant, rider | My document's file |
+| PUT | `/kyc/payout-account` | restaurant, rider | Bank account for payouts (`holderName`, `accountNumber`, `ifsc`, `bankName`) |
+| GET | `/admin/kyc/partners/{userId}` | `restaurants:manage` or `riders:manage` | A partner's documents and masked bank account |
+| PATCH, GET | `/admin/kyc/documents/{id}`, `/admin/kyc/documents/{id}/file` | `restaurants:manage` or `riders:manage` | Approve or reject (with a note the partner sees); view the file (audited) |
 | GET, POST | `/admin/categories` | `catalog:manage` | Categories |
 | PATCH, DELETE | `/admin/categories/{id}` | `catalog:manage` | Edit / delete an unused category |
 | GET | `/admin/foods` | `restaurants:manage` | All menu items |
@@ -916,7 +941,9 @@ Admin coupons (`catalog:manage`): `GET/POST /admin/coupons`, `PATCH/DELETE /admi
 | GET | `/my/restaurant/earnings` | restaurant | Earnings (`?days=`) |
 | GET | `/delivery/me` | rider | Profile, current offer, active delivery |
 | PUT | `/delivery/me/vehicle` | rider | Vehicle (needed before going online) |
-| PATCH | `/delivery/me/availability` | rider | Online (with location) / offline |
+| PATCH | `/delivery/me/availability` | rider | Online (with location) / offline; online needs verification |
+| PATCH | `/delivery/me/details` | rider | Home address (`address.line1`, `area`, `city`, `state`, `postalCode`) |
+| POST | `/delivery/me/resubmit` | rider | Send for review again after "documents needed" or a rejection |
 | PUT | `/delivery/me/location` | rider, rate limited | Report position |
 | POST | `/delivery/offers/{id}/accept`, `/decline` | rider | Answer an offer |
 | PATCH | `/delivery/orders/{id}/status` | rider | Arrived → picked up → on the way → delivered (with `otp`) |
@@ -936,7 +963,9 @@ Admin coupons (`catalog:manage`): `GET/POST /admin/coupons`, `PATCH/DELETE /admi
 | GET | `/admin/orders/{id}/timeline` | `orders:view` | Status changes with labels |
 | GET | `/admin/dashboard` | any admin role | Platform figures (money with `finance:view`) |
 | GET | `/admin/users/{id}/logins`, `/admin/admins/{id}/logins` | `users:manage` / `admins:manage` | Sign-in history |
-| GET | `/admin/delivery-partners` | `riders:manage` | Riders with availability |
+| GET | `/admin/delivery-partners` | `riders:manage` | Riders with availability (`verification` filter) |
+| GET | `/admin/delivery-partners/{id}` | `riders:manage` | Rider details, profile and verification |
+| PATCH | `/admin/delivery-partners/{id}/verification` | `riders:manage`, audited | `status` approved, rejected or resubmission_requested, with `reason` |
 | PATCH | `/admin/delivery-partners/{id}/status` | `riders:manage` | Suspend or reactivate (not while carrying an order) |
 | GET | `/admin/payments` | `finance:view` | All payments (search by order number or customer; `orderState` (`active`, `delivered` or `cancelled`) finds cancelled or rejected orders that still hold money) |
 | POST | `/admin/payments/{id}/refund` | `refunds:manage` | Retry a failed refund |
@@ -1068,7 +1097,8 @@ Requesters (customer, restaurant or rider) use `GET/POST /support/tickets`, `GET
 |---|---|
 | `/restaurant` | Dashboard |
 | `/restaurant/orders` | Live order board (new-order alert and chime) |
-| `/restaurant/details` | Restaurant details and approval status |
+| `/restaurant/details` | Restaurant details, photos, weekly hours and approval status |
+| `/restaurant/verification` | Legal and tax details, documents, bank account; send for review again |
 | `/restaurant/menu` | Menu management |
 | `/restaurant/reviews` | Ratings, reviews, replies |
 | `/restaurant/earnings` | Earnings |
@@ -1098,7 +1128,7 @@ Requesters (customer, restaurant or rider) use `GET/POST /support/tickets`, `GET
 | `/admin/operations`, `/monitoring`, `/reports` | `operations:view` | Operations dashboard, live monitoring, delivery performance |
 | `/admin/orders` | `orders:view` | Orders |
 | `/admin/restaurants`, `/restaurants/:id`, `/admin/foods` | `restaurants:manage` | Restaurants, approval review, food items |
-| `/admin/delivery-partners` | `riders:manage` | Riders |
+| `/admin/delivery-partners`, `/delivery-partners/:id` | `riders:manage` | Riders, verification review |
 | `/admin/finance`, `/finance/refunds`, `/finance/commission`, `/admin/payments`, `/admin/reports` | `finance:view` | Finance |
 | `/admin/finance/payouts/:type` | `payouts:manage` | Restaurant and rider payouts |
 | `/admin/support`, `/support/queue/:view`, `/support/ticket/:id` | `support:manage` | Support |

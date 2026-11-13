@@ -421,6 +421,17 @@ np-icon[matChipAvatar] {
   font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+  overflow: hidden;
+  // Centred next to text: with a photo there is no text baseline to line up with.
+  vertical-align: middle;
+
+  // The profile photo, when there is one, fills the circle instead of the initials.
+  img {
+    display: block; // no inline baseline gap under the photo
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 }
 
 .bb-count-badge {
@@ -1038,6 +1049,16 @@ np-time-picker .time-picker-field {
     color: var(--bb-ink-muted);
     margin: 0;
   }
+}
+
+// Small links under a form step, e.g. "Resend code" and "Change details".
+.bb-form-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--bb-space-2);
+  margin: 0;
+  font-size: 0.9rem;
 }
 
 .bb-form-footer {

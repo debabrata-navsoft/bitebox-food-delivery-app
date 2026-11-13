@@ -19,6 +19,8 @@ export default Router()
   .use(authenticate, authorize(ROLES.DELIVERY))
   .get("/me", c.riderDashboard)
   .put("/me/vehicle", validate(rules.vehicleRules), c.riderUpdateVehicle)
+  .patch("/me/details", validate(rules.riderDetailsRules), c.riderUpdateDetails)
+  .post("/me/resubmit", c.riderResubmit)
   .patch(
     "/me/availability",
     validate(rules.availabilityRules),

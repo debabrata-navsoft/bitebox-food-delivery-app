@@ -64,6 +64,7 @@ import {
 } from "./routes/admin-operations.routes.js";
 import { adminAuditRouter, adminStaffRouter } from "./routes/admin-staff.routes.js";
 import { adminSupportRouter, supportRouter } from "./routes/support.routes.js";
+import { adminKycRouter, kycRouter } from "./routes/kyc.routes.js";
 
 export function createApp(options = {}) {
   const app = express();
@@ -148,6 +149,7 @@ export function createApp(options = {}) {
   app.use("/api/v1/admin/rewards", adminRewardsRouter);
   app.use("/api/v1/admin/push", adminPushRouter);
   app.use("/api/v1/admin/notifications", adminNotificationsRouter);
+  app.use("/api/v1/admin/kyc", adminKycRouter);
   app.use("/api/v1/admin", adminCatalogRoutes);
   app.use("/api/v1/restaurants", restaurantsRouter);
   app.use("/api/v1/categories", categoriesRouter);
@@ -168,6 +170,7 @@ export function createApp(options = {}) {
   app.use("/api/v1/referrals", referralsRouter);
   app.use("/api/v1/rewards", rewardsRouter);
   app.use("/api/v1/newsletter", newsletterRouter);
+  app.use("/api/v1/kyc", kycRouter);
   app.use("/api/v1/geo", geoRoutes);
   app.use("/api/v1/tracking", trackingRouter);
 

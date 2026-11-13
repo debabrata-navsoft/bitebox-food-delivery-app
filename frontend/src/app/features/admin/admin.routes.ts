@@ -153,6 +153,13 @@ export const ADMIN_ROUTES: Routes = [
     loadComponent: () =>
       import('./delivery-partners/admin-delivery-partners').then((m) => m.AdminDeliveryPartners),
   },
+  {
+    path: 'delivery-partners/:id',
+    title: 'Delivery partner | BiteBox Admin',
+    canActivate: [can('riders:manage')],
+    loadComponent: () =>
+      import('./delivery-partners/rider-review/admin-rider-review').then((m) => m.AdminRiderReview),
+  },
 
   // Finance
   {

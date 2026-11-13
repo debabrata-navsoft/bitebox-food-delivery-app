@@ -45,7 +45,8 @@
   padding: 3px 12px;
   border-radius: 999px;
 
-  &.status-pending {
+  &.status-pending,
+  &.status-resubmission_requested {
     background: var(--bb-amber-100);
     color: var(--bb-warning-ink);
   }
@@ -117,4 +118,9 @@ address {
 .coords {
   font-size: 0.85rem;
   margin-top: var(--bb-space-2);
+}
+
+.kyc {
+  display: block;
+  margin-top: var(--bb-space-4);
 }

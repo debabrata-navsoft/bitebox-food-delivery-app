@@ -133,6 +133,13 @@ export const adminReportsRouter = Router()
 export const adminDeliveryPartnersRouter = Router()
   .use(authenticate, can(P.RIDERS_MANAGE))
   .get("/", validate(rules.adminRiderListRules), c.adminRiderList)
+  .get("/:id", validate([mongoIdParam()]), c.adminRiderGet)
+  .patch(
+    "/:id/verification",
+    validate(rules.adminRiderVerificationRules),
+    audited("rider.verification", "user", (req) => `Set rider verification to ${req.body.status}`),
+    c.adminRiderSetVerification,
+  )
   .patch(
     "/:id/status",
     validate(rules.adminRiderStatusRules),

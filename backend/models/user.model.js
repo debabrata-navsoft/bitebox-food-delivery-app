@@ -60,6 +60,12 @@ const userSchema = new mongoose.Schema(
 
     passwordResetTokenHash: { type: String, select: false },
     passwordResetExpiresAt: { type: Date, select: false },
+    // Verification: set when the person proves they own the address or number.
+    emailVerifiedAt: { type: Date, default: undefined },
+    emailVerificationTokenHash: { type: String, select: false },
+    emailVerificationExpiresAt: { type: Date, select: false },
+    phoneVerifiedAt: { type: Date, default: undefined },
+    avatarUrl: { type: String, trim: true, maxlength: 500 },
 
     lastLoginAt: { type: Date },
 
@@ -100,6 +106,12 @@ const userSchema = new mongoose.Schema(
         delete ret.tokenVersion;
         delete ret.passwordResetTokenHash;
         delete ret.passwordResetExpiresAt;
+        delete ret.emailVerificationTokenHash;
+        delete ret.emailVerificationExpiresAt;
+        ret.emailVerified = Boolean(ret.emailVerifiedAt);
+        ret.phoneVerified = Boolean(ret.phoneVerifiedAt);
+        delete ret.emailVerifiedAt;
+        delete ret.phoneVerifiedAt;
         delete ret.pushPreferences; // served by GET /push/preferences
         delete ret.channelPreferences; // served by GET /notifications/preferences
         // Admin roles carry their permissions so the web app can shape its menu (the API still checks).
@@ -121,5 +133,6 @@ userSchema.index(
   { unique: true, partialFilterExpression: { referralCode: { $type: "string" } } },
 );
 userSchema.index({ passwordResetTokenHash: 1 }, { sparse: true });
+userSchema.index({ emailVerificationTokenHash: 1 }, { sparse: true });
 
 export const User = mongoose.model("User", userSchema);

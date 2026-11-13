@@ -10,6 +10,7 @@ import re
 import uuid
 from collections.abc import Iterator
 from typing import Protocol
+from urllib.parse import urlsplit
 
 from django.conf import settings
 
@@ -73,6 +74,20 @@ class CloudinaryStorage:
             secure=True,
         )
         return str(url)
+
+
+def is_uploaded_image_url(url: str) -> bool:
+    """True for images this API stored (Node: isUploadedImageUrl): local or our Cloudinary."""
+    parts = urlsplit(url)
+    local = f"{settings.PUBLIC_BASE_URL}/uploads/images/"
+    if url.startswith(local) and LOCAL_NAME.match(url[len(local) :]):
+        return True
+    cloud = settings.CLOUDINARY_CLOUD_NAME
+    return bool(cloud) and (
+        parts.scheme == "https"
+        and parts.netloc == "res.cloudinary.com"
+        and parts.path.startswith(f"/{cloud}/image/upload/")
+    )
 
 
 def cloudinary_enabled() -> bool:

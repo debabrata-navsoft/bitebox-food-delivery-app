@@ -2,7 +2,7 @@
 
 The Django + DRF + Channels + Celery backend that replaces the Node API in `../backend`, phase by phase. The plan, decisions and data model are in [`docs/django-migration/`](../docs/django-migration/README.md). Until the switch-over, the Node API remains the one the web app uses.
 
-**Status: Phase 16 (testing and security audit).** Phases follow the user's 19-phase list from Phase 8 on (see the migration README).
+**Status: onboarding, part 3 (delivery partner registration and verification) after Phase 16.** Phases follow the user's 19-phase list from Phase 8 on (see the migration README).
 - **Built:** the skeleton (settings, envelope and errors, pagination, permissions, health, OpenAPI, Celery, Docker, CI), the parity schema (45 tables, see [03 §3.5](../docs/django-migration/03-data-model.md#35-phase-4-implementation-notes-what-changed-from-the-plan-above)), sign-in and admin accounts, the catalogue and cart, and orders: placing them, the status workflow, dispatch to riders, the sweep (Celery Beat) and live updates over `/ws/`.
 - **Not yet:** online payments (Phase 8; cash on delivery works), coins, reviews, notifications inbox and push.
 
