@@ -638,6 +638,33 @@ np-pagination {
 
 // np-tabs used as a tab strip only: its panel takes text content, so screens render their own
 // content below and the built-in (empty) panel is hidden.
+// A segmented np-button-toggle that would overflow on phones (e.g. order stages): there it
+// becomes wrapping pills so every option stays visible. Selectors outrank NexPrime's emulated ones.
+@include bp.phone-only {
+  np-button-toggle.bb-toggle-wrap .toggle-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--bb-space-2);
+    overflow: visible;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  np-button-toggle.bb-toggle-wrap .toggle-group .toggle-button {
+    height: 36px;
+    padding-inline: 14px;
+    border: 1px solid var(--ui-border-strong);
+    border-radius: 999px;
+    background: var(--ui-surface);
+  }
+
+  np-button-toggle.bb-toggle-wrap .toggle-group .toggle-button--selected {
+    border-color: var(--ui-primary);
+    background: var(--ui-primary-soft);
+  }
+}
+
 np-tabs.bb-tab-strip .tab-panel {
   display: none;
 }
