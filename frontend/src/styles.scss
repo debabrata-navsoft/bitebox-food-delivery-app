@@ -899,6 +899,11 @@ np-time-picker .time-picker-field {
   --mat-snack-bar-button-color: #fff;
 }
 
+// Phones: snackbars at the top, clear of the notch (NotificationService).
+.bb-snack-top.mat-mdc-snack-bar-container {
+  margin-top: max(8px, env(safe-area-inset-top));
+}
+
 // Skeleton loading placeholder
 .bb-skeleton {
   display: block;
