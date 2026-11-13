@@ -1,6 +1,12 @@
 from django.urls import path
 
+from apps.rbac.roles import Role
+from common.permissions import role_required
+
 from . import views
+
+RESTAURANT = [role_required(Role.RESTAURANT)]
+RIDER = [role_required(Role.DELIVERY)]
 
 urlpatterns = [
     path("my/restaurant/earnings", views.RestaurantEarningsView.as_view()),
@@ -22,10 +28,19 @@ urlpatterns = [
     path("admin/orders/<str:id>/invoice", views.AdminOrderInvoiceView.as_view()),
     # Customers and partners
     path("orders/<str:id>/invoice", views.OrderInvoiceView.as_view()),
-    path("my/restaurant/payouts", views.MyPayoutsView.as_view()),
-    path("my/restaurant/payouts/<str:id>/statement", views.MyStatementView.as_view()),
-    path("my/restaurant/settlements", views.MySettlementsView.as_view()),
-    path("delivery/payouts", views.MyPayoutsView.as_view()),
-    path("delivery/payouts/<str:id>/statement", views.MyStatementView.as_view()),
-    path("delivery/settlements", views.MySettlementsView.as_view()),
+    # Each prefix belongs to one partner role (as in Node), so a rider never calls /my/restaurant.
+    path("my/restaurant/payouts", views.MyPayoutsView.as_view(permission_classes=RESTAURANT)),
+    path(
+        "my/restaurant/payouts/<str:id>/statement",
+        views.MyStatementView.as_view(permission_classes=RESTAURANT),
+    ),
+    path(
+        "my/restaurant/settlements", views.MySettlementsView.as_view(permission_classes=RESTAURANT)
+    ),
+    path("delivery/payouts", views.MyPayoutsView.as_view(permission_classes=RIDER)),
+    path(
+        "delivery/payouts/<str:id>/statement",
+        views.MyStatementView.as_view(permission_classes=RIDER),
+    ),
+    path("delivery/settlements", views.MySettlementsView.as_view(permission_classes=RIDER)),
 ]

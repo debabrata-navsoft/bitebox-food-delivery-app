@@ -17,7 +17,7 @@ from apps.audit.services import audited
 from apps.rbac.roles import Permission
 from common.api import ok
 from common.pagination import Page
-from common.permissions import IsSignedIn, permission_required
+from common.permissions import PUBLIC, IsSignedIn, permission_required
 from common.schema import envelope, errors
 from common.throttling import rate_limit
 from common.validation import PageQuery, parse_id, validated
@@ -137,6 +137,7 @@ class ChannelPreferencesView(APIView):
 # Web Push
 # ---------------------------------------------------------------------------
 class PublicKeyView(APIView):
+    permission_classes = PUBLIC
     authentication_classes: list[Any] = []
 
     @extend_schema(tags=["Push"], responses={200: envelope("PushConfig")})

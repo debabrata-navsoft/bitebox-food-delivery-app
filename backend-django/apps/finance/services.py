@@ -574,6 +574,11 @@ def settlement_history(page: Page, type: str, **scope: Any) -> dict[str, Any]:
     return {"items": items, "pagination": meta}
 
 
+def spreadsheet_safe(text: str) -> str:
+    """Text a spreadsheet would run as a formula (starts with = + - @, tab or CR): quote it."""
+    return f"'{text}" if text[:1] in ("=", "+", "-", "@", "\t", "\r") else text
+
+
 def settlements_csv(start: datetime | None, end: datetime | None) -> str:
     """The settlement report (one row per delivered order) for spreadsheets and accountants."""
     qs = OrderSettlement.objects.filter(order__status=S.DELIVERED).select_related(
@@ -599,7 +604,7 @@ def settlements_csv(start: datetime | None, end: datetime | None) -> str:
             [
                 o.order_number,
                 s.settled_at.isoformat(),
-                o.restaurant_snapshot.get("name", ""),
+                spreadsheet_safe(o.restaurant_snapshot.get("name", "")),  # partner-written
                 money(o.total_paise),
                 money(o.tax_paise),
                 f"{s.commission_bp / 100:g}",

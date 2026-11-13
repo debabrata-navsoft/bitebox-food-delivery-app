@@ -62,6 +62,7 @@ Production: `docker compose --env-file deploy/.env up -d --build` (see `docs/DOC
   - Partner and rider endpoints (`/my/restaurant`, `/delivery`) resolve their scope from `req.user` and never trust ids from the client.
   - **Admin roles:** `admin` is the super admin; `operations_admin`, `finance_admin` and `support_admin` share the admin panel (`config/roles.js`). Admin routes use `can(PERMISSIONS.X)` from `config/permissions.js`, not `authorize(ROLES.ADMIN)`. Add a permission there (and to the frontend `Permission` type) rather than checking roles. Admin users carry `permissions` in their JSON.
   - **Audit log:** add `audited(action, resourceType, describe)` (`services/audit.service.js`) to admin routes that change data; it records after a successful response.
+  - **Access matrix:** `tests/security-access.test.js` reads each route's guards from the route table (`tests/route-table.js`; `authorize`/`can` carry `roles`/`permissions`) and checks every role. A new public route must be added to its `PUBLIC` list (and to `backend-django/tests/test_access_control.py`). Django views are deny-by-default: public ones set `permission_classes = PUBLIC` (`common/permissions.py`).
 - **Money:** always integer paise. Prices, fees, discounts and totals are computed server-side (`config/pricing.js`, `services/pricing.service.js`, the cart quote). Orders store snapshots of items, the address and the restaurant.
 - **Multi-document writes:** use `utils/transaction.js#withTransaction`. It uses a transaction on replica sets (Atlas). Otherwise it calls `work(null)`, and the caller must undo completed steps itself; `order.service.js#placeOrder` is the reference pattern. `DISABLE_TRANSACTIONS=true` forces the fallback path.
 - **Order lifecycle:** `services/order-workflow.service.js` is the single place where statuses change.
@@ -96,7 +97,7 @@ Production: `docker compose --env-file deploy/.env up -d --build` (see `docs/DOC
   - `services/geocoding.service.js` (Nominatim) and `services/routing.service.js` (OSRM, swappable via `useProvider`) share `utils/upstream.js#createUpstream`. It caches, merges identical in-flight requests and serialises about 1 request per second. Both fail with a 503 that the UI degrades on.
   - GeoJSON helpers (`toPoint`, `fromPoint`, `haversineMeters`) are in `utils/geo.js`. Order status groups (`ACTIVE_STATUSES`, `FINAL_STATUSES`, `TRACKED_STATUSES`) live next to `ORDER_STATUS` in `models/order.model.js`.
   - Distances are labelled as straight-line (fees and dispatch), road estimate (routing) or live GPS. Keep those distinctions.
-- **Images:** `services/upload.service.js#saveImage` checks the real file type from its bytes, then stores it in Cloudinary (`config/cloudinary.js`, when the `CLOUDINARY_*` keys are set) or on local disk. Tests always use local disk; swap storage with `useImageStorage`.
+- **Images:** `services/upload.service.js#saveImage` checks the real file type from its bytes, strips EXIF/GPS metadata (`utils/image-metadata.js`, keeps the JPEG orientation), then stores it in Cloudinary (`config/cloudinary.js`, when the `CLOUDINARY_*` keys are set) or on local disk. Tests always use local disk; swap storage with `useImageStorage`.
 - **API docs:** OpenAPI fragments in `docs/openapi.*.js`, merged in `docs/openapi.js`. Update them when routes change.
 
 ## Frontend architecture (`frontend/src/app`)
@@ -106,6 +107,7 @@ Production: `docker compose --env-file deploy/.env up -d --build` (see `docs/DOC
   - Lazy feature routes: `features/*/…routes.ts`, wired in `app.routes.ts`.
   - Panels use `layout/panel-shell`, with `NavItem.badge` for counts.
 - **SSR:**
+  - `src/server.ts` sends a Content-Security-Policy with a fresh nonce per rendered page; `index.html` carries the `CSP_NONCE` placeholder on its inline script and on `<app-root ngCspNonce>`. A new inline script needs `nonce="CSP_NONCE"`.
   - `app.routes.server.ts` sets the render modes. Home renders per request, the auth pages are prerendered, everything else is client-only.
   - Never touch `window`, `navigator` or `localStorage` outside `isPlatformBrowser` / `afterNextRender`.
   - Leaflet is imported dynamically inside `afterNextRender`.

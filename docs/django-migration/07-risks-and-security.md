@@ -43,7 +43,7 @@ Likelihood (L) and impact (I): H = high, M = medium, L = low.
 | Sensitive data | Bank account and document numbers encrypted at the field level (key in a secret manager, rotation supported). Only last-4 shown. Logs scrub `password`, `token`, `otp`, `accountNumber`, `authorization`. | Log scrub test |
 | Payments | Signature verified on confirm and webhook (raw body, constant-time compare). Amount and currency taken from the DB, not the client. Unique webhook event ids. Refunds capped at paid minus refunded. No card data handled. Mock provider refused when `ENV=production`. | Payment tests |
 | Rate limiting | DRF throttles in Redis + nginx `limit_req` on `/api/v1/auth` and `/ws/` | Tests |
-| Transport and headers | HTTPS only, HSTS (preload after stable), `SECURE_*` settings, CSP on the SSR server (existing), CORS allow-list only, `X-Frame-Options DENY` | `manage.py check --deploy` in CI |
+| Transport and headers | HTTPS only, HSTS (preload after stable), `SECURE_*` settings, CSP on the SSR server (per-request nonce, `frontend/src/server.ts`, added in Phase 16), CORS allow-list only, `X-Frame-Options DENY` | `manage.py check --deploy` in CI |
 | SSRF | Push endpoints restricted to `PUSH_ALLOWED_HOSTS` (existing). Geo adapters only call configured base URLs. No user-supplied URLs are fetched. | Tests |
 | WebSockets | Auth frame within 5 s, origin check (`AllowedHostsOriginValidator`), per-connection message rate limit, group membership only via server-side checks, location only to authorised viewers | Consumer tests |
 | Secrets | Environment or secret manager only. `.env.example` without values. Never printed (CLAUDE.md rule). Separate keys per environment. | `gitleaks` in CI |
@@ -53,7 +53,7 @@ Likelihood (L) and impact (I): H = high, M = medium, L = low.
 | Backups | Managed PostgreSQL PITR + nightly logical dump to separate-account object storage (encrypted), 30-day retention. Monthly restore drill, timed against the RTO. | Runbook + drill log |
 | Monitoring | Sentry (backend, frontend, Celery) with PII scrubbing, Prometheus metrics (request latency, Celery queue depth, WS connections, dispatch wait time), Grafana alerts (5xx rate, queue backlog, sweep lag, webhook failures) | Staging alert test |
 
-## 7.4 Security testing plan (phase 15)
+## 7.4 Security testing plan (done in Phase 16: see [../SECURITY.md](../SECURITY.md))
 
 - Automated: access-control matrix, IDOR tests (customer A reading B's order, address, ticket; restaurant reading another restaurant's orders; rider reading an order not assigned), injection payloads on search and filter parameters, rate-limit tests, JWT tampering (alg none, wrong key, old `ver`), webhook signature forgery, oversize and polyglot uploads.
 - Tools: OWASP ZAP baseline scan against staging, `bandit` on Python, `npm audit`, `pip-audit`, `gitleaks`.

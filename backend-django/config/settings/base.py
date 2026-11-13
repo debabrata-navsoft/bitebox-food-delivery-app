@@ -305,7 +305,8 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 20,
     # Bearer access tokens; views opt in to protection with permission classes.
     "DEFAULT_AUTHENTICATION_CLASSES": ["apps.accounts.authentication.BearerAuthentication"],
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    # Deny by default; public views say `permission_classes = PUBLIC` (common/permissions.py).
+    "DEFAULT_PERMISSION_CLASSES": ["common.permissions.IsSignedIn"],
     "UNAUTHENTICATED_USER": None,
     # Proxies in front of the API (nginx = 1), so rate limits see the real client IP.
     "NUM_PROXIES": env.int("TRUST_PROXY", default=0),
@@ -351,7 +352,10 @@ LOGGING = {
     "formatters": {
         "line": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"},
     },
-    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "line"}},
+    "filters": {"redact": {"()": "common.log_redaction.RedactSecrets"}},  # tokens, passwords
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "line", "filters": ["redact"]}
+    },
     "root": {"handlers": ["console"], "level": LOG_LEVEL},
     "loggers": {
         "django.request": {"level": "ERROR"},

@@ -19,7 +19,7 @@ from apps.orders.notifications import rupees
 from apps.rbac.roles import Permission, Role
 from common.api import ApiError, ok
 from common.pagination import Page
-from common.permissions import permission_required, role_required
+from common.permissions import PUBLIC, permission_required, role_required
 from common.schema import envelope, errors
 from common.validation import PageQuery, parse_id, validated
 
@@ -41,6 +41,7 @@ def _choice(choices: list[str], message: str, **kwargs: Any) -> serializers.Choi
 
 
 class MethodsView(APIView):
+    permission_classes = PUBLIC
     authentication_classes: list[Any] = []
 
     @extend_schema(tags=["Payments"], responses={200: envelope("PaymentMethods")})
@@ -149,6 +150,8 @@ class MockView(APIView):
 
 class RazorpayWebhookView(APIView):
     """Signed over the exact raw body, so the body is read before any parsing."""
+
+    permission_classes = PUBLIC
 
     authentication_classes: list[Any] = []
 

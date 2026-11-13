@@ -547,6 +547,9 @@ export async function settlementHistory(type, match, pagination) {
   };
 }
 
+/** Text a spreadsheet would run as a formula (starts with = + - @, tab or CR): quote it. */
+export const spreadsheetSafe = (text) => (/^[=+\-@\t\r]/.test(text) ? `'${text}` : text);
+
 /** The settlement report (one row per delivered order) for spreadsheets and accountants. */
 export async function settlementsCsv({ from, to } = {}) {
   const at = { $ne: null, ...(from && { $gte: from }), ...(to && { $lte: to }) };
@@ -556,7 +559,7 @@ export async function settlementsCsv({ from, to } = {}) {
     .populate("payouts.restaurant payouts.rider", "status")
     .lean();
   const money = (p) => ((p ?? 0) / 100).toFixed(2);
-  const cell = (v) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+  const cell = (v) => (/[",\r\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
   const rows = [
     [
       "Order", "Delivered at", "Restaurant", "Order total (₹)", "Tax (₹)", "Commission %",
@@ -566,7 +569,7 @@ export async function settlementsCsv({ from, to } = {}) {
     ...orders.map((o) => [
       o.orderNumber,
       new Date(o.settlement.at).toISOString(),
-      o.restaurantSnapshot?.name ?? "",
+      spreadsheetSafe(o.restaurantSnapshot?.name ?? ""), // partner-written
       money(o.pricing.totalPaise),
       money(o.pricing.taxPaise),
       (o.settlement.commissionBp ?? EARNINGS.restaurantCommissionBasisPoints) / 100,

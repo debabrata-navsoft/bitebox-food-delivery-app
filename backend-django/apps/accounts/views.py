@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.api import ApiError, ok
-from common.permissions import IsSignedIn
+from common.permissions import PUBLIC, IsSignedIn
 from common.schema import envelope, errors
 from common.throttling import rate_limit
 from common.validation import validated
@@ -96,6 +96,7 @@ def _refresh_cookie(request: Request) -> str | None:
 
 
 class RegisterView(APIView):
+    permission_classes = PUBLIC
     throttle_classes = [AuthLimit]
 
     @extend_schema(
@@ -109,6 +110,7 @@ class RegisterView(APIView):
 
 
 class LoginView(APIView):
+    permission_classes = PUBLIC
     throttle_classes = [AuthLimit]
 
     @extend_schema(
@@ -120,6 +122,7 @@ class LoginView(APIView):
 
 
 class RefreshView(APIView):
+    permission_classes = PUBLIC
     authentication_classes: list[Any] = []  # uses the refresh cookie, not a bearer token
 
     @extend_schema(
@@ -147,6 +150,7 @@ class RefreshView(APIView):
 
 
 class LogoutView(APIView):
+    permission_classes = PUBLIC
     authentication_classes: list[Any] = []
 
     @extend_schema(tags=["Auth"], request=None, responses={200: EMPTY, **errors(403)})
@@ -157,6 +161,7 @@ class LogoutView(APIView):
 
 
 class ForgotPasswordView(APIView):
+    permission_classes = PUBLIC
     throttle_classes = [SensitiveLimit]
 
     @extend_schema(
@@ -168,6 +173,7 @@ class ForgotPasswordView(APIView):
 
 
 class ResetPasswordView(APIView):
+    permission_classes = PUBLIC
     throttle_classes = [SensitiveLimit]
 
     @extend_schema(

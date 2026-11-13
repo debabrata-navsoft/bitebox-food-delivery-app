@@ -21,6 +21,8 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - run: npm run lint
+      - name: Known vulnerabilities in production dependencies
+        run: npm audit --omit=dev --audit-level=moderate
       # Uses an in-memory MongoDB (mongodb-memory-server); no database service needed.
       - run: npm test
 
@@ -37,6 +39,9 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      # Low: quill (pulled in by nexprime, editor unused; no fixed release yet). See docs/SECURITY.md.
+      - name: Known vulnerabilities in production dependencies
+        run: npm audit --omit=dev --audit-level=moderate
       - run: npm test -- --watch=false
       - run: npm run build
 
@@ -92,4 +97,4 @@ jobs:
           DATABASE_URL: postgres://bitebox:bitebox@localhost:5432/bitebox_test
         run: python manage.py check --deploy --fail-level WARNING
       - name: Known vulnerabilities in dependencies
-        run: pip-audit -r requirements/base.txt
+        run: pip-audit -r requirements/base.txt -r requirements/prod.txt

@@ -17,6 +17,7 @@ BiteBox is a full-stack food delivery app with four role-based panels: **Custome
 |---|---|
 | **[docs/DOCUMENTATION.md](docs/DOCUMENTATION.md)** | **The complete reference:** architecture, configuration, roles and permissions, data model, business rules, realtime events, push and PWA, every API endpoint, every screen, security, testing, deployment |
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Symptoms, causes and fixes |
+| [docs/SECURITY.md](docs/SECURITY.md) | Security audit: findings, fixes, accepted risks and how to rerun the checks |
 | [docs/COINS_REWARDS_PLAN.md](docs/COINS_REWARDS_PLAN.md) | Design notes for coins, referrals and campaigns |
 | Swagger UI, `http://localhost:5000/api/docs` | The live API contract (raw JSON at `/api/docs.json`) |
 
