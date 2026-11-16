@@ -80,10 +80,26 @@ h2 {
   }
 }
 
-.form-actions {
+// A rider without a vehicle: a short prompt that opens the vehicle dialog. Stacked on phones,
+// text and button side by side from tablets up.
+.vehicle-needed {
   display: flex;
-  justify-content: flex-end;
-  gap: var(--bb-space-2);
+  flex-direction: column;
+  gap: var(--bb-space-3);
+
+  h2 {
+    margin: 0 0 var(--bb-space-1);
+  }
+
+  p {
+    margin: 0;
+  }
+
+  @include bp.tablet-up {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
 }
 
 .work {
@@ -270,20 +286,20 @@ h2 {
   }
 }
 
-// Phones: completed and rating side by side; the vehicle gets a full row with "Change" at its end.
+// Completed and rating side by side; the vehicle gets its own row with "Change" at its end, at
+// every width (the card sits in a narrow column on desktops, where three columns wrap badly).
 .stats {
-  @include bp.phone-only {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 
-    .vehicle {
-      grid-column: 1 / -1;
+  .vehicle {
+    grid-column: 1 / -1;
 
-      dd {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        gap: var(--bb-space-2);
-      }
+    dd {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: var(--bb-space-1) var(--bb-space-3);
     }
   }
 }
@@ -321,5 +337,22 @@ np-progress-bar ::ng-deep .caption {
   span {
     flex: 1;
     min-width: 200px;
+  }
+
+  // Phones: icon and text side by side, then a full-width button below them.
+  @include bp.phone-only {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+
+    span {
+      min-width: 0;
+    }
+
+    .bb-btn {
+      grid-column: 1 / -1;
+      width: 100%;
+      justify-content: center;
+    }
   }
 }

@@ -90,6 +90,7 @@
                 <button class="bb-link-button" (click)="editVehicle()">Change</button>
               } @else {
                 Not set
+                <button class="bb-link-button" (click)="editVehicle()">Add</button>
               }
             </dd>
           </div>
@@ -127,43 +128,13 @@
       }
 
       <!-- Vehicle (required before going online) -->
-      @if (editingVehicle()) {
-        <section class="bb-card" aria-labelledby="vehicle-title">
-          <h2 id="vehicle-title">Your vehicle</h2>
-          <p class="bb-muted">Restaurants and customers see this when you pick up their order.</p>
-          <form class="bb-form" [formRoot]="vehicleForm">
-            <div class="bb-form-row">
-              <div class="bb-field">
-                <np-select
-                  [formField]="vehicleForm.vehicleType"
-                  label="Vehicle"
-                  placeholder="Choose"
-                  [options]="vehicleOptions"
-                />
-                <bb-field-error [field]="vehicleForm.vehicleType" />
-              </div>
-              <np-text-input
-                [formField]="vehicleForm.vehicleNumber"
-                label="Registration number (optional)"
-                placeholder="e.g. KA 01 AB 1234"
-                autocapitalize="characters"
-                [error]="shownError(vehicleForm.vehicleNumber)"
-              />
-            </div>
-            <div class="form-actions">
-              @if (profile()?.vehicleType) {
-                <np-button
-                  variant="text"
-                  severity="secondary"
-                  label="Cancel"
-                  (clicked)="editingVehicle.set(false)"
-                />
-              }
-              <button type="submit" class="bb-btn" [disabled]="vehicleForm().submitting()">
-                Save vehicle
-              </button>
-            </div>
-          </form>
+      @if (profile() && !profile()?.vehicleType) {
+        <section class="bb-card vehicle-needed" aria-labelledby="vehicle-title">
+          <div>
+            <h2 id="vehicle-title">Add your vehicle</h2>
+            <p class="bb-muted">You need it before you can go online.</p>
+          </div>
+          <button type="button" class="bb-btn" (click)="editVehicle()">Add vehicle</button>
         </section>
       }
     </div>

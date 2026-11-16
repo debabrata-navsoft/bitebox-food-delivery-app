@@ -1,0 +1,9 @@
+.bb-dialog__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bb-space-4);
+
+  > p {
+    margin: 0;
+  }
+}

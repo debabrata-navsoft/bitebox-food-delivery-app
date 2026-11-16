@@ -12,18 +12,16 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
-import { FormRoot, TreeValidationResult, form, required } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ButtonComponent,
   IconComponent,
   ProgressBarComponent,
-  SelectOption,
   ToggleComponent,
 } from 'nexprime';
 import { EMPTY, catchError, firstValueFrom, interval, of, switchMap } from 'rxjs';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
+import { errorMessage } from '../../../core/services/api-error';
 import {
   GeolocationService,
   ImpreciseLocationError,
@@ -41,9 +39,8 @@ import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { openDeliveryCode } from '../delivery-code-dialog/delivery-code-dialog';
-import { serverErrors, shownError } from '../../../shared/forms/form-errors';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { VEHICLE_LABEL, VehicleType } from '../../../shared/models/checkout.models';
+import { openVehicleDialog } from '../vehicle-dialog/vehicle-dialog';
+import { VEHICLE_LABEL } from '../../../shared/models/checkout.models';
 import {
   RiderAction,
   RiderDashboard,
@@ -88,8 +85,6 @@ const NEXT_ACTION: Partial<Record<RiderOrder['status'], RiderAction>> = {
   selector: 'bb-delivery-dashboard',
   imports: [
     DecimalPipe,
-    FormRoot,
-    NP_FORM_FIELDS,
     RouterLink,
     ButtonComponent,
     IconComponent,
@@ -210,21 +205,6 @@ export class DeliveryDashboard {
     () => (this.offerSecondsLeft() / (this.offer()?.offerWindowSeconds ?? 90)) * 100,
   );
 
-  protected readonly vehicleOptions: SelectOption[] = (
-    Object.keys(VEHICLE_LABEL) as VehicleType[]
-  ).map((v) => ({
-    value: v,
-    label: VEHICLE_LABEL[v],
-  }));
-  protected readonly editingVehicle = signal(false);
-  protected readonly vehicleModel = signal({ vehicleType: '', vehicleNumber: '' });
-  protected readonly vehicleForm = form(
-    this.vehicleModel,
-    (path) => required(path.vehicleType, { message: 'Choose your vehicle' }),
-    { submission: { action: () => this.saveVehicle() } },
-  );
-  protected readonly shownError = shownError;
-
   constructor() {
     const reload = () =>
       this.rider.dashboard().pipe(
@@ -261,34 +241,13 @@ export class DeliveryDashboard {
       this.now.set(Date.now());
       this.notify.info(`New delivery request from ${d.offer.restaurantSnapshot.name}`);
     }
-    if (!d.profile.vehicleType && !this.editingVehicle()) this.editingVehicle.set(true);
   }
 
+  /** "Change" or "Add": the vehicle dialog; the saved profile updates the dashboard. */
   protected editVehicle(): void {
-    const p = this.profile();
-    this.vehicleForm().reset({
-      vehicleType: p?.vehicleType ?? '',
-      vehicleNumber: p?.vehicleNumber ?? '',
-    });
-    this.editingVehicle.set(true);
-  }
-
-  private async saveVehicle(): Promise<TreeValidationResult> {
-    const { vehicleType, vehicleNumber } = this.vehicleModel();
-    try {
-      const profile = await firstValueFrom(
-        this.rider.saveVehicle(vehicleType as VehicleType, vehicleNumber.trim()),
-      );
-      this.data.update((d) => (d ? { ...d, profile } : d));
-      this.editingVehicle.set(false);
-      this.notify.success('Vehicle saved');
-      return undefined;
-    } catch (err) {
-      // Field errors (422) show under their fields; anything else as a message.
-      const details = fieldErrors(err);
-      if (!details.length) this.notify.error(errorMessage(err));
-      return serverErrors(this.vehicleForm, details);
-    }
+    openVehicleDialog(this.bbDialog, this.profile()).subscribe((profile) =>
+      this.data.update((d) => (d ? { ...d, profile } : d)),
+    );
   }
 
   protected async setOnline(online: boolean): Promise<void> {
