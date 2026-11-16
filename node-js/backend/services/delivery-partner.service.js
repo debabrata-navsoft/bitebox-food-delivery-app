@@ -7,6 +7,7 @@ import {
 import { env } from "../config/env.js";
 import { PERMISSIONS } from "../config/permissions.js";
 import * as kyc from "./kyc.service.js";
+import { DOCUMENT_STATUS, KycDocument, PayoutAccount } from "../models/kyc-document.model.js";
 import { notify, notifyAdmins } from "./notification.service.js";
 import { ORDER_STATUS, Order } from "../models/order.model.js";
 import { ROLES, User, USER_STATUS } from "../models/user.model.js";
@@ -24,6 +25,37 @@ import {
   pickupDistanceMeters,
   presentForRider,
 } from "./order-management.service.js";
+
+/** List filter: riders still waiting on themselves (pending, something not sent yet). */
+export const NOT_SUBMITTED = "not_submitted";
+
+/**
+ * Riders who have sent everything an admin checks (each required document, not rejected; a bank
+ * account; the home address; the vehicle), so a pending rider is really waiting for review. Until
+ * then they are "not submitted", not "in review". Django: delivery/services.py#with_submitted.
+ */
+export async function submittedRiderIds(userIds) {
+  const kinds = kyc.KINDS_FOR[ROLES.DELIVERY];
+  const scope = userIds ? { user: { $in: userIds } } : {};
+  const [withDocuments, withAccount, withDetails] = await Promise.all([
+    KycDocument.aggregate([
+      { $match: { ...scope, kind: { $in: kinds }, status: { $ne: DOCUMENT_STATUS.REJECTED } } },
+      { $group: { _id: "$user", kinds: { $addToSet: "$kind" } } },
+      { $match: { kinds: { $size: kinds.length } } },
+    ]).then((rows) => rows.map((r) => String(r._id))),
+    PayoutAccount.find(scope).distinct("user"),
+    DeliveryPartner.find({ ...scope, vehicleType: { $ne: null }, address: { $ne: null } }).distinct("user"),
+  ]);
+  const [account, details] = [withAccount, withDetails].map((list) => new Set(list.map(String)));
+  return new Set(withDocuments.filter((id) => account.has(id) && details.has(id)));
+}
+
+/** A profile as JSON, with `verification.submitted`. */
+export async function profileJson(profile) {
+  const json = profile.toJSON();
+  json.verification.submitted = (await submittedRiderIds([profile.user])).has(String(profile.user));
+  return json;
+}
 
 /** The rider's profile, created on first use (a plain read on every later call). */
 export async function getOrCreateProfile(userId) {
@@ -53,7 +85,7 @@ export async function dashboard(userId) {
       : null,
   ]);
   return {
-    profile: profile.toJSON(),
+    profile: await profileJson(profile),
     offer: offer
       ? {
           ...presentForRider(offer, userId),
@@ -65,10 +97,12 @@ export async function dashboard(userId) {
 }
 
 export async function updateVehicle(userId, { vehicleType, vehicleNumber }) {
-  return DeliveryPartner.findOneAndUpdate(
-    { user: userId },
-    { $set: { vehicleType, vehicleNumber }, $setOnInsert: { verificationStatus: V.PENDING } },
-    { upsert: true, returnDocument: "after", runValidators: true },
+  return profileJson(
+    await DeliveryPartner.findOneAndUpdate(
+      { user: userId },
+      { $set: { vehicleType, vehicleNumber }, $setOnInsert: { verificationStatus: V.PENDING } },
+      { upsert: true, returnDocument: "after", runValidators: true },
+    ),
   );
 }
 
@@ -166,8 +200,22 @@ export async function adminList({ search, online, verification }, pagination) {
     );
     userFilter._id = { $in: onlineIds };
   }
-  if (verification) {
-    // No status (older profiles) counts as approved; $and keeps the online filter on _id above.
+  // Pending: sent everything and waiting for review. Not submitted: pending (or no profile yet)
+  // with something still to send. Only these filters need every rider's state.
+  let submitted = null;
+  if (verification === V.PENDING || verification === NOT_SUBMITTED) {
+    const [ids, decided] = await Promise.all([
+      submittedRiderIds(),
+      DeliveryPartner.find({ verificationStatus: { $ne: V.PENDING } }).distinct("user"),
+    ]);
+    submitted = ids;
+    // $and keeps the online filter on _id above.
+    userFilter.$and =
+      verification === V.PENDING
+        ? [{ _id: { $in: [...submitted] } }, { _id: { $nin: decided } }]
+        : [{ _id: { $nin: [...submitted, ...decided] } }];
+  } else if (verification) {
+    // No status (older profiles) counts as approved.
     const statuses = verification === V.APPROVED ? [V.APPROVED, null] : [verification];
     const ids = await DeliveryPartner.find({ verificationStatus: { $in: statuses } }).distinct("user");
     userFilter.$and = [{ _id: { $in: ids } }];
@@ -179,9 +227,10 @@ export async function adminList({ search, online, verification }, pagination) {
       .limit(pagination.limit),
     User.countDocuments(userFilter),
   ]);
-  const profiles = await DeliveryPartner.find({
-    user: { $in: users.map((u) => u._id) },
-  });
+  const [profiles, submittedOnPage] = await Promise.all([
+    DeliveryPartner.find({ user: { $in: users.map((u) => u._id) } }),
+    submitted ?? submittedRiderIds(users.map((u) => u._id)),
+  ]);
   const byUser = new Map(profiles.map((p) => [String(p.user), p]));
   const activeOrders = await Order.find({
     _id: { $in: profiles.map((p) => p.activeOrder).filter(Boolean) },
@@ -197,6 +246,7 @@ export async function adminList({ search, online, verification }, pagination) {
       vehicleNumber: p?.vehicleNumber ?? null,
       isOnline: p?.isOnline ?? false,
       verificationStatus: p ? verificationOf(p) : V.PENDING,
+      submitted: submittedOnPage.has(String(u._id)),
       locationUpdatedAt: p?.locationUpdatedAt ?? null,
       completedDeliveries: p?.completedDeliveries ?? 0,
       rating: p?.rating ?? null,
@@ -254,7 +304,9 @@ const VERIFICATION_NOTICE = {
 
 export async function updateDetails(userId, address) {
   await getOrCreateProfile(userId);
-  return DeliveryPartner.findOneAndUpdate({ user: userId }, { $set: { address } }, { returnDocument: "after" });
+  return profileJson(
+    await DeliveryPartner.findOneAndUpdate({ user: userId }, { $set: { address } }, { returnDocument: "after" }),
+  );
 }
 
 /** The rider fixed what was asked: back to the review queue. */
@@ -274,7 +326,7 @@ export async function resubmit(user) {
     },
     PERMISSIONS.RIDERS_MANAGE,
   );
-  return profile;
+  return profileJson(profile);
 }
 
 /** What stops approval: documents, bank account, address (when required). */
@@ -285,7 +337,7 @@ async function verificationGaps(user, profile) {
 
 export async function adminGet(userId) {
   const user = await findRider(userId);
-  return { user: user.toJSON(), profile: (await getOrCreateProfile(user._id)).toJSON() };
+  return { user: user.toJSON(), profile: await profileJson(await getOrCreateProfile(user._id)) };
 }
 
 export async function adminSetVerification(userId, status, reason, adminId) {

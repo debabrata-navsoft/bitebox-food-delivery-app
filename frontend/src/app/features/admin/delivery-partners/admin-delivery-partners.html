@@ -43,7 +43,7 @@
             <div>
               <span class="title">
                 <a class="name" [routerLink]="['/admin/delivery-partners', r.id]">{{ r.name }}</a>
-                @if (r.verificationStatus; as v) {
+                @if (stateOf(r); as v) {
                   <span class="bb-badge {{ verificationTone[v] }}">{{ verificationLabel[v] }}</span>
                 }
               </span>

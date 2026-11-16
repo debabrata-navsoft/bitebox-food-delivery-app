@@ -14,6 +14,7 @@ import {
   RIDER_VERIFICATION_LABEL,
   RIDER_VERIFICATION_TONE,
   RiderVerificationStatus,
+  riderReviewState,
 } from '../../../../shared/models/order-management.models';
 
 /** Anything but approving needs a reason, which the rider sees. */
@@ -72,6 +73,13 @@ export class AdminRiderReview {
   );
   protected readonly status = computed<RiderVerificationStatus>(
     () => this.data()?.profile.verification?.status ?? 'pending',
+  );
+  /** The badge: "Not submitted" while the rider still has something to send. */
+  protected readonly state = computed(() =>
+    riderReviewState({
+      status: this.status(),
+      submitted: this.data()?.profile.verification?.submitted,
+    }),
   );
   protected readonly decisions = computed(() => DECISIONS[this.status()]);
   protected readonly label = RIDER_VERIFICATION_LABEL;

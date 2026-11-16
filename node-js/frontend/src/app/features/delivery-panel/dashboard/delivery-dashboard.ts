@@ -48,6 +48,7 @@ import {
   RiderStats,
   AT_OR_TO_RESTAURANT,
   RIDER_VERIFICATION_COPY,
+  riderReviewState,
 } from '../../../shared/models/order-management.models';
 import { ItemCountPipe } from '../../../shared/pipes/item-count.pipe';
 import { InrPipe, formatDistance } from '../../../shared/pipes/money.pipes';
@@ -128,6 +129,7 @@ export class DeliveryDashboard {
     return v && v.status !== 'approved' ? v : null;
   });
   protected readonly verifyCopy = RIDER_VERIFICATION_COPY;
+  protected readonly reviewState = riderReviewState;
   protected readonly onlineSwitch = linkedSignal(() => this.online());
   protected readonly offer = computed(() => this.data()?.offer ?? null);
   protected readonly active = computed(() => this.data()?.activeOrder ?? null);

@@ -112,7 +112,7 @@ export const adminAssignRules = [
 export const adminRiderListRules = [
   searchQuery(),
   booleanQuery("online"),
-  query("verification").optional().isIn(Object.values(VERIFICATION_STATUS)),
+  query("verification").optional().isIn([...Object.values(VERIFICATION_STATUS), "not_submitted"]),
   ...paginationRules,
 ];
 export const adminRiderVerificationRules = [

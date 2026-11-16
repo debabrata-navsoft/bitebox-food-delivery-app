@@ -18,6 +18,7 @@ import {
   RiderOrder,
   RiderAddress,
   RiderProfile,
+  RiderReviewState,
   RiderVerificationStatus,
   RiderStats,
 } from '../../shared/models/order-management.models';
@@ -213,7 +214,7 @@ export class AdminOrdersService {
   riders(query: {
     search?: string;
     online?: boolean;
-    verification?: RiderVerificationStatus;
+    verification?: RiderReviewState;
     page?: number;
     limit?: number;
   }): Observable<Paginated<AdminRider>> {

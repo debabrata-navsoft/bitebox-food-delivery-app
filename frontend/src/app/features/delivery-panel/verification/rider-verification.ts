@@ -28,6 +28,7 @@ import {
   RIDER_VERIFICATION_TONE,
   RiderAddress,
   RiderProfile,
+  riderReviewState,
 } from '../../../shared/models/order-management.models';
 
 /**
@@ -52,6 +53,10 @@ export class RiderVerification {
     this.kycData.hasValue() ? this.kycData.value() : null,
   );
   protected readonly status = computed(() => this.profile()?.verification?.status ?? 'pending');
+  /** What the rider sees: "Not submitted" until everything is sent, then "In review". */
+  protected readonly state = computed(() =>
+    riderReviewState({ status: this.status(), submitted: this.profile()?.verification?.submitted }),
+  );
   protected readonly canResubmit = computed(() =>
     ['rejected', 'resubmission_requested'].includes(this.status()),
   );

@@ -10,7 +10,7 @@
   <header class="head">
     <div>
       <h1>{{ d.user.name }}</h1>
-      <span class="bb-badge {{ tone[status()] }}">{{ label[status()] }}</span>
+      <span class="bb-badge {{ tone[state()] }}">{{ label[state()] }}</span>
       @if (d.user.status === 'suspended') {
         <span class="bb-badge tone-bad">Account suspended</span>
       }

@@ -63,10 +63,18 @@ describe("rider verification", () => {
     assert.equal(early.status, 409);
     for (const gap of ["Driving licence", "Vehicle registration", "Identity proof", "Bank account", "Address"])
       assert.ok(early.body.message.includes(gap), gap);
-    const pending = (await as(ops.token).get("/api/v1/admin/delivery-partners?verification=pending")).body.data.items;
-    assert.deepEqual(pending.map((i) => i.id), [rider.id]);
+    // Nothing sent yet: "not submitted", not waiting for review.
+    const listed = async (v) =>
+      (await as(ops.token).get(`/api/v1/admin/delivery-partners?verification=${v}`)).body.data.items.map((i) => i.id);
+    assert.deepEqual(await listed("pending"), []);
+    assert.ok((await listed("not_submitted")).includes(rider.id));
+    assert.equal(me.verification.submitted, false);
 
     await complete();
+    // Everything sent: now in review.
+    assert.deepEqual(await listed("pending"), [rider.id]);
+    assert.ok(!(await listed("not_submitted")).includes(rider.id));
+    assert.equal((await as(rider.token).get("/api/v1/delivery/me")).body.data.profile.verification.submitted, true);
     assert.equal((await verify("approved")).body.data.profile.verification.status, "approved");
     assert.equal((await goOnline()).status, 200);
     assert.ok(await Notification.exists({ user: rider.id, type: "rider.verified" }));

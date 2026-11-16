@@ -16,8 +16,8 @@
       matButtonIcon
     />
     <span>
-      <span class="bb-badge {{ tone[status()] }}">{{ label[status()] }}</span>
-      {{ copy[status()] }}
+      <span class="bb-badge {{ tone[state()] }}">{{ label[state()] }}</span>
+      {{ copy[state()] }}
       @if (p.verification?.reason; as reason) {
         <span class="reason"><strong>Reason:</strong> {{ reason }}</span>
       }

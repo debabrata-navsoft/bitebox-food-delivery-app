@@ -257,7 +257,9 @@ class RiderStatsView(APIView):
 # ---------------------------------------------------------------------------
 class AdminRiderQuery(PageQuery):
     online = QueryBoolean()
-    verification = serializers.ChoiceField(choices=VerificationStatus.values, required=False)
+    verification = serializers.ChoiceField(
+        choices=[*VerificationStatus.values, services.NOT_SUBMITTED], required=False
+    )
 
 
 class AdminVerificationInput(serializers.Serializer):

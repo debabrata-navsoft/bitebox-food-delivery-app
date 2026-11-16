@@ -16,7 +16,8 @@ import {
   AdminRider,
   RIDER_VERIFICATION_LABEL,
   RIDER_VERIFICATION_TONE,
-  RiderVerificationStatus,
+  RiderReviewState,
+  riderReviewState,
 } from '../../../shared/models/order-management.models';
 import { RouterLink } from '@angular/router';
 import { SelectOption } from 'nexprime';
@@ -56,7 +57,7 @@ export class AdminDeliveryPartners {
   private readonly notify = inject(NotificationService);
 
   /** ?verification=pending (the dashboards' "Review" shortcut) preselects that filter. */
-  readonly verification = input<RiderVerificationStatus>();
+  readonly verification = input<RiderReviewState>();
   protected readonly filterModel = linkedSignal(() => {
     const preset = this.verification();
     return {
@@ -67,9 +68,12 @@ export class AdminDeliveryPartners {
   });
   protected readonly verificationLabel = RIDER_VERIFICATION_LABEL;
   protected readonly verificationTone = RIDER_VERIFICATION_TONE;
+  /** "Not submitted" for a pending rider who has not sent everything yet. */
+  protected readonly stateOf = (r: AdminRider): RiderReviewState | null =>
+    r.verificationStatus ? riderReviewState({ status: r.verificationStatus, submitted: r.submitted }) : null;
   protected readonly verificationOptions: SelectOption[] = [
     { value: '', label: 'Any verification' },
-    ...(Object.keys(RIDER_VERIFICATION_LABEL) as RiderVerificationStatus[]).map((s) => ({
+    ...(Object.keys(RIDER_VERIFICATION_LABEL) as RiderReviewState[]).map((s) => ({
       value: s,
       label: RIDER_VERIFICATION_LABEL[s],
     })),
@@ -84,7 +88,7 @@ export class AdminDeliveryPartners {
       return this.api.riders({
         search: search.trim() || undefined,
         online: onlineOnly || undefined,
-        verification: (verification || undefined) as RiderVerificationStatus | undefined,
+        verification: (verification || undefined) as RiderReviewState | undefined,
         page,
         limit,
       });

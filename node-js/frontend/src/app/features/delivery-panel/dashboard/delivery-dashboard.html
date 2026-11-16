@@ -16,7 +16,7 @@
     <div class="bb-alert {{ v.status === 'rejected' ? 'error' : 'info' }} verify" role="status">
       <np-icon name="shield-alert" class="mat-icon" matButtonIcon />
       <span>
-        <strong>{{ verifyCopy[v.status] }}</strong>
+        <strong>{{ verifyCopy[reviewState(v)] }}</strong>
         @if (v.reason) {
           Reason: {{ v.reason }}
         }

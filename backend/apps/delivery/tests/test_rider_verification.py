@@ -98,12 +98,23 @@ def test_new_riders_go_online_only_after_verification() -> None:
         "Address",
     ):
         assert gap in early.json()["message"]
-    pending = ops.get("/api/v1/admin/delivery-partners?verification=pending").json()["data"][
-        "items"
+    # Nothing sent yet: "not submitted", not waiting for review.
+    listed = lambda v: [  # noqa: E731
+        i["id"]
+        for i in ops.get(f"/api/v1/admin/delivery-partners?verification={v}").json()["data"][
+            "items"
+        ]
     ]
-    assert [i["id"] for i in pending] == [str(r.pk)]
+    assert listed("pending") == []
+    assert listed("not_submitted") == [str(r.pk)]
+    assert me["verification"]["submitted"] is False
 
     complete(rider, ops)
+    # Everything sent: now in review.
+    assert listed("pending") == [str(r.pk)]
+    assert listed("not_submitted") == []
+    me = rider.get("/api/v1/delivery/me").json()["data"]["profile"]
+    assert me["verification"]["submitted"] is True
     assert (
         verify(ops, r.pk, "approved").json()["data"]["profile"]["verification"]["status"]
         == "approved"

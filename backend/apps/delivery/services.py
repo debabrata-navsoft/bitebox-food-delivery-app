@@ -9,13 +9,14 @@ from typing import Any
 
 from django.conf import settings
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import BooleanField, Count, Exists, ExpressionWrapper, OuterRef, Q, QuerySet
 from django.utils import timezone
 
 from apps.accounts.models import RevokedReason, User, UserStatus
 from apps.accounts.serializers import user_json
 from apps.accounts.services import end_sessions
 from apps.kyc import services as kyc
+from apps.kyc.models import DocumentStatus, KycDocument, PayoutAccount
 from apps.notifications.services import notify, notify_admins
 from apps.orders import presenters
 from apps.orders.models import Order, OrderStatus
@@ -63,6 +64,42 @@ def _vehicle(profile: DeliveryPartner) -> RiderVehicle | None:
         return None
 
 
+# List filter: riders still waiting on themselves (status pending, something not sent yet).
+NOT_SUBMITTED = "not_submitted"
+
+
+def with_submitted(users: QuerySet[User]) -> QuerySet[User]:
+    """
+    Annotates `submitted`: the rider has sent everything an admin checks, so a pending rider is
+    really waiting for review. That is each required document (not rejected), a bank account, the
+    home address and the vehicle. Until then they are "not submitted", not "in review".
+    """
+    kinds = kyc.KINDS_FOR[Role.DELIVERY]
+    all_documents = (
+        KycDocument.objects.filter(user=OuterRef("pk"), kind__in=kinds)
+        .exclude(status=DocumentStatus.REJECTED)
+        .order_by()
+        .values("user")
+        .annotate(n=Count("kind", distinct=True))
+        .filter(n=len(kinds))
+    )
+    return users.annotate(
+        submitted=ExpressionWrapper(
+            Q(
+                Exists(all_documents),
+                Exists(PayoutAccount.objects.filter(user=OuterRef("pk"))),
+                delivery_partner__address__isnull=False,
+                delivery_partner__vehicle__isnull=False,
+            ),
+            output_field=BooleanField(),
+        )
+    )
+
+
+def is_submitted(user_id: uuid.UUID) -> bool:
+    return with_submitted(User.objects.filter(pk=user_id)).filter(Q(submitted=True)).exists()
+
+
 def profile_json(profile: DeliveryPartner) -> dict[str, Any]:
     vehicle = _vehicle(profile)
     data: dict[str, Any] = {
@@ -79,6 +116,7 @@ def profile_json(profile: DeliveryPartner) -> dict[str, Any]:
             "status": profile.verification_status,
             "reason": profile.verification_reason or None,
             "verified_at": profile.verified_at,
+            "submitted": is_submitted(profile.user_id),
         },
         "created_at": profile.created_at,
         "updated_at": profile.updated_at,
@@ -232,7 +270,13 @@ def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
         )
     if query.get("online") is True:
         users = users.filter(delivery_partner__is_online=True)
-    if verification := query.get("verification"):
+    users = with_submitted(users)
+    pending = Q(delivery_partner__verification_status=V.PENDING) | Q(delivery_partner__isnull=True)
+    if (verification := query.get("verification")) == NOT_SUBMITTED:
+        users = users.filter(pending, Q(submitted=False))
+    elif verification == V.PENDING:  # in review: sent everything, waiting for a decision
+        users = users.filter(pending, Q(submitted=True))
+    elif verification:
         users = users.filter(delivery_partner__verification_status=verification)
     rows, meta = paginate(users.order_by("-created_at"), page)
     profiles = {
@@ -253,6 +297,7 @@ def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
                 "vehicle_number": (vehicle.vehicle_number or None) if vehicle else None,
                 "is_online": p.is_online if p else False,
                 "verification_status": p.verification_status if p else V.PENDING,
+                "submitted": u.submitted,
                 "location_updated_at": p.location_updated_at if p else None,
                 "completed_deliveries": p.completed_deliveries if p else 0,
                 "rating": rating_json(p) if p else None,
