@@ -21,6 +21,7 @@ import { CatalogService } from '../../../core/services/catalog.service';
 import { DeliveryLocationService } from '../../../core/services/delivery-location.service';
 import { LocationPickerDialog } from '../../../shared/components/location-picker/location-picker-dialog';
 import { RestaurantCard } from '../../../shared/components/restaurant-card/restaurant-card';
+import { AppQr } from '../../../shared/components/app-qr/app-qr';
 import { FoodCategory, Restaurant } from '../../../shared/models/catalog.models';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { InstallPromptService } from '../../../core/services/install-prompt.service';
@@ -36,6 +37,7 @@ import { InstallPromptService } from '../../../core/services/install-prompt.serv
     NpIconPipe,
     RestaurantCard,
     AnimateOnScrollComponent,
+    AppQr,
   ],
   templateUrl: './home.html',
   styleUrl: './home.scss',

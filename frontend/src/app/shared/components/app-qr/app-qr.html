@@ -1,0 +1,14 @@
+<div class="phone">
+  <span class="notch" aria-hidden="true"></span>
+  <div class="screen">
+    <p>Scan the QR code to get the app</p>
+    <div class="code">
+      @if (src(); as s) {
+        <img [src]="s" alt="QR code that opens BiteBox on your phone" />
+      } @else {
+        <span class="placeholder" aria-hidden="true"></span>
+      }
+    </div>
+    <small>Open your phone camera and point it at the code</small>
+  </div>
+</div>
