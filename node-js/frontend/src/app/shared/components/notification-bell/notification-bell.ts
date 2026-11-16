@@ -1,4 +1,4 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../icons/np-icon-name';
 import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
@@ -43,11 +43,9 @@ export class NotificationBell {
       confirmLabel: 'Clear all',
       danger: true,
     }).subscribe(() =>
-      this.inbox
-        .clearAll()
-        .subscribe({
-          error: () => this.notify.error('Could not clear your notifications. Try again.'),
-        }),
+      this.inbox.clearAll().subscribe({
+        error: () => this.notify.error('Could not clear your notifications. Try again.'),
+      }),
     );
   }
 }

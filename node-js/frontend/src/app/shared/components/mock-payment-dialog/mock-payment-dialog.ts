@@ -1,4 +1,4 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../icons/np-icon-name';
 import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { BB_DIALOG_DATA, BB_DIALOG_TITLE_ID, BbDialog, BbDialogRef } from '../../dialog/bb-dialog';

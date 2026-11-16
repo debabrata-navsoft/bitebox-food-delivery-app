@@ -21,7 +21,7 @@ import {
   getCountryCallingCode,
   parsePhoneNumberFromString,
 } from 'libphonenumber-js/mobile';
-import metadata from 'libphonenumber-js/metadata.mobile.json';
+import metadata from 'libphonenumber-js/mobile/metadata';
 import { NpInputAttrs } from '../../forms/np-input-attrs';
 
 export const DEFAULT_COUNTRY: CountryCode = 'IN';
