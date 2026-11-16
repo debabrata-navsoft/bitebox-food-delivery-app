@@ -191,25 +191,46 @@ h2 {
   font-weight: 600;
 }
 
-.coupon-form {
-  display: flex;
-  gap: var(--bb-space-2);
-  // Top-aligned so an error line under the input does not shift the button.
-  align-items: flex-start;
 
-  np-text-input {
-    flex: 1;
+
+// "Apply coupon ›": opens every coupon in a dialog.
+.coupon-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--bb-space-3);
+  padding: var(--bb-space-3) var(--bb-space-4);
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius-sm);
+  background: var(--bb-success-bg);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--bb-success);
   }
 
-  button {
+  > np-icon {
+    color: var(--bb-success);
     flex-shrink: 0;
   }
-}
 
-.field-error {
-  color: var(--bb-danger);
-  font-size: 0.85rem;
-  margin: var(--bb-space-2) 0 0;
+  span {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  small {
+    color: var(--bb-ink-muted);
+  }
+
+  .chevron {
+    color: var(--bb-ink-muted);
+  }
 }
 
 .applied {
@@ -228,55 +249,6 @@ h2 {
   }
 }
 
-.offers {
-  list-style: none;
-  margin: var(--bb-space-3) 0 0;
-  padding: 0;
-  display: grid;
-  gap: var(--bb-space-2);
-
-  // Icon, offer details with its code as a tag, and an obvious "Apply" button.
-  li {
-    display: flex;
-    align-items: center;
-    gap: var(--bb-space-3);
-    border: 1px dashed var(--bb-amber-600);
-    border-radius: var(--bb-radius-sm);
-    padding: var(--bb-space-3);
-    background: var(--bb-amber-100);
-
-    div {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 2px;
-    }
-    button {
-      flex-shrink: 0;
-      height: 36px;
-    }
-  }
-
-  .offer-icon {
-    --bb-icon-size: 28px;
-    flex-shrink: 0;
-    color: var(--bb-amber-600);
-  }
-
-  .code {
-    margin-top: 4px;
-    padding: 1px 8px;
-    border: 1px dashed var(--bb-plum);
-    border-radius: 4px;
-    background: var(--bb-surface);
-    color: var(--bb-plum);
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-  }
-}
 
 .hint {
   margin: var(--bb-space-3) 0 0;

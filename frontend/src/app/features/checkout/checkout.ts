@@ -1,7 +1,7 @@
 import { NpIconPipe } from '../../shared/icons/np-icon-name';
 import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { FormRoot, form, maxLength, pattern } from '@angular/forms/signals';
+import { form, maxLength } from '@angular/forms/signals';
 import { TitleCasePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -28,15 +28,15 @@ import { QtyStepper } from '../../shared/components/qty-stepper/qty-stepper';
 import { VegBadge } from '../../shared/components/veg-badge/veg-badge';
 import { CouponOffer, DeliveryAddress } from '../../shared/models/checkout.models';
 import { InrPipe, formatPaise } from '../../shared/pipes/money.pipes';
+import { BbDialog } from '../../shared/dialog/bb-dialog';
+import { openCoupons } from './coupon-dialog/coupon-dialog';
 
 
-import { shownError } from '../../shared/forms/form-errors';
 import { NP_FORM_FIELDS } from '../../shared/forms/np-form-fields';
 
 @Component({
   selector: 'bb-checkout',
   imports: [
-    FormRoot,
     NP_FORM_FIELDS,
     RouterLink,
     MatButtonModule,
@@ -63,6 +63,7 @@ export class Checkout {
   private readonly addresses = inject(AddressService);
   private readonly orders = inject(OrderService);
   private readonly dialog = inject(MatDialog);
+  private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly payments = inject(PaymentService);
@@ -72,18 +73,6 @@ export class Checkout {
   protected readonly loadError = signal<string | null>(null);
   protected readonly savedAddresses = signal<DeliveryAddress[]>([]);
   protected readonly offers = signal<CouponOffer[]>([]);
-  protected readonly shownError = shownError;
-  protected readonly couponForm = form(
-    signal({ code: '' }),
-    (path) => {
-      pattern(path.code, /^\s*[A-Za-z0-9_-]{3,30}\s*$/, {
-        message: 'Coupon codes are 3-30 letters or digits',
-      });
-    },
-    { submission: { action: async () => this.applyCoupon() } },
-  );
-  protected readonly couponError = signal<string | null>(null);
-  protected readonly applyingCoupon = signal(false);
   protected readonly noteForm = form(signal({ note: '' }), (path) => {
     maxLength(path.note, 300, { message: 'Keep the note under 300 characters' });
   });
@@ -129,25 +118,11 @@ export class Checkout {
       .subscribe({ next: (list) => this.offers.set(list), error: () => this.offers.set([]) });
   }
 
-  protected applyCoupon(code = this.couponForm.code().value()): void {
-    const value = code.trim();
-    if (!value) return;
-    this.applyingCoupon.set(true);
-    this.couponError.set(null);
-    this.cart.applyCoupon(value).subscribe({
-      next: (quote) => {
-        this.applyingCoupon.set(false);
-        this.couponForm().reset({ code: '' });
-        this.notify.success(
-          `${quote.coupon?.code} applied — you save ₹${(quote.pricing.discountPaise / 100).toFixed(0)}`,
-        );
-      },
-      error: (err: unknown) => {
-        this.couponError.set(errorMessage(err));
-        this.applyingCoupon.set(false);
-      },
-    });
+  /** "Apply coupon": every coupon for this cart; the quote refreshes once one is applied. */
+  protected showCoupons(): void {
+    openCoupons(this.bbDialog, this.offers()).subscribe();
   }
+
 
   protected applyCoins(coins: number): void {
     this.cart.setCoins(coins).subscribe({
@@ -270,9 +245,4 @@ export class Checkout {
     return [a.line1, a.line2, a.area, a.city].filter(Boolean).join(', ');
   }
 
-  protected offerTitle(o: CouponOffer): string {
-    return o.discountType === 'percent'
-      ? `${o.discountValue}% off`
-      : `₹${o.discountValue / 100} off`;
-  }
 }

@@ -122,9 +122,9 @@
       </div>
 
       <aside class="side">
-        <!-- Coupon -->
+        <!-- Coupon: a row that opens every coupon in a dialog -->
         <section class="bb-card" aria-labelledby="coupon-title">
-          <h2 id="coupon-title">Offers</h2>
+          <h2 id="coupon-title">Offers &amp; benefits</h2>
           @if (q.coupon; as applied) {
             <div class="applied">
               <np-icon name="tag" class="mat-icon" matButtonIcon />
@@ -141,44 +141,16 @@
                 <span>{{ ce.code }}: {{ ce.message }} <button class="bb-link-button" (click)="removeCoupon()">Remove</button></span>
               </div>
             }
-            <form class="coupon-form" [formRoot]="couponForm">
-              <np-text-input
-                [formField]="couponForm.code"
-                ariaLabel="Coupon code"
-                placeholder="Enter coupon code"
-                icon="tag"
-                autocapitalize="characters"
-                [error]="shownError(couponForm.code)"
-              />
-              <button mat-stroked-button type="submit" [disabled]="applyingCoupon() || !couponForm.code().value().trim()">Apply</button>
-            </form>
-            @if (couponError()) {
-              <p class="field-error" role="alert">{{ couponError() }}</p>
-            }
-            @if (offers().length) {
-              <ul class="offers">
-                @for (o of offers(); track o.code) {
-                  <li>
-                    <np-icon name="ticket-percent" class="mat-icon offer-icon" />
-                    <div>
-                      <strong>{{ offerTitle(o) }}</strong>
-                      <span class="bb-muted small">{{ o.description }}</span>
-                      <span class="code">{{ o.code }}</span>
-                    </div>
-                    <button
-                      mat-flat-button
-                      class="bb-btn-accent"
-                      type="button"
-                      (click)="applyCoupon(o.code)"
-                      [disabled]="applyingCoupon()"
-                      [attr.aria-label]="'Apply coupon ' + o.code"
-                    >
-                      Apply
-                    </button>
-                  </li>
+            <button type="button" class="coupon-row" (click)="showCoupons()">
+              <np-icon name="ticket-percent" class="mat-icon" matButtonIcon />
+              <span>
+                <strong>Apply coupon</strong>
+                @if (offers().length) {
+                  <small>{{ offers().length }} {{ offers().length === 1 ? 'offer' : 'offers' }} available</small>
                 }
-              </ul>
-            }
+              </span>
+              <np-icon name="chevron-right" class="mat-icon chevron" matButtonIcon />
+            </button>
           }
         </section>
 

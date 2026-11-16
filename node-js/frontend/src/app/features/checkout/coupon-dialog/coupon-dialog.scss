@@ -1,0 +1,132 @@
+// The code box, then every coupon for this cart (moved from checkout.scss).
+.code-form {
+  display: flex;
+  gap: var(--bb-space-2);
+  // Top-aligned so an error line under the input does not shift the button.
+  align-items: flex-start;
+
+  np-text-input {
+    flex: 1;
+  }
+
+  button {
+    flex-shrink: 0;
+  }
+}
+
+.field-error {
+  color: var(--bb-danger);
+  font-size: 0.85rem;
+  margin: var(--bb-space-2) 0 0;
+}
+
+h3 {
+  margin: var(--bb-space-4) 0 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--bb-ink-muted);
+}
+
+// Each coupon: the discount on a side panel, offer details with its code as a tag, and an "Apply" button in the middle
+// on the right. Locked (below the minimum): greyed out, Apply disabled, and how much to add.
+.offers {
+  list-style: none;
+  margin: var(--bb-space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--bb-space-2);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: var(--bb-space-3);
+    border: 1px dashed var(--bb-amber-600);
+    border-radius: var(--bb-radius-sm);
+    padding: var(--bb-space-2) var(--bb-space-3) var(--bb-space-2) var(--bb-space-2);
+    background: var(--bb-amber-100);
+
+    div {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+    }
+
+    button {
+      flex-shrink: 0;
+      height: 36px;
+    }
+  }
+
+  strong {
+    color: var(--bb-ink);
+    font-size: 1.05rem;
+  }
+
+  // The discount, on an amber panel down the card's left side.
+  .side {
+    flex: 0 0 78px;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--bb-space-2);
+    border-radius: 6px;
+    background: linear-gradient(160deg, #ffd27a 0%, var(--bb-amber) 100%);
+    color: var(--bb-on-accent);
+    text-align: center;
+
+    strong {
+      color: inherit;
+      font-size: 1.3rem;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    small {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+    }
+  }
+
+  .min-order,
+  .short {
+    font-size: 0.85rem;
+  }
+
+  .min-order {
+    color: var(--bb-ink);
+    font-weight: 600;
+  }
+
+  li.locked {
+    border-color: var(--bb-border);
+    background: var(--bb-surface-alt);
+
+    .side {
+      background: var(--bb-border);
+      color: var(--bb-ink-muted);
+    }
+
+    .short {
+      color: var(--bb-danger);
+    }
+  }
+
+  .code {
+    margin-top: 4px;
+    padding: 1px 8px;
+    border: 1px dashed var(--bb-plum);
+    border-radius: 4px;
+    background: var(--bb-surface);
+    color: var(--bb-plum);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+}

@@ -1,0 +1,64 @@
+<h2 bbDialogTitle>Apply coupon</h2>
+<div class="bb-dialog__content">
+  <form class="code-form" [formRoot]="codeForm">
+    <np-text-input
+      [formField]="codeForm.code"
+      ariaLabel="Coupon code"
+      placeholder="Enter coupon code"
+      icon="tag"
+      autocapitalize="characters"
+      [error]="shownError(codeForm.code)"
+    />
+    <button
+      mat-stroked-button
+      type="submit"
+      [disabled]="applying() || !codeForm.code().value().trim()"
+    >
+      Apply
+    </button>
+  </form>
+  @if (error()) {
+    <p class="field-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (offers.length) {
+    <h3>Available coupons</h3>
+    <ul class="offers">
+      @for (o of offers; track o.code) {
+        @let left = minOrderLeft(o);
+        <li [class.locked]="left > 0">
+          <!-- The discount on a coloured side panel. -->
+          <span class="side" aria-hidden="true">
+            <strong>{{ amount(o) }}</strong>
+            <small>OFF</small>
+          </span>
+          <div>
+            <strong>{{ o.description || amount(o) + ' off' }}</strong>
+            @if (o.minOrderPaise) {
+              <span class="min-order">Min order {{ o.minOrderPaise | inr }}</span>
+            }
+            @if (left > 0) {
+              <span class="short">Add {{ left | inr }} more to use this offer</span>
+            }
+            <span class="code">{{ o.code }}</span>
+          </div>
+          <button
+            mat-flat-button
+            class="bb-btn-accent"
+            type="button"
+            (click)="apply(o.code)"
+            [disabled]="applying() || left > 0"
+            [attr.aria-label]="'Apply coupon ' + o.code + ', ' + amount(o) + ' off'"
+          >
+            Apply
+          </button>
+        </li>
+      }
+    </ul>
+  } @else {
+    <p class="bb-muted">No coupons for this cart right now.</p>
+  }
+</div>
+<div class="bb-dialog__actions">
+  <np-button variant="soft" severity="secondary" label="Close" (clicked)="ref.close()" />
+</div>
