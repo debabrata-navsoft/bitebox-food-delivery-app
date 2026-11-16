@@ -1,0 +1,34 @@
+:host {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.6;
+  padding: 1px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+:host(.tone-waiting) {
+  background: var(--bb-amber-100);
+  color: var(--bb-warning-ink);
+}
+:host(.tone-cooking) {
+  background: var(--bb-info-bg);
+  color: var(--bb-info-ink);
+}
+:host(.tone-handover) {
+  background: var(--bb-plum-100);
+  color: var(--bb-plum);
+}
+:host(.tone-road) {
+  background: var(--bb-teal-bg);
+  color: var(--bb-teal-ink);
+}
+:host(.tone-done) {
+  background: var(--bb-success-bg);
+  color: var(--bb-success);
+}
+:host(.tone-stopped) {
+  background: var(--bb-danger-bg);
+  color: var(--bb-danger);
+}

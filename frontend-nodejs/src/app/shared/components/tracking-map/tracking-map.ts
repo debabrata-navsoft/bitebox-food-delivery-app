@@ -1,0 +1,235 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  viewChild,
+} from '@angular/core';
+import type * as Leaflet from 'leaflet';
+import { environment } from '../../../../environments/environment';
+import { Point, isValidPoint } from '../../../core/services/routing.service';
+
+type MarkerKind = 'restaurant' | 'home' | 'rider';
+const ICON: Record<MarkerKind, string> = {
+  restaurant: 'store',
+  home: 'house',
+  rider: 'bike',
+};
+const LABEL: Record<MarkerKind, string> = {
+  restaurant: 'Restaurant',
+  home: 'Delivery address',
+  rider: 'Rider',
+};
+const GLIDE_MS = 900;
+
+/** Road route, straight-line fallback (dashed) and the rider's trail (coloured in the SCSS). */
+const LINE: Record<'road' | 'straight' | 'trail', Leaflet.PolylineOptions> = {
+  road: { color: '#2e1a3d', weight: 5, opacity: 0.8 },
+  straight: { color: '#6b5a78', weight: 3, opacity: 0.7, dashArray: '6 8' },
+  trail: { className: 'bb-track-trail', weight: 4, opacity: 0.9, interactive: false },
+};
+
+@Component({
+  selector: 'bb-tracking-map',
+  templateUrl: './tracking-map.html',
+  styleUrl: './tracking-map.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class TrackingMap {
+  readonly restaurant = input<Point | null>(null);
+  readonly destination = input<Point | null>(null);
+  readonly rider = input<Point | null>(null);
+  readonly riderStale = input(false);
+  readonly route = input<Point[] | null>(null);
+  readonly lineFrom = input<Point | null>(null);
+  /** Where the rider has already been (drawn under the route). */
+  readonly trail = input<Point[]>([]);
+  readonly label = input('Delivery map');
+
+  protected readonly loadError = signal<string | null>(null);
+  private readonly ready = signal(false);
+  private readonly container = viewChild.required<ElementRef<HTMLDivElement>>('map');
+
+  private L?: typeof Leaflet;
+  private map?: Leaflet.Map;
+  private readonly markers: Partial<Record<MarkerKind, Leaflet.Marker>> = {};
+  private svgs: Partial<Record<MarkerKind, string>> = {};
+  private line?: Leaflet.Polyline;
+  private trailLine?: Leaflet.Polyline;
+  private fitted = false;
+  private glide?: number;
+  private resizeObserver?: ResizeObserver;
+
+  private readonly stops = computed(() => ({
+    restaurant: isValidPoint(this.restaurant()) ? this.restaurant() : null,
+    home: isValidPoint(this.destination()) ? this.destination() : null,
+  }));
+  private readonly riderPoint = computed(() => (isValidPoint(this.rider()) ? this.rider() : null));
+
+  constructor() {
+    afterNextRender(() => void this.init());
+    inject(DestroyRef).onDestroy(() => {
+      if (this.glide) cancelAnimationFrame(this.glide);
+      this.resizeObserver?.disconnect();
+      this.map?.remove();
+    });
+
+    effect(() => {
+      const points = { ...this.stops(), rider: this.riderPoint() };
+      const stale = this.riderStale();
+      if (!this.ready()) return;
+      this.place('restaurant', points.restaurant);
+      this.place('home', points.home);
+      this.place('rider', points.rider, stale);
+      this.keepInView(points);
+    });
+
+    effect(() => {
+      const trail = this.trail().filter(isValidPoint);
+      if (this.ready()) this.trailLine = this.polyline(this.trailLine, trail, LINE.trail);
+    });
+
+    effect(() => {
+      if (!this.ready()) return;
+      const route = (this.route() ?? []).filter(isValidPoint);
+      const from = isValidPoint(this.lineFrom()) ? this.lineFrom() : this.stops().restaurant;
+      const to = this.stops().home;
+      const road = route.length > 1;
+      const path = road ? route : from && to ? [from, to] : [];
+      this.line = this.polyline(this.line, path, road ? LINE.road : LINE.straight);
+    });
+  }
+
+  private async init(): Promise<void> {
+    try {
+      const [mod] = await Promise.all([import('leaflet'), this.loadMarkerIcons()]);
+      const L = (this.L = ((mod as { default?: typeof Leaflet }).default ?? mod) as typeof Leaflet);
+      this.map = L.map(this.container().nativeElement, {
+        zoomControl: true,
+        attributionControl: true,
+        scrollWheelZoom: false,
+      });
+      this.map.setView([22.35, 78.67], 5);
+      L.tileLayer(environment.map.tileUrl, {
+        maxZoom: environment.map.maxZoom,
+        attribution: environment.map.attribution,
+      })
+        .on('tileerror', () =>
+          this.loadError.set(
+            'Some map tiles could not be loaded. Positions below are still accurate.',
+          ),
+        )
+        .addTo(this.map);
+      this.resizeObserver = new ResizeObserver(() => this.map?.invalidateSize());
+      this.resizeObserver.observe(this.container().nativeElement);
+      this.ready.set(true);
+    } catch {
+      this.loadError.set(
+        'The map could not be loaded. Order details and updates below still work.',
+      );
+    }
+  }
+
+  private async loadMarkerIcons(): Promise<void> {
+    const entries = await Promise.all(
+      (Object.keys(ICON) as MarkerKind[]).map(async (kind) => {
+        const res = await fetch(`icons/${ICON[kind]}.svg`).catch(() => null);
+        return [kind, res?.ok ? await res.text() : ''] as const;
+      }),
+    );
+    this.svgs = Object.fromEntries(entries);
+  }
+
+  private place(kind: MarkerKind, point: Point | null, stale = false): void {
+    const L = this.L!;
+    const existing = this.markers[kind];
+    if (!point) {
+      existing?.remove();
+      delete this.markers[kind];
+      return;
+    }
+    const target = L.latLng(point.latitude, point.longitude);
+    if (!existing) {
+      const icon = L.divIcon({
+        className: `bb-track-marker bb-track-${kind}`,
+        html: `<span class="bb-track-icon" aria-hidden="true">${this.svgs[kind] ?? ''}</span>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+      });
+      this.markers[kind] = L.marker(target, {
+        icon,
+        title: LABEL[kind],
+        keyboard: false,
+        zIndexOffset: kind === 'rider' ? 1000 : 0,
+      }).addTo(this.map!);
+    } else if (kind === 'rider') {
+      this.glideTo(existing, target);
+    } else if (!existing.getLatLng().equals(target, 1e-7)) {
+      existing.setLatLng(target);
+    }
+    if (kind === 'rider') this.markers.rider?.getElement()?.classList.toggle('is-stale', stale);
+  }
+
+  private glideTo(marker: Leaflet.Marker, target: Leaflet.LatLng): void {
+    if (this.glide) cancelAnimationFrame(this.glide);
+    const start = marker.getLatLng();
+    const began = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - began) / GLIDE_MS);
+      marker.setLatLng([
+        start.lat + (target.lat - start.lat) * t,
+        start.lng + (target.lng - start.lng) * t,
+      ]);
+      this.glide = t < 1 ? requestAnimationFrame(step) : undefined;
+    };
+    this.glide = requestAnimationFrame(step);
+  }
+
+  /** Replaces `old` with a line through `points` (none for fewer than two), under the markers. */
+  private polyline(
+    old: Leaflet.Polyline | undefined,
+    points: Point[],
+    style: Leaflet.PolylineOptions,
+  ): Leaflet.Polyline | undefined {
+    old?.remove();
+    if (points.length < 2) return undefined;
+    return this.L!.polyline(
+      points.map((p) => [p.latitude, p.longitude] as [number, number]),
+      style,
+    )
+      .addTo(this.map!)
+      .bringToBack();
+  }
+
+  private keepInView(points: {
+    restaurant: Point | null;
+    home: Point | null;
+    rider: Point | null;
+  }): void {
+    const L = this.L!;
+    const all = [points.restaurant, points.home, points.rider].filter((p): p is Point => !!p);
+    if (all.length === 0) return;
+    if (!this.fitted) {
+      this.fitted = true;
+      if (all.length === 1) this.map!.setView([all[0].latitude, all[0].longitude], 15);
+      else
+        this.map!.fitBounds(L.latLngBounds(all.map((p) => [p.latitude, p.longitude])), {
+          padding: [36, 36],
+          maxZoom: 16,
+        });
+      return;
+    }
+    if (
+      points.rider &&
+      !this.map!.getBounds().pad(-0.1).contains([points.rider.latitude, points.rider.longitude])
+    ) {
+      this.map!.panTo([points.rider.latitude, points.rider.longitude]);
+    }
+  }
+}

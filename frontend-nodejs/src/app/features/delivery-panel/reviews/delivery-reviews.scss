@@ -1,0 +1,50 @@
+.summary {
+  margin-bottom: var(--bb-space-4);
+
+  .bb-h3 {
+    margin-top: 0;
+  }
+}
+
+.list-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.row-skeleton {
+  display: block;
+  height: 80px;
+  margin: var(--bb-space-3) var(--bb-space-4);
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    padding: var(--bb-space-4);
+  }
+
+  li + li {
+    border-top: 1px solid var(--bb-border);
+  }
+}
+
+// Order number on the left, Report on the right: one tidy footer row on every screen size.
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--bb-space-2);
+  font-size: 0.85rem;
+}
+
+.order-no {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--bb-ink-muted);
+  font-size: 0.8rem;
+}

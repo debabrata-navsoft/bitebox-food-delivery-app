@@ -1,0 +1,229 @@
+<bb-page-header
+  title="Orders"
+  subtitle="Accept new orders quickly: unanswered ones are rejected automatically."
+>
+  <np-button severity="primary" variant="outlined" icon="refresh-cw" label="Refresh" (clicked)="board.refresh()" />
+</bb-page-header>
+
+@if (board.noRestaurant()) {
+  <bb-empty-state
+    icon="storefront"
+    title="Add your restaurant first"
+    message="Once your restaurant is approved, orders arrive here."
+  >
+    <a class="bb-btn" routerLink="/restaurant/details">Add restaurant details</a>
+  </bb-empty-state>
+} @else {
+  <div class="tabs-scroll">
+    <np-button-toggle
+      class="tabs bb-toggle-wrap"
+      [options]="tabOptions()"
+      [value]="tab()"
+      (valueChange)="selectTab($event)"
+      ariaLabel="Order stage"
+    />
+  </div>
+
+  @if (board.error(); as message) {
+    <div class="bb-alert error" role="alert">
+      <np-icon name="cloud-off" class="mat-icon" matButtonIcon />
+      <span
+        >{{ message }} <button class="bb-link-button" (click)="board.refresh()">Retry</button></span
+      >
+    </div>
+  }
+
+  @if (tab() === 'history') {
+    @if (history.loading() && !history.data()) {
+      <span class="bb-skeleton" style="height: 240px"></span>
+    } @else if (history.error(); as message) {
+      <div class="bb-alert error" role="alert">
+        <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
+        <span
+          >{{ message }}
+          <button class="bb-link-button" (click)="history.load(1)">Retry</button></span
+        >
+      </div>
+    } @else if (history.data(); as h) {
+      @if (h.items.length === 0) {
+        <bb-empty-state
+          icon="history"
+          title="No finished orders yet"
+          message="Delivered, rejected and cancelled orders appear here."
+        />
+      } @else {
+        <ul class="history bb-card">
+          @for (o of h.items; track o.id) {
+            <li>
+              <div class="h-main">
+                <strong>{{ o.orderNumber }}</strong>
+                <span class="bb-muted"
+                  >{{ o.createdAt | date: 'd MMM, h:mm a' }} · {{ o | itemCount }} ·
+                  {{ o.deliveryAddress.recipientName }}</span
+                >
+                @if (o.cancellation?.reason) {
+                  <span class="reason">{{ o.cancellation!.reason }}</span>
+                }
+              </div>
+              <span class="h-total">{{ o.pricing.totalPaise | inr }}</span>
+              <bb-order-status-chip [status]="o.status" />
+            </li>
+          }
+        </ul>
+        <np-pagination
+          [page]="h.pagination.page"
+          [rows]="h.pagination.limit"
+          [totalRecords]="h.pagination.total"
+          [rowsOptions]="[15, 30, 50]"
+          variant="compact"
+          (pageChange)="history.goTo($event)"
+          (rowsChange)="history.goTo(1, $event)"
+        />
+      }
+    }
+  } @else if (!board.board()) {
+    <div class="grid">
+      @for (i of [1, 2, 3]; track i) {
+        <span class="bb-skeleton" style="height: 260px"></span>
+      }
+    </div>
+  } @else if (shown().length === 0) {
+    @switch (tab()) {
+      @case ('new') {
+        <bb-empty-state
+          icon="notifications_active"
+          title="No new orders"
+          message="New orders appear here with a sound alert. Keep this tab open."
+        />
+      }
+      @case ('preparing') {
+        <bb-empty-state
+          icon="skillet"
+          title="Nothing cooking"
+          message="Accepted orders you are preparing show up here."
+        />
+      }
+      @case ('ready') {
+        <bb-empty-state icon="takeout_dining" title="Nothing waiting for pickup" />
+      }
+      @default {
+        <bb-empty-state icon="two_wheeler" title="No orders on the road" />
+      }
+    }
+  } @else {
+    <div class="grid">
+      @for (o of shown(); track o.id) {
+        <article
+          class="bb-card order"
+          [class.urgent]="o.status === 'pending' && minutesLeft(o) <= 3"
+          [attr.aria-labelledby]="'order-' + o.id"
+        >
+          <header>
+            <div>
+              <h3 [id]="'order-' + o.id">{{ o.orderNumber }}</h3>
+              <span class="bb-muted when"
+                >{{ o.createdAt | date: 'h:mm a' }} ·
+                {{ minutesAgo(o) === 0 ? 'just now' : minutesAgo(o) + ' min ago' }}</span
+              >
+            </div>
+            <bb-order-status-chip
+              [status]="o.status"
+              [label]="
+                o.status === 'ready_for_pickup'
+                  ? 'Finding a rider'
+                  : o.status === 'assigned'
+                    ? 'Rider on the way'
+                    : undefined
+              "
+            />
+          </header>
+
+          <p class="customer">
+            <np-icon name="user" class="mat-icon" matButtonIcon />
+            {{ o.deliveryAddress.recipientName
+            }}{{ o.deliveryAddress.area ? ' · ' + o.deliveryAddress.area : '' }}
+          </p>
+
+          <ul class="items">
+            @for (item of o.items; track item.foodItem) {
+              <li>
+                <bb-veg-badge [veg]="item.isVeg" />
+                <span class="qty">{{ item.quantity }} ×</span>
+                <span>{{ item.name }}</span>
+              </li>
+            }
+          </ul>
+
+          @if (o.note) {
+            <p class="note"><np-icon name="sticky-note" class="mat-icon" matButtonIcon />{{ o.note }}</p>
+          }
+
+          <div class="total">
+            @let isPaid = o.paymentMethod === 'online' || o.paymentStatus === 'paid';
+            <span>
+              {{ o | itemCount }} ·
+              <span [class.pay-paid]="isPaid">{{ isPaid ? 'Paid online' : 'Cash on delivery' }}</span>
+            </span>
+            <strong>{{ o.pricing.totalPaise | inr }}</strong>
+          </div>
+
+          @if (o.status === 'pending') {
+            <p class="deadline" [class.soon]="minutesLeft(o) <= 3">
+              <np-icon name="timer" class="mat-icon" matButtonIcon />
+              {{
+                minutesLeft(o) > 0
+                  ? 'Auto-rejects in ' + minutesLeft(o) + ' min'
+                  : 'Auto-rejecting now'
+              }}
+            </p>
+          }
+          @if (o.readyBy && (o.status === 'confirmed' || o.status === 'preparing')) {
+            <p class="deadline">
+              <np-icon name="chef-hat" class="mat-icon" matButtonIcon />
+              Ready by {{ o.readyBy | date: 'h:mm a' }} ({{ o.prepMinutes }} min)
+            </p>
+          }
+
+          @if (next[o.status]; as step) {
+            <div class="actions">
+              @if (o.status === 'pending') {
+                <np-button
+                  variant="outlined"
+                  severity="danger"
+                  label="Reject"
+                  [disabled]="busy().has(o.id)"
+                  (clicked)="reject(o)"
+                />
+              }
+              <np-button
+                severity="primary"
+                [icon]="step.icon | npIcon"
+                [label]="step.label"
+                [loading]="busy().has(o.id)"
+                (clicked)="advance(o)"
+              />
+            </div>
+          } @else {
+            <p class="waiting">
+              <np-icon [name]="(o.riderAssigned ? 'two_wheeler' : 'hourglass_top') | npIcon" class="mat-icon" matButtonIcon />
+              @switch (o.status) {
+                @case ('ready_for_pickup') {
+                  Looking for a nearby rider…
+                }
+                @case ('assigned') {
+                  A rider is coming to collect this order.
+                }
+                @default {
+                  With the rider, on its way to the customer.
+                }
+              }
+            </p>
+            @if (o.pickupBy) {
+              <p class="bb-muted pickup-by">Cancelled automatically at {{ o.pickupBy | date: 'h:mm a' }} if no rider picks it up.</p>
+            }
+          }
+        </article>
+      }
+    </div>
+  }
+}

@@ -1,0 +1,63 @@
+@let item = data.item;
+<!-- Photo, title and details scroll together; the actions below stay in view. -->
+<div class="bb-dialog__content scroll">
+  @if (item.imageUrl | usableImage) {
+    <img class="hero" [bbSrc]="item.imageUrl" alt="" />
+  }
+  <h2 bbDialogTitle class="title">
+    <bb-veg-badge [veg]="item.isVeg" />
+    {{ item.name }}
+  </h2>
+  <p class="price">{{ item.pricePaise | inr }}</p>
+  @if (!item.isAvailable) {
+    <div class="bb-alert error" role="status">
+      <np-icon name="ban" class="mat-icon" matButtonIcon />
+      <span>Currently unavailable</span>
+    </div>
+  } @else if (data.restaurant.isOpenNow === false) {
+    <div class="bb-alert info" role="status">
+      <np-icon name="clock" class="mat-icon" matButtonIcon />
+      <span>{{ data.restaurant.name }} is closed right now.</span>
+    </div>
+  }
+  @if (item.description) {
+    <p>{{ item.description }}</p>
+  }
+  <dl>
+    @if (item.category) {
+      <div>
+        <dt>Category</dt>
+        <dd>
+          <np-icon [name]="(item.category.icon) | npIcon: 'utensils'" class="mat-icon" matButtonIcon />{{ item.category.name }}
+        </dd>
+      </div>
+    }
+    <div>
+      <dt>Restaurant</dt>
+      <dd>{{ data.restaurant.name }}</dd>
+    </div>
+    @if (item.prepTimeMinutes) {
+      <div>
+        <dt>Prep time</dt>
+        <dd>~{{ item.prepTimeMinutes }} min</dd>
+      </div>
+    }
+  </dl>
+  @if (item.id) {
+    <section class="dish-reviews" aria-labelledby="dish-reviews-title">
+      <h3 id="dish-reviews-title">Reviews of this dish</h3>
+      <bb-public-reviews [subject]="{ kind: 'food', key: item.id }" [responder]="data.restaurant.name" [pageSize]="3" />
+    </section>
+  }
+</div>
+<div class="bb-dialog__actions">
+  @if (data.showRestaurantLink) {
+    <a
+      class="bb-btn bb-btn--outlined"
+      [routerLink]="['/restaurants', data.restaurant.slug]"
+      (click)="ref.close()"
+      >View menu</a
+    >
+  }
+  <np-button variant="soft" severity="secondary" label="Close" (clicked)="ref.close()" />
+</div>

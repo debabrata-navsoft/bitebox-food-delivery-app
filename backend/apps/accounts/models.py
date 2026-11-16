@@ -162,18 +162,21 @@ class Session(BaseModel):
 class OtpPurpose(models.TextChoices):
     LOGIN = "login"  # sign in with a phone number
     VERIFY_PHONE = "verify_phone"  # a signed-in person confirms their number
-    REGISTER = "register"  # a new account confirms its number before it is created
+    REGISTER = "register"  # a new account confirms its number before it is created (SMS, legacy)
+    REGISTER_EMAIL = "register_email"  # a new account confirms its email before it is created
+    VERIFY_EMAIL = "verify_email"  # a signed-in person confirms their email
 
 
 class OtpChallenge(BaseModel):
     """
-    One 6-digit code sent by SMS (apps/accounts/otp.py). Only an HMAC of the code is stored; it
-    expires after OTP_TTL_SECONDS and allows OTP_MAX_ATTEMPTS tries, then a new code is needed.
-    Rows are also the rate-limit record (per number and per IP).
+    One 6-digit code sent by SMS to `phone` or by email to `email` (apps/accounts/otp.py). Only an
+    HMAC of the code is stored; it expires after OTP_TTL_SECONDS and allows OTP_MAX_ATTEMPTS tries,
+    then a new code is needed. Rows are also the rate-limit record (per number/address and per IP).
     """
 
     purpose = models.CharField(max_length=16, choices=OtpPurpose.choices)
-    phone = models.CharField(max_length=16)
+    phone = models.CharField(max_length=16, blank=True, default="")
+    email = models.EmailField(blank=True, default="")
     code_hash = models.CharField(max_length=64)
     expires_at = models.DateTimeField()
     attempts = models.PositiveSmallIntegerField(default=0)
@@ -184,6 +187,7 @@ class OtpChallenge(BaseModel):
         db_table = "otp_challenges"
         indexes = [
             models.Index(fields=["phone", "purpose", "-created_at"], name="otp_phone_recent"),
+            models.Index(fields=["email", "purpose", "-created_at"], name="otp_email_recent"),
             models.Index(fields=["ip", "-created_at"], name="otp_ip_recent"),
         ]
         constraints = [one_of("purpose", OtpPurpose, "otp_challenges_purpose_valid")]

@@ -113,14 +113,17 @@ def _check_new_account(email: str, phone: str | None) -> None:
 
 
 def signup_needs_code() -> bool:
-    """New accounts confirm their number by SMS first (SIGNUP_OTP_REQUIRED, while SMS is on)."""
-    return bool(settings.SIGNUP_OTP_REQUIRED) and sms_enabled()
+    """New accounts confirm their email with an emailed code first (SIGNUP_OTP_REQUIRED)."""
+    return bool(settings.SIGNUP_OTP_REQUIRED)
 
 
 def request_signup_code(email: str, phone: str, ip: str | None) -> dict[str, Any]:
-    """Step 1 of sign-up: the email and number are free, so text a code to the number."""
+    """Step 1 of sign-up: the email and number are free, so email a code to the address.
+    While codes are off, says so and the client creates the account at once."""
     _check_new_account(email, phone)
-    return otp.send_code(phone, OtpPurpose.REGISTER, ip, True)
+    if not signup_needs_code():
+        return {"codeRequired": False}
+    return {**otp.send_email_code(email, OtpPurpose.REGISTER_EMAIL, ip), "codeRequired": True}
 
 
 def register(data: dict[str, Any], meta: RequestMeta) -> IssuedSession:
@@ -129,29 +132,25 @@ def register(data: dict[str, Any], meta: RequestMeta) -> IssuedSession:
     for check in registration_checks:
         check(data)
     _check_new_account(email, phone)
-    phone_verified_at = None
+    email_verified_at = None
     if signup_needs_code():
-        # Step 2: the account is created only with the code texted to its number.
-        if not phone:
-            raise ApiError.bad_request(
-                "Enter your mobile number",
-                [{"field": "phone", "message": "Enter your mobile number"}],
-            )
+        # Step 2: the account is created only with the code emailed to its address.
         if not data.get("code"):
             raise ApiError.bad_request(
-                "Enter the code we sent to your phone",
+                "Enter the code we sent to your email",
                 [{"field": "code", "message": "Enter the 6-digit code"}],
             )
-        otp.check_code(phone, OtpPurpose.REGISTER, data["code"])
-        phone_verified_at = timezone.now()
+        otp.check_email_code(email, OtpPurpose.REGISTER_EMAIL, data["code"])
+        email_verified_at = timezone.now()
 
     with transaction.atomic():
         user = User.objects.create_user(
             email, data["password"], data["name"], phone=phone, role=role,
-            phone_verified_at=phone_verified_at,
+            email_verified_at=email_verified_at,
         )  # fmt: skip
         session = _issue(user, meta)
-        transaction.on_commit(_safe(lambda u, *_: send_email_verification(u), user))
+        if not email_verified_at:
+            transaction.on_commit(_safe(lambda u, *_: send_email_verification(u), user))
         for hook in registration_hooks:
             transaction.on_commit(_safe(hook, user, data, meta))
     logger.info("User registered", extra={"user_id": str(user.pk), "role": role})
@@ -240,6 +239,31 @@ def send_email_verification(user: User) -> None:
         from_email=None,
         recipient_list=[user.email],
     )
+
+
+def request_email_code(user: User, ip: str | None) -> dict[str, Any]:
+    """Emails a signed-in person a code that confirms their address (the account page)."""
+    if user.email_verified_at:
+        raise ApiError.conflict("Your email is already verified")
+    return otp.send_email_code(user.email, OtpPurpose.VERIFY_EMAIL, ip, user.name)
+
+
+def verify_email_code(user: User, code: str) -> User:
+    if user.email_verified_at:
+        raise ApiError.conflict("Your email is already verified")
+    otp.check_email_code(user.email, OtpPurpose.VERIFY_EMAIL, code)
+    user.email_verified_at = timezone.now()
+    user.email_verification_token_hash = None
+    user.email_verification_expires_at = None
+    user.save(
+        update_fields=[
+            "email_verified_at",
+            "email_verification_token_hash",
+            "email_verification_expires_at",
+            "updated_at",
+        ]
+    )
+    return user
 
 
 def resend_email_verification(user: User) -> None:

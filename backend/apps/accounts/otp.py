@@ -1,10 +1,10 @@
 """
-One-time codes by SMS (Node: services/otp.service.js): sign in with a phone number, or confirm a
-signed-in person's number.
+One-time codes (Node: services/otp.service.js): by SMS to sign in with a phone number or confirm a
+signed-in person's number, and by email to confirm the address at sign-up or later.
 
 - 6 digits from `secrets`; only an HMAC (keyed with SECRET_KEY) is stored.
 - A code lives OTP_TTL_SECONDS and allows OTP_MAX_ATTEMPTS tries; a new one can be asked for after
-  OTP_RESEND_SECONDS, at most OTP_PER_PHONE_PER_HOUR per number and OTP_PER_IP_PER_HOUR per IP.
+  OTP_RESEND_SECONDS, at most OTP_PER_PHONE_PER_HOUR per number or email address and OTP_PER_IP_PER_HOUR per IP.
 - Sign-in requests get the same answer whether or not the number has an account (a code is only
   sent when it does), so the endpoint cannot be used to find out who is registered.
 """
@@ -18,8 +18,10 @@ from datetime import timedelta
 from typing import Any
 
 from django.conf import settings
+from django.core.mail import send_mail
 from django.db.models import F
 from django.utils import timezone
+from django.utils.html import escape
 
 from apps.notifications.senders import deliver_sms, sms_enabled
 from common.api import ApiError
@@ -29,14 +31,56 @@ from .models import OtpChallenge, OtpPurpose, User, UserStatus
 logger = logging.getLogger("bitebox.auth")
 
 
-def _hash(phone: str, code: str) -> str:
+def _hash(target: str, code: str) -> str:
     return hmac.new(
-        settings.SECRET_KEY.encode(), f"{phone}:{code}".encode(), hashlib.sha256
+        settings.SECRET_KEY.encode(), f"{target}:{code}".encode(), hashlib.sha256
     ).hexdigest()
 
 
 def _limit(message: str) -> ApiError:
     return ApiError(429, message, code="OTP_RATE_LIMITED")
+
+
+def _lookup(phone: str | None, email: str | None) -> dict[str, str]:
+    """The challenge column a code belongs to: the phone number, or the (lower-case) email."""
+    return {"email": email.strip().lower()} if email else {"phone": phone or ""}
+
+
+def _create(
+    lookup: dict[str, str], purpose: str, ip: str | None, what: str
+) -> tuple[OtpChallenge, str]:
+    """Checks the resend wait and hourly limits, then stores a new challenge; returns its code."""
+    now = timezone.now()
+    recent = OtpChallenge.objects.filter(purpose=purpose, **lookup)
+    last = recent.order_by("-created_at").first()
+    if last and (wait := settings.OTP_RESEND_SECONDS - (now - last.created_at).total_seconds()) > 0:
+        raise _limit(f"Wait {int(wait) + 1} seconds before asking for a new code")
+    hour_ago = now - timedelta(hours=1)
+    if recent.filter(created_at__gte=hour_ago).count() >= settings.OTP_PER_PHONE_PER_HOUR:
+        raise _limit(f"Too many codes for this {what}. Try again in an hour")
+    if (
+        ip
+        and OtpChallenge.objects.filter(ip=ip, created_at__gte=hour_ago).count()
+        >= settings.OTP_PER_IP_PER_HOUR
+    ):
+        raise _limit("Too many codes requested. Try again in an hour")
+
+    code = f"{secrets.randbelow(10**6):06d}"
+    challenge = OtpChallenge.objects.create(
+        purpose=purpose,
+        code_hash=_hash(next(iter(lookup.values())), code),
+        expires_at=now + timedelta(seconds=settings.OTP_TTL_SECONDS),
+        ip=ip,
+        **lookup,
+    )
+    return challenge, code
+
+
+def _sent() -> dict[str, Any]:
+    return {
+        "resendInSeconds": settings.OTP_RESEND_SECONDS,
+        "expiresInSeconds": settings.OTP_TTL_SECONDS,
+    }
 
 
 def send_code(phone: str, purpose: str, ip: str | None, send: bool) -> dict[str, Any]:
@@ -48,29 +92,7 @@ def send_code(phone: str, purpose: str, ip: str | None, send: bool) -> dict[str,
             "We can't send text messages right now. Please try again later",
             code="SMS_UNAVAILABLE",
         )
-    now = timezone.now()
-    recent = OtpChallenge.objects.filter(phone=phone, purpose=purpose)
-    last = recent.order_by("-created_at").first()
-    if last and (wait := settings.OTP_RESEND_SECONDS - (now - last.created_at).total_seconds()) > 0:
-        raise _limit(f"Wait {int(wait) + 1} seconds before asking for a new code")
-    hour_ago = now - timedelta(hours=1)
-    if recent.filter(created_at__gte=hour_ago).count() >= settings.OTP_PER_PHONE_PER_HOUR:
-        raise _limit("Too many codes for this number. Try again in an hour")
-    if (
-        ip
-        and OtpChallenge.objects.filter(ip=ip, created_at__gte=hour_ago).count()
-        >= settings.OTP_PER_IP_PER_HOUR
-    ):
-        raise _limit("Too many codes requested. Try again in an hour")
-
-    code = f"{secrets.randbelow(10**6):06d}"
-    OtpChallenge.objects.create(
-        purpose=purpose,
-        phone=phone,
-        code_hash=_hash(phone, code),
-        expires_at=now + timedelta(seconds=settings.OTP_TTL_SECONDS),
-        ip=ip,
-    )
+    _, code = _create(_lookup(phone, None), purpose, ip, "number")
     if send:
         minutes = settings.OTP_TTL_SECONDS // 60
         deliver_sms(
@@ -78,17 +100,56 @@ def send_code(phone: str, purpose: str, ip: str | None, send: bool) -> dict[str,
             f"{code} is your BiteBox code. It expires in {minutes} minutes. Never share it.",
             settings.MSG91_OTP_TEMPLATE_ID or None,
         )
-    return {
-        "resendInSeconds": settings.OTP_RESEND_SECONDS,
-        "expiresInSeconds": settings.OTP_TTL_SECONDS,
-    }
+    return _sent()
+
+
+def send_email_code(email: str, purpose: str, ip: str | None, name: str = "") -> dict[str, Any]:
+    """Emails a 6-digit code that proves the address (sign-up, or verifying it later)."""
+    challenge, code = _create(_lookup(None, email), purpose, ip, "email address")
+    minutes = settings.OTP_TTL_SECONDS // 60
+    greeting = f"Hi {name}," if name else "Hi,"
+    try:
+        send_mail(
+            subject=f"{code} is your BiteBox verification code",
+            message=(
+                f"{greeting}\n\nYour BiteBox verification code is {code}\n\n"
+                f"It expires in {minutes} minutes. Never share it with anyone. If you did not ask "
+                "for it, ignore this email."
+            ),
+            html_message=(
+                f"<p>{escape(greeting)}</p><p>Your BiteBox verification code is</p>"
+                f'<p style="font-size:28px;font-weight:700;letter-spacing:6px">{code}</p>'
+                f"<p>It expires in {minutes} minutes. Never share it with anyone. If you did not "
+                "ask for it, ignore this email.</p>"
+            ),
+            from_email=None,
+            recipient_list=[email],
+        )
+    except Exception:
+        challenge.delete()  # not sent, so it should not count against the limits
+        logger.exception("Verification code email failed")
+        raise ApiError(
+            503,
+            "We can't send emails right now. Please try again later",
+            code="EMAIL_UNAVAILABLE",
+        ) from None
+    return _sent()
 
 
 def check_code(phone: str, purpose: str, code: str) -> None:
     """Uses up the latest live code for this number, or raises 400/429. Each try counts."""
+    _check(_lookup(phone, None), purpose, code)
+
+
+def check_email_code(email: str, purpose: str, code: str) -> None:
+    """Uses up the latest live code emailed to this address, or raises 400/429."""
+    _check(_lookup(None, email), purpose, code)
+
+
+def _check(lookup: dict[str, str], purpose: str, code: str) -> None:
     challenge = (
         OtpChallenge.objects.filter(
-            phone=phone, purpose=purpose, consumed_at__isnull=True, expires_at__gt=timezone.now()
+            purpose=purpose, consumed_at__isnull=True, expires_at__gt=timezone.now(), **lookup
         )
         .order_by("-created_at")
         .first()
@@ -98,7 +159,7 @@ def check_code(phone: str, purpose: str, code: str) -> None:
     if challenge.attempts >= settings.OTP_MAX_ATTEMPTS:
         raise ApiError(429, "Too many wrong codes. Ask for a new one", code="OTP_LOCKED")
     OtpChallenge.objects.filter(pk=challenge.pk).update(attempts=F("attempts") + 1)
-    if not hmac.compare_digest(challenge.code_hash, _hash(phone, code)):
+    if not hmac.compare_digest(challenge.code_hash, _hash(next(iter(lookup.values())), code)):
         left = settings.OTP_MAX_ATTEMPTS - challenge.attempts - 1
         raise ApiError.bad_request(
             f"That code is not right. {left} {'try' if left == 1 else 'tries'} left"
