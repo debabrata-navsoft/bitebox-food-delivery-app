@@ -1,45 +1,38 @@
+// The search box is first in the scrolling content, which clips anything outside it: room for
+// its 4px focus ring (--ui-ring) at the top.
+bb-place-search {
+  padding-top: 4px;
+}
+
+// Under the search box: the current location, then what was found.
 .gps {
   width: 100%;
-  margin-bottom: var(--bb-space-3);
+  margin: var(--bb-space-3) 0;
 }
-h3 {
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--bb-ink-muted);
-  margin: var(--bb-space-4) 0 var(--bb-space-1);
-}
-.list {
-  list-style: none;
-  margin: var(--bb-space-2) 0 0;
-  padding: 0;
-  button {
-    width: 100%;
-    display: flex;
-    align-items: flex-start;
-    gap: var(--bb-space-3);
-    padding: var(--bb-space-3) var(--bb-space-2);
-    border: 0;
-    border-bottom: 1px solid var(--bb-border);
-    background: none;
-    font: inherit;
-    color: inherit;
-    text-align: left;
-    cursor: pointer;
-    &:hover,
-    &:focus-visible {
-      background: var(--bb-surface-alt);
-    }
-  }
+
+// Place rows (the detected location, saved addresses): icon, then a name over a one-line detail.
+.detected,
+.list button {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--bb-space-3);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+
   np-icon {
     color: var(--bb-ink-muted);
     flex-shrink: 0;
   }
+
   span {
     display: flex;
     flex-direction: column;
     min-width: 0;
   }
+
   small {
     color: var(--bb-ink-muted);
     overflow: hidden;
@@ -47,6 +40,51 @@ h3 {
     white-space: nowrap;
   }
 }
+
+// The current location found when the dialog opened, under the GPS button: one tap uses it.
+.detected {
+  margin: calc(-1 * var(--bb-space-1)) 0 var(--bb-space-3);
+  padding: var(--bb-space-3);
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius-sm);
+  background: var(--bb-surface-alt);
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--bb-plum);
+  }
+
+  np-icon {
+    color: var(--bb-success);
+  }
+}
+
+h3 {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--bb-ink-muted);
+  margin: var(--bb-space-4) 0 var(--bb-space-1);
+}
+
+.list {
+  list-style: none;
+  margin: var(--bb-space-2) 0 0;
+  padding: 0;
+
+  button {
+    padding: var(--bb-space-3) var(--bb-space-2);
+    border: 0;
+    border-bottom: 1px solid var(--bb-border);
+    background: none;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--bb-surface-alt);
+    }
+  }
+}
+
 .attribution {
   font-size: 0.72rem;
   color: var(--bb-ink-muted);

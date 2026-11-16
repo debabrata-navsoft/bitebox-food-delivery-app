@@ -28,6 +28,16 @@ export class GeolocationService {
     return this.isBrowser && 'geolocation' in navigator;
   }
 
+  /** True when the person has already refused location for this site (no prompt is shown). */
+  async denied(): Promise<boolean> {
+    if (!this.supported || !navigator.permissions?.query) return false;
+    try {
+      return (await navigator.permissions.query({ name: 'geolocation' })).state === 'denied';
+    } catch {
+      return false; // older browsers without this permission name
+    }
+  }
+
   async currentPrecise(): Promise<Coordinates> {
     const position = await this.current();
     if (position.accuracy !== undefined && position.accuracy > MAX_USABLE_ACCURACY_M) {

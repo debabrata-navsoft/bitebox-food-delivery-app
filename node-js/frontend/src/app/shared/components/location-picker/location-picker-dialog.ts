@@ -3,6 +3,7 @@ import { IconComponent } from 'nexprime';
 import {
   ChangeDetectionStrategy,
   Component,
+  afterNextRender,
   computed,
   inject,
   signal,
@@ -63,6 +64,8 @@ export class LocationPickerDialog {
   protected readonly isCustomer = computed(() => this.auth.role() === 'customer');
 
   protected readonly candidate = signal<Candidate | null>(null);
+  /** The person's current location, found when the dialog opens (shown under the GPS button). */
+  protected readonly detected = signal<Candidate | null>(null);
   protected readonly naming = signal(false);
   private naming$?: Subscription;
 
@@ -72,31 +75,45 @@ export class LocationPickerDialog {
         .list()
         .subscribe({ next: (list) => this.addresses.set(list), error: () => undefined });
     }
+    // Find the current location as soon as the dialog opens, unless location was refused before
+    // (then the button explains why when tapped, instead of a prompt on every open).
+    afterNextRender(async () => {
+      if (this.geo.supported && !(await this.geo.denied())) await this.detect(false);
+    });
   }
 
+  /** "Use my current location" (or the detected place under it): use what was found, finding it first if needed. */
   protected async useGps(): Promise<void> {
+    if (!this.detected()) await this.detect(true);
+    const d = this.detected();
+    if (d) {
+      this.location.choosePoint(d);
+      this.ref.close(true);
+    }
+  }
+
+  private async detect(asked: boolean): Promise<void> {
+    if (this.locating()) return;
     this.locating.set(true);
     this.gpsError.set(null);
     try {
       const { latitude, longitude } = await this.geo.currentPrecise();
-      let label = 'Current location';
-      let detail: string | undefined;
-      try {
-        const place = await firstValueFrom(this.location.reverse(latitude, longitude));
-        label = place.label || label;
-        detail = place.displayName;
-      } catch {
-        detail = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
-      }
-      this.location.choosePoint({ latitude, longitude, label, detail, source: 'gps' });
-      this.ref.close(true);
+      // Without an address (lookup down), the coordinates stand in for it.
+      const place = await firstValueFrom(this.location.reverse(latitude, longitude)).catch(() => null);
+      this.detected.set({
+        latitude,
+        longitude,
+        label: place?.label || 'Current location',
+        detail: place?.displayName ?? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
+        source: 'gps',
+      });
     } catch (err) {
       this.gpsError.set(
         err instanceof ImpreciseLocationError
           ? err.message
           : `${(err as Error).message} Search for your area instead.`,
       );
-      this.placeSearch()?.focus();
+      if (asked) this.placeSearch()?.focus();
     } finally {
       this.locating.set(false);
     }

@@ -15,7 +15,8 @@ type Picker = {
 };
 
 describe('LocationPickerDialog', () => {
-  const geo = { supported: true, currentPrecise: vi.fn() };
+  // `denied: true` keeps the on-open detection out of the tests that don't cover it.
+  const geo = { supported: true, currentPrecise: vi.fn(), denied: vi.fn(() => Promise.resolve(true)) };
   const ref = { close: vi.fn() };
   const location = {
     location: signal(null),
@@ -45,6 +46,24 @@ describe('LocationPickerDialog', () => {
     location.choosePoint.mockReset();
     location.reverse.mockReset();
     ref.close.mockReset();
+    geo.currentPrecise.mockReset();
+    geo.denied.mockImplementation(() => Promise.resolve(true));
+  });
+
+  it('finds the current location when it opens, shows it, and uses it in one tap', async () => {
+    geo.denied.mockImplementation(() => Promise.resolve(false));
+    geo.currentPrecise.mockResolvedValue({ latitude: 11.5, longitude: 21.5, accuracy: 15 });
+    location.reverse.mockReturnValue(of({ label: 'Sample Area, Sample City', displayName: 'Sample Area, Sample City, Test State', latitude: 11.5, longitude: 21.5 }));
+    const picker = await create();
+    const detected = (picker as unknown as { detected: () => { label: string } | null }).detected;
+
+    await vi.waitFor(() => expect(detected()?.label).toBe('Sample Area, Sample City'));
+    expect(ref.close).not.toHaveBeenCalled(); // shown under the button, not used yet
+
+    await picker.useGps();
+    expect(geo.currentPrecise).toHaveBeenCalledTimes(1); // no second GPS wait
+    expect(location.choosePoint).toHaveBeenCalledWith(expect.objectContaining({ latitude: 11.5, source: 'gps' }));
+    expect(ref.close).toHaveBeenCalledWith(true);
   });
 
   it('auto-detects and saves the current location in one click', async () => {

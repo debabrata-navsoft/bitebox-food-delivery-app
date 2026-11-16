@@ -30,6 +30,8 @@
   <!-- Step 1: choose -->
   <h2 mat-dialog-title>Choose delivery location</h2>
   <mat-dialog-content>
+    <bb-place-search [showEmpty]="true" (picked)="pick($event)" cdkFocusInitial />
+
     @if (geo.supported) {
       <button
         mat-stroked-button
@@ -44,14 +46,23 @@
     }
     @if (locating()) {
       <mat-progress-bar mode="indeterminate" aria-label="Getting your location" />
+    } @else if (detected(); as d) {
+      <!-- What was found when the dialog opened: one tap to use it. -->
+      <button type="button" class="detected" (click)="useGps()">
+        <np-icon name="navigation" class="mat-icon" matButtonIcon />
+        <span>
+          <strong>{{ d.label }}</strong>
+          @if (d.detail) {
+            <small>{{ d.detail }}</small>
+          }
+        </span>
+      </button>
     }
     @if (gpsError()) {
       <div class="bb-alert info" role="status">
         <np-icon name="map-pin-off" class="mat-icon" matButtonIcon /><span>{{ gpsError() }}</span>
       </div>
     }
-
-    <bb-place-search [showEmpty]="true" (picked)="pick($event)" cdkFocusInitial />
 
     @if (addresses().length) {
       <h3>Saved addresses</h3>
