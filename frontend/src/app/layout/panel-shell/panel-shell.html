@@ -28,7 +28,12 @@
           >
             <np-icon [name]="item.icon | npIcon" class="mat-icon" matListItemIcon />
             <span matListItemTitle>{{ item.label }}</span>
-            <np-icon matListItemMeta name="chevron-down" class="mat-icon chevron" />
+            <span matListItemMeta class="group-meta">
+              @if (!open && groupBadge(item); as count) {
+                <span class="nav-badge" [attr.aria-label]="count + ' new'">{{ count }}</span>
+              }
+              <np-icon name="chevron-down" class="mat-icon chevron" />
+            </span>
           </button>
           @if (open) {
             <div class="subnav" role="group" [attr.aria-label]="item.label">

@@ -16,9 +16,9 @@ import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { VEHICLE_LABEL, VehicleType } from '../../../shared/models/checkout.models';
 import { RiderProfile } from '../../../shared/models/order-management.models';
 
-const VEHICLE_OPTIONS: SelectOption[] = (Object.keys(VEHICLE_LABEL) as VehicleType[]).map((v) => ({
-  value: v,
-  label: VEHICLE_LABEL[v],
+const VEHICLE_OPTIONS: SelectOption[] = Object.entries(VEHICLE_LABEL).map(([value, label]) => ({
+  value,
+  label,
 }));
 
 /** The rider's vehicle (needed before going online). Closes with the saved profile. */

@@ -4,6 +4,7 @@ import { IconComponent } from 'nexprime';
 import { OperationsService } from '../../../../core/services/admin/operations.service';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
 import { StatTile } from '../../../../shared/components/stat-tile/stat-tile';
+import { ReviewShortcuts } from '../../review-shortcuts/review-shortcuts';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
 import { periodReport } from '../../../../shared/list/period-report';
 import { ORDER_STATUS_LABEL, OrderStatus } from '../../../../shared/models/checkout.models';
@@ -21,7 +22,7 @@ const LIVE_ORDER: OrderStatus[] = [
 
 @Component({
   selector: 'bb-operations-dashboard',
-  imports: [RouterLink, IconComponent, NP_FORM_FIELDS, PageHeader, StatTile],
+  imports: [RouterLink, IconComponent, NP_FORM_FIELDS, PageHeader, StatTile, ReviewShortcuts],
   templateUrl: './operations-dashboard.html',
   styleUrl: './operations-dashboard.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

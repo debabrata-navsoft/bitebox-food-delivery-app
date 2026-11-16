@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Signal, computed, inject } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
+import { AdminReviewCounts } from '../../core/services/admin/admin-review-counts.service';
 import { AdminRole, ROLE_META } from '../../shared/models/user.models';
 import { NavItem, PanelShell } from '../panel-shell/panel-shell';
 
@@ -124,6 +125,14 @@ const NAV: Record<AdminRole, NavItem[]> = {
   ],
 };
 
+/** The items with each link's badge (groups included). */
+const withBadges = (items: NavItem[], badges: Record<string, Signal<number>>): NavItem[] =>
+  items.map((item) => ({
+    ...item,
+    badge: item.link ? badges[item.link] : undefined,
+    children: item.children && withBadges(item.children, badges),
+  }));
+
 @Component({
   selector: 'bb-admin-layout',
   imports: [PanelShell],
@@ -133,7 +142,13 @@ const NAV: Record<AdminRole, NavItem[]> = {
 export class AdminLayout {
   private readonly auth = inject(AuthService);
   private readonly role = computed(() => (this.auth.role() ?? 'admin') as AdminRole);
-  protected readonly nav = computed(() => NAV[this.role()] ?? []);
+  private readonly reviews = inject(AdminReviewCounts).watch();
+  /** Sidebar counts of what waits for review, by page link. */
+  private readonly badges: Record<string, Signal<number>> = {
+    '/admin/restaurants': this.reviews.pendingRestaurants,
+    '/admin/delivery-partners': this.reviews.pendingRiders,
+  };
+  protected readonly nav = computed(() => withBadges(NAV[this.role()] ?? [], this.badges));
   protected readonly label = computed(() =>
     this.role() === 'admin' ? 'Admin' : ROLE_META[this.role()].label.replace(' admin', ''),
   );

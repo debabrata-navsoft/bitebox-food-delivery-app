@@ -1,0 +1,18 @@
+@if (shortcuts().length) {
+  <section class="shortcuts" aria-label="Waiting for review">
+    @for (s of shortcuts(); track s.link) {
+      <article class="bb-card shortcut">
+        <span class="icon" aria-hidden="true">
+          <np-icon [name]="s.icon" class="mat-icon" matButtonIcon />
+        </span>
+        <div class="text">
+          <h2 class="bb-h3">{{ s.title }}</h2>
+          <p class="bb-muted">{{ s.detail }}</p>
+        </div>
+        <a class="bb-btn bb-btn--accent" [routerLink]="s.link" [queryParams]="s.query">
+          Review
+        </a>
+      </article>
+    }
+  </section>
+}

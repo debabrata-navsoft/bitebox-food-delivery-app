@@ -6,15 +6,14 @@ import { RouterLink } from '@angular/router';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { catchError, forkJoin, map, of } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { AdminCatalogService } from '../../../core/services/admin/admin-catalog.service';
 import { AdminStaffService } from '../../../core/services/admin/admin-staff.service';
 import { AdminUsersService } from '../../../core/services/admin/admin-users.service';
 import { errorMessage } from '../../../core/services/api-error';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
+import { ReviewShortcuts } from '../review-shortcuts/review-shortcuts';
 import { ReportsService } from '../../../core/services/reports.service';
 import { formatPaise } from '../../../shared/pipes/money.pipes';
-import { RestaurantStatus } from '../../../shared/models/catalog.models';
 import { ROLE_META, Role, User } from '../../../shared/models/user.models';
 
 interface StatCard {
@@ -26,14 +25,13 @@ interface StatCard {
 
 @Component({
   selector: 'bb-admin-dashboard',
-  imports: [DatePipe, RouterLink, IconComponent, NpIconPipe, PageHeader, StatTile],
+  imports: [DatePipe, RouterLink, IconComponent, NpIconPipe, PageHeader, StatTile, ReviewShortcuts],
   templateUrl: './admin-dashboard.html',
   styleUrl: './admin-dashboard.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminDashboard {
   private readonly users = inject(AdminUsersService);
-  private readonly catalog = inject(AdminCatalogService);
   private readonly staff = inject(AdminStaffService);
   protected readonly user = inject(AuthService).user;
   protected readonly roleMeta = ROLE_META;
@@ -42,7 +40,6 @@ export class AdminDashboard {
   protected readonly error = signal<string | null>(null);
   protected readonly stats = signal<StatCard[]>([]);
   protected readonly recent = signal<User[]>([]);
-  protected readonly restaurantCounts = signal<Record<RestaurantStatus, number> | null>(null);
   private readonly reports = inject(ReportsService);
   protected readonly report = rxResource({ stream: () => this.reports.adminReport(30) });
   protected readonly formatPaise = formatPaise;
@@ -64,7 +61,6 @@ export class AdminDashboard {
       delivery: this.users.countByRole('delivery'),
       admin: this.staff.list({ limit: 1 }).pipe(map((page) => page.pagination.total)),
       recent: this.users.list({ limit: 5 }),
-      restaurants: this.catalog.restaurantCounts(),
     }).subscribe({
       next: (res) => {
         this.stats.set([
@@ -84,7 +80,6 @@ export class AdminDashboard {
           { role: 'admin', label: 'Administrators', icon: 'shield_person', value: res.admin },
         ]);
         this.recent.set(res.recent.items);
-        this.restaurantCounts.set(res.restaurants);
         this.loading.set(false);
       },
       error: (err: unknown) => {

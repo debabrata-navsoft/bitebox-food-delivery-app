@@ -51,30 +51,7 @@
   </section>
 }
 
-@if (restaurantCounts(); as rc) {
-  <section class="approvals bb-card" aria-labelledby="approvals-title">
-    <span class="approvals-icon" aria-hidden="true"
-      ><np-icon name="clipboard-clock" class="mat-icon" matButtonIcon
-    /></span>
-    <div>
-      <h2 class="bb-h3" id="approvals-title">
-        {{ rc.pending }} restaurant {{ rc.pending === 1 ? 'application' : 'applications' }} awaiting
-        review
-      </h2>
-      <p class="bb-muted">
-        {{ rc.approved }} live · {{ rc.suspended }} suspended · {{ rc.rejected }} rejected
-      </p>
-    </div>
-    <a
-      class="bb-btn"
-      [class.bb-btn--accent]="rc.pending > 0"
-      routerLink="/admin/restaurants"
-      [queryParams]="{ status: 'pending' }"
-    >
-      Review
-    </a>
-  </section>
-}
+<bb-review-shortcuts />
 
 <section class="business" aria-labelledby="business-title">
   <div class="business-head">

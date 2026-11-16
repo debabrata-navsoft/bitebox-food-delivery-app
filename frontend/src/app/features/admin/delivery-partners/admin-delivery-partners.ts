@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, linkedSignal, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { form } from '@angular/forms/signals';
 import { IconComponent, PaginationComponent, ToggleComponent } from 'nexprime';
@@ -55,7 +55,16 @@ export class AdminDeliveryPartners {
   private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
 
-  protected readonly filterModel = signal({ search: '', onlineOnly: false, verification: '' });
+  /** ?verification=pending (the dashboards' "Review" shortcut) preselects that filter. */
+  readonly verification = input<RiderVerificationStatus>();
+  protected readonly filterModel = linkedSignal(() => {
+    const preset = this.verification();
+    return {
+      search: '',
+      onlineOnly: false,
+      verification: preset && preset in RIDER_VERIFICATION_LABEL ? preset : '',
+    };
+  });
   protected readonly verificationLabel = RIDER_VERIFICATION_LABEL;
   protected readonly verificationTone = RIDER_VERIFICATION_TONE;
   protected readonly verificationOptions: SelectOption[] = [

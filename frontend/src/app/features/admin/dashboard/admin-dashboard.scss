@@ -115,34 +115,6 @@
   }
 }
 
-.approvals {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--bb-space-4);
-  margin-bottom: var(--bb-space-4);
-
-  > div {
-    flex: 1 1 240px;
-  }
-  h2 {
-    margin: 0 0 2px;
-  }
-  p {
-    margin: 0;
-  }
-}
-
-.approvals-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  background: var(--bb-amber);
-  color: var(--bb-on-accent);
-}
-
 .business {
   margin-bottom: var(--bb-space-5);
 }
@@ -159,12 +131,7 @@
   }
 }
 
-// Phones: the Review button spans the card under the text.
-@include bp.phone-only {
-  .approvals > a {
-    flex: 1 1 100%;
-  }
-}
+
 
 .platform {
   display: flex;

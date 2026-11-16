@@ -206,6 +206,12 @@
   &.open .chevron {
     transform: rotate(180deg);
   }
+
+  .group-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
 }
 
 .subnav {

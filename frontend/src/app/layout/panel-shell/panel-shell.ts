@@ -91,6 +91,11 @@ export class PanelShell {
     );
   });
 
+  /** A closed group shows the total of its links' badges, so nothing waiting is hidden. */
+  protected groupBadge(group: NavItem): number {
+    return (group.children ?? []).reduce((sum, child) => sum + (child.badge?.() ?? 0), 0);
+  }
+
   protected toggleGroup(label: string): void {
     this.openGroups.update((open) => {
       const next = new Set(open);
