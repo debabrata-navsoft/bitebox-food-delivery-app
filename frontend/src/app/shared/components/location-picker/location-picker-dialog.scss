@@ -82,6 +82,11 @@ h3 {
     &:focus-visible {
       background: var(--bb-surface-alt);
     }
+
+    // The address in use now.
+    &.selected {
+      background: var(--bb-success-bg);
+    }
   }
 }
 

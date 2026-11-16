@@ -62,6 +62,8 @@ export class LocationPickerDialog {
   protected readonly gpsError = signal<string | null>(null);
   protected readonly addresses = signal<DeliveryAddress[]>([]);
   protected readonly isCustomer = computed(() => this.auth.role() === 'customer');
+  /** The saved address in use now (marked in the list). */
+  protected readonly selectedAddressId = computed(() => this.location.location()?.addressId);
 
   protected readonly candidate = signal<Candidate | null>(null);
   /** The person's current location, found when the dialog opens (shown under the GPS button). */

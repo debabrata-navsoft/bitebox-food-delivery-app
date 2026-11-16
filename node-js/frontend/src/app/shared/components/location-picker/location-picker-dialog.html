@@ -68,8 +68,14 @@
       <h3>Saved addresses</h3>
       <ul class="list">
         @for (a of addresses(); track a.id) {
+          @let selected = a.id === selectedAddressId();
           <li>
-            <button type="button" (click)="pickAddress(a)">
+            <button
+              type="button"
+              [class.selected]="selected"
+              [attr.aria-current]="selected ? 'true' : null"
+              (click)="pickAddress(a)"
+            >
               <np-icon [name]="(a.label === 'home' ? 'home' : a.label === 'work' ? 'work' : 'place') | npIcon" class="mat-icon" matButtonIcon />
               <span>
                 <strong>{{
