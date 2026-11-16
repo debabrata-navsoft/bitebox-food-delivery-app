@@ -375,6 +375,13 @@ def forgot_password(email: str) -> None:
     )
 
 
+def _refuse_current_password(user: User, new_password: str, field: str) -> None:
+    """A new password must differ from the one it replaces (reset and change)."""
+    if user.check_password(new_password):
+        message = "Your new password must be different from your current password"
+        raise ApiError.bad_request(message, [{"field": field, "message": message}])
+
+
 def reset_password(token: str, new_password: str) -> None:
     password = make_password(new_password)
     with transaction.atomic():
@@ -386,6 +393,7 @@ def reset_password(token: str, new_password: str) -> None:
         user = matched.select_for_update().first()
         if user is None:
             raise ApiError.bad_request("This reset link is invalid or has expired")
+        _refuse_current_password(user, new_password, "password")
         matched.update(
             password=password,
             password_reset_token_hash=None,
@@ -399,6 +407,7 @@ def reset_password(token: str, new_password: str) -> None:
 def change_password(user: User, current: str, new: str) -> None:
     if not user.check_password(current):
         raise ApiError.bad_request("Current password is incorrect")
+    _refuse_current_password(user, new, "newPassword")
     user.set_password(new)
     end_sessions(user, RevokedReason.PASSWORD_CHANGE, fields=("password",))
 

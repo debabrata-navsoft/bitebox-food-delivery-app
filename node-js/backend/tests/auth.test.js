@@ -399,6 +399,27 @@ describe("Authentication", () => {
       assert.equal(ok.status, 200);
       assert.equal((await refreshWith(app, refreshCookie(cookie))).status, 401);
     });
+
+    it("refuses a new password that is the same as the current one", async () => {
+      const { body, token } = await registerUser(app);
+      const same = await request(app)
+        .post("/api/v1/auth/change-password")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ currentPassword: PASSWORD, newPassword: PASSWORD });
+      assert.equal(same.status, 400);
+      assert.equal(same.body.error.details[0].field, "newPassword");
+      // Nothing changed: still signed in.
+      assert.equal((await request(app).get("/api/v1/auth/me").set("Authorization", `Bearer ${token}`)).status, 200);
+
+      await request(app).post("/api/v1/auth/forgot-password").send({ email: body.email });
+      const resetToken = tokenFromEmail();
+      const reset = (password) => request(app).post("/api/v1/auth/reset-password").send({ token: resetToken, password });
+      const refused = await reset(PASSWORD);
+      assert.equal(refused.status, 400);
+      assert.equal(refused.body.error.details[0].field, "password");
+      // The link still works with a different password.
+      assert.equal((await reset("Brand-new-pass9")).status, 200);
+    });
   });
 
   describe("role authorization", () => {

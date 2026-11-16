@@ -6,8 +6,8 @@ import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../../core/auth/auth.service';
-import { errorMessage } from '../../../core/services/api-error';
-import { shownError } from '../../../shared/forms/form-errors';
+import { errorMessage, fieldErrors } from '../../../core/services/api-error';
+import { serverErrors, shownError } from '../../../shared/forms/form-errors';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { matchesField, passwordRules } from '../../../shared/forms/form-rules';
 
@@ -58,6 +58,9 @@ export class ResetPassword implements OnInit {
       await firstValueFrom(this.auth.resetPassword(token, this.model().password));
       void this.router.navigate(['/login'], { queryParams: { reason: 'reset' } });
     } catch (err) {
+      // A refused password ("same as your current one") shows under the field.
+      const fields = fieldErrors(err);
+      if (fields.length) return serverErrors(this.form, fields);
       this.error.set(errorMessage(err));
     }
     return undefined;

@@ -59,6 +59,17 @@ export function matchesField(
   );
 }
 
+/** The value must not equal another field's, e.g. a new password and the current one. */
+export function differsFrom(
+  path: SchemaPath<string>,
+  other: SchemaPath<string>,
+  message = 'Your new password must be different from your current password',
+): void {
+  validate(path, ({ value, valueOf }) =>
+    value() && value() === valueOf(other) ? { kind: 'same', message } : undefined,
+  );
+}
+
 export function phoneRules(
   path: SchemaPath<string>,
   { optional = false }: { optional?: boolean } = {},

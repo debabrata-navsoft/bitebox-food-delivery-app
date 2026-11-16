@@ -335,14 +335,24 @@ export async function forgotPassword(email) {
   });
 }
 
+/** A new password must differ from the one it replaces (reset and change). */
+async function refuseCurrentPassword(passwordHash, newPassword, field) {
+  if (passwordHash && (await bcrypt.compare(newPassword, passwordHash))) {
+    const message = "Your new password must be different from your current password";
+    throw ApiError.badRequest(message, [{ field, message }]);
+  }
+}
+
 export async function resetPassword(token, newPassword) {
+  const match = { passwordResetTokenHash: hashToken(token), passwordResetExpiresAt: { $gt: new Date() } };
+  const current = await User.findOne(match).select("+passwordHash");
+  if (!current) throw ApiError.badRequest("This reset link is invalid or has expired");
+  // Refused before the link is used, so it still works with a different password.
+  await refuseCurrentPassword(current.passwordHash, newPassword, "password");
   const passwordHash = await hashPassword(newPassword);
   // Atomically consume the token so it can only be used once.
   const user = await User.findOneAndUpdate(
-    {
-      passwordResetTokenHash: hashToken(token),
-      passwordResetExpiresAt: { $gt: new Date() },
-    },
+    match,
     {
       $set: { passwordHash },
       $unset: { passwordResetTokenHash: 1, passwordResetExpiresAt: 1 },
@@ -362,6 +372,7 @@ export async function changePassword(userId, currentPassword, newPassword) {
   if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
     throw ApiError.badRequest("Current password is incorrect");
   }
+  await refuseCurrentPassword(user.passwordHash, newPassword, "newPassword");
   user.passwordHash = await hashPassword(newPassword);
   await endSessions(user, "password-change");
 }

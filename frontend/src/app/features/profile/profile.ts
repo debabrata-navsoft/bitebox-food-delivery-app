@@ -21,6 +21,7 @@ import { ROLE_META } from '../../shared/models/user.models';
 import { serverErrors, shownError } from '../../shared/forms/form-errors';
 import { NP_FORM_FIELDS } from '../../shared/forms/np-form-fields';
 import {
+  differsFrom,
   matchesField,
   passwordRules,
   phoneRules,
@@ -80,6 +81,7 @@ export class Profile {
     (path) => {
       required(path.currentPassword, { message: 'Current password is required' });
       passwordRules(path.newPassword, 'New password');
+      differsFrom(path.newPassword, path.currentPassword);
       matchesField(path.confirmPassword, path.newPassword);
     },
     { submission: { action: () => this.changePassword() } },
