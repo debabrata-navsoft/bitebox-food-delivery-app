@@ -19,6 +19,8 @@ auth_urls = [
     path("auth/phone/verify", views.PhoneVerifyView.as_view()),
     path("auth/email/verification", views.EmailVerificationView.as_view()),
     path("auth/email/verify", views.EmailVerifyView.as_view()),
+    path("auth/email/code", views.EmailCodeView.as_view()),
+    path("auth/email/code/verify", views.EmailCodeVerifyView.as_view()),
 ]
 
 admin_urls = [

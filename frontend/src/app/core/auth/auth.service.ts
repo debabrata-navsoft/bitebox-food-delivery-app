@@ -125,7 +125,7 @@ export class AuthService {
       .pipe(map((res) => this.applySession(res.data)));
   }
 
-  /** Sign-up step 1: the API checks the email and number are free, then texts a code. */
+  /** Sign-up step 1: the API checks the email and number are free, then emails a code. */
   requestSignupCode(email: string, phone: string): Observable<CodeSent> {
     return this.sendCode('register/code', { email, phone });
   }
@@ -151,10 +151,15 @@ export class AuthService {
       .pipe(map((res) => this.setUser(res.data.user)));
   }
 
-  resendEmailVerification(): Observable<string> {
+  /** Emails the signed-in person a code that confirms their address. */
+  requestEmailCode(): Observable<CodeSent> {
+    return this.sendCode('email/code', {});
+  }
+
+  verifyEmailCode(code: string): Observable<User> {
     return this.http
-      .post<ApiResponse<null>>(`${this.baseUrl}/email/verification`, {})
-      .pipe(map((res) => res.message));
+      .post<ApiResponse<{ user: User }>>(`${this.baseUrl}/email/code/verify`, { code })
+      .pipe(map((res) => this.setUser(res.data.user)));
   }
 
   verifyEmail(token: string): Observable<string> {
@@ -249,7 +254,7 @@ export class AuthService {
     if (this.isBrowser) localStorage.removeItem(HINT_KEY);
   }
 
-  /** The endpoints that text a code answer with its timings and a message to show. */
+  /** The endpoints that send a code answer with its timings and a message to show. */
   private sendCode(path: string, body: object): Observable<CodeSent> {
     return this.http
       .post<ApiResponse<Omit<CodeSent, 'message'>>>(`${this.baseUrl}/${path}`, body)

@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { escapeHtml } from "../utils/html.js";
 import crypto from "node:crypto";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
@@ -53,9 +54,6 @@ const absoluteLink = (link) => {
   const path = typeof link === "string" && link.startsWith("/") && !link.startsWith("//") ? link : "/";
   return `${env.clientUrls[0].replace(/\/$/, "")}${path}`;
 };
-const escapeHtml = (s = "") =>
-  s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-
 /** { subject, text, html } in BiteBox's simple email layout. */
 export function renderEmail({ title, body, link }, name) {
   const url = absoluteLink(link);

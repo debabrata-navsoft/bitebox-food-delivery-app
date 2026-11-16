@@ -207,7 +207,7 @@ Use four browser profiles, or normal and private windows.
 | `PRIVATE_UPLOAD_DIR` | `private-uploads` | KYC documents (mount a persistent volume; never serve it) |
 | `RESTAURANT_KYC_REQUIRED` | `true` | Approval needs the FSSAI number, approved documents and a bank account |
 | `RIDER_KYC_REQUIRED` | `true` | New riders go online only after verification (documents, bank account, address) |
-| `SIGNUP_OTP_REQUIRED` | `true` | Sign-up confirms the mobile number with an SMS code first (only while an SMS provider is on; otherwise sign-up is one step) |
+| `SIGNUP_OTP_REQUIRED` | `true` | Sign-up confirms the email address with an emailed 6-digit code first, and the account starts with the email verified (`false`: sign-up is one step and a verification link is emailed instead) |
 | `OTP_TTL_SECONDS`, `OTP_RESEND_SECONDS` | `300`, `30` | SMS code lifetime and wait before a new one (5 wrong tries lock a code) |
 | `OTP_PER_PHONE_PER_HOUR`, `OTP_PER_IP_PER_HOUR` | `5`, `20` | SMS code limits |
 | `MSG91_OTP_TEMPLATE_ID` | | DLT template for sign-in codes (falls back to `MSG91_TEMPLATE_ID`) |
@@ -859,10 +859,11 @@ The service worker only runs in **production builds** (`npm run build`, then `np
 | POST | `/auth/reset-password` | public, rate limited | Reset the password with the emailed token |
 | GET, PATCH | `/auth/me` | signed in | Current user / update own profile |
 | POST | `/auth/change-password` | signed in | Change password (signs out every session) |
-| POST | `/auth/register/code` | public | Sign-up step 1: checks the email and number are free, texts a 6-digit code. `POST /auth/register` then needs `code` (while `SIGNUP_OTP_REQUIRED` and SMS are on) and creates the account with the number verified |
+| POST | `/auth/register/code` | public | Sign-up step 1: checks the email and number are free, emails a 6-digit code (`codeRequired: true`). `POST /auth/register` then needs `code` (while `SIGNUP_OTP_REQUIRED` is on) and creates the account with the email verified. With codes off it answers `codeRequired: false` and sends nothing. 503 `EMAIL_UNAVAILABLE` when the email can't be sent |
 | POST | `/auth/otp/request`, `/auth/otp/login` | public | Sign in with a mobile number: text a code (same answer whether or not the number has an account), then sign in with it |
 | POST | `/auth/phone/verification`, `/auth/phone/verify` | signed in | Confirm your own number with an SMS code (changing the number clears it) |
-| POST | `/auth/email/verification` (signed in), `/auth/email/verify` (public) | | New accounts get a link (`/verify-email?token=`, 24 hours, works once); ask for a new one |
+| POST | `/auth/email/code`, `/auth/email/code/verify` (signed in) | | Account page: email a 6-digit code, then confirm the address with it (same limits as SMS codes) |
+| POST | `/auth/email/verification` (signed in), `/auth/email/verify` (public) | | Accounts created without a code get a link (`/verify-email?token=`, 24 hours, works once); ask for a new one |
 | POST | `/uploads/avatars` | signed in | Profile photo (saved with `PATCH /auth/me` `avatarUrl`; `null` removes it) |
 | GET | `/admin/users` | `users:manage` | List accounts (role, status, search, paging) |
 | PATCH | `/admin/users/{id}/status` | `users:manage` | Suspend or reactivate |

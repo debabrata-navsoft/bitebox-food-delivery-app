@@ -52,8 +52,10 @@ CODE_SENT = envelope(
     inline_serializer(
         name="CodeSentData",
         fields={
-            "resend_in_seconds": serializers.IntegerField(),
-            "expires_in_seconds": serializers.IntegerField(),
+            "resend_in_seconds": serializers.IntegerField(required=False),
+            "expires_in_seconds": serializers.IntegerField(required=False),
+            # Sign-up only: false while SIGNUP_OTP_REQUIRED is off (no code was sent).
+            "code_required": serializers.BooleanField(required=False),
         },
     ),
 )
@@ -269,7 +271,8 @@ class SignupCodeView(APIView):
     def post(self, request: Request) -> Response:
         data = validated(SignupCodeInput, request.data)
         sent = services.request_signup_code(data["email"], data["phone"], _meta(request).ip)
-        return ok(sent, message="We have sent a code to your phone")
+        message = "We have sent a code to your email" if sent["codeRequired"] else "No code needed"
+        return ok(sent, message=message)
 
 
 class OtpRequestView(APIView):
@@ -336,6 +339,35 @@ class EmailVerificationView(APIView):
     def post(self, request: Request) -> Response:
         services.resend_email_verification(current_user(request))
         return ok(message="We have sent you a new link")
+
+
+class EmailCodeView(APIView):
+    """The account page: email a code that confirms the signed-in person's address."""
+
+    permission_classes = [IsSignedIn]
+    throttle_classes = [AuthLimit]
+
+    @extend_schema(
+        tags=["Auth"], request=None, responses={200: CODE_SENT, **errors(401, 409, 429, 503)}
+    )
+    def post(self, request: Request) -> Response:
+        data = services.request_email_code(current_user(request), _meta(request).ip)
+        return ok(data, message="We have sent a code to your email")
+
+
+class EmailCodeVerifyView(APIView):
+    permission_classes = [IsSignedIn]
+    throttle_classes = [AuthLimit]
+
+    @extend_schema(
+        tags=["Auth"],
+        request=OtpCodeInput,
+        responses={200: USER, **errors(400, 401, 409, 422, 429)},
+    )
+    def post(self, request: Request) -> Response:
+        code = validated(OtpCodeInput, request.data)["code"]
+        user = services.verify_email_code(current_user(request), code)
+        return ok({"user": user_json(user)}, message="Email verified")
 
 
 class EmailVerifyView(APIView):

@@ -232,7 +232,7 @@ def test_purge_drops_expired_sessions_and_old_codes(api: APIClient) -> None:
     assert not OtpChallenge.objects.exists()
 
 
-# --- sign-up confirmed by SMS --------------------------------------------------------------------
+# --- sign-up confirmed by an emailed code --------------------------------------------------------
 
 
 def signup(**body: Any) -> Any:
@@ -245,22 +245,36 @@ def signup(**body: Any) -> Any:
     return APIClient().post("/api/v1/auth/register", {**base, **body}, format="json")
 
 
-def test_sign_up_creates_the_account_only_with_the_texted_code(settings: Any) -> None:
+def emailed_code(to: str = "meera@example.com") -> str:
+    message = [m for m in mail.outbox if to in m.to][-1]
+    return re.search(r"\b(\d{6})\b", message.body).group(1)  # type: ignore[union-attr]
+
+
+def test_sign_up_creates_the_account_only_with_the_emailed_code(
+    settings: Any, django_capture_on_commit_callbacks: Any
+) -> None:
     settings.SIGNUP_OTP_REQUIRED = True
     sent = APIClient().post(
-        "/api/v1/auth/register/code", {"email": "meera@example.com", "phone": PHONE}, format="json"
+        "/api/v1/auth/register/code", {"email": "Meera@Example.com", "phone": PHONE}, format="json"
     )
     assert sent.status_code == 200
-    assert sms_outbox[-1]["to"] == PHONE
+    assert sent.json()["data"]["codeRequired"] is True
+    assert sms_outbox == []  # the code goes by email, not SMS
+    code = emailed_code()
     without = signup()
     assert without.status_code == 400
     assert without.json()["error"]["details"][0]["field"] == "code"
-    assert signup(code=wrong(last_code())).status_code == 400
+    assert signup(code=wrong(code)).status_code == 400
     assert not User.objects.filter(email="meera@example.com").exists()
-    created = signup(code=last_code())
+    with django_capture_on_commit_callbacks(execute=True):
+        created = signup(code=code)
     assert created.status_code == 201, created.json()
-    assert created.json()["data"]["user"]["phoneVerified"] is True
-    assert signup(code=last_code()).status_code == 409  # the account exists now
+    user = created.json()["data"]["user"]
+    assert user["emailVerified"] is True
+    assert user["phoneVerified"] is False
+    # Already verified, so no "confirm your email" link is sent.
+    assert not [m for m in mail.outbox if m.subject == "Confirm your BiteBox email"]
+    assert signup(code=code).status_code == 409  # the account exists now
 
 
 def test_sign_up_code_is_not_sent_for_taken_emails_or_numbers(
@@ -268,14 +282,53 @@ def test_sign_up_code_is_not_sent_for_taken_emails_or_numbers(
 ) -> None:
     signed_up(api)  # PHONE is taken
     settings.SIGNUP_OTP_REQUIRED = True
+    mail.outbox.clear()
     taken = APIClient().post(
         "/api/v1/auth/register/code", {"email": "new@example.com", "phone": PHONE}, format="json"
     )
     assert taken.status_code == 409
-    assert sms_outbox == []
+    assert mail.outbox == []
 
 
-def test_sign_up_stays_one_step_while_sms_is_off(settings: Any) -> None:
-    settings.SIGNUP_OTP_REQUIRED = True
-    settings.SMS_PROVIDER = ""
+def test_sign_up_stays_one_step_while_codes_are_off(settings: Any) -> None:
+    settings.SIGNUP_OTP_REQUIRED = False
+    sent = APIClient().post(
+        "/api/v1/auth/register/code", {"email": "meera@example.com", "phone": PHONE}, format="json"
+    )
+    assert sent.json()["data"] == {"codeRequired": False}
+    assert mail.outbox == []
     assert signup().status_code == 201
+
+
+def test_sign_up_code_email_failure_is_a_503_and_does_not_count(
+    settings: Any, monkeypatch: Any
+) -> None:
+    settings.SIGNUP_OTP_REQUIRED = True
+
+    def broken(*_: Any, **__: Any) -> None:
+        raise OSError("SMTP down")
+
+    monkeypatch.setattr("apps.accounts.otp.send_mail", broken)
+    res = APIClient().post(
+        "/api/v1/auth/register/code", {"email": "meera@example.com", "phone": PHONE}, format="json"
+    )
+    assert res.status_code == 503
+    assert res.json()["error"]["code"] == "EMAIL_UNAVAILABLE"
+    assert not OtpChallenge.objects.exists()
+
+
+# --- verifying the email with a code (account page) ---------------------------------------------
+
+
+def test_signed_in_people_verify_their_email_with_a_code(api: APIClient) -> None:
+    client, user = signed_up(api)
+    assert user["emailVerified"] is False
+    assert client.post("/api/v1/auth/email/code").status_code == 200
+    code = emailed_code(user["email"])
+    bad = client.post("/api/v1/auth/email/code/verify", {"code": wrong(code)}, format="json")
+    assert bad.status_code == 400
+    ok = client.post("/api/v1/auth/email/code/verify", {"code": code}, format="json")
+    assert ok.status_code == 200
+    assert ok.json()["data"]["user"]["emailVerified"] is True
+    assert client.get("/api/v1/auth/me").json()["data"]["user"]["emailVerified"] is True
+    assert client.post("/api/v1/auth/email/code").status_code == 409

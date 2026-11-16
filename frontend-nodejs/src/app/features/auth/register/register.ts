@@ -14,7 +14,6 @@ import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { emailRules, matchesField, passwordRules, phoneRules, requiredText } from '../../../shared/forms/form-rules';
 import { codeRules } from '../../../shared/forms/code-rules';
 import { countdown } from '../../../shared/forms/countdown';
-import { errorCode } from '../../../core/services/api-error';
 import { PhoneInput } from '../../../shared/components/phone-input/phone-input';
 
 const INTRO: Record<SelfRegisterRole, string> = {
@@ -53,7 +52,7 @@ export class Register {
     (path) => {
       requiredText(path.name, 'Name', { min: 2, max: 80 });
       emailRules(path.email);
-      phoneRules(path.phone); // the account is confirmed with a code texted to it
+      phoneRules(path.phone);
       passwordRules(path.password);
       matchesField(path.confirmPassword, path.password);
       pattern(path.referralCode, /^\s*([A-Za-z0-9-]{4,40})?\s*$/, { message: 'Enter a valid referral code' });
@@ -61,7 +60,7 @@ export class Register {
     { submission: { action: () => this.sendCode() } },
   );
 
-  /** Step 2: the code texted to the number creates the account. */
+  /** Step 2: the code emailed to the address creates the account (and verifies the email). */
   protected readonly step = signal<'details' | 'code'>('details');
   protected readonly notice = signal<string | null>(null);
   private readonly timer = countdown();
@@ -85,19 +84,19 @@ export class Register {
     });
   }
 
-  /** Step 1: check the details, then text a code (or sign up at once while SMS is off). */
+  /** Step 1: check the details, then email a code (or sign up at once while codes are off). */
   private async sendCode(): Promise<TreeValidationResult> {
     this.error.set(null);
     const { email, phone } = this.model();
     try {
-      const sent = await firstValueFrom(this.auth.requestSignupCode(email, phone.trim()));
-      this.notice.set(`${sent.message}: ${phone.trim()}`);
+      const sent = await firstValueFrom(this.auth.requestSignupCode(email.trim(), phone.trim()));
+      if (sent.codeRequired === false) return this.createAccount();
+      this.notice.set(`${sent.message}: ${email.trim()}. Check your spam folder if you don't see it.`);
       this.codeForm().reset({ code: '' });
       this.step.set('code');
       this.timer.start(sent.resendInSeconds);
       return undefined;
     } catch (err) {
-      if (errorCode(err) === 'SMS_UNAVAILABLE') return this.createAccount();
       this.error.set(errorMessage(err, 'Unable to create your account. Please try again.'));
       return serverErrors(this.form, fieldErrors(err));
     }
@@ -113,7 +112,7 @@ export class Register {
     this.error.set(null);
   }
 
-  private async createAccount(smsCode?: string): Promise<TreeValidationResult> {
+  private async createAccount(emailCode?: string): Promise<TreeValidationResult> {
     this.error.set(null);
     const { confirmPassword: _confirm, phone, referralCode, ...rest } = this.model();
     const code = this.role() === 'customer' ? referralCode.trim().toUpperCase() : '';
@@ -123,7 +122,7 @@ export class Register {
           ...rest,
           ...(phone.trim() ? { phone: phone.trim() } : {}),
           ...(code ? { referralCode: code } : {}),
-          ...(smsCode ? { code: smsCode } : {}),
+          ...(emailCode ? { code: emailCode } : {}),
           role: this.role(),
         }),
       );

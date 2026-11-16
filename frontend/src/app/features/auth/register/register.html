@@ -31,12 +31,12 @@
       placeholder="Enter your email address"
       autocomplete="email"
       inputmode="email"
+      hint="We will email you a code to confirm it"
       [error]="shownError(form.email)"
     />
     <bb-phone-input
       [formField]="form.phone"
       label="Mobile number"
-      /* hint="We will text you a code to confirm it" */
       [error]="shownError(form.phone)"
     />
     <np-text-input
@@ -84,20 +84,12 @@
 } @else {
   @if (notice()) {
     <div class="bb-alert info" role="status">
-      <np-icon name="message-square" class="mat-icon" matButtonIcon />
+      <np-icon name="mail" class="mat-icon" matButtonIcon />
       <span>{{ notice() }}</span>
     </div>
   }
   <form class="bb-form" [formRoot]="codeForm">
-    <np-text-input
-      [formField]="codeForm.code"
-      label="6-digit code"
-      icon="key-round"
-      placeholder="••••••"
-      autocomplete="one-time-code"
-      inputmode="numeric"
-      [error]="shownError(codeForm.code)"
-    />
+    <bb-code-input [field]="codeForm.code" label="6-digit code from the email" />
     <div class="bb-form-actions">
       <button mat-flat-button type="submit" [disabled]="codeForm().submitting()">
         @if (codeForm().submitting()) {

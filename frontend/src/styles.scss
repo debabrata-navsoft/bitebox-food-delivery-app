@@ -702,6 +702,44 @@ np-menu.bb-menu-compact .menu.mi-panel {
   width: 160px;
 }
 
+// One-time code boxes (np-input-otp): 48px each, smaller on narrow phones so six fit in the card.
+// `.otp.otp` outranks NexPrime's emulated `.otp` rule.
+np-input-otp .otp.otp {
+  --otp-box: clamp(38px, 11vw, 48px);
+}
+
+// In the sign-in and sign-up cards the boxes share the full width, like the inputs around them.
+.bb-form np-input-otp {
+  display: block !important;
+  width: 100%;
+
+  .otp.otp {
+    --otp-box: 52px;
+    gap: clamp(6px, 2vw, 12px);
+  }
+
+  .otp__box.otp__box {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    max-width: 64px;
+  }
+}
+
+// A filled submit button that is busy (it shows a spinner) keeps its colour, with a white
+// spinner, instead of greying out like a disabled button.
+.bb-form button[mat-flat-button][type='submit'][disabled]:has(mat-progress-spinner) {
+  background-color: var(--bb-brand);
+  color: var(--bb-on-brand);
+  opacity: 0.85;
+  cursor: progress;
+
+  mat-progress-spinner {
+    --mat-progress-spinner-active-indicator-color: currentColor;
+    margin-inline: auto;
+  }
+}
+
 // NexPrime colours any `.ui-control[aria-invalid='true']` red, and Signal Forms sets `invalid` as
 // soon as a form opens. Keep untouched fields neutral (NpFieldTouch adds .bb-untouched); errors
 // appear after blur or a submit attempt, like <bb-field-error> and np-text-input's [error].

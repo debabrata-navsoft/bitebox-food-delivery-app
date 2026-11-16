@@ -406,13 +406,13 @@ export const openApiDocument = {
     "/auth/register/code": {
       post: {
         tags: ["Auth"],
-        summary: "Sign-up step 1: text a code to the new number (then POST /auth/register with code)",
+        summary: "Sign-up step 1: email a code to the new address (then POST /auth/register with code)",
         requestBody: { content: { "application/json": { schema: { type: "object", required: ["email", "phone"], properties: { email: { type: "string" }, phone: { type: "string" } } } } } },
         responses: {
-          200: ok({ type: "object", properties: { resendInSeconds: { type: "integer" }, expiresInSeconds: { type: "integer" } } }),
+          200: ok({ type: "object", properties: { codeRequired: { type: "boolean", description: "false while SIGNUP_OTP_REQUIRED is off (no code sent; sign up in one step)" }, resendInSeconds: { type: "integer" }, expiresInSeconds: { type: "integer" } } }),
           409: err("Email or phone already registered"),
           429: err("Wait before asking again"),
-          503: err("SMS is off (sign-up is one step then)"),
+          503: err("The email could not be sent (EMAIL_UNAVAILABLE)"),
         },
       },
     },
@@ -465,6 +465,28 @@ export const openApiDocument = {
         summary: "Send a new email verification link",
         security: [{ bearerAuth: [] }],
         responses: { 200: ok({ type: "null" }), 409: err("Already verified"), 429: err("Too many requests") },
+      },
+    },
+    "/auth/email/code": {
+      post: {
+        tags: ["Auth"],
+        summary: "Email a 6-digit code that confirms your address",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: ok({ type: "object", properties: { resendInSeconds: { type: "integer" }, expiresInSeconds: { type: "integer" } } }),
+          409: err("Already verified"),
+          429: err("Wait before asking again"),
+          503: err("The email could not be sent"),
+        },
+      },
+    },
+    "/auth/email/code/verify": {
+      post: {
+        tags: ["Auth"],
+        summary: "Confirm your email address with the emailed code",
+        security: [{ bearerAuth: [] }],
+        requestBody: { content: { "application/json": { schema: { type: "object", required: ["code"], properties: { code: { type: "string" } } } } } },
+        responses: { 200: ok({ type: "object", properties: { user: { $ref: "#/components/schemas/User" } } }), 400: err("Wrong or expired code"), 409: err("Already verified") },
       },
     },
     "/auth/email/verify": {

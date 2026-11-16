@@ -10,12 +10,14 @@ import {
   TimePickerComponent,
 } from 'nexprime';
 import { FieldError } from './field-error/field-error';
-import { NpFieldTouch } from './np-field-touch';
+import { CodeInput } from './code-input/code-input';
+import { NpFieldTouch, NpUntouched } from './np-field-touch';
 import { NpInputAttrs } from './np-input-attrs';
 
 export const NP_FORM_FIELDS = [
   FormField,
   NpFieldTouch,
+  NpUntouched,
   NpInputAttrs,
   FieldError,
   TextInputComponent,
@@ -26,4 +28,5 @@ export const NP_FORM_FIELDS = [
   SearchInputComponent,
   CalendarComponent,
   TimePickerComponent,
+  CodeInput,
 ] as const;

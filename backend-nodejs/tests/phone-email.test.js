@@ -172,35 +172,63 @@ describe("phone codes and email verification", () => {
     }
   });
 
-  describe("sign-up confirmed by SMS", () => {
+  const emailedCode = (to = "meera@example.com") =>
+    testOutbox.findLast((m) => m.to === to).text.match(/\b(\d{6})\b/)[1];
+
+  describe("sign-up confirmed by an emailed code", () => {
     const signup = (body = {}) =>
       request(app).post("/api/v1/auth/register").send({ name: "Meera Test", email: "meera@example.com", password: "Sup3rSecret!", phone: PHONE, ...body });
     const askCode = (email = "meera@example.com", phone = PHONE) => request(app).post("/api/v1/auth/register/code").send({ email, phone });
-    beforeEach(() => useSignupCode(true));
+    beforeEach(() => {
+      useSignupCode(true);
+      testOutbox.length = 0;
+    });
     after(() => useSignupCode(null));
 
-    it("creates the account only with the texted code", async () => {
-      assert.equal((await askCode()).status, 200);
-      assert.equal(testSmsOutbox.at(-1).to, PHONE);
+    it("creates the account only with the emailed code, and the email is verified", async () => {
+      const sent = await askCode("Meera@Example.com");
+      assert.equal(sent.status, 200, JSON.stringify(sent.body));
+      assert.equal(sent.body.data.codeRequired, true);
+      assert.equal(testSmsOutbox.length, 0); // by email, not SMS
+      const code = emailedCode();
       const without = await signup();
       assert.equal(without.status, 400);
       assert.equal(without.body.error.details[0].field, "code");
-      assert.equal((await signup({ code: wrong(lastCode()) })).status, 400);
+      assert.equal((await signup({ code: wrong(code) })).status, 400);
       assert.equal(await User.exists({ email: "meera@example.com" }), null);
-      const created = await signup({ code: lastCode() });
+      const created = await signup({ code });
       assert.equal(created.status, 201, JSON.stringify(created.body));
-      assert.equal(created.body.data.user.phoneVerified, true);
-      assert.equal((await signup({ code: lastCode() })).status, 409);
+      assert.equal(created.body.data.user.emailVerified, true);
+      assert.equal(created.body.data.user.phoneVerified, false);
+      // Already verified, so no "confirm your email" link.
+      assert.equal(testOutbox.some((m) => m.subject === "Confirm your BiteBox email"), false);
+      assert.equal((await signup({ code })).status, 409);
     });
 
-    it("sends no code for taken emails or numbers, and stays one step while SMS is off", async () => {
+    it("sends no code for taken emails or numbers, and stays one step while codes are off", async () => {
       useSignupCode(false);
       await signedUp();
       useSignupCode(true);
+      testOutbox.length = 0;
       assert.equal((await askCode("new@example.com")).status, 409);
-      assert.equal(testSmsOutbox.length, 0);
-      useChannel("smsProvider", "");
+      assert.equal(testOutbox.length, 0);
+      useSignupCode(false);
+      const off = await askCode("other@example.com", "9811122233");
+      assert.deepEqual(off.body.data, { codeRequired: false });
       assert.equal((await signup({ email: "other@example.com", phone: "9811122233" })).status, 201);
     });
+  });
+
+  it("verifies a signed-in person's email with an emailed code", async () => {
+    const { as, user } = await signedUp();
+    assert.equal(user.emailVerified, false);
+    assert.equal((await as("post", "/api/v1/auth/email/code")).status, 200);
+    const code = emailedCode(user.email);
+    assert.equal((await as("post", "/api/v1/auth/email/code/verify", { code: wrong(code) })).status, 400);
+    const ok = await as("post", "/api/v1/auth/email/code/verify", { code });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    assert.equal(ok.body.data.user.emailVerified, true);
+    assert.equal((await as("get", "/api/v1/auth/me")).body.data.user.emailVerified, true);
+    assert.equal((await as("post", "/api/v1/auth/email/code")).status, 409);
   });
 });

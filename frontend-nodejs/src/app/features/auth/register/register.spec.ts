@@ -26,7 +26,7 @@ const details = {
   referralCode: '',
 };
 
-describe('Register (sign-up confirmed by SMS)', () => {
+describe('Register (sign-up confirmed by an emailed code)', () => {
   let fixture: ComponentFixture<Register>;
   let auth: { requestSignupCode: ReturnType<typeof vi.fn>; register: ReturnType<typeof vi.fn> };
   let navigate: ReturnType<typeof vi.spyOn>;
@@ -57,10 +57,11 @@ describe('Register (sign-up confirmed by SMS)', () => {
     await fixture.whenStable();
   };
 
-  it('texts a code first, and creates the account only with it', async () => {
+  it('emails a code first, and creates the account only with it', async () => {
     auth.requestSignupCode.mockReturnValue(
       of({
-        message: 'We have sent a code to your phone',
+        message: 'We have sent a code to your email',
+        codeRequired: true,
         resendInSeconds: 30,
         expiresInSeconds: 300,
       }),
@@ -71,6 +72,7 @@ describe('Register (sign-up confirmed by SMS)', () => {
     expect(auth.register).not.toHaveBeenCalled();
     expect(el().textContent).toContain('Confirm and create account');
     expect(el().textContent).toContain('Resend code in 30 s');
+    expect(el().textContent).toContain('We have sent a code to your email: kavya@example.com');
 
     component().codeModel.set({ code: '123456' });
     await submit();
@@ -80,21 +82,35 @@ describe('Register (sign-up confirmed by SMS)', () => {
     expect(navigate).toHaveBeenCalledWith('/');
   });
 
-  it('signs up in one step while SMS is off', async () => {
+  it('signs up in one step while codes are off', async () => {
     auth.requestSignupCode.mockReturnValue(
-      throwError(
-        () =>
-          new HttpErrorResponse({
-            status: 503,
-            error: { success: false, message: 'Off', error: { code: 'SMS_UNAVAILABLE' } },
-          }),
-      ),
+      of({ message: 'No code needed', resendInSeconds: 0, expiresInSeconds: 0, codeRequired: false }),
     );
     component().model.set(details);
     await submit();
     expect(auth.register).toHaveBeenCalledWith(
       expect.not.objectContaining({ code: expect.anything() }),
     );
+  });
+
+  it('stays on the details when the email cannot be sent', async () => {
+    auth.requestSignupCode.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 503,
+            error: {
+              success: false,
+              message: "We can't send emails right now. Please try again later",
+              error: { code: 'EMAIL_UNAVAILABLE' },
+            },
+          }),
+      ),
+    );
+    component().model.set(details);
+    await submit();
+    expect(auth.register).not.toHaveBeenCalled();
+    expect(el().textContent).toContain("We can't send emails right now");
   });
 
   it('needs a mobile number', async () => {

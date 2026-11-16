@@ -125,7 +125,7 @@ class RegisterInput(serializers.Serializer):
     phone = PhoneField()
     password = NewPasswordField()
     role = _choice(SELF_REGISTER_ROLES, "Invalid role", required=False)
-    # The SMS code from POST /auth/register/code (needed while signup_needs_code()).
+    # The emailed code from POST /auth/register/code (needed while signup_needs_code()).
     code = serializers.RegexField(r"^\d{6}$", required=False, error_messages=OTP_CODE)
     referral_code = serializers.RegexField(
         r"^[A-Za-z0-9-]{4,40}$",

@@ -31,15 +31,7 @@
     </div>
   }
   <form class="bb-form" [formRoot]="codeForm">
-    <np-text-input
-      [formField]="codeForm.code"
-      label="6-digit code"
-      icon="key-round"
-      placeholder="••••••"
-      autocomplete="one-time-code"
-      inputmode="numeric"
-      [error]="shownError(codeForm.code)"
-    />
+    <bb-code-input [field]="codeForm.code" label="6-digit code from the SMS" />
     <div class="bb-form-actions">
       <button mat-flat-button type="submit" [disabled]="codeForm().submitting()">
         @if (codeForm().submitting()) {

@@ -84,7 +84,7 @@ export async function changePassword(req, res) {
 export const methods = respond(() => authService.authMethods(), "Sign-in methods");
 export const requestSignupCode = respond(
   (req) => authService.requestSignupCode(req.body, req.ip),
-  "We have sent a code to your phone",
+  (_req, data) => (data.codeRequired ? "We have sent a code to your email" : "No code needed"),
 );
 // The same answer whether or not the number has an account.
 export const requestOtp = respond(
@@ -98,6 +98,14 @@ export const requestPhoneVerification = respond(
 export const verifyPhone = respond(
   async (req) => ({ user: (await authService.verifyPhone(req.user, req.body.code)).toJSON() }),
   "Phone number verified",
+);
+export const requestEmailCode = respond(
+  (req) => authService.requestEmailCode(req.user, req.ip),
+  "We have sent a code to your email",
+);
+export const verifyEmailCode = respond(
+  async (req) => ({ user: (await authService.verifyEmailCode(req.user, req.body.code)).toJSON() }),
+  "Email verified",
 );
 export const resendEmailVerification = respond(
   (req) => authService.resendEmailVerification(req.user).then(() => null),

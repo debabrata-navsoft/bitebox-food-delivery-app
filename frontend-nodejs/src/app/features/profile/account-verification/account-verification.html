@@ -16,9 +16,9 @@
             size="small"
             variant="soft"
             severity="secondary"
-            label="Send link again"
-            [disabled]="busy() === 'email'"
-            (clicked)="resendLink()"
+            [label]="sendLabel('email')"
+            [disabled]="busy() === 'email' || timers.email.left() > 0"
+            (clicked)="sendCode('email')"
           />
         }
       </li>
@@ -38,9 +38,9 @@
             size="small"
             variant="soft"
             severity="secondary"
-            [label]="codeSent() ? 'Send a new code' : 'Verify'"
-            [disabled]="busy() === 'phone' || phoneCodes() === false"
-            (clicked)="sendCode()"
+            [label]="sendLabel('phone')"
+            [disabled]="busy() === 'phone' || timers.phone.left() > 0 || phoneCodes() === false"
+            (clicked)="sendCode('phone')"
           />
         }
       </li>
@@ -49,19 +49,16 @@
     @if (phoneCodes() === false && u.phone && !u.phoneVerified) {
       <p class="bb-muted small">Verification by SMS is not available yet.</p>
     }
-    @if (codeSent() && u.phone && !u.phoneVerified) {
+    @if (pending(); as channel) {
       <form class="code" [formRoot]="codeForm">
-        <np-text-input
-          [formField]="codeForm.code"
-          label="Code from the SMS"
-          placeholder="6 digits"
-          autocomplete="one-time-code"
-          inputmode="numeric"
-          [error]="shownError(codeForm.code)"
-        />
+        <bb-code-input [field]="codeForm.code" [label]="channel.codeLabel" />
         <button type="submit" class="bb-btn" [disabled]="codeForm().submitting()">
-          Confirm number
+          {{ channel.confirmLabel }}
         </button>
+        <p class="bb-muted small sent-to">
+          Sent to {{ channel.sentTo(u) }}. It expires in {{ expiresInMinutes() }}
+          {{ expiresInMinutes() === 1 ? 'minute' : 'minutes' }}.
+        </p>
       </form>
     }
   </section>

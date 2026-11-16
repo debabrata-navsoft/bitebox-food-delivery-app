@@ -57,6 +57,8 @@ export interface CodeSent {
   message: string;
   resendInSeconds: number;
   expiresInSeconds: number;
+  /** Sign-up only: false when the API creates accounts without a code (no code was sent). */
+  codeRequired?: boolean;
 }
 
 export interface AuthSession {

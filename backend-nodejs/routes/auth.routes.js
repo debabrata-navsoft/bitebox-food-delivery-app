@@ -56,6 +56,8 @@ export function createAuthRouter({
   router.post("/phone/verify", authenticate, authLimiter, validate(rules.otpCodeRules), auth.verifyPhone);
   router.post("/email/verification", authenticate, sensitiveLimiter, auth.resendEmailVerification);
   router.post("/email/verify", authLimiter, validate(rules.emailVerifyRules), auth.verifyEmail);
+  router.post("/email/code", authenticate, authLimiter, auth.requestEmailCode);
+  router.post("/email/code/verify", authenticate, authLimiter, validate(rules.otpCodeRules), auth.verifyEmailCode);
 
   router.get("/me", authenticate, auth.me);
   router.patch(

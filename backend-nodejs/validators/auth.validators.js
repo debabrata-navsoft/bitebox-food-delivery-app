@@ -61,7 +61,7 @@ export const registerRules = [
     .toUpperCase()
     .matches(/^[A-Z0-9-]{4,40}$/)
     .withMessage("Enter a valid referral code"),
-  // The SMS code from POST /auth/register/code (needed while signupNeedsCode()).
+  // The emailed code from POST /auth/register/code (needed while signupNeedsCode()).
   body("code").optional().isString().bail().matches(/^\d{6}$/).withMessage("Enter the 6-digit code"),
 ];
 

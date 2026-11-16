@@ -18,7 +18,7 @@ from apps.rbac.roles import (
     permissions_for,
 )
 
-NODE_CONFIG = Path(__file__).resolve().parents[4] / "backend" / "config"
+NODE_CONFIG = Path(__file__).resolve().parents[4] / "backend-nodejs" / "config"
 
 
 def test_super_admin_has_everything_and_members_nothing() -> None:

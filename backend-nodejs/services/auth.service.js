@@ -11,6 +11,7 @@ import {
   USER_STATUS,
 } from "../models/user.model.js";
 import { ApiError } from "../utils/api-error.js";
+import { escapeHtml } from "../utils/html.js";
 import { hashToken, randomToken, signAccessToken } from "../utils/tokens.js";
 import { sendMail } from "./mail.service.js";
 import { notify, notifyAdmins } from "./notification.service.js";
@@ -97,13 +98,12 @@ export async function register(
       : null;
 
   await checkNewAccount(email, phone);
-  let phoneVerifiedAt;
+  let emailVerifiedAt;
   if (signupNeedsCode()) {
-    // Step 2: the account is created only with the code texted to its number.
-    if (!phone) throw ApiError.badRequest("Enter your mobile number", [{ field: "phone", message: "Enter your mobile number" }]);
-    if (!code) throw ApiError.badRequest("Enter the code we sent to your phone", [{ field: "code", message: "Enter the 6-digit code" }]);
-    await otp.checkCode(phone, OTP_PURPOSES.REGISTER, code);
-    phoneVerifiedAt = new Date();
+    // Step 2: the account is created only with the code emailed to its address.
+    if (!code) throw ApiError.badRequest("Enter the code we sent to your email", [{ field: "code", message: "Enter the 6-digit code" }]);
+    await otp.checkEmailCode(email, OTP_PURPOSES.REGISTER_EMAIL, code);
+    emailVerifiedAt = new Date();
   }
 
   const user = await User.create({
@@ -111,10 +111,11 @@ export async function register(
     email,
     phone,
     role,
-    phoneVerifiedAt,
+    emailVerifiedAt,
     passwordHash: await hashPassword(password),
   });
   logger.info({ userId: user.id, role }, "User registered");
+  // Already verified with the code, so sendEmailVerification sends no link.
   await sendEmailVerification(user).catch((err) =>
     logger.error({ err, userId: user.id }, "Could not send the verification email"),
   );
@@ -139,18 +140,22 @@ async function checkNewAccount(email, phone) {
     throw ApiError.conflict("An account with this phone number already exists");
 }
 
-/** New accounts confirm their number by SMS first (env.signupOtpRequired, while SMS is on). */
 /** What the sign-in and profile pages may offer: SMS codes only when an SMS provider is set up. */
 export const authMethods = () => ({ phone: channelEnabled(CHANNELS.SMS) });
-export const signupNeedsCode = () => (signupOverride ?? env.signupOtpRequired) && channelEnabled(CHANNELS.SMS);
+/** New accounts confirm their email with an emailed code first (SIGNUP_OTP_REQUIRED). */
+export const signupNeedsCode = () => signupOverride ?? env.signupOtpRequired;
 let signupOverride = null;
 /** Tests: require the sign-up code (true/false), or null for the configured behaviour. */
 export const useSignupCode = (value) => (signupOverride = value);
 
-/** Step 1 of sign-up: the email and number are free, so text a code to the number. */
+/**
+ * Step 1 of sign-up: the email and number are free, so email a code to the address. While codes
+ * are off, says so and the client creates the account at once.
+ */
 export async function requestSignupCode({ email, phone }, ip) {
   await checkNewAccount(email, phone);
-  return otp.sendCode(phone, OTP_PURPOSES.REGISTER, ip, true);
+  if (!signupNeedsCode()) return { codeRequired: false };
+  return { ...(await otp.sendEmailCode(email, OTP_PURPOSES.REGISTER_EMAIL, ip)), codeRequired: true };
 }
 
 /** The welcome notification (in-app, and email when allowed) per role. */
@@ -231,6 +236,24 @@ export async function sendEmailVerification(user) {
   });
 }
 
+/** The update that marks an email verified and drops any pending link. */
+const markEmailVerified = () => ({
+  $set: { emailVerifiedAt: new Date() },
+  $unset: { emailVerificationTokenHash: 1, emailVerificationExpiresAt: 1 },
+});
+
+/** Emails a signed-in person a code that confirms their address (the account page). */
+export async function requestEmailCode(user, ip) {
+  if (user.emailVerifiedAt) throw ApiError.conflict("Your email is already verified");
+  return otp.sendEmailCode(user.email, OTP_PURPOSES.VERIFY_EMAIL, ip, user.name);
+}
+
+export async function verifyEmailCode(user, code) {
+  if (user.emailVerifiedAt) throw ApiError.conflict("Your email is already verified");
+  await otp.checkEmailCode(user.email, OTP_PURPOSES.VERIFY_EMAIL, code);
+  return User.findByIdAndUpdate(user._id, markEmailVerified(), { returnDocument: "after" });
+}
+
 export async function resendEmailVerification(user) {
   if (user.emailVerifiedAt) throw ApiError.conflict("Your email is already verified");
   await sendEmailVerification(user);
@@ -240,7 +263,7 @@ export async function verifyEmail(token) {
   // Consume the token atomically so it works once.
   const user = await User.findOneAndUpdate(
     { emailVerificationTokenHash: hashToken(token), emailVerificationExpiresAt: { $gt: new Date() } },
-    { $set: { emailVerifiedAt: new Date() }, $unset: { emailVerificationTokenHash: 1, emailVerificationExpiresAt: 1 } },
+    markEmailVerified(),
   );
   if (!user) throw ApiError.badRequest("This link is invalid or has expired. Ask for a new one");
 }
@@ -373,12 +396,3 @@ export async function updateProfile(userId, { name, phone, avatarUrl }) {
 
 export { revokeAllSessions };
 
-function escapeHtml(value) {
-  return value.replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ],
-  );
-}

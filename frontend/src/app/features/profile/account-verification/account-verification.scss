@@ -38,13 +38,23 @@ h3 {
   gap: var(--bb-space-2);
   margin-top: var(--bb-space-3);
 
+  .bb-field {
+    margin-bottom: 0;
+  }
+
+  .sent-to {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+
   @include bp.tablet-up {
-    grid-template-columns: minmax(0, 260px) max-content; // the button only as wide as its label
+    grid-template-columns: max-content max-content; // the six boxes, then the button
     justify-content: start;
     align-items: start;
+    column-gap: var(--bb-space-4);
 
     .bb-btn {
-      margin-top: 24px; // in line with the input under its label
+      margin-top: 30px; // in line with the boxes under their label
     }
   }
 }

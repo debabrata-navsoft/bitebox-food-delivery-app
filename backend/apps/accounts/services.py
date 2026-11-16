@@ -21,7 +21,6 @@ from django.db.models import F
 from django.utils import timezone
 from django.utils.html import escape
 
-from apps.notifications.senders import sms_enabled
 from apps.rbac.roles import Role
 from apps.uploads.storage import is_uploaded_image_url
 from common.api import ApiError
