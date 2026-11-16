@@ -1,0 +1,16 @@
+{% autoescape off %}{% if name %}Hi {{ name }},
+
+{% endif %}{{ title }}
+{% for line in lines %}
+{{ line }}
+{% endfor %}{% if code %}
+    {{ code }}
+{% endif %}{% if action_url %}
+{{ action_label }}: {{ action_url }}
+{% endif %}{% if note %}
+{{ note }}
+{% endif %}
+--
+{{ footer }}
+BiteBox, good food, boxed and delivered.
+{% endautoescape %}

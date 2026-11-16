@@ -19,11 +19,10 @@ from datetime import timedelta
 from typing import Any
 
 from django.conf import settings
-from django.core.mail import send_mail
 from django.db.models import F
 from django.utils import timezone
-from django.utils.html import escape
 
+from apps.notifications import emails
 from apps.notifications.senders import deliver_sms, sms_enabled
 from common.api import ApiError
 
@@ -108,23 +107,20 @@ def send_email_code(email: str, purpose: str, ip: str | None, name: str = "") ->
     email = _normalise_email(email)
     challenge, code = _create("email", email, purpose, ip)
     minutes = settings.OTP_TTL_SECONDS // 60
-    greeting = f"Hi {name}," if name else "Hi,"
     try:
-        send_mail(
-            subject=f"{code} is your BiteBox verification code",
-            message=(
-                f"{greeting}\n\nYour BiteBox verification code is {code}\n\n"
-                f"It expires in {minutes} minutes. Never share it with anyone. If you did not ask "
-                "for it, ignore this email."
+        emails.send(
+            email,
+            emails.Email(
+                subject=f"{code} is your BiteBox verification code",
+                title="Your verification code",
+                name=name,
+                lines=["Enter this code in BiteBox to confirm your email address."],
+                code=code,
+                note=(
+                    f"It expires in {minutes} minutes. Never share it with anyone. If you did not "
+                    "ask for it, you can ignore this email."
+                ),
             ),
-            html_message=(
-                f"<p>{escape(greeting)}</p><p>Your BiteBox verification code is</p>"
-                f'<p style="font-size:28px;font-weight:700;letter-spacing:6px">{code}</p>'
-                f"<p>It expires in {minutes} minutes. Never share it with anyone. If you did not "
-                "ask for it, ignore this email.</p>"
-            ),
-            from_email=None,
-            recipient_list=[email],
         )
     except Exception:
         challenge.delete()  # not sent, so it should not count against the limits

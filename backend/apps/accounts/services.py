@@ -15,12 +15,11 @@ from typing import Any
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
-from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
-from django.utils.html import escape
 
+from apps.notifications import emails
 from apps.rbac.roles import Role
 from apps.uploads.storage import is_uploaded_image_url
 from common.api import ApiError
@@ -221,22 +220,18 @@ def send_email_verification(user: User) -> None:
             "updated_at",
         ]
     )
-    link = f"{settings.CLIENT_URLS[0]}/verify-email?token={token}"
-    send_mail(
-        subject="Confirm your BiteBox email",
-        message=(
-            f"Hi {user.name},\n\nConfirm this is your email address for BiteBox:\n\n{link}\n\n"
-            f"The link works for {hours} hours. If you did not create an account, ignore this "
-            "email."
+    emails.send(
+        user.email,
+        emails.Email(
+            subject="Confirm your BiteBox email",
+            title="Confirm your email address",
+            name=user.name,
+            lines=["Tap the button to confirm this is your email address for BiteBox."],
+            action_label="Confirm email",
+            action_url=f"{settings.CLIENT_URLS[0]}/verify-email?token={token}",
+            note=f"The link works for {hours} hours. If you did not create an account, ignore "
+            "this email.",
         ),
-        html_message=(
-            f"<p>Hi {escape(user.name)},</p><p>Confirm this is your email address for BiteBox.</p>"
-            f'<p><a href="{escape(link)}">Confirm email</a></p>'
-            f"<p>The link works for {hours} hours. If you did not create an account, ignore this "
-            "email.</p>"
-        ),
-        from_email=None,
-        recipient_list=[user.email],
     )
 
 
@@ -356,22 +351,21 @@ def forgot_password(email: str) -> None:
         update_fields=["password_reset_token_hash", "password_reset_expires_at", "updated_at"]
     )
 
-    link = f"{settings.CLIENT_URLS[0]}/reset-password?token={token}"
-    send_mail(
-        subject="Reset your BiteBox password",
-        message=(
-            f"Hi {user.name},\n\nUse this link to reset your BiteBox password. It expires in "
-            f"{minutes} minutes and can only be used once:\n\n{link}\n\nIf you did not request "
-            "this, you can ignore this email."
+    emails.send(
+        user.email,
+        emails.Email(
+            subject="Reset your BiteBox password",
+            title="Reset your password",
+            name=user.name,
+            lines=[
+                "We got a request to reset your BiteBox password. Tap the button to choose a "
+                "new one."
+            ],
+            action_label="Reset password",
+            action_url=f"{settings.CLIENT_URLS[0]}/reset-password?token={token}",
+            note=f"The link expires in {minutes} minutes and works once. If you did not ask for "
+            "this, you can ignore this email; your password stays the same.",
         ),
-        html_message=(
-            f"<p>Hi {escape(user.name)},</p><p>Use the link below to reset your BiteBox password. "
-            f"It expires in {minutes} minutes and can only be used once.</p>"
-            f'<p><a href="{escape(link)}">Reset password</a></p>'
-            "<p>If you did not request this, you can ignore this email.</p>"
-        ),
-        from_email=None,
-        recipient_list=[user.email],
     )
 
 

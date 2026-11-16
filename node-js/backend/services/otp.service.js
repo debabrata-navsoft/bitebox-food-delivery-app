@@ -6,8 +6,7 @@ import { ApiError } from "../utils/api-error.js";
 import { CHANNELS } from "../models/notification-delivery.model.js";
 import { channelEnabled, deliverSms } from "./notification-channels.js";
 import { logger } from "../config/logger.js";
-import { sendMail } from "./mail.service.js";
-import { escapeHtml } from "../utils/html.js";
+import { sendEmail } from "./email-template.js";
 
 /**
  * One-time codes (same rules as backend/apps/accounts/otp.py, Django): by SMS to sign in with a
@@ -76,13 +75,14 @@ export async function sendEmailCode(email, purpose, ip, name = "") {
   const to = normaliseEmail(email);
   const { challenge, code } = await createChallenge("email", to, purpose, ip);
   const minutes = Math.floor(otp.ttlSeconds / 60);
-  const greeting = name ? `Hi ${name},` : "Hi,";
   try {
-    await sendMail({
-      to,
+    await sendEmail(to, {
       subject: `${code} is your BiteBox verification code`,
-      text: `${greeting}\n\nYour BiteBox verification code is ${code}\n\nIt expires in ${minutes} minutes. Never share it with anyone. If you did not ask for it, ignore this email.`,
-      html: `<p>${escapeHtml(greeting)}</p><p>Your BiteBox verification code is</p><p style="font-size:28px;font-weight:700;letter-spacing:6px">${code}</p><p>It expires in ${minutes} minutes. Never share it with anyone. If you did not ask for it, ignore this email.</p>`,
+      title: "Your verification code",
+      name,
+      lines: ["Enter this code in BiteBox to confirm your email address."],
+      code,
+      note: `It expires in ${minutes} minutes. Never share it with anyone. If you did not ask for it, you can ignore this email.`,
     });
   } catch (err) {
     await OtpChallenge.deleteOne({ _id: challenge._id }); // not sent, so it should not count against the limits

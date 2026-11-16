@@ -11,9 +11,8 @@ import {
   USER_STATUS,
 } from "../models/user.model.js";
 import { ApiError } from "../utils/api-error.js";
-import { escapeHtml } from "../utils/html.js";
 import { hashToken, randomToken, signAccessToken } from "../utils/tokens.js";
-import { sendMail } from "./mail.service.js";
+import { sendEmail } from "./email-template.js";
 import { notify, notifyAdmins } from "./notification.service.js";
 import { CHANNELS } from "../models/notification-delivery.model.js";
 import { OTP_PURPOSES } from "../models/otp-challenge.model.js";
@@ -227,12 +226,14 @@ export async function sendEmailVerification(user) {
     { _id: user._id },
     { emailVerificationTokenHash: hashToken(token), emailVerificationExpiresAt: new Date(Date.now() + hours * 3_600_000) },
   );
-  const link = `${env.clientUrls[0]}/verify-email?token=${encodeURIComponent(token)}`;
-  await sendMail({
-    to: user.email,
+  await sendEmail(user.email, {
     subject: "Confirm your BiteBox email",
-    text: `Hi ${user.name},\n\nConfirm this is your email address for BiteBox:\n\n${link}\n\nThe link works for ${hours} hours. If you did not create an account, ignore this email.`,
-    html: `<p>Hi ${escapeHtml(user.name)},</p><p>Confirm this is your email address for BiteBox.</p><p><a href="${link}">Confirm email</a></p><p>The link works for ${hours} hours. If you did not create an account, ignore this email.</p>`,
+    title: "Confirm your email address",
+    name: user.name,
+    lines: ["Tap the button to confirm this is your email address for BiteBox."],
+    actionLabel: "Confirm email",
+    actionUrl: `${env.clientUrls[0]}/verify-email?token=${encodeURIComponent(token)}`,
+    note: `The link works for ${hours} hours. If you did not create an account, ignore this email.`,
   });
 }
 
@@ -326,12 +327,14 @@ export async function forgotPassword(email) {
   );
   await user.save();
 
-  const link = `${env.clientUrls[0]}/reset-password?token=${encodeURIComponent(token)}`;
-  await sendMail({
-    to: user.email,
+  await sendEmail(user.email, {
     subject: "Reset your BiteBox password",
-    text: `Hi ${user.name},\n\nUse this link to reset your BiteBox password. It expires in ${env.passwordReset.ttlMinutes} minutes and can only be used once:\n\n${link}\n\nIf you did not request this, you can ignore this email.`,
-    html: `<p>Hi ${escapeHtml(user.name)},</p><p>Use the link below to reset your BiteBox password. It expires in ${env.passwordReset.ttlMinutes} minutes and can only be used once.</p><p><a href="${link}">Reset password</a></p><p>If you did not request this, you can ignore this email.</p>`,
+    title: "Reset your password",
+    name: user.name,
+    lines: ["We got a request to reset your BiteBox password. Tap the button to choose a new one."],
+    actionLabel: "Reset password",
+    actionUrl: `${env.clientUrls[0]}/reset-password?token=${encodeURIComponent(token)}`,
+    note: `The link expires in ${env.passwordReset.ttlMinutes} minutes and works once. If you did not ask for this, you can ignore this email; your password stays the same.`,
   });
 }
 

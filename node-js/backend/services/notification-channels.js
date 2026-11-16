@@ -1,11 +1,10 @@
 import fs from "node:fs";
-import { escapeHtml } from "../utils/html.js";
 import crypto from "node:crypto";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { DeviceToken } from "../models/device-token.model.js";
 import { CHANNELS } from "../models/notification-delivery.model.js";
-import { sendMail } from "./mail.service.js";
+import { sendEmail as sendTemplatedEmail } from "./email-template.js";
 import { categoryOf, isPushEnabled, pushToUser } from "./push.service.js";
 
 /**
@@ -55,26 +54,19 @@ const absoluteLink = (link) => {
   return `${env.clientUrls[0].replace(/\/$/, "")}${path}`;
 };
 /** { subject, text, html } in BiteBox's simple email layout. */
-export function renderEmail({ title, body, link }, name) {
-  const url = absoluteLink(link);
-  const footer =
-    "You get this email because of your BiteBox account. Change which emails you get in Account, Notifications.";
-  return {
-    subject: `${title} | BiteBox`,
-    text: [`Hi ${name},`, "", title, ...(body ? ["", body] : []), "", `Open BiteBox: ${url}`, "", footer].join("\n"),
-    html: `<!doctype html><html lang="en"><body style="margin:0;padding:24px;background:#f6f3f8;font-family:Arial,Helvetica,sans-serif;color:#2e1a3d">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px">
-<tr><td style="padding:24px 28px 8px"><strong style="font-size:20px">BiteBox</strong></td></tr>
-<tr><td style="padding:8px 28px 24px;font-size:15px;line-height:1.5">
-<p style="margin:0 0 12px">Hi ${escapeHtml(name)},</p>
-<h1 style="margin:0 0 8px;font-size:20px">${escapeHtml(title)}</h1>
-${body ? `<p style="margin:0 0 20px">${escapeHtml(body)}</p>` : ""}
-<a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 22px;border-radius:12px;background:#2e1a3d;color:#ffffff;text-decoration:none;font-weight:bold">Open BiteBox</a>
-</td></tr>
-<tr><td style="padding:16px 28px 24px;font-size:12px;color:#6b5a78;border-top:1px solid #eee6f2">${footer}</td></tr>
-</table></body></html>`,
-  };
-}
+const NOTIFICATION_FOOTER =
+  "You get this email because of your BiteBox account. Change which emails you get in Account, Notifications.";
+
+/** A notification as an email, in the shared layout (email-template.js). */
+export const notificationEmail = ({ title, body, link }, name) => ({
+  subject: `${title} | BiteBox`,
+  title,
+  name,
+  lines: body ? [body] : [],
+  actionLabel: "Open BiteBox",
+  actionUrl: absoluteLink(link),
+  footer: NOTIFICATION_FOOTER,
+});
 
 export function renderSms({ title, body }) {
   const text = `BiteBox: ${title}. ${body ?? ""}`.trim();
@@ -153,7 +145,7 @@ async function sendFcm(notification, user) {
 
 async function sendEmail(notification, user) {
   if (!user.email) throw new Skip("No email address");
-  await sendMail({ to: user.email, ...renderEmail(notification, user.name) });
+  await sendTemplatedEmail(user.email, notificationEmail(notification, user.name));
 }
 
 /** The "test" SMS provider (tests only). */

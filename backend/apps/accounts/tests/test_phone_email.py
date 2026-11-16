@@ -308,7 +308,7 @@ def test_sign_up_code_email_failure_is_a_503_and_does_not_count(
     def broken(*_: Any, **__: Any) -> None:
         raise OSError("SMTP down")
 
-    monkeypatch.setattr("apps.accounts.otp.send_mail", broken)
+    monkeypatch.setattr("apps.notifications.emails.send_mail", broken)
     res = APIClient().post(
         "/api/v1/auth/register/code", {"email": "meera@example.com", "phone": PHONE}, format="json"
     )

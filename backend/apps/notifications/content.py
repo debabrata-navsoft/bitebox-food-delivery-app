@@ -5,16 +5,18 @@ What each notification type sends where, and how it reads on email and SMS.
   anything else → account (the same rule as Node's push.service#categoryOf).
 - Web Push and FCM carry every type the person allows. Email and SMS carry only the types below:
   receipts, money and things the person must act on (SMS costs money and is opt-in).
-- Email uses `notifications/email/<type>.{txt,html}` when present, else `base.{txt,html}`.
+- Email uses the shared layout (emails.py, templates/emails/layout.{html,txt}).
 """
 
-from typing import Any
-
 from django.conf import settings
-from django.template import TemplateDoesNotExist
-from django.template.loader import render_to_string
 
+from . import emails
 from .models import Channel, Notification
+
+NOTIFICATION_FOOTER = (
+    "You get this email because of your BiteBox account. Change which emails you get in Account, "
+    "Notifications."
+)
 
 CATEGORIES = ("orders", "account", "promotions")
 
@@ -68,27 +70,21 @@ def absolute_link(link: str) -> str:
     return f"{base}{path}"
 
 
-def _render(name: str, context: dict[str, Any]) -> str:
-    try:
-        return render_to_string(f"notifications/email/{name}", context)
-    except TemplateDoesNotExist:
-        return render_to_string(f"notifications/email/base.{name.rsplit('.', 1)[-1]}", context)
-
-
 def render_email(notification: Notification, name: str) -> tuple[str, str, str]:
     """(subject, text, html)."""
-    context = {
-        "name": name,
-        "title": notification.title,
-        "body": notification.body,
-        "url": absolute_link(notification.link),
-        "type": notification.type,
-    }
-    return (
-        f"{notification.title} | BiteBox",
-        _render(f"{notification.type}.txt", context).strip(),
-        _render(f"{notification.type}.html", context),
+    subject = f"{notification.title} | BiteBox"
+    text, html = emails.render(
+        emails.Email(
+            subject=subject,
+            title=notification.title,
+            name=name,
+            lines=[notification.body] if notification.body else [],
+            action_label="Open BiteBox",
+            action_url=absolute_link(notification.link),
+            footer=NOTIFICATION_FOOTER,
+        )
     )
+    return subject, text, html
 
 
 def render_sms(notification: Notification) -> str:
