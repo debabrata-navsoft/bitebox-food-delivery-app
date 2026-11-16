@@ -107,6 +107,20 @@
     font-size: 0.85rem;
     overflow-wrap: anywhere;
   }
+
+  // The name with its verification status beside it (the badge only as wide as its text).
+  .title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px var(--bb-space-2);
+    font-size: inherit;
+  }
+
+  .bb-badge {
+    flex: none;
+    white-space: nowrap;
+  }
 }
 
 .dot {
