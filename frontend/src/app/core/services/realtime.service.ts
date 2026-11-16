@@ -8,7 +8,6 @@ import { AppNotification } from '../../shared/models/payment.models';
 import {
   DjangoSocketTransport,
   RealtimeTransport,
-  SocketIoTransport,
 } from './realtime-transport';
 
 export interface OrderEvent {
@@ -38,13 +37,11 @@ export interface LocationAck {
     | 'NOT_CONNECTED';
 }
 
-/** The socket URL for the configured backend (the API's origin; Django serves it at /ws/). */
+/** The socket URL for the Django backend (Django Channels WebSocket at /ws/). */
 export function realtimeUrl(): string {
-  if (environment.realtime === 'django') {
-    const api = new URL(environment.djangoUrl, window.location.origin);
-    return `${api.protocol === 'https:' ? 'wss:' : 'ws:'}//${api.host}/ws/`;
-  }
-  return new URL(environment.baseUrl, window.location.origin).origin;
+  if (environment.wsUrl) return environment.wsUrl;
+  const api = new URL(environment.baseUrl, window.location.origin);
+  return `${api.protocol === 'https:' ? 'wss:' : 'ws:'}//${api.host}/ws/`;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -71,9 +68,7 @@ export class RealtimeService {
   /** Swappable in tests. */
   protected createTransport(): RealtimeTransport {
     const token = () => this.auth.accessToken;
-    return environment.realtime === 'django'
-      ? new DjangoSocketTransport(realtimeUrl(), token)
-      : new SocketIoTransport(realtimeUrl(), token);
+    return new DjangoSocketTransport(realtimeUrl(), token);
   }
 
   private connect(): void {

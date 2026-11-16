@@ -5,8 +5,8 @@ BiteBox is a full-stack food delivery app with four role-based panels: **Custome
 | Part | Stack |
 |---|---|
 | Frontend | Angular 22 (standalone, signals, zoneless, SSR/prerender, Signal Forms), Angular Material, NexPrime, Leaflet + OpenStreetMap, service worker |
-| Backend | Node.js + Express 5 (ES modules), Mongoose 9, Socket.IO, JWT, express-validator, pino, Swagger UI, Web Push |
-| Database | MongoDB 7+ (local, Docker or Atlas) |
+| Backend | Django 5 + Django REST framework, Channels (WebSockets), Celery, uvicorn (ASGI), drf-spectacular |
+| Database | PostgreSQL 16 + PostGIS, Redis 7 |
 | Integrations | Razorpay, Cloudinary, SMTP, Nominatim (place search), OSRM (road routing) |
 
 > **Status: production ready.** All seven phases are complete: authentication; restaurants and menus; cart and checkout; orders and delivery; maps and live tracking; payments, notifications and reports; and quality and deployment. Admin staff roles, reviews, coins and referrals, support tickets, and PWA install, offline mode and push notifications were added on top.
@@ -19,7 +19,7 @@ BiteBox is a full-stack food delivery app with four role-based panels: **Custome
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Symptoms, causes and fixes |
 | [docs/SECURITY.md](docs/SECURITY.md) | Security audit: findings, fixes, accepted risks and how to rerun the checks |
 | [docs/COINS_REWARDS_PLAN.md](docs/COINS_REWARDS_PLAN.md) | Design notes for coins, referrals and campaigns |
-| Swagger UI, `http://localhost:5000/api/docs` | The live API contract (raw JSON at `/api/docs.json`) |
+| Swagger UI, `http://localhost:8000/api/docs` | The live API contract (raw JSON at `/api/docs.json`) |
 
 ## Features
 
@@ -36,25 +36,28 @@ BiteBox is a full-stack food delivery app with four role-based panels: **Custome
   - **Finance:** transactions, refunds, payouts, commission and reports.
   - **Support:** tickets and review moderation.
 - **Everywhere:**
-  - Live updates over Socket.IO, an in-app notification inbox, and opt-in browser push notifications.
+  - Live updates over Django Channels WebSocket (`/ws/`), an in-app notification inbox, and opt-in browser push notifications.
   - Installable PWA that works offline for pages already seen.
   - Responsive layouts and accessibility to WCAG 2.1 AA.
 
 ## Quick start
 
-**Prerequisites:** Node.js 24 LTS (or 22.22+ / 26+), npm 10+, MongoDB 7+. For a local MongoDB you can run `docker run -d -p 27017:27017 mongo:8`.
+**Prerequisites:** Python 3.12+, PostgreSQL 16+ (with PostGIS), Redis 7+, Node.js 22+, npm 10+.
 
 ```bash
-# 1. Install
-cd backend  && npm install && cp .env.example .env    # set MONGO_URI and JWT_SECRET (32+ chars)
-cd ../frontend && npm install
+# 1. Backend (Django)
+cd backend
+python -m venv .venv && .venv/Scripts/pip install -r requirements/dev.txt  # Windows
+# (Linux/macOS: python3 -m venv .venv && .venv/bin/pip install -r requirements/dev.txt)
+cp .env.example .env
+.venv/Scripts/python manage.py migrate
+SEED_PASSWORD='Choose-a-dev-pass1' .venv/Scripts/python manage.py seed
+.venv/Scripts/uvicorn config.asgi:application --reload --port 8000
 
-# 2. Seed development data (optional, safe to rerun, refuses to run in production)
-cd ../backend && SEED_PASSWORD='Choose-a-dev-pass1' npm run seed
-
-# 3. Run (two terminals)
-cd backend  && npm run dev    # API  http://localhost:5000  (Swagger /api/docs, health /api/v1/health)
-cd frontend && npm start      # web  http://localhost:4200
+# 2. Frontend (Angular 22) - in another terminal
+cd frontend
+npm install
+npm start      # web  http://localhost:4200
 ```
 
 Generate a JWT secret with `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`. Every other variable is optional; see [Configuration reference](docs/DOCUMENTATION.md#5-configuration-reference).
@@ -90,10 +93,9 @@ To try a full order across all four roles, follow [Try the whole order flow](doc
 
 ```bash
 # Backend (cd backend)
-npm run dev                  # API with nodemon
-npm test                     # integration tests (node:test + supertest, in-memory MongoDB)
-npm run lint                 # eslint
-TEST_MONGO_URI='mongodb://127.0.0.1:27017/bitebox_test' npm test   # real DB; name MUST end in _test
+.venv/Scripts/uvicorn config.asgi:application --reload --port 8000   # API on :8000
+.venv/Scripts/pytest                                                # unit & integration tests
+.venv/Scripts/ruff check . && .venv/Scripts/ruff format --check .   # linter & formatter
 
 # Frontend (cd frontend). Always use the npm scripts: they set NG_BUILD_SASS_EMBEDDED=0.
 npm start                    # dev server
@@ -102,11 +104,11 @@ npm run build                # production build (SSR + prerender + service worke
 npm run serve:ssr:frontend   # serve the production build on :4000 (needed to test the PWA)
 ```
 
-CI (`.github/workflows/ci.yml`) runs lint, both test suites and the production build on every push to `master` and every pull request. `tests/docs.test.js` fails if an API route is missing from the OpenAPI docs.
+CI (`.github/workflows/ci.yml`) runs lint, both test suites and the production build on every push to `master` and every pull request.
 
 ## Deployment
 
-The production setup is one HTTPS origin. nginx sends `/api`, `/socket.io` and `/uploads` to the API, and everything else to the Angular SSR server.
+The production setup is one HTTPS origin. nginx sends `/api`, `/ws` and `/uploads` to the Django API, and everything else to the Angular SSR server.
 
 ```bash
 cp deploy/.env.example deploy/.env      # JWT_SECRET, PUBLIC_URL, PUBLIC_HOST (+ optional keys)

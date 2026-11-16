@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog } from '@angular/material/dialog';
@@ -41,7 +42,9 @@ import { initialsOf } from '../../shared/models/user.models';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CustomerLayout {
+  private readonly platformId = inject(PLATFORM_ID);
   private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
   protected readonly cart = inject(CartService);
   protected readonly installer = inject(InstallPromptService);
@@ -64,7 +67,9 @@ export class CustomerLayout {
   /** Checkout gets the compact footer (no links pulling the customer away from paying). */
   protected readonly onCheckout = computed(() => this.url().startsWith('/checkout'));
   /** The install promo floats over the page, so only where nothing else sits at the bottom. */
-  protected readonly installPromo = computed(() => ['/', '/restaurants'].includes(this.url().split(/[?#]/)[0]));
+  protected readonly installPromo = computed(() =>
+    ['/', '/restaurants'].includes(this.url().split(/[?#]/)[0]),
+  );
 
   protected chooseLocation(): void {
     this.dialog.open(LocationPickerDialog, {
@@ -77,4 +82,72 @@ export class CustomerLayout {
   protected logout(): void {
     this.auth.logout().subscribe();
   }
+
+  protected scrollToSection(event: Event, id: string): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    event.preventDefault();
+
+    const go = () => {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      const header = document.querySelector('.site-header')?.getBoundingClientRect().height ?? 0;
+      const pad = parseFloat(getComputedStyle(el).paddingTop) || 0; // the section's 48px
+      const target = () => el.getBoundingClientRect().top + window.scrollY + pad - header - 16;
+
+      // const header = document.querySelector('.site-header')?.getBoundingClientRect().height ?? 0;
+      // const target = () => el.getBoundingClientRect().top + window.scrollY - header - 16;
+
+      const from = window.scrollY;
+      const start = performance.now();
+      const DURATION = 600;
+
+      const step = (now: number) => {
+        const p = Math.min((now - start) / DURATION, 1);
+        const ease = 1 - (1 - p) ** 3;
+        window.scrollTo({
+          top: from + (target() - from) * ease,
+          behavior: 'instant' as ScrollBehavior,
+        });
+        if (p < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    };
+
+    const onHome = ['', '/'].includes(this.url().split(/[?#]/)[0]);
+    if (onHome) go();
+    else void this.router.navigateByUrl('/').then(() => setTimeout(go, 200));
+  }
+
+  // protected scrollToAppDownload(event?: Event): void {
+  //   if (!isPlatformBrowser(this.platformId)) return;
+  //   event?.preventDefault();
+
+  //   const go = () => {
+  //     const banner = document.querySelector<HTMLElement>('#app-download .app-download-banner');
+  //     if (!banner) return;
+
+  //     const header = document.querySelector('.site-header')?.getBoundingClientRect().height ?? 0;
+  //     const target = () => banner.getBoundingClientRect().top + window.scrollY - header - 16;
+
+  //     const from = window.scrollY;
+  //     const start = performance.now();
+  //     const DURATION = 600;
+
+  //     const step = (now: number) => {
+  //       const p = Math.min((now - start) / DURATION, 1);
+  //       const ease = 1 - (1 - p) ** 3;
+  //       window.scrollTo({
+  //         top: from + (target() - from) * ease,
+  //         behavior: 'instant' as ScrollBehavior,
+  //       });
+  //       if (p < 1) requestAnimationFrame(step);
+  //     };
+  //     requestAnimationFrame(step);
+  //   };
+
+  //   const onHome = ['', '/'].includes(this.url().split(/[?#]/)[0]);
+  //   if (onHome) go();
+  //   else void this.router.navigateByUrl('/').then(() => setTimeout(go, 200));
+  // }
 }

@@ -1,9 +1,6 @@
-import { Socket, io } from 'socket.io-client';
-
 /**
- * The live connection behind RealtimeService. Two implementations with one contract:
- * - `SocketIoTransport`: the Node API's Socket.IO server (until the switch-over).
- * - `DjangoSocketTransport`: the Django API's plain WebSocket at `/ws/` (Channels).
+ * The live connection behind RealtimeService.
+ * Connects to the Django API's WebSocket at `/ws/` (Django Channels).
  *
  * Lifecycle events are delivered like server events: `connect` (signed in and ready),
  * `disconnect`, and `unauthorized` (the server refused the token: refresh it and `reconnect()`).
@@ -12,7 +9,7 @@ export interface RealtimeTransport {
   readonly isConnected: boolean;
   on(event: string, handler: (data: any) => void): void;
   off(event: string, handler: (data: any) => void): void;
-  /** A request the server acknowledges (Socket.IO `emitWithAck`). Rejects on timeout. */
+  /** A request the server acknowledges. Rejects on timeout. */
   request<T>(type: string, data: unknown, timeoutMs: number): Promise<T>;
   /** Fire and forget. Dropped when not connected. */
   send(type: string, data: unknown): void;
@@ -40,61 +37,6 @@ class Emitter {
   }
 }
 
-/** Server events forwarded from Socket.IO. */
-const SERVER_EVENTS = ['order:updated', 'order:location', 'notification:new'];
-
-export class SocketIoTransport implements RealtimeTransport {
-  private readonly events = new Emitter();
-  private readonly socket: Socket;
-
-  constructor(origin: string, token: () => string | null) {
-    this.socket = io(origin, {
-      path: '/socket.io',
-      auth: (cb) => cb({ token: token() }),
-      transports: ['websocket', 'polling'],
-    });
-    this.socket.on('connect', () => this.events.fire('connect'));
-    for (const event of SERVER_EVENTS)
-      this.socket.on(event, (data: unknown) => this.events.fire(event, data));
-    this.socket.on('disconnect', (reason) => {
-      this.events.fire('disconnect');
-      if (reason === 'io server disconnect') this.events.fire('unauthorized');
-    });
-    this.socket.on('connect_error', () => {
-      this.events.fire('disconnect');
-      if (!this.socket.active) this.events.fire('unauthorized');
-    });
-  }
-
-  get isConnected(): boolean {
-    return this.socket.connected;
-  }
-
-  on(event: string, handler: Handler): void {
-    this.events.on(event, handler);
-  }
-
-  off(event: string, handler: Handler): void {
-    this.events.off(event, handler);
-  }
-
-  request<T>(type: string, data: unknown, timeoutMs: number): Promise<T> {
-    return this.socket.timeout(timeoutMs).emitWithAck(type, data) as Promise<T>;
-  }
-
-  send(type: string, data: unknown): void {
-    if (this.socket.connected) this.socket.emit(type, data);
-  }
-
-  reconnect(): void {
-    this.socket.connect();
-  }
-
-  close(): void {
-    this.socket.disconnect();
-  }
-}
-
 /** Close code the Django server uses for a missing, invalid or expired token. */
 export const CLOSE_UNAUTHORIZED = 4401;
 const HEARTBEAT_MS = 25_000;
@@ -107,7 +49,7 @@ interface Pending {
 }
 
 /**
- * Django Channels socket. Protocol (backend-django/apps/realtime/consumers.py):
+ * Django Channels socket. Protocol (backend/apps/realtime/consumers.py):
  * `{type: 'auth', token}` first, then `{type: 'ready'}`; requests carry an `id` and are answered
  * by `{type: 'ack', id, data}`; server events are `{type: <event>, data}`.
  * Network drops reconnect with backoff; a 4401 close asks for a fresh token instead.

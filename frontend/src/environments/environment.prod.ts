@@ -1,10 +1,7 @@
 export const environment = {
   production: true,
-  baseUrl: '/api/v1', // same origin; nginx sends each path to Node or Django
-  djangoUrl: '/api/v1',
-  djangoRoutes: [] as string[],
-  // Live updates: 'node' until the switch-over, then 'django' (nginx sends /ws/ to Django).
-  realtime: 'node' as 'node' | 'django',
+  baseUrl: '/api/v1',
+  wsUrl: '',
 
   map: {
     tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',

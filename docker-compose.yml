@@ -1,59 +1,91 @@
-# Production-like stack: MongoDB (single-node replica set, so transactions work),
-# the API, the Angular SSR web app and an nginx reverse proxy on http://localhost:8080.
+# Full stack: PostgreSQL + PostGIS, Redis, the Django API (ASGI),
+# Celery worker, Celery beat, the Angular SSR web app and an nginx reverse proxy on http://localhost:8080.
 #
-#   cp deploy/.env.example deploy/.env    # then set JWT_SECRET (and optional keys)
-#   docker compose --env-file deploy/.env up -d --build
+#   docker compose up -d --build
 #
-# Seed demo data once (fictional accounts):
-#   docker compose --env-file deploy/.env exec -e NODE_ENV=development -e SEED_PASSWORD='Demo-pass-123' api node src/scripts/seed.js
+# Run migrations & seed:
+#   docker compose exec api python manage.py migrate
+#   docker compose exec -e SEED_PASSWORD='Dev-pass-123' api python manage.py seed
+
+x-app: &app
+  build: ./backend
+  environment:
+    DJANGO_SETTINGS_MODULE: config.settings.development
+    DATABASE_URL: postgres://bitebox:bitebox@db:5432/bitebox
+    REDIS_URL: redis://redis:6379/0
+    DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,api
+    FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
+    JWT_SECRET: ${JWT_SECRET:-dev-insecure-secret-key-at-least-32-chars-long}
+    CLIENT_URL: ${PUBLIC_URL:-http://localhost:8080}
+    PUBLIC_BASE_URL: ${PUBLIC_URL:-http://localhost:8080}
+    RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+    RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+    RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+    VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+    VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+    VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:support@example.com}
+    CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+    CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+    CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+    SMTP_HOST: ${SMTP_HOST:-}
+    SMTP_PORT: ${SMTP_PORT:-587}
+    SMTP_USER: ${SMTP_USER:-}
+    SMTP_PASS: ${SMTP_PASS:-}
+    EMAIL_FROM: ${EMAIL_FROM:-BiteBox <no-reply@example.com>}
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
 
 services:
-  mongo:
-    image: mongo:8
-    command: ["--replSet", "rs0", "--bind_ip_all"]
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: bitebox
+      POSTGRES_USER: bitebox
+      POSTGRES_PASSWORD: bitebox
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
-      - mongo-data:/data/db
+      - pg-data:/var/lib/postgresql/data
     healthcheck:
-      # Starts the replica set on first boot, then reports healthy once it has a primary.
-      test: ["CMD", "mongosh", "--quiet", "--eval", "try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongo:27017' }] }).ok }"]
-      interval: 10s
-      timeout: 10s
-      retries: 10
-      start_period: 20s
+      test: ["CMD-SHELL", "pg_isready -U bitebox -d bitebox"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     restart: unless-stopped
 
   api:
-    build: ./backend
-    environment:
-      NODE_ENV: production
-      PORT: 5000
-      MONGO_URI: mongodb://mongo:27017/bitebox?replicaSet=rs0
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in deploy/.env}
-      CLIENT_URL: ${PUBLIC_URL:-http://localhost:8080}
-      PUBLIC_BASE_URL: ${PUBLIC_URL:-http://localhost:8080}
-      TRUST_PROXY: 1
-      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
-      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
-      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
-      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
-      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
-      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:support@example.com}
-      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
-      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
-      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
-      EMAIL_FROM: ${EMAIL_FROM:-BiteBox <no-reply@example.com>}
-      FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:?set FIELD_ENCRYPTION_KEY in deploy/.env}
+    <<: *app
+    command: ["uvicorn", "config.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    entrypoint: []
+    ports:
+      - "127.0.0.1:8000:8000"
     volumes:
       - uploads:/app/uploads
-      # KYC documents: never served by URL, only through the API.
       - private-uploads:/app/private-uploads
-    depends_on:
-      mongo:
-        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    <<: *app
+    command: ["worker"]
+    restart: unless-stopped
+
+  beat:
+    <<: *app
+    command: ["beat"]
     restart: unless-stopped
 
   web:
@@ -61,9 +93,8 @@ services:
     environment:
       PORT: 4000
       TRUST_PROXY: 1
-      # Server rendering talks to the API directly inside the Docker network.
-      API_INTERNAL_URL: http://api:5000
-      # Host names the SSR server answers for (Angular's SSRF protection); comma-separated.
+      # Server rendering talks to Django API directly inside the Docker network.
+      API_INTERNAL_URL: http://api:8000
       NG_ALLOWED_HOSTS: ${PUBLIC_HOST:-localhost}
     depends_on:
       - api
@@ -81,6 +112,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  mongo-data:
+  pg-data:
   uploads:
   private-uploads:

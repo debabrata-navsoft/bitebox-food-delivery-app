@@ -223,6 +223,10 @@ html {
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   height: 100%;
@@ -496,7 +500,7 @@ np-icon[matChipAvatar] {
   border: 0;
 }
 
-// NexPrime-look buttons for what np-button can't be (docs/django-migration/08 §8.3): form submit
+// NexPrime-look buttons for what np-button can't be: form submit
 // buttons (<button type="submit">) and links styled as buttons (<a routerLink>). Same tokens and
 // sizes as np-button (medium), so both sit side by side. Variants: solid (default, brand
 // gradient), --outlined, --text, --soft, --accent (amber), --danger; --small; --icon (icon only).
@@ -596,7 +600,8 @@ np-icon[matChipAvatar] {
   --bb-btn-radius: 12px;
 }
 
-np-button .np-button:is(.np-button--solid, .np-button--outlined, .np-button--text, .np-button--soft) {
+np-button
+  .np-button:is(.np-button--solid, .np-button--outlined, .np-button--text, .np-button--soft) {
   border-radius: var(--bb-btn-radius);
 }
 
@@ -768,6 +773,53 @@ np-menu.bb-menu-compact .menu.mi-panel {
   background: #141016;
 }
 
+// Install BiteBox dialog: rounded corners, smooth scrolling, and pinned bottom actions.
+.bb-install-dialog-panel {
+  .mat-mdc-dialog-container {
+    padding: 0;
+  }
+
+  .mat-mdc-dialog-surface {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--bb-radius-xl, 20px) !important;
+    max-height: min(88vh, 640px) !important;
+    overflow: hidden;
+    background: var(--bb-surface, #ffffff);
+    color: var(--bb-ink);
+    box-shadow: 0 24px 48px rgb(0 0 0 / 22%);
+  }
+
+  .mat-mdc-dialog-title {
+    padding: 0 !important;
+    margin: 0 !important;
+
+    &::before {
+      display: none !important;
+      content: none !important;
+    }
+  }
+
+  .mat-mdc-dialog-content {
+    scrollbar-width: thin;
+    scrollbar-color: var(--bb-border) transparent;
+    padding: 16px 24px !important;
+    margin: 0 !important;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none !important;
+    overflow-y: auto;
+  }
+
+  .mat-mdc-dialog-actions {
+    padding: 12px 24px 16px !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    flex-shrink: 0;
+    border-top: 1px solid var(--bb-border);
+  }
+}
+
 // BbDialog (shared/dialog/bb-dialog.ts): CDK dialogs styled like the Material ones they replace.
 // The dialog component is the container's only child; it and any <form> inside it are flex
 // columns so the content scrolls between a fixed title and fixed actions.
@@ -934,7 +986,12 @@ np-time-picker .time-picker-field {
 .bb-skeleton {
   display: block;
   border-radius: var(--bb-radius-sm);
-  background: linear-gradient(90deg, var(--bb-skeleton) 25%, var(--bb-skeleton-shine) 37%, var(--bb-skeleton) 63%);
+  background: linear-gradient(
+    90deg,
+    var(--bb-skeleton) 25%,
+    var(--bb-skeleton-shine) 37%,
+    var(--bb-skeleton) 63%
+  );
   background-size: 400% 100%;
   animation: bb-shimmer 1.4s ease infinite;
 }
