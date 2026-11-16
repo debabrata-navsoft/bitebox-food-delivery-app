@@ -1486,10 +1486,25 @@ np-time-picker .time-picker-field {
   }
 }
 
+// Menus use the app's surface (white in light mode, the dark surface in dark mode), not
+// Material's tinted M3 container colour.
+.mat-mdc-menu-panel {
+  --mat-menu-container-color: var(--bb-surface);
+}
+
 // The customer account menu (header avatar). The panel lives in an overlay, so it is styled here.
+// Compact rows (40px, not 48px) and tighter dividers keep the long list shorter.
 .mat-mdc-menu-panel.bb-account-menu {
   width: 300px;
   max-width: calc(100vw - 32px);
+
+  .mat-mdc-menu-item {
+    min-height: 40px;
+  }
+
+  .mat-divider {
+    margin: 4px 0;
+  }
 }
 
 // Restaurant page on phones/tablets: the sticky "View cart" bar (~64px) sits on the tab bar, so
