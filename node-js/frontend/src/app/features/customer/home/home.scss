@@ -630,6 +630,19 @@ h1 {
   color: var(--bb-on-accent);
   overflow: hidden;
 
+  // The card stays amber in dark mode, so its chip and buttons keep the dark plum instead of
+  // --bb-plum and Material's primary (both turn lavender in dark mode).
+  .eyebrow.dark {
+    color: var(--bb-on-accent);
+  }
+  .mat-mdc-unelevated-button {
+    --mat-button-filled-container-color: var(--bb-brand);
+    --mat-button-filled-label-text-color: var(--bb-on-brand);
+  }
+  .mat-mdc-button {
+    --mat-button-text-label-text-color: var(--bb-on-accent);
+  }
+
   @include bp.tablet-up {
     grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
     padding: var(--bb-space-6);
