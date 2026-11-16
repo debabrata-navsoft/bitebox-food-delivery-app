@@ -30,7 +30,7 @@ export const DELIVERY_ROUTES: Routes = [
   },
   {
     path: 'verification',
-    title: 'Verification | BiteBox Rider',
+    title: 'KYC Verification | BiteBox Rider',
     loadComponent: () =>
       import('./verification/rider-verification').then((m) => m.RiderVerification),
   },

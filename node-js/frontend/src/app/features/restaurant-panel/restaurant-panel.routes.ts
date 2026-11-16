@@ -20,7 +20,7 @@ export const RESTAURANT_ROUTES: Routes = [
   },
   {
     path: 'verification',
-    title: 'Verification | BiteBox Restaurant',
+    title: 'KYC Verification | BiteBox Restaurant',
     loadComponent: () =>
       import('./verification/restaurant-verification').then((m) => m.RestaurantVerification),
   },
