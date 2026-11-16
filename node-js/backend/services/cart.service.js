@@ -10,11 +10,16 @@ import * as coinsService from "./coins.service.js";
 import * as couponService from "./coupon.service.js";
 import { computePricing, couponDiscount } from "./pricing.service.js";
 
-/** Retries a load-modify-save once if a concurrent edit bumped the cart version. */
-async function mutateCart(userId, mutate) {
+const loadCart = (userId) => Cart.findOne({ user: userId }).exec();
+
+/**
+ * Retries a load-modify-save once if a concurrent edit bumped the cart version. `firstLoad` is a
+ * cart read already started by the caller (so it runs alongside the caller's own reads).
+ */
+async function mutateCart(userId, mutate, firstLoad) {
   for (let attempt = 0; attempt < 2; attempt++) {
     const cart =
-      (await Cart.findOne({ user: userId })) ??
+      (await (attempt === 0 && firstLoad ? firstLoad : loadCart(userId))) ??
       new Cart({ user: userId, items: [] });
     await mutate(cart);
     try {
@@ -34,11 +39,24 @@ async function mutateCart(userId, mutate) {
   throw ApiError.conflict("Your cart was updated elsewhere. Please try again.");
 }
 
+/** The dish with its restaurant's status and name, in one round trip ($lookup, not populate). */
 async function loadOrderableItem(foodItemId) {
-  const item = await FoodItem.findOne({
-    _id: foodItemId,
-    deletedAt: null,
-  }).populate("restaurant", "status name");
+  if (!mongoose.isValidObjectId(foodItemId)) throw ApiError.notFound("This dish is not available");
+  const [item] = await FoodItem.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(String(foodItemId)), deletedAt: null } },
+    { $limit: 1 },
+    {
+      $lookup: {
+        from: Restaurant.collection.name,
+        localField: "restaurant",
+        foreignField: "_id",
+        pipeline: [{ $project: { status: 1, name: 1 } }],
+        as: "restaurant",
+      },
+    },
+    { $set: { restaurant: { $first: "$restaurant" } } },
+    { $project: { name: 1, isAvailable: 1, restaurant: 1 } },
+  ]);
   if (
     !item ||
     !item.restaurant ||
@@ -57,6 +75,9 @@ export async function addItem(
   userId,
   { foodItemId, quantity = 1, replace = false },
 ) {
+  // The cart and the dish load together (each read is a round trip to the database).
+  const cartLoad = loadCart(userId);
+  cartLoad.catch(() => {}); // awaited in mutateCart; this only stops an unhandled rejection
   const item = await loadOrderableItem(foodItemId);
   const restaurantId = item.restaurant._id;
 
@@ -91,7 +112,7 @@ export async function addItem(
         foodItem: item._id,
         quantity: Math.min(MAX_ITEM_QUANTITY, quantity),
       });
-  });
+  }, cartLoad);
 }
 
 /** Sets an exact quantity; 0 removes the line. */
@@ -125,13 +146,13 @@ export async function applyCoupon(userId, code) {
     restaurantId: quote.cart.restaurant.id,
     subtotalPaise: quote.pricing.subtotalPaise,
   });
-  await mutateCart(userId, async (cart) => {
+  return mutateCart(userId, async (cart) => {
     cart.couponCode = String(code).trim().toUpperCase();
   });
 }
 
 export async function removeCoupon(userId) {
-  await mutateCart(userId, async (cart) => {
+  return mutateCart(userId, async (cart) => {
     cart.couponCode = undefined;
   });
 }
@@ -145,13 +166,13 @@ export async function setCoins(userId, coins) {
   const quote = await buildQuote(userId);
   if (!quote.cart) throw ApiError.badRequest("Add dishes to your cart first");
   coinsService.assertRedeemable(quote.coins, coins);
-  await mutateCart(userId, async (cart) => {
+  return mutateCart(userId, async (cart) => {
     cart.coinsToRedeem = Math.min(coins, quote.coins.maxRedeemable);
   });
 }
 
 export async function removeCoins(userId) {
-  await mutateCart(userId, async (cart) => {
+  return mutateCart(userId, async (cart) => {
     cart.coinsToRedeem = 0;
   });
 }
@@ -161,8 +182,9 @@ export async function removeCoins(userId) {
  * anything that blocks checkout. This is the single source of truth used by
  * both the cart page and order placement.
  */
-export async function buildQuote(userId, { addressId } = {}) {
-  const cart = await Cart.findOne({ user: userId });
+export async function buildQuote(userId, { addressId, cart: saved } = {}) {
+  // A cart the caller just saved needs no second read.
+  const cart = saved ?? (await loadCart(userId));
   const empty = {
     cart: null,
     coupon: null,

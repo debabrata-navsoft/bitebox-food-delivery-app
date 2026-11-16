@@ -42,24 +42,16 @@
             "server": "src/main.server.ts",
             "outputMode": "server",
             "security": {
-              "allowedHosts": [
-                "localhost"
-              ]
+              "allowedHosts": ["localhost"]
             },
             "ssr": {
               "entry": "src/server.ts"
             },
             "inlineStyleLanguage": "scss",
             "stylePreprocessorOptions": {
-              "includePaths": [
-                "src/styles"
-              ]
+              "includePaths": ["src/styles"]
             },
-            "allowedCommonJsDependencies": [
-              "leaflet",
-              "lottie-web",
-              "quill-delta"
-            ]
+            "allowedCommonJsDependencies": ["leaflet", "lottie-web", "quill-delta"]
           },
           "configurations": {
             "production": {
@@ -107,10 +99,7 @@
               "buildTarget": "frontend:build:development"
             }
           },
-          "defaultConfiguration": "development",
-          "options": {
-            "port": 4201
-          }
+          "defaultConfiguration": "development"
         },
         "test": {
           "builder": "@angular/build:unit-test",

@@ -1,3 +1,4 @@
+import { Cart } from "../models/cart.model.js";
 import * as addressService from "../services/address.service.js";
 import * as cartService from "../services/cart.service.js";
 import * as couponService from "../services/coupon.service.js";
@@ -6,12 +7,13 @@ import * as payments from "../services/payments/payment.service.js";
 import { respond, sendSuccess } from "../utils/api-response.js";
 import { parsePagination } from "../utils/pagination.js";
 
-const quoteFor = (req) => cartService.buildQuote(req.user._id, { addressId: req.validatedQuery?.addressId });
-/** Cart mutations answer with the freshly priced cart. */
+const quoteFor = (req, cart) =>
+  cartService.buildQuote(req.user._id, { addressId: req.validatedQuery?.addressId, cart });
+/** Cart mutations answer with the freshly priced cart (reusing the cart they just saved). */
 const thenQuote = (change, message) =>
   respond(async (req) => {
-    await change(req);
-    return quoteFor(req);
+    const result = await change(req);
+    return quoteFor(req, result instanceof Cart ? result : undefined);
   }, message);
 
 // Cart
