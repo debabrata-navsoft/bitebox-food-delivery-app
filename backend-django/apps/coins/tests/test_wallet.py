@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
+from django.db import transaction
 
 from apps.coins import config as reward_config
 from apps.coins import wallet
@@ -164,7 +165,9 @@ def test_refunds_coins_spent_on_an_order_that_was_then_cancelled(user: Any) -> N
 
 def test_keeps_the_balance_right_over_many_redemptions(user: Any) -> None:
     earn(user, 100, "c1")
-    codes = [code_of(lambda i=i: wallet.reserve(user.pk, coins=30, key=f"r:p{i}")) for i in range(12)]
+    codes = [
+        code_of(lambda i=i: wallet.reserve(user.pk, coins=30, key=f"r:p{i}")) for i in range(12)
+    ]
     assert codes.count(None) == 3
     assert set(codes) - {None} == {"INSUFFICIENT_COINS"}
     w = bal(user)
@@ -193,7 +196,9 @@ def test_keeps_the_balance_right_over_mixed_operations(user: Any) -> None:
 def test_spends_coins_that_expire_first_and_never_expiring_coins_last(user: Any) -> None:
     wallet.credit(user.pk, coins=50, source="WELCOME_REWARD", key="never", expires_at=None, now=NOW)
     wallet.credit(user.pk, coins=30, source="ORDER_REWARD", key="late", expires_at=at(90), now=NOW)
-    wallet.credit(user.pk, coins=40, source="REVIEW_REWARD", key="early", expires_at=at(10), now=NOW)
+    wallet.credit(
+        user.pk, coins=40, source="REVIEW_REWARD", key="early", expires_at=at(10), now=NOW
+    )
     txn = wallet.reserve(user.pk, coins=60, key="reserve:fifo", now=NOW).row()
     assert [(a.source, a.coins) for a in txn.allocations.order_by("expires_at")] == [
         ("REVIEW_REWARD", 40),
@@ -265,7 +270,9 @@ def test_reverses_part_then_the_rest_and_never_more(user: Any) -> None:
     assert too_much == "REVERSAL_TOO_LARGE"
     rest = wallet.reverse_credit(user.pk, credit_key="order-reward:R", key="rev:3")
     assert rest.row().coins == 60
-    again = code_of(lambda: wallet.reverse_credit(user.pk, credit_key="order-reward:R", key="rev:4"))
+    again = code_of(
+        lambda: wallet.reverse_credit(user.pk, credit_key="order-reward:R", key="rev:4")
+    )
     assert again == "ALREADY_REVERSED"
     replay = wallet.reverse_credit(user.pk, credit_key="order-reward:R", coins=40, key="rev:1")
     assert replay.created is False
@@ -316,7 +323,9 @@ def test_keeps_one_wallet_per_user_and_a_gap_free_sequence(user: Any) -> None:
     for i in range(6):
         earn(user, 5, f"par:{i}")
     assert CoinWallet.objects.filter(user=user).count() == 1
-    seqs = list(CoinTransaction.objects.filter(user=user).order_by("seq").values_list("seq", flat=True))
+    seqs = list(
+        CoinTransaction.objects.filter(user=user).order_by("seq").values_list("seq", flat=True)
+    )
     assert seqs == [1, 2, 3, 4, 5, 6]
 
 
@@ -324,7 +333,9 @@ def test_keeps_wallets_separate_between_customers(user: Any) -> None:
     other = factories.user()
     earn(user, 100, "mine")
     wallet.credit(other.pk, coins=5, source="ORDER_REWARD", key="theirs")
-    assert code_of(lambda: wallet.reserve(other.pk, coins=50, key="r:other")) == "INSUFFICIENT_COINS"
+    assert (
+        code_of(lambda: wallet.reserve(other.pk, coins=50, key="r:other")) == "INSUFFICIENT_COINS"
+    )
     wallet.reserve(user.pk, coins=50, key="reserve:mine")
     # Another customer cannot settle my reservation, even with my key.
     assert code_of(lambda: wallet.commit_reservation(other.pk, reserve_key="reserve:mine")) == (
@@ -339,12 +350,14 @@ def test_keeps_wallets_separate_between_customers(user: Any) -> None:
 def test_a_failed_operation_leaves_nothing_behind(user: Any) -> None:
     """The row, the batches and the wallet are written in one transaction (Node: aborts)."""
     earn(user, 100, "c1")
-    with pytest.raises(RuntimeError, match="order creation failed"):
-        from django.db import transaction
 
+    def place_and_fail() -> None:
         with transaction.atomic():
             wallet.reserve(user.pk, coins=60, key="reserve:tx-abort")
             raise RuntimeError("order creation failed")
+
+    with pytest.raises(RuntimeError, match="order creation failed"):
+        place_and_fail()
     assert not CoinTransaction.objects.filter(idempotency_key="reserve:tx-abort").exists()
     assert bal(user).available == 100
     reconciled(user)
@@ -406,7 +419,10 @@ def test_saves_a_partial_change_keeps_the_rest_and_bumps_the_version() -> None:
     admin = factories.user(Role.ADMIN)
     saved = reward_config.update(
         admin,
-        {"redemption": {"min_coins": 50, "payment_methods": ["online"]}, "birthday": {"coins": 150}},
+        {
+            "redemption": {"min_coins": 50, "payment_methods": ["online"]},
+            "birthday": {"coins": 150},
+        },
         0,
     )
     assert saved["version"] == 1
@@ -447,7 +463,12 @@ def test_validates_values_and_ranges(patch: dict[str, Any]) -> None:
 def test_ignores_unknown_and_protected_fields() -> None:
     saved = reward_config.update(
         None,
-        {"something_else": True, "key": "other", "version": 99, "redemption": {"secret": 1, "min_coins": 120}},
+        {
+            "something_else": True,
+            "key": "other",
+            "version": 99,
+            "redemption": {"secret": 1, "min_coins": 120},
+        },
     )
     assert saved["redemption"]["min_coins"] == 120
     assert "something_else" not in saved

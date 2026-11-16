@@ -68,10 +68,22 @@ def test_follows_the_configured_earning_rule_and_switches() -> None:
     config = get_reward_config()
     order = SimpleNamespace(subtotal_paise=69_800, discount_paise=9_800, coin_discount_paise=1_000)
     assert coin_orders.order_reward_coins(order, config) == 50  # ₹590 -> 5 x 10
-    capped = {**config, "earning": {**config["earning"], "order": {**config["earning"]["order"], "max_coins_per_order": 30}}}
+    capped = {
+        **config,
+        "earning": {
+            **config["earning"],
+            "order": {**config["earning"]["order"], "max_coins_per_order": 30},
+        },
+    }
     assert coin_orders.order_reward_coins(order, capped) == 30
     assert coin_orders.order_reward_coins(order, {**config, "coins_enabled": False}) == 0
-    high = {**config, "earning": {**config["earning"], "order": {**config["earning"]["order"], "min_order_paise": 60_000}}}
+    high = {
+        **config,
+        "earning": {
+            **config["earning"],
+            "order": {**config["earning"]["order"], "min_order_paise": 60_000},
+        },
+    }
     assert coin_orders.order_reward_coins(order, high) == 0
 
 
@@ -116,7 +128,9 @@ def test_can_require_a_written_comment_for_the_review_bonus(w: RewardsWorld) -> 
     reward_config.update(None, {"earning": {"review": {"min_comment_length": 20}}})
     order_id = w.place_as()["id"]
     w.deliver(order_id)
-    w.c.post(f"/api/v1/orders/{order_id}/reviews", {"restaurant": 5, "comment": "Nice"}, format="json")
+    w.c.post(
+        f"/api/v1/orders/{order_id}/reviews", {"restaurant": 5, "comment": "Nice"}, format="json"
+    )
     assert not CoinTransaction.objects.filter(source="REVIEW_REWARD").exists()
 
 

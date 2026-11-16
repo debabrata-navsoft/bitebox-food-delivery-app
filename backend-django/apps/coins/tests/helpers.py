@@ -74,9 +74,7 @@ class RewardsWorld(World):
                 city="Bengaluru",
                 state="Karnataka",
                 postal_code="560034",
-                location=GeoPoint(
-                    lat=where[0], lng=where[1]
-                ),
+                location=GeoPoint(lat=where[0], lng=where[1]),
                 is_default=True,
             )
         return str(address.pk)

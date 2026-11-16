@@ -340,7 +340,8 @@ def test_a_welcome_note_on_sign_up(django_capture_on_commit_callbacks: Commits) 
     assert note.title == "Welcome to BiteBox, Meera Rao!"
     assert mail.outbox[-1].to == [body["email"]]
     inbox = client_for(token_of(res)).get("/api/v1/notifications").json()["data"]
-    assert inbox["unread"] == 1
+    assert inbox["unread"] == 2  # the welcome note and the welcome coins (apps/coins)
+    assert Notification.objects.filter(type="coins.reward").count() == 1
 
 
 def test_channel_preferences_show_what_is_available(customer: dict[str, Any]) -> None:

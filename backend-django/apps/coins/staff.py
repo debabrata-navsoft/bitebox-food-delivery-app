@@ -227,12 +227,14 @@ def reports(days: int = 30) -> dict[str, Any]:
         for key in day_keys(days, now)
     ]
     owed = CoinWallet.objects.aggregate(
-        available=Sum("available"),
-        reserved=Sum("reserved"),
+        # Aliases must not match field names: Django resolves a filter's `reserved` to the alias.
+        total_available=Sum("available"),
+        total_reserved=Sum("reserved"),
         wallets=Count("pk"),
         active=Count("pk", filter=Q(available__gt=0) | Q(reserved__gt=0)),
     )
-    available, reserved = int(owed["available"] or 0), int(owed["reserved"] or 0)
+    available = int(owed["total_available"] or 0)
+    reserved = int(owed["total_reserved"] or 0)
     top = RewardCampaign.objects.filter(claims_count__gt=0).order_by("-coins_issued")[:10]
     referral_stats = referrals.stats()
     shortfalls = CoinWallet.objects.filter(uncollected_reversal__gt=0).aggregate(
