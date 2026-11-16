@@ -13,7 +13,7 @@
     clearable
   />
   <np-select [formField]="filters.verification" ariaLabel="Verification" [options]="verificationOptions" />
-  <np-toggle class="bb-toggle-success" [formField]="filters.onlineOnly" label="Online only" />
+  <np-toggle [formField]="filters.onlineOnly" label="Online only" />
 </div>
 
 @if (list.error(); as message) {

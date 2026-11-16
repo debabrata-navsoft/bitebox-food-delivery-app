@@ -16,7 +16,7 @@
         clearable
       />
       <np-select [formField]="filters.status" ariaLabel="Status" [options]="statusOptions" />
-      <np-toggle class="bb-toggle-success" [formField]="filters.lateOnly" label="Late only" />
+      <np-toggle [formField]="filters.lateOnly" label="Late only" />
     </div>
 
     @if (error(); as message) {

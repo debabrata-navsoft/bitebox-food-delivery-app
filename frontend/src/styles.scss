@@ -957,9 +957,11 @@ np-textarea:has(.count) + bb-field-error {
   max-width: none !important;
 }
 
-// Availability switches are green when on (NexPrime fills the track with --ui-gradient).
-np-toggle.bb-toggle-success {
+// Every switch is green when on (NexPrime fills the track with --ui-gradient; the iOS and icon
+// variants use --ui-primary).
+np-toggle {
   --ui-gradient: var(--bb-success);
+  --ui-primary: var(--bb-success);
 }
 
 // A switch whose label changes with its state ("Off" / "Available"): fixed label width so the

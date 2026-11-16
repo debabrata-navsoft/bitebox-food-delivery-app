@@ -72,7 +72,7 @@
         <np-toggle
           [checked]="item.isAvailable"
           [disabled]="busyId() === item.id"
-          class="bb-toggle-success bb-toggle-stable bb-label-hidden-phone"
+          class="bb-toggle-stable bb-label-hidden-phone"
           [label]="item.isAvailable ? 'Available' : 'Off'"
           [attr.title]="'Available: ' + item.name"
           (checkedChange)="toggleAvailability(item, $event)"

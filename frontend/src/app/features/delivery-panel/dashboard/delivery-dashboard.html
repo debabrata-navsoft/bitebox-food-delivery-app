@@ -46,7 +46,6 @@
             </p>
           </div>
           <np-toggle
-            class="bb-toggle-success"
             [label]="online() ? 'Online' : 'Offline'"
             [checked]="onlineSwitch()"
             [disabled]="switching() || !profile()?.vehicleType || (online() && !!active())"
