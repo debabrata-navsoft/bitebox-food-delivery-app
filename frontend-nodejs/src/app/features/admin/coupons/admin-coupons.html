@@ -1,0 +1,65 @@
+<bb-page-header title="Coupons" subtitle="Discount codes customers can apply at checkout.">
+  <np-button severity="primary" icon="plus" label="New coupon" (clicked)="open()" />
+</bb-page-header>
+@if (error()) {
+  <div class="bb-alert error" role="alert">
+    <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ error() }}</span>
+  </div>
+}
+@if (loading()) {
+  <span class="bb-skeleton" style="height: 240px"></span>
+} @else if (coupons().length === 0) {
+  <bb-empty-state icon="local_offer" title="No coupons yet">
+    <np-button severity="primary" label="Create a coupon" (clicked)="open()" />
+  </bb-empty-state>
+} @else {
+  <div class="grid">
+    @for (c of coupons(); track c.id) {
+      <article class="bb-card coupon" [class.inactive]="!c.isActive || expired(c)">
+        <header>
+          <strong class="code">{{ c.code }}</strong>
+          <np-toggle
+            [checked]="c.isActive"
+            (checkedChange)="toggle(c, $event)"
+            class="bb-label-hidden"
+            [label]="'Active: ' + c.code"
+          />
+        </header>
+        <p class="value">
+          @if (c.discountType === 'percent') {
+            {{ c.discountValue }}% off{{ c.maxDiscountPaise ? ' up to ' : ''
+            }}{{ c.maxDiscountPaise ? (c.maxDiscountPaise | inr) : '' }}
+          } @else {
+            {{ c.discountValue | inr }} off
+          }
+          @if (c.minOrderPaise) {
+            <span class="bb-muted">on {{ c.minOrderPaise | inr }}+</span>
+          }
+        </p>
+        <p class="bb-muted small">{{ c.description }}</p>
+        <p class="bb-muted small">
+          {{ c.validFrom | date: 'mediumDate' }} – {{ c.validUntil | date: 'mediumDate' }}
+          @if (expired(c)) {
+            <span class="expired">Expired</span>
+          }
+        </p>
+        <p class="small">
+          Used {{ c.usedCount }}{{ c.usageLimit ? ' / ' + c.usageLimit : '' }} times ·
+          {{ c.perUserLimit }} per customer
+        </p>
+        <footer>
+          <np-button
+            variant="text"
+            severity="primary"
+            icon="pencil"
+            label="Edit"
+            (clicked)="open(c)"
+          />
+          <button class="bb-btn bb-btn--text" (click)="remove(c)" [disabled]="c.usedCount > 0">
+            <np-icon name="trash-2" />Delete
+          </button>
+        </footer>
+      </article>
+    }
+  </div>
+}

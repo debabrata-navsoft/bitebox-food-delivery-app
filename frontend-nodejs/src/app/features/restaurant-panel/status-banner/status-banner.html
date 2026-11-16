@@ -1,0 +1,16 @@
+@let c = copy();
+<div class="bb-alert banner {{ c.tone }}" role="status">
+  <np-icon [name]="(c.icon) | npIcon" class="mat-icon" matButtonIcon />
+  <div>
+    <strong>{{ c.title }}</strong>
+    <p>{{ c.text }}</p>
+    @if (restaurant().statusReason) {
+      <p class="reason"><strong>Reason:</strong> {{ restaurant().statusReason }}</p>
+    }
+    @if (restaurant().status === 'rejected' && showFixLink()) {
+      <a class="bb-btn bb-btn--outlined bb-btn--small" routerLink="/restaurant/details">Update details</a>
+    } @else if (restaurant().status === 'resubmission_requested' && showFixLink()) {
+      <a class="bb-btn bb-btn--outlined bb-btn--small" routerLink="/restaurant/verification">Open verification</a>
+    }
+  </div>
+</div>

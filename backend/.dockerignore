@@ -1,9 +1,8 @@
-node_modules
-tests
-uploads
-tmp
-coverage
+.venv
+**/__pycache__
+**/*.pyc
 .env
-.env.*
-!.env.example
-*.log
+.pytest_cache
+.mypy_cache
+.ruff_cache
+staticfiles

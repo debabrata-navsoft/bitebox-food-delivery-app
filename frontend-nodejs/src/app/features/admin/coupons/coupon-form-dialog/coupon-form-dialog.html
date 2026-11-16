@@ -1,0 +1,109 @@
+<h2 bbDialogTitle>{{ data ? 'Edit coupon' : 'New coupon' }}</h2>
+<form [formRoot]="form">
+  <div class="bb-dialog__content bb-form">
+    @if (error()) {
+      <div class="bb-alert error" role="alert">
+        <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ error() }}</span>
+      </div>
+    }
+    <div class="bb-form-row">
+      <np-text-input
+        [formField]="form.code"
+        label="Code"
+        autocapitalize="characters"
+        cdkFocusInitial
+        [error]="shownError(form.code)"
+      />
+      <np-button-toggle
+        class="type"
+        [formField]="form.discountType"
+        [options]="discountTypes"
+        ariaLabel="Discount type"
+      />
+    </div>
+    <np-text-input
+      [formField]="form.description"
+      label="Description shown to customers"
+      [error]="shownError(form.description)"
+    />
+    <div class="bb-form-row">
+      <div class="bb-field">
+        <np-input-number
+          [formField]="form.discount"
+          [label]="model().discountType === 'percent' ? 'Discount' : 'Discount amount'"
+          [prefix]="model().discountType === 'percent' ? '' : '₹ '"
+          [suffix]="model().discountType === 'percent' ? ' %' : ''"
+          [maxFractionDigits]="model().discountType === 'percent' ? 0 : 2"
+        />
+        <bb-field-error [field]="form.discount" />
+      </div>
+      @if (model().discountType === 'percent') {
+        <div class="bb-field">
+          <np-input-number
+            [formField]="form.maxDiscount"
+            label="Max discount (optional)"
+            prefix="₹ "
+            [maxFractionDigits]="2"
+          />
+          <bb-field-error [field]="form.maxDiscount" />
+        </div>
+      }
+    </div>
+    <div class="bb-form-row">
+      <div class="bb-field">
+        <np-input-number
+          [formField]="form.minOrder"
+          label="Minimum order"
+          prefix="₹ "
+          [maxFractionDigits]="2"
+        />
+        <bb-field-error [field]="form.minOrder" />
+      </div>
+      <div class="bb-field">
+        <np-input-number
+          [formField]="form.perUserLimit"
+          label="Uses per customer"
+          [maxFractionDigits]="0"
+        />
+        <bb-field-error [field]="form.perUserLimit" />
+      </div>
+    </div>
+    <div class="bb-form-row">
+      <div class="bb-field">
+        <np-calendar
+          [formField]="form.validFrom"
+          label="Valid from"
+          dateFormat="dd M yy"
+          showIcon
+        />
+        <bb-field-error [field]="form.validFrom" />
+      </div>
+      <div class="bb-field">
+        <np-calendar
+          [formField]="form.validUntil"
+          label="Valid until"
+          dateFormat="dd M yy"
+          [minDate]="model().validFrom"
+          showIcon
+        />
+        <bb-field-error [field]="form.validUntil" />
+      </div>
+    </div>
+    <div class="bb-field">
+      <np-input-number
+        [formField]="form.usageLimit"
+        label="Total uses allowed"
+        placeholder="Unlimited"
+        [maxFractionDigits]="0"
+      />
+      <bb-field-error [field]="form.usageLimit" />
+    </div>
+    <np-toggle [formField]="form.isActive" label="Active" />
+  </div>
+  <div class="bb-dialog__actions">
+    <np-button variant="soft" severity="secondary" label="Cancel" (clicked)="ref.close()" />
+    <button class="bb-btn" type="submit" [disabled]="form().submitting()">
+      {{ data ? 'Save' : 'Create' }}
+    </button>
+  </div>
+</form>

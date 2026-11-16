@@ -1,0 +1,20 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--bb-space-7) var(--bb-space-4);
+  color: var(--bb-ink-muted);
+}
+np-icon {
+  --bb-icon-size: 56px;
+  color: var(--bb-amber-600);
+  margin-bottom: var(--bb-space-3);
+}
+h3 {
+  color: var(--bb-ink);
+  margin-bottom: var(--bb-space-2);
+}
+p {
+  max-width: 420px;
+}

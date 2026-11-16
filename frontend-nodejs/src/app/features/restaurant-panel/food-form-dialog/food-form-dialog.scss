@@ -1,0 +1,16 @@
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--bb-space-3);
+  margin-bottom: var(--bb-space-3);
+}
+.prep {
+  width: 140px;
+}
+// A 4:3 preview at full dialog width is ~375px tall; cap it so the dialog stays compact.
+bb-image-upload {
+  display: block;
+  max-width: 280px;
+  margin-top: var(--bb-space-3);
+}

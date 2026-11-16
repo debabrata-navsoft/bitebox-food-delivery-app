@@ -1,0 +1,200 @@
+@use 'breakpoints' as bp;
+
+// Stage tabs scroll sideways on narrow screens instead of wrapping.
+.tabs-scroll {
+  overflow-x: auto;
+  margin-bottom: var(--bb-space-4);
+  padding-bottom: 2px;
+}
+
+.tabs {
+  white-space: nowrap;
+}
+
+.grid {
+  display: grid;
+  gap: var(--bb-space-4);
+  grid-template-columns: minmax(0, 1fr);
+
+  @include bp.tablet-up {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  @include bp.desktop-up {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.order {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bb-space-2);
+  border-top: 4px solid var(--bb-border);
+
+  &.urgent {
+    border-top-color: var(--bb-danger);
+  }
+
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--bb-space-2);
+  }
+
+  // Order numbers stay on one line; the status chip wraps below instead.
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+    white-space: nowrap;
+  }
+}
+
+.when {
+  font-size: 0.8rem;
+}
+
+.customer,
+.note,
+.deadline,
+.waiting {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.88rem;
+
+  np-icon {
+    --bb-icon-size: 18px;
+    flex-shrink: 0;
+  }
+}
+
+.items {
+  list-style: none;
+  margin: 0;
+  padding: var(--bb-space-2) 0;
+  border-block: 1px dashed var(--bb-border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.92rem;
+  }
+}
+
+.qty {
+  font-weight: 700;
+}
+
+.note {
+  align-items: flex-start;
+  padding: var(--bb-space-2);
+  border-radius: var(--bb-radius-sm);
+  background: var(--bb-amber-100);
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+  color: var(--bb-ink-muted);
+
+  strong {
+    color: var(--bb-ink);
+    font-size: 1rem;
+  }
+
+  .pay-paid {
+    color: var(--bb-success);
+    font-weight: 600;
+  }
+}
+
+.deadline {
+  color: var(--bb-ink-muted);
+
+  &.soon {
+    color: var(--bb-danger);
+    font-weight: 700;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: var(--bb-space-2);
+  margin-top: auto;
+  padding-top: var(--bb-space-2);
+
+  button {
+    flex: 1;
+  }
+}
+
+.waiting {
+  margin-top: auto;
+  padding-top: var(--bb-space-2);
+  color: var(--bb-ink-muted);
+}
+
+.history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--bb-space-1) var(--bb-space-3);
+    align-items: center;
+    padding: var(--bb-space-3) var(--bb-space-4);
+    border-bottom: 1px solid var(--bb-border);
+
+    @include bp.tablet-up {
+      grid-template-columns: minmax(0, 1fr) auto auto;
+    }
+  }
+
+  bb-order-status-chip {
+    justify-self: start;
+    @include bp.tablet-up {
+      justify-self: end;
+    }
+  }
+}
+
+.h-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+
+  span {
+    font-size: 0.85rem;
+  }
+}
+
+.reason {
+  color: var(--bb-danger);
+}
+
+.h-total {
+  font-weight: 700;
+  text-align: right;
+}
+
+.pickup-by {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+}
+
+// Phones: every stage stays visible as wrapping pills (global .bb-toggle-wrap), not a scroll strip.
+@include bp.phone-only {
+  .tabs-scroll {
+    overflow: visible;
+  }
+}

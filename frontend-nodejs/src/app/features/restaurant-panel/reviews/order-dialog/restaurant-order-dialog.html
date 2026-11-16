@@ -1,0 +1,79 @@
+@if (data(); as d) {
+  <header class="head">
+    <h2 bbDialogTitle>Order {{ d.orderNumber }}</h2>
+    <p class="meta">
+      {{ d.authorName }} · {{ d.createdAt | date: 'd MMM y' }} · {{ d.reviews.length }}
+      {{ d.reviews.length === 1 ? 'review' : 'reviews' }}
+      @if (d.unanswered) {
+        · <span class="needs">{{ d.unanswered }} without a reply</span>
+      }
+    </p>
+  </header>
+  <div class="bb-dialog__content">
+    <ul class="reviews">
+      @for (r of d.reviews; track r.id) {
+        <li>
+          <h3 class="subject">
+            <np-icon [name]="r.target === 'restaurant' ? 'store' : 'utensils'" class="mat-icon" matButtonIcon />
+            {{ heading(r) }}
+          </h3>
+          <bb-review-card [review]="r" responder="You">
+            @if (replying() === r.id) {
+              <bb-reply-form [review]="r" (saved)="replied(r, $event)" (cancelled)="replying.set(null)" />
+            } @else {
+              <div class="actions">
+                @if (r.response) {
+                  <np-button severity="primary" variant="text" icon="pencil" label="Edit reply" (clicked)="replying.set(r.id)" />
+                  <np-button
+                    variant="text"
+                    severity="danger"
+                    icon="trash-2"
+                    label="Remove reply"
+                    (clicked)="deleteReply(r)"
+                  />
+                } @else {
+                  <np-button severity="primary"
+                    variant="outlined"
+                    icon="message-square-reply"
+                    label="Reply"
+                    [ariaLabel]="'Reply to the ' + heading(r) + ' review'"
+                    (clicked)="replying.set(r.id)"
+                  />
+                }
+                @if (r.reportedByYou) {
+                  <span class="bb-muted reported">Reported</span>
+                } @else {
+                  <np-button
+                    variant="text"
+                    severity="secondary"
+                    icon="flag"
+                    label="Report"
+                    [ariaLabel]="'Report the ' + heading(r) + ' review'"
+                    (clicked)="report(r)"
+                  />
+                }
+              </div>
+            }
+          </bb-review-card>
+        </li>
+      }
+    </ul>
+  </div>
+  <div class="bb-dialog__actions">
+    <np-button variant="soft" severity="secondary" label="Close" (clicked)="ref.close(changed())" />
+  </div>
+} @else if (error(); as message) {
+  <h2 bbDialogTitle class="bb-sr-only">Order reviews</h2>
+  <div class="bb-dialog__content">
+    <div class="bb-alert error" role="alert">
+      <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
+      <span>{{ message }} <button class="bb-link-button" (click)="load()">Retry</button></span>
+    </div>
+  </div>
+  <div class="bb-dialog__actions">
+    <np-button variant="soft" severity="secondary" label="Close" (clicked)="ref.close(false)" />
+  </div>
+} @else {
+  <h2 bbDialogTitle class="bb-sr-only">Order reviews</h2>
+  <div class="bb-dialog__content"><span class="bb-skeleton" style="height: 280px" aria-busy="true"></span></div>
+}

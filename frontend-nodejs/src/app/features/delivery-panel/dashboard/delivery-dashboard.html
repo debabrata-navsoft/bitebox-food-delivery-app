@@ -1,0 +1,366 @@
+<bb-page-header title="Deliveries" subtitle="Go online to receive delivery requests near you.">
+  <a class="bb-btn bb-btn--outlined" routerLink="/delivery/history"><np-icon name="history" />History</a>
+</bb-page-header>
+
+@if (!data()) {
+  @if (loadError(); as message) {
+    <bb-empty-state icon="cloud_off" title="Could not load your dashboard" [message]="message" />
+  } @else {
+    <div class="layout">
+      <span class="bb-skeleton" style="height: 160px"></span>
+      <span class="bb-skeleton" style="height: 260px"></span>
+    </div>
+  }
+} @else {
+  @if (verification(); as v) {
+    <div class="bb-alert {{ v.status === 'rejected' ? 'error' : 'info' }} verify" role="status">
+      <np-icon name="shield-alert" class="mat-icon" matButtonIcon />
+      <span>
+        <strong>{{ verifyCopy[v.status] }}</strong>
+        @if (v.reason) {
+          Reason: {{ v.reason }}
+        }
+      </span>
+      <a class="bb-btn bb-btn--small" routerLink="/delivery/verification">Open verification</a>
+    </div>
+  }
+  <div class="layout">
+    <div class="col">
+      <!-- Availability -->
+      <section
+        class="bb-card status-card"
+        [class.is-online]="online()"
+        aria-labelledby="availability-title"
+      >
+        <div class="status-row">
+          <div>
+            <h2 id="availability-title">{{ online() ? 'You are online' : 'You are offline' }}</h2>
+            <p class="bb-muted">
+              @if (active()) {
+                Finish your current delivery before going offline.
+              } @else if (online()) {
+                Waiting for requests near you{{ gps.lastSharedAt() ? ' · location shared' : '' }}.
+              } @else {
+                Go online to start receiving delivery requests.
+              }
+            </p>
+          </div>
+          <np-toggle
+            class="bb-toggle-success"
+            [label]="online() ? 'Online' : 'Offline'"
+            [checked]="onlineSwitch()"
+            [disabled]="switching() || !profile()?.vehicleType || (online() && !!active())"
+            (checkedChange)="setOnline($event)"
+          />
+        </div>
+        @if (switching()) {
+          <np-progress-bar [indeterminate]="true" [showLabel]="false" size="small" label="Updating availability" />
+        }
+        @if (online() && gps.problem(); as problem) {
+          <div class="bb-alert info" role="status">
+            <np-icon name="locate-off" class="mat-icon" matButtonIcon /><span>{{ problem }}</span>
+          </div>
+        }
+        @if (availabilityError(); as message) {
+          <div class="bb-alert error" role="alert">
+            <np-icon name="map-pin-off" class="mat-icon" matButtonIcon /><span>{{ message }}</span>
+          </div>
+        }
+        <dl class="stats">
+          <div>
+            <dt>Deliveries completed</dt>
+            <dd>{{ profile()?.completedDeliveries ?? 0 }}</dd>
+          </div>
+          <div>
+            <dt>Rating</dt>
+            <dd>
+              @if (profile()?.rating?.count) {
+                <a routerLink="/delivery/reviews">★ {{ profile()!.rating!.average.toFixed(1) }} ({{ profile()!.rating!.count }})</a>
+              } @else {
+                <a routerLink="/delivery/reviews">No ratings yet</a>
+              }
+            </dd>
+          </div>
+          <div class="vehicle">
+            <dt>Vehicle</dt>
+            <dd>
+              @if (profile()?.vehicleType; as v) {
+                {{ vehicleLabel[v]
+                }}{{ profile()?.vehicleNumber ? ' · ' + profile()?.vehicleNumber : '' }}
+                <button class="bb-link-button" (click)="editVehicle()">Change</button>
+              } @else {
+                Not set
+              }
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      @if (!statsUnavailable()) {
+        <section class="figures" aria-labelledby="figures-title">
+          <h2 id="figures-title" class="bb-sr-only">Your earnings</h2>
+          @if (stats(); as st) {
+            <bb-stat-tile
+              icon="wallet"
+              label="Today"
+              [value]="st.today.earningsPaise | inr"
+              [hint]="st.today.deliveries + (st.today.deliveries === 1 ? ' delivery' : ' deliveries')"
+            />
+            <bb-stat-tile
+              icon="calendar-days"
+              label="This week"
+              [value]="st.week.earningsPaise | inr"
+              [hint]="st.week.deliveries + (st.week.deliveries === 1 ? ' delivery' : ' deliveries')"
+            />
+            <bb-stat-tile
+              icon="trophy"
+              label="All time"
+              [value]="st.total.earningsPaise | inr"
+              [hint]="st.total.deliveries + (st.total.deliveries === 1 ? ' delivery' : ' deliveries')"
+            />
+          } @else {
+            @for (i of [1, 2, 3]; track i) {
+              <span class="bb-skeleton" style="height: 96px"></span>
+            }
+          }
+        </section>
+      }
+
+      <!-- Vehicle (required before going online) -->
+      @if (editingVehicle()) {
+        <section class="bb-card" aria-labelledby="vehicle-title">
+          <h2 id="vehicle-title">Your vehicle</h2>
+          <p class="bb-muted">Restaurants and customers see this when you pick up their order.</p>
+          <form class="bb-form" [formRoot]="vehicleForm">
+            <div class="bb-form-row">
+              <div class="bb-field">
+                <np-select
+                  [formField]="vehicleForm.vehicleType"
+                  label="Vehicle"
+                  placeholder="Choose"
+                  [options]="vehicleOptions"
+                />
+                <bb-field-error [field]="vehicleForm.vehicleType" />
+              </div>
+              <np-text-input
+                [formField]="vehicleForm.vehicleNumber"
+                label="Registration number (optional)"
+                placeholder="e.g. KA 01 AB 1234"
+                autocapitalize="characters"
+                [error]="shownError(vehicleForm.vehicleNumber)"
+              />
+            </div>
+            <div class="form-actions">
+              @if (profile()?.vehicleType) {
+                <np-button
+                  variant="text"
+                  severity="secondary"
+                  label="Cancel"
+                  (clicked)="editingVehicle.set(false)"
+                />
+              }
+              <button type="submit" class="bb-btn" [disabled]="vehicleForm().submitting()">
+                Save vehicle
+              </button>
+            </div>
+          </form>
+        </section>
+      }
+    </div>
+
+    <div class="col">
+      @if (active(); as o) {
+        <!-- Delivery in progress -->
+        <section class="bb-card work" aria-labelledby="active-title">
+          <header class="work-head">
+            <h2 id="active-title">Current delivery</h2>
+            <bb-order-status-chip [status]="o.status" />
+          </header>
+          <p class="order-no">{{ o.orderNumber }} · {{ o | itemCount }}</p>
+
+          <ol class="stops">
+            <li [class.done]="o.status !== 'assigned'">
+              <np-icon name="store" class="mat-icon" matButtonIcon />
+              <div>
+                <span class="stop-label">Pickup</span>
+                <strong>{{ o.restaurantSnapshot.name }}</strong>
+                <span>{{ o.restaurantSnapshot.address }}</span>
+                @if (o.restaurantSnapshot.phone; as phone) {
+                  <a class="call" [href]="'tel:' + phone"
+                    ><np-icon name="phone" class="mat-icon" matButtonIcon />Call restaurant</a
+                  >
+                }
+              </div>
+            </li>
+            <li>
+              <np-icon name="map-pin-house" class="mat-icon" matButtonIcon />
+              <div>
+                <span class="stop-label">Drop</span>
+                <strong>{{ o.deliveryAddress.recipientName }}</strong>
+                <span>
+                  {{ o.deliveryAddress.line1
+                  }}{{ o.deliveryAddress.line2 ? ', ' + o.deliveryAddress.line2 : '' }},
+                  {{ o.deliveryAddress.area ? o.deliveryAddress.area + ', ' : ''
+                  }}{{ o.deliveryAddress.city }}
+                </span>
+                @if (o.deliveryAddress.landmark) {
+                  <span class="bb-muted">Landmark: {{ o.deliveryAddress.landmark }}</span>
+                }
+                @if (o.deliveryAddress.phone; as phone) {
+                  <a class="call" [href]="'tel:' + phone"
+                    ><np-icon name="phone" class="mat-icon" matButtonIcon />Call customer</a
+                  >
+                }
+              </div>
+            </li>
+          </ol>
+
+          @if (o.note) {
+            <p class="note"><np-icon name="sticky-note" class="mat-icon" matButtonIcon />{{ o.note }}</p>
+          }
+
+          @if (stops(); as s) {
+            <bb-tracking-map
+              [restaurant]="s.restaurant"
+              [destination]="s.destination"
+              [rider]="myPosition()"
+              [route]="routeToStop()?.path ?? null"
+              [lineFrom]="myPosition() ?? s.restaurant"
+              [label]="'Map: route to ' + (s.toRestaurant ? 'the restaurant' : 'the customer')"
+            />
+            <p class="route-line">
+              @if (routeToStop(); as r) {
+                <np-icon name="route" class="mat-icon" matButtonIcon />
+                {{ r.distanceMeters / 1000 | number: '1.1-1' }} km · about
+                {{ minutes(r.durationSeconds) }} min by road to
+                {{ s.toRestaurant ? 'the restaurant' : 'the customer' }}
+                <span class="bb-muted">(estimate, no live traffic)</span>
+              } @else if (!myPosition()) {
+                <np-icon name="locate" class="mat-icon" matButtonIcon />
+                Waiting for your GPS position…
+              }
+            </p>
+          }
+
+          @let isCod = o.paymentMethod === 'cod' && o.paymentStatus !== 'paid';
+          <div [class]="isCod ? 'cash' : 'paid-online'">
+            <np-icon [name]="isCod ? 'banknote' : 'circle-check'" class="mat-icon" matButtonIcon />
+            <span>{{ isCod ? 'Collect in cash' : 'Paid online · Do not collect cash' }}</span>
+            <strong>{{ o.pricing.totalPaise | inr }}</strong>
+          </div>
+
+          @if (nextStep(); as step) {
+            <p class="hint">{{ step.hint }}</p>
+            <div class="work-actions">
+              @if (directionsUrl(); as url) {
+                <a class="bb-btn bb-btn--outlined" [href]="url" target="_blank" rel="noopener"
+                  ><np-icon name="navigation" />Directions</a
+                >
+              }
+              <np-button
+                class="go"
+                severity="success"
+                [icon]="step.icon | npIcon"
+                [label]="step.label"
+                [loading]="acting()"
+                (clicked)="advance(o)"
+              />
+            </div>
+          }
+        </section>
+      } @else if (offer(); as o) {
+        <!-- Request on offer -->
+        <section class="bb-card work offer" aria-labelledby="offer-title" role="alert">
+          <header class="work-head">
+            <h2 id="offer-title">New delivery request</h2>
+            <span class="countdown" [class.soon]="offerSecondsLeft() <= 15"
+              >{{ offerSecondsLeft() }}s</span
+            >
+          </header>
+          <np-progress-bar [value]="offerProgress()" [showLabel]="false" size="small" label="Time left to accept" />
+
+          <ol class="stops">
+            <li>
+              <np-icon name="store" class="mat-icon" matButtonIcon />
+              <div>
+                <span class="stop-label">Pickup</span>
+                <strong>{{ o.restaurantSnapshot.name }}</strong>
+                <span>{{ o.restaurantSnapshot.address }}</span>
+              </div>
+            </li>
+            <li>
+              <np-icon name="map-pin-house" class="mat-icon" matButtonIcon />
+              <div>
+                <span class="stop-label">Drop</span>
+                <strong>{{ o.deliveryAddress.area || o.deliveryAddress.city }}</strong>
+                <span class="bb-muted">Full address after you accept</span>
+              </div>
+            </li>
+          </ol>
+
+          <dl class="trip">
+            @if (o.estimatedEarningsPaise !== undefined) {
+              <div class="earn">
+                <dt>You earn</dt>
+                <dd>{{ o.estimatedEarningsPaise | inr }}</dd>
+              </div>
+            }
+            @if (o.pickupDistanceMeters != null) {
+              <div>
+                <dt>To pickup</dt>
+                <dd>~{{ o.pickupDistanceMeters / 1000 | number: '1.1-1' }} km</dd>
+              </div>
+            }
+            <div>
+              <dt>Trip</dt>
+              <dd>~{{ o.distanceMeters / 1000 | number: '1.1-1' }} km</dd>
+            </div>
+            <div>
+              <dt>Items</dt>
+              <dd>{{ o | itemCount }}</dd>
+            </div>
+            <div>
+              @let offerCod = o.paymentMethod === 'cod' && o.paymentStatus !== 'paid';
+              <dt>{{ offerCod ? 'Cash to collect' : 'Payment' }}</dt>
+              <dd [class.paid-tag]="!offerCod">{{ offerCod ? (o.pricing.totalPaise | inr) : 'Paid online' }}</dd>
+            </div>
+          </dl>
+          <p class="bb-muted small">
+            Distances are straight lines (you to the restaurant, restaurant to customer); road
+            routes are longer.
+          </p>
+
+          <div class="work-actions">
+            <np-button
+              variant="outlined"
+              severity="secondary"
+              label="Decline"
+              [disabled]="acting() || offerSecondsLeft() === 0"
+              (clicked)="decline(o)"
+            />
+            <np-button
+              class="go"
+              severity="success"
+              icon="check"
+              label="Accept"
+              [disabled]="acting() || offerSecondsLeft() === 0"
+              (clicked)="accept(o)"
+            />
+          </div>
+        </section>
+      } @else {
+        <section class="bb-card idle" aria-live="polite">
+          <np-icon [name]="(online() ? 'radar' : 'bedtime') | npIcon" class="mat-icon" matButtonIcon />
+          <h2>{{ online() ? 'Looking for requests…' : 'No active delivery' }}</h2>
+          <p class="bb-muted">
+            {{
+              online()
+                ? 'Requests from restaurants near you appear here. Accept each one before its timer runs out.'
+                : 'Go online to start receiving requests.'
+            }}
+          </p>
+        </section>
+      }
+    </div>
+  </div>
+}
