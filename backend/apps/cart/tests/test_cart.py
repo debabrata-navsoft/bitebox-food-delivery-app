@@ -72,6 +72,7 @@ def test_tax_on_the_discounted_subtotal() -> None:
         "tax_paise": 1250,
         "coin_discount_paise": 0,
         "total_paise": 25000 + 2500 + 500 + 1250,
+        "delivery_discount_paise": 0,
     }
 
 

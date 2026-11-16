@@ -30,6 +30,11 @@ export const RESTAURANT_ROUTES: Routes = [
     loadComponent: () => import('./menu/restaurant-menu').then((m) => m.RestaurantMenu),
   },
   {
+    path: 'offers',
+    title: 'Offers | BiteBox Restaurant',
+    loadComponent: () => import('./offers/restaurant-offers').then((m) => m.RestaurantOffers),
+  },
+  {
     path: 'reviews',
     title: 'Reviews | BiteBox Restaurant',
     loadComponent: () => import('./reviews/restaurant-reviews').then((m) => m.RestaurantReviews),

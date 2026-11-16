@@ -1,42 +1,42 @@
-@use 'breakpoints' as bp;
-.grid {
-  display: grid;
-  gap: var(--bb-space-3);
-  @include bp.tablet-up {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-  @include bp.desktop-up {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-.coupon {
-  border-left: 4px solid var(--bb-amber);
-  &.inactive {
-    opacity: 0.6;
-    border-left-color: var(--bb-border);
-  }
-  header,
-  footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  p {
-    margin: var(--bb-space-1) 0;
-  }
+.tiles {
+  margin-bottom: var(--bb-space-4);
 }
 .code {
   font-family: ui-monospace, monospace;
-  font-size: 1.1rem;
-  letter-spacing: 0.05em;
-}
-.value {
+  letter-spacing: 0.04em;
   font-weight: 700;
 }
-.small {
-  font-size: 0.85rem;
+.reason {
+  max-width: 220px;
 }
-.expired {
-  color: var(--bb-danger);
+.actions {
+  width: 56px;
+}
+// Pending offers on the "Review offers" link.
+.count {
+  min-width: 1.5em;
+  padding: 0 0.4em;
+  border-radius: 999px;
+  background: var(--bb-brand);
+  color: var(--bb-on-brand);
+  font-size: 0.75rem;
   font-weight: 700;
+  line-height: 1.5em;
+  text-align: center;
+}
+.top {
+  margin-top: var(--bb-space-4);
+  h2 {
+    margin: 0 0 var(--bb-space-2);
+    font-size: 1rem;
+  }
+  ol {
+    margin: 0;
+    padding-left: var(--bb-space-4);
+  }
+  li {
+    display: flex;
+    gap: var(--bb-space-3);
+    padding: var(--bb-space-1) 0;
+  }
 }

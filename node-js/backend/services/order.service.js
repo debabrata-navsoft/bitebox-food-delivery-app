@@ -125,8 +125,9 @@ export async function placeOrder(
       location: address.location,
     },
     pricing: quote.pricing,
+    // The saving, including any delivery fee a free-delivery coupon waived.
     coupon: quote.coupon
-      ? { code: quote.coupon.code, discountPaise: quote.pricing.discountPaise }
+      ? { code: quote.coupon.code, discountPaise: quote.coupon.discountPaise }
       : undefined,
     coins: coinsRedeemed
       ? {
@@ -263,7 +264,7 @@ async function commitOrder(
             coupon: coupon._id,
             user: userId,
             order: order._id,
-            discountPaise: order.pricing.discountPaise,
+            discountPaise: quote.coupon.discountPaise,
           },
         ],
         { session },

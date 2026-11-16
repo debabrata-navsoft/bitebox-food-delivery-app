@@ -157,6 +157,7 @@ def place_order(
                     "platform_fee_paise": pricing["platform_fee_paise"],
                     "tax_paise": pricing["tax_paise"],
                     "coin_discount_paise": pricing["coin_discount_paise"],
+                    "delivery_discount_paise": pricing["delivery_discount_paise"],
                     "coins_redeemed": coins.get("applied") or 0,
                     # Cash orders spend the coins now; online orders hold them until paid.
                     "coins_state": (
@@ -252,8 +253,9 @@ def _commit_order(
         status=PaymentStatus.PENDING,
     )
     if coupon is not None:
+        # The saving, including any delivery fee a free-delivery coupon waived (for analytics).
         CouponRedemption.objects.create(
-            coupon=coupon, user=user, order=order, discount_paise=order.discount_paise
+            coupon=coupon, user=user, order=order, discount_paise=quote["coupon"]["discount_paise"]
         )
 
     # 4. Hold the redeemed coins (cash orders spend them straight away); a short balance stops

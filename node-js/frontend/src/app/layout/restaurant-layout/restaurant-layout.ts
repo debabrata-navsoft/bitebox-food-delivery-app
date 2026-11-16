@@ -22,6 +22,7 @@ export class RestaurantLayout {
     { label: 'Restaurant details', icon: 'storefront', link: '/restaurant/details' },
     { label: 'KYC Verification', icon: 'shield-check', link: '/restaurant/verification' },
     { label: 'Menu', icon: 'menu_book', link: '/restaurant/menu' },
+    { label: 'Offers', icon: 'ticket-percent', link: '/restaurant/offers' },
     { label: 'Reviews', icon: 'star', link: '/restaurant/reviews' },
     { label: 'Earnings', icon: 'account_balance_wallet', link: '/restaurant/earnings' },
     { label: 'Help & support', icon: 'life-buoy', link: '/restaurant/support' },

@@ -22,13 +22,13 @@ import {
   foodsRouter,
   restaurantsRouter,
 } from "./routes/catalog.routes.js";
+import { addressesRouter, cartRouter, ordersRouter } from "./routes/checkout.routes.js";
 import {
-  addressesRouter,
   adminCouponsRouter,
-  cartRouter,
+  adminRestaurantOffersRouter,
   couponsRouter,
-  ordersRouter,
-} from "./routes/checkout.routes.js";
+  myOffersRouter,
+} from "./routes/coupon.routes.js";
 import {
   adminDeliveryPartnersRouter,
   adminOrdersRouter,
@@ -134,6 +134,7 @@ export function createApp(options = {}) {
   app.use("/api/v1/auth", createAuthRouter(options.rateLimits));
   app.use("/api/v1/admin/users", adminUsersRoutes);
   app.use("/api/v1/admin/coupons", adminCouponsRouter);
+  app.use("/api/v1/admin/restaurant-offers", adminRestaurantOffersRouter);
   app.use("/api/v1/admin/orders", adminOrdersRouter);
   app.use("/api/v1/admin/delivery-partners", adminDeliveryPartnersRouter);
   app.use("/api/v1/admin/payments", adminPaymentsRouter);
@@ -154,6 +155,7 @@ export function createApp(options = {}) {
   app.use("/api/v1/restaurants", restaurantsRouter);
   app.use("/api/v1/categories", categoriesRouter);
   app.use("/api/v1/foods", foodsRouter);
+  app.use("/api/v1/my/restaurant/offers", myOffersRouter);
   app.use("/api/v1/my/restaurant", myRestaurantRoutes);
   app.use("/api/v1/uploads", uploadsRoutes);
   app.use("/api/v1/cart", cartRouter);

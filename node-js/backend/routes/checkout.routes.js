@@ -3,8 +3,7 @@ import * as c from "../controllers/checkout.controller.js";
 import * as orders from "../controllers/order-management.controller.js";
 import { orderInvoiceFor } from "../controllers/partner-finance.controller.js";
 import { env } from "../config/env.js";
-import { PERMISSIONS } from "../config/permissions.js";
-import { authenticate, authorize, can } from "../middleware/auth.middleware.js";
+import { authenticate, authorize } from "../middleware/auth.middleware.js";
 import { createRateLimiter } from "../middleware/security.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
 import { ROLES } from "../models/user.model.js";
@@ -99,15 +98,3 @@ export const ordersRouter = Router()
     orders.customerCancel,
   );
 
-/** /api/v1/coupons (signed-in customers) */
-export const couponsRouter = Router()
-  .use(...customerOnly)
-  .get("/available", validate(rules.availableCouponRules), c.availableCoupons);
-
-/** /api/v1/admin/coupons */
-export const adminCouponsRouter = Router()
-  .use(authenticate, can(PERMISSIONS.CATALOG_MANAGE))
-  .get("/", validate(rules.adminCouponListRules), c.adminListCoupons)
-  .post("/", validate(rules.createCouponRules), c.adminCreateCoupon)
-  .patch("/:id", validate(rules.updateCouponRules), c.adminUpdateCoupon)
-  .delete("/:id", validate([mongoIdParam()]), c.adminDeleteCoupon);

@@ -86,6 +86,8 @@ class Order(BaseModel):
     coin_discount_paise = models.BigIntegerField(
         default=0
     )  # Node pricing.coinDiscountPaise (= coins.discountPaise)
+    # The delivery fee a free-delivery coupon waived (already left out of delivery_fee_paise).
+    delivery_discount_paise = models.BigIntegerField(default=0)
     total_paise = models.BigIntegerField()
     coupon_code = models.CharField(max_length=30, blank=True, default="")
 

@@ -112,6 +112,8 @@ export const env = Object.freeze({
   restaurantKycRequired: !isTest && process.env.RESTAURANT_KYC_REQUIRED !== "false",
   // A rider goes online only once approved: documents, bank account and address.
   riderKycRequired: !isTest && process.env.RIDER_KYC_REQUIRED !== "false",
+  // Restaurant offers wait for an admin's approval before customers see them (coupon.service.js).
+  offerApprovalRequired: process.env.OFFER_APPROVAL_REQUIRED !== "false",
   publicBaseUrl: (
     process.env.PUBLIC_BASE_URL || `http://localhost:${integer("PORT", 5000)}`
   ).replace(/\/$/, ""),

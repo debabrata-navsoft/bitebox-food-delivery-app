@@ -14,6 +14,7 @@ import { uniqueSlug } from "../utils/slug.js";
 import { env } from "../config/env.js";
 import { User } from "../models/user.model.js";
 import * as kyc from "./kyc.service.js";
+import { bestOffers } from "./coupon.service.js";
 
 const OWNER_FIELDS = [
   "name",
@@ -354,8 +355,10 @@ export async function listPublic(query, pagination) {
       ? json
       : { ...json, distanceMeters: Math.round(raw.distanceMeters) };
   });
+  // Each card's offer badge: the restaurant's best live offer.
+  const offers = await bestOffers(items.map((r) => r.id));
   return {
-    items: items.map(publicView),
+    items: items.map((r) => ({ ...publicView(r), offer: offers[r.id] ?? null })),
     pagination: paginationMeta(pagination, result.total[0]?.count ?? 0),
   };
 }

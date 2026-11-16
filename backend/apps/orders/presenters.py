@@ -105,6 +105,7 @@ def order_json(order: Order) -> dict[str, Any]:
             "tax_paise": order.tax_paise,
             "coin_discount_paise": order.coin_discount_paise,
             "total_paise": order.total_paise,
+            "delivery_discount_paise": order.delivery_discount_paise,
         },
         "coins": {
             "redeemed": order.coins_redeemed,

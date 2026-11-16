@@ -78,6 +78,7 @@ describe("pricing rules", () => {
       taxPaise: 1250, // 5% of 25000
       coinDiscountPaise: 0,
       totalPaise: 25000 + 2500 + 500 + 1250,
+      deliveryDiscountPaise: 0,
     });
   });
 

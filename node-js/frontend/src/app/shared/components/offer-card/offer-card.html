@@ -1,0 +1,24 @@
+<span class="side" aria-hidden="true">
+  <strong>{{ side().big }}</strong>
+  <small>{{ side().small }}</small>
+</span>
+<div class="body">
+  <strong class="title">{{ title() }}</strong>
+  @if (title() !== discount()) {
+    <span class="detail">{{ discount() }}</span>
+  }
+  @if (offer().minOrderPaise) {
+    <span class="detail strong">Min order {{ offer().minOrderPaise | inr }}</span>
+  }
+  @if (items(); as items) {
+    <span class="detail">On {{ items }}</span>
+  }
+  @if (offer().audience === 'new') {
+    <span class="detail">New customers only</span>
+  }
+  <ng-content select="[offerNote]" />
+  @if (offer().code) {
+    <span class="code">{{ offer().code }}</span>
+  }
+</div>
+<ng-content />

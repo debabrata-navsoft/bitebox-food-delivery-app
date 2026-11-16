@@ -1148,6 +1148,16 @@ np-time-picker .time-picker-field {
   }
 }
 
+// A small uppercase heading between groups of fields in a long form ("Discount", "Limits and dates").
+.bb-form-section {
+  margin: var(--bb-space-3) 0 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bb-ink-muted);
+}
+
 // Small links under a form step, e.g. "Resend code" and "Change details".
 .bb-form-links {
   display: flex;

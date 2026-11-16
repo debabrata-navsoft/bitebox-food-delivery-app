@@ -2,15 +2,21 @@ import { PRICING } from "../config/pricing.js";
 import { DISCOUNT_TYPES } from "../models/coupon.model.js";
 
 /** Coupon discount for a subtotal, never more than the subtotal itself. */
-export function couponDiscount(coupon, subtotalPaise) {
-  if (!coupon) return 0;
+/**
+ * The food discount. `basePaise` is what the coupon applies to (the lines in its categories or
+ * dishes; the whole subtotal by default). Never more than that base; percentages are capped by
+ * maxDiscountPaise; free-delivery coupons take nothing off the food.
+ */
+export function couponDiscount(coupon, subtotalPaise, basePaise = null) {
+  if (!coupon || coupon.discountType === DISCOUNT_TYPES.FREE_DELIVERY) return 0;
+  const base = basePaise === null ? subtotalPaise : Math.min(basePaise, subtotalPaise);
   let discount =
     coupon.discountType === DISCOUNT_TYPES.PERCENT
-      ? Math.floor((subtotalPaise * coupon.discountValue) / 100)
+      ? Math.floor((base * coupon.discountValue) / 100)
       : coupon.discountValue;
   if (coupon.maxDiscountPaise)
     discount = Math.min(discount, coupon.maxDiscountPaise);
-  return Math.max(0, Math.min(discount, subtotalPaise));
+  return Math.max(0, Math.min(discount, base));
 }
 
 export function deliveryFee(distanceMeters, discountedSubtotalPaise) {
@@ -28,11 +34,14 @@ export function computePricing({
   coupon = null,
   distanceMeters = null,
   coinDiscountPaise = 0,
+  couponBasePaise = null,
 }) {
-  const discountPaise = couponDiscount(coupon, subtotalPaise);
+  const discountPaise = couponDiscount(coupon, subtotalPaise, couponBasePaise);
   const discounted = subtotalPaise - discountPaise;
-  const deliveryFeePaise =
-    distanceMeters === null ? 0 : deliveryFee(distanceMeters, discounted);
+  const fee = distanceMeters === null ? 0 : deliveryFee(distanceMeters, discounted);
+  // A free-delivery coupon waives the fee; the waived amount is shown separately.
+  const deliveryDiscountPaise = coupon?.discountType === DISCOUNT_TYPES.FREE_DELIVERY ? fee : 0;
+  const deliveryFeePaise = fee - deliveryDiscountPaise;
   const taxPaise = Math.round(
     (discounted * PRICING.foodTaxBasisPoints) / 10_000,
   );
@@ -48,5 +57,6 @@ export function computePricing({
     taxPaise,
     coinDiscountPaise: coins,
     totalPaise: beforeCoins - coins,
+    deliveryDiscountPaise,
   };
 }

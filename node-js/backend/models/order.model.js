@@ -121,6 +121,8 @@ const orderSchema = new mongoose.Schema(
       // Paid with BiteBox coins (platform-funded; comes off the payable total, not the food value).
       coinDiscountPaise: { type: Number, default: 0, min: 0 },
       totalPaise: { type: Number, required: true },
+      // The delivery fee a free-delivery coupon waived (already left out of deliveryFeePaise).
+      deliveryDiscountPaise: { type: Number, default: 0, min: 0 },
     },
     coupon: { code: String, discountPaise: Number },
     coins: {

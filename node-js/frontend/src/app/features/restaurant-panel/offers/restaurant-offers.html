@@ -1,0 +1,100 @@
+<bb-page-header title="Offers" subtitle="Discounts for your restaurant. BiteBox reviews each offer before customers see it.">
+  <np-button severity="primary" icon="plus" label="New offer" (clicked)="open()" />
+</bb-page-header>
+
+@if (totals(); as s) {
+  <section class="bb-grid cols-4 tiles" aria-label="Offer totals">
+    <bb-stat-tile icon="ticket-percent" label="Live now" [value]="s.active" [hint]="s.scheduled + ' scheduled'" />
+    <bb-stat-tile icon="hourglass" label="Awaiting approval" [value]="s.pending" [hint]="s.draft + (s.draft === 1 ? ' draft · ' : ' drafts · ') + s.rejected + ' rejected'" />
+    <bb-stat-tile icon="shopping-bag" label="Orders with an offer" [value]="s.redemptions.toLocaleString('en-IN')" />
+    <bb-stat-tile icon="receipt-indian-rupee" label="Discount given" [value]="formatPaise(s.discountGivenPaise) || '₹0'" />
+  </section>
+}
+
+<div class="bb-filters">
+  <np-text-input [formField]="filters.search" placeholder="Search by code or name" ariaLabel="Search offers" icon="search" clearable />
+  <np-select [formField]="filters.status" ariaLabel="Status" [options]="statusOptions" />
+</div>
+
+@if (list.error(); as message) {
+  <div class="bb-alert error" role="alert">
+    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
+    <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
+  </div>
+}
+
+<div class="bb-card bb-list-card" [attr.aria-busy]="list.loading()">
+  @if (list.showSkeleton()) {
+    @for (i of [1, 2, 3]; track i) {
+      <span class="bb-skeleton row"></span>
+    }
+  } @else if (list.empty()) {
+    <bb-empty-state icon="ticket-percent" title="No offers yet" message="Create an offer to bring in more orders.">
+      <np-button severity="primary" label="Create an offer" (clicked)="open()" />
+    </bb-empty-state>
+  } @else {
+    <div class="bb-table-scroll" [class.bb-dim]="list.loading()">
+      <table class="bb-table">
+        <thead>
+          <tr>
+            <th scope="col">Offer</th>
+            <th scope="col">Discount</th>
+            <th scope="col">Dishes</th>
+            <th scope="col">Runs</th>
+            <th scope="col" class="num">Used</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="actions"><span class="bb-sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (o of list.data()!.items; track o.id) {
+            <tr>
+              <td>
+                <button type="button" class="bb-link-button code" (click)="open(o)">{{ o.code }}</button>
+                @if (o.name || o.description) {
+                  <span class="sub">{{ o.name || o.description }}</span>
+                }
+              </td>
+              <td>
+                {{ discountLabel(o) }}
+                <span class="sub">{{ conditionsLabel(o) }}</span>
+              </td>
+              <td>{{ itemsLabel(o) ?? 'Whole menu' }}</td>
+              <td>{{ o.validFrom | date: 'd MMM y' }} – {{ o.validUntil | date: 'd MMM y' }}</td>
+              <td class="num">
+                {{ o.usedCount.toLocaleString('en-IN') }}{{ o.usageLimit ? ' / ' + o.usageLimit.toLocaleString('en-IN') : '' }}
+              </td>
+              <td>
+                <span class="bb-badge {{ statusTone[o.status] }}">{{ statusLabel[o.status] }}</span>
+                @if (o.status === 'rejected' && o.rejectionReason) {
+                  <span class="sub reason">{{ o.rejectionReason }}</span>
+                }
+              </td>
+              <td class="actions">
+                <np-button
+                  variant="text"
+                  severity="secondary"
+                  icon="ellipsis-vertical"
+                  label=""
+                  [ariaLabel]="'Actions for ' + o.code"
+                  [disabled]="busy() === o.id"
+                  (clicked)="toggleMenu(menu, $event)"
+                />
+                <np-menu #menu class="bb-menu-compact" [popup]="true" [model]="menus().get(o.id) ?? []" />
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <np-pagination
+      variant="compact"
+      [page]="list.data()!.pagination.page"
+      [rows]="list.data()!.pagination.limit"
+      [totalRecords]="list.data()!.pagination.total"
+      [rowsOptions]="[20, 50, 100]"
+      (pageChange)="list.goTo($event)"
+      (rowsChange)="list.goTo(1, $event)"
+    />
+  }
+</div>

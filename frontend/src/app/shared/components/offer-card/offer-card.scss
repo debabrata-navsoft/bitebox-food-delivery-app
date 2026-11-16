@@ -1,0 +1,73 @@
+// The checkout coupon look: dashed amber card, the discount on a side panel, the code as a tag.
+:host {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-space-3);
+  border: 1px dashed var(--bb-amber-600);
+  border-radius: var(--bb-radius-sm);
+  padding: var(--bb-space-2) var(--bb-space-3) var(--bb-space-2) var(--bb-space-2);
+  background: var(--bb-amber-100);
+}
+:host(.locked) {
+  border-color: var(--bb-border);
+  background: var(--bb-surface-alt);
+  .side {
+    background: var(--bb-border);
+    color: var(--bb-ink-muted);
+  }
+}
+.side {
+  flex: 0 0 78px;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--bb-space-2);
+  border-radius: 6px;
+  background: linear-gradient(160deg, #ffd27a 0%, var(--bb-amber) 100%);
+  color: var(--bb-on-accent);
+  text-align: center;
+  strong {
+    font-size: 1.3rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+  small {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+  }
+}
+.body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.title {
+  color: var(--bb-ink);
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+.detail {
+  font-size: 0.85rem;
+  color: var(--bb-ink-muted);
+  &.strong {
+    color: var(--bb-ink);
+    font-weight: 600;
+  }
+}
+.code {
+  margin-top: 4px;
+  padding: 1px 8px;
+  border: 1px dashed var(--bb-plum);
+  border-radius: 4px;
+  background: var(--bb-surface);
+  color: var(--bb-plum);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}

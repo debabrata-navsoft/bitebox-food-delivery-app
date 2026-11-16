@@ -51,8 +51,9 @@ export class CouponDialog {
     return Math.max(0, o.minOrderPaise - (this.cart.quote()?.pricing.subtotalPaise ?? 0));
   }
 
-  /** The discount on the side panel: "40%" or "₹50". */
+  /** The discount on the side panel: "40%", "₹50" or "Free delivery". */
   protected amount(o: CouponOffer): string {
+    if (o.discountType === 'free_delivery') return 'Free delivery';
     return o.discountType === 'percent' ? `${o.discountValue}%` : formatPaise(o.discountValue);
   }
 

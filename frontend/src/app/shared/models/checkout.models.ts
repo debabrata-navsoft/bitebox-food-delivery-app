@@ -85,14 +85,45 @@ export interface DeliveryAddress extends Omit<AddressInput, 'location'> {
   isDefault: boolean;
 }
 
+export type DiscountType = 'percent' | 'flat' | 'free_delivery';
+export type CouponAudience = 'all' | 'new';
+export type CouponSource = 'platform' | 'restaurant';
+export type ApprovalStatus = 'draft' | 'pending' | 'approved' | 'rejected';
+/** One word for lists, worked out by the API from approval, the switch, dates and uses. */
+export type CouponStatus =
+  | 'active'
+  | 'scheduled'
+  | 'expired'
+  | 'paused'
+  | 'draft'
+  | 'pending'
+  | 'rejected';
+
+export interface NamedRef {
+  id: string;
+  name: string;
+  slug?: string;
+}
+
 export interface CouponOffer {
+  id?: string;
   code: string;
-  description?: string;
-  discountType: 'percent' | 'flat';
+  name?: string | null;
+  description?: string | null;
+  terms?: string | null;
+  discountType: DiscountType;
+  /** Percent (1-100), paise for flat, 0 for free delivery. */
   discountValue: number;
-  maxDiscountPaise?: number;
+  maxDiscountPaise?: number | null;
   minOrderPaise: number;
   validUntil: string;
+  audience?: CouponAudience;
+  source?: CouponSource;
+  bannerUrl?: string | null;
+  restaurant?: NamedRef | string | null;
+  restaurants?: NamedRef[];
+  categories?: NamedRef[];
+  foodItems?: NamedRef[];
 }
 
 export interface AdminCoupon extends CouponOffer {
@@ -102,16 +133,23 @@ export interface AdminCoupon extends CouponOffer {
   usageLimit: number | null;
   usedCount: number;
   perUserLimit: number;
-  restaurant: { _id?: string; id?: string; name: string; slug: string } | string | null;
+  restaurant: NamedRef | string | null;
+  status: CouponStatus;
+  approvalStatus: ApprovalStatus;
+  rejectionReason?: string | null;
+  createdBy?: string | null;
   createdAt: string;
+  updatedAt?: string;
 }
 
 /** Admin create/update payload. `null` clears the optional cap/limit. */
 export interface AdminCouponInput {
   code?: string;
+  name?: string;
   description?: string;
-  discountType?: 'percent' | 'flat';
-  discountValue?: number;
+  terms?: string;
+  discountType?: DiscountType;
+  discountValue?: number | null;
   maxDiscountPaise?: number | null;
   minOrderPaise?: number;
   validFrom?: string;
@@ -119,7 +157,48 @@ export interface AdminCouponInput {
   isActive?: boolean;
   usageLimit?: number | null;
   perUserLimit?: number;
+  audience?: CouponAudience;
+  restaurants?: string[];
+  categories?: string[];
+  foodItems?: string[];
 }
+
+export interface CouponQuery {
+  search?: string;
+  status?: CouponStatus;
+  owner?: CouponSource;
+  sort?: 'newest' | 'oldest' | 'expiring' | 'most_used' | 'code';
+  page?: number;
+  limit?: number;
+}
+
+/** Counts by status plus redemptions (aggregates only). */
+export type CouponAnalytics = Record<CouponStatus, number> & {
+  total: number;
+  redemptions: number;
+  discountGivenPaise: number;
+  top: { id: string; code: string; redemptions: number; discountPaise: number }[];
+};
+
+export const COUPON_STATUS_LABEL: Record<CouponStatus, string> = {
+  active: 'Active',
+  scheduled: 'Scheduled',
+  expired: 'Expired',
+  paused: 'Paused',
+  draft: 'Draft',
+  pending: 'Awaiting approval',
+  rejected: 'Rejected',
+};
+
+export const COUPON_STATUS_TONE: Record<CouponStatus, string> = {
+  active: 'tone-good',
+  scheduled: 'tone-info',
+  expired: '',
+  paused: 'tone-warn',
+  draft: '',
+  pending: 'tone-warn',
+  rejected: 'tone-bad',
+};
 
 export type OrderStatus =
   | 'pending'

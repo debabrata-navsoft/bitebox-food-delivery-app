@@ -45,6 +45,7 @@ PUBLIC = {
     ("api/v1/restaurants/cuisines", "get"),
     ("api/v1/restaurants/<str:slug_or_id>", "get"),
     ("api/v1/restaurants/<str:slug_or_id>/menu", "get"),
+    ("api/v1/restaurants/<str:slug_or_id>/offers", "get"),
     ("api/v1/restaurants/<str:slug_or_id>/reviews", "get"),
     ("api/v1/categories", "get"),
     ("api/v1/foods", "get"),

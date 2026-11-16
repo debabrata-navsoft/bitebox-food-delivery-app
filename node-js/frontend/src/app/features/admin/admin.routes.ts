@@ -45,6 +45,12 @@ export const ADMIN_ROUTES: Routes = [
     canActivate: [can('catalog:manage')],
     loadComponent: () => import('./coupons/admin-coupons').then((m) => m.AdminCoupons),
   },
+  {
+    path: 'coupons/review',
+    title: 'Review restaurant offers | BiteBox Admin',
+    canActivate: [can('catalog:manage')],
+    loadComponent: () => import('./coupons/offer-review/offer-review').then((m) => m.OfferReview),
+  },
 
   {
     path: 'promotions',

@@ -11,7 +11,8 @@ from django.db import IntegrityError, transaction
 from apps.accounts.models import User
 from apps.coins import quote as coins
 from apps.coupons.models import Coupon
-from apps.coupons.services import assert_eligible
+from apps.coupons.services import Line as CouponLine
+from apps.coupons.services import assert_eligible, coupon_base
 from apps.customers.models import Address
 from apps.customers.services import address_json
 from apps.menus.models import FoodItem
@@ -114,11 +115,23 @@ def apply_coupon(user: User, code: str) -> None:
     quote = build_quote(user)
     if quote["cart"] is None:
         raise ApiError.bad_request("Add dishes to your cart first")
+    # The engine needs each orderable line's dish and category (for category and dish coupons).
+    items = [i for i in quote["cart"]["items"] if i["is_available"]]
+    category_of = {
+        str(pk): category
+        for pk, category in FoodItem.objects.filter(
+            pk__in=[i["food_item_id"] for i in items]
+        ).values_list("pk", "category_id")
+    }
     assert_eligible(
         code,
         user_id=user.pk,
         restaurant_id=quote["cart"]["restaurant"]["id"],
         subtotal_paise=quote["pricing"]["subtotal_paise"],
+        lines=[
+            CouponLine(i["food_item_id"], category_of.get(i["food_item_id"]), i["line_total_paise"])
+            for i in items
+        ],
     )
     with transaction.atomic():
         cart = _cart_for_update(user)
@@ -255,6 +268,12 @@ def build_quote(user: User, address_id: uuid.UUID | None = None) -> dict[str, An
             }
         )
 
+    # What the coupon engine sees: each orderable line's dish, category and total.
+    engine_lines = [
+        CouponLine(line.food_item_id, line.food_item.category_id, entry["line_total_paise"])
+        for line, entry in zip(lines_qs, lines, strict=True)
+        if entry["is_available"]
+    ]
     coupon: Coupon | None = None
     coupon_error = None
     if cart.coupon_code:
@@ -264,6 +283,7 @@ def build_quote(user: User, address_id: uuid.UUID | None = None) -> dict[str, An
                 user_id=user.pk,
                 restaurant_id=cart.restaurant_id,
                 subtotal_paise=subtotal,
+                lines=engine_lines,
             )
         except ApiError as error:
             coupon_error = {"code": cart.coupon_code, "message": error.message}
@@ -285,14 +305,16 @@ def build_quote(user: User, address_id: uuid.UUID | None = None) -> dict[str, An
                 }
             )
 
+    # A category or dish coupon discounts only those lines.
+    base = coupon_base(coupon, engine_lines) if coupon else None
     wallet = coins.load_cart_coins(user.pk)
     coin_quote = coins.redemption_quote(
         wallet["config"],
         wallet["available"],
         cart.coins_to_redeem or 0,
-        subtotal - coupon_discount(coupon, subtotal),
+        subtotal - coupon_discount(coupon, subtotal, base),
     )
-    pricing = compute_pricing(subtotal, coupon, distance_m, coin_quote["discount_paise"])
+    pricing = compute_pricing(subtotal, coupon, distance_m, coin_quote["discount_paise"], base)
 
     return {
         "cart": {
@@ -305,7 +327,9 @@ def build_quote(user: User, address_id: uuid.UUID | None = None) -> dict[str, An
         "coupon": {
             "code": coupon.code,
             "description": coupon.description or None,
-            "discount_paise": pricing.discount_paise,
+            "discount_type": coupon.discount_type,
+            # What the customer saves: food discount plus any delivery fee it waived.
+            "discount_paise": pricing.discount_paise + pricing.delivery_discount_paise,
         }
         if coupon
         else None,

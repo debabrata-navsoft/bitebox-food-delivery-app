@@ -1,65 +1,130 @@
-<bb-page-header title="Coupons" subtitle="Discount codes customers can apply at checkout.">
+<bb-page-header title="Coupons & offers" subtitle="BiteBox coupons and the offers restaurants run.">
+  <a class="bb-btn bb-btn--outlined" routerLink="review">
+    <np-icon name="clipboard-check" class="mat-icon" matButtonIcon />
+    Review offers
+    @if (totals()?.pending; as pending) {
+      <span class="count" [attr.aria-label]="pending + ' waiting'">{{ pending }}</span>
+    }
+  </a>
   <np-button severity="primary" icon="plus" label="New coupon" (clicked)="open()" />
 </bb-page-header>
-@if (error()) {
+
+@if (totals(); as s) {
+  <section class="bb-grid cols-4 tiles" aria-label="Coupon totals">
+    <bb-stat-tile icon="ticket-percent" label="All coupons" [value]="s.total" [hint]="s.active + ' active now'" />
+    <bb-stat-tile icon="calendar-clock" label="Scheduled" [value]="s.scheduled" [hint]="s.paused + ' paused'" />
+    <bb-stat-tile icon="calendar-x" label="Expired" [value]="s.expired" />
+    <bb-stat-tile
+      icon="receipt-indian-rupee"
+      label="Redemptions"
+      [value]="s.redemptions.toLocaleString('en-IN')"
+      [hint]="(formatPaise(s.discountGivenPaise) || '₹0') + ' given in discounts'"
+    />
+  </section>
+}
+
+<div class="bb-filters">
+  <np-text-input [formField]="filters.search" placeholder="Search by code or name" ariaLabel="Search coupons" icon="search" clearable />
+  <np-select [formField]="filters.status" ariaLabel="Status" [options]="statusOptions" />
+  <np-select [formField]="filters.owner" ariaLabel="Created by" [options]="ownerOptions" />
+  <np-select [formField]="filters.sort" ariaLabel="Sort" [options]="sortOptions" />
+</div>
+
+@if (list.error(); as message) {
   <div class="bb-alert error" role="alert">
-    <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ error() }}</span>
+    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
+    <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
   </div>
 }
-@if (loading()) {
-  <span class="bb-skeleton" style="height: 240px"></span>
-} @else if (coupons().length === 0) {
-  <bb-empty-state icon="local_offer" title="No coupons yet">
-    <np-button severity="primary" label="Create a coupon" (clicked)="open()" />
-  </bb-empty-state>
-} @else {
-  <div class="grid">
-    @for (c of coupons(); track c.id) {
-      <article class="bb-card coupon" [class.inactive]="!c.isActive || expired(c)">
-        <header>
-          <strong class="code">{{ c.code }}</strong>
-          <np-toggle
-            [checked]="c.isActive"
-            (checkedChange)="toggle(c, $event)"
-            class="bb-label-hidden"
-            [label]="'Active: ' + c.code"
-          />
-        </header>
-        <p class="value">
-          @if (c.discountType === 'percent') {
-            {{ c.discountValue }}% off{{ c.maxDiscountPaise ? ' up to ' : ''
-            }}{{ c.maxDiscountPaise ? (c.maxDiscountPaise | inr) : '' }}
-          } @else {
-            {{ c.discountValue | inr }} off
-          }
-          @if (c.minOrderPaise) {
-            <span class="bb-muted">on {{ c.minOrderPaise | inr }}+</span>
-          }
-        </p>
-        <p class="bb-muted small">{{ c.description }}</p>
-        <p class="bb-muted small">
-          {{ c.validFrom | date: 'mediumDate' }} – {{ c.validUntil | date: 'mediumDate' }}
-          @if (expired(c)) {
-            <span class="expired">Expired</span>
-          }
-        </p>
-        <p class="small">
-          Used {{ c.usedCount }}{{ c.usageLimit ? ' / ' + c.usageLimit : '' }} times ·
-          {{ c.perUserLimit }} per customer
-        </p>
-        <footer>
-          <np-button
-            variant="text"
-            severity="primary"
-            icon="pencil"
-            label="Edit"
-            (clicked)="open(c)"
-          />
-          <button class="bb-btn bb-btn--text" (click)="remove(c)" [disabled]="c.usedCount > 0">
-            <np-icon name="trash-2" />Delete
-          </button>
-        </footer>
-      </article>
+
+<div class="bb-card bb-list-card" [attr.aria-busy]="list.loading()">
+  @if (list.showSkeleton()) {
+    @for (i of [1, 2, 3, 4]; track i) {
+      <span class="bb-skeleton row"></span>
     }
-  </div>
+  } @else if (list.empty()) {
+    <bb-empty-state icon="ticket-percent" title="No coupons here" message="Try other filters, or create a coupon.">
+      <np-button severity="primary" label="Create a coupon" (clicked)="open()" />
+    </bb-empty-state>
+  } @else {
+    <div class="bb-table-scroll" [class.bb-dim]="list.loading()">
+      <table class="bb-table">
+        <thead>
+          <tr>
+            <th scope="col">Coupon</th>
+            <th scope="col">Discount</th>
+            <th scope="col">Applies to</th>
+            <th scope="col">Valid</th>
+            <th scope="col" class="num">Used</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="actions"><span class="bb-sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of list.data()!.items; track c.id) {
+            <tr>
+              <td>
+                <button type="button" class="bb-link-button code" (click)="open(c)">{{ c.code }}</button>
+                <span class="sub">{{ c.name || c.description ? (c.name || c.description) + ' · ' : '' }}{{ owner(c) }}</span>
+              </td>
+              <td>
+                {{ discountLabel(c) }}
+                <span class="sub">{{ conditionsLabel(c) }}</span>
+              </td>
+              <td>{{ scopeLabel(c) }}</td>
+              <td>
+                {{ c.validFrom | date: 'd MMM y' }} – {{ c.validUntil | date: 'd MMM y' }}
+              </td>
+              <td class="num">
+                {{ c.usedCount.toLocaleString('en-IN') }}{{ c.usageLimit ? ' / ' + c.usageLimit.toLocaleString('en-IN') : '' }}
+                <span class="sub">{{ c.perUserLimit }} per customer</span>
+              </td>
+              <td>
+                <span class="bb-badge {{ statusTone[c.status] }}">{{ statusLabel[c.status] }}</span>
+                @if (c.status === 'rejected' && c.rejectionReason) {
+                  <span class="sub reason">{{ c.rejectionReason }}</span>
+                }
+              </td>
+              <td class="actions">
+                <np-button
+                  variant="text"
+                  severity="secondary"
+                  icon="ellipsis-vertical"
+                  label=""
+                  [ariaLabel]="'Actions for ' + c.code"
+                  [disabled]="busy() === c.id"
+                  (clicked)="toggleMenu(menu, $event)"
+                />
+                <np-menu #menu class="bb-menu-compact" [popup]="true" [model]="menus().get(c.id) ?? []" />
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <np-pagination
+      variant="compact"
+      [page]="list.data()!.pagination.page"
+      [rows]="list.data()!.pagination.limit"
+      [totalRecords]="list.data()!.pagination.total"
+      [rowsOptions]="[20, 50, 100]"
+      (pageChange)="list.goTo($event)"
+      (rowsChange)="list.goTo(1, $event)"
+    />
+  }
+</div>
+
+@if (totals()?.top?.length) {
+  <section class="bb-card top" aria-labelledby="top-coupons">
+    <h2 id="top-coupons">Most used</h2>
+    <ol>
+      @for (t of totals()!.top; track t.id) {
+        <li>
+          <span class="code">{{ t.code }}</span>
+          <span>{{ t.redemptions.toLocaleString('en-IN') }} uses</span>
+          <span class="bb-muted">{{ t.discountPaise | inr }} off</span>
+        </li>
+      }
+    </ol>
+  </section>
 }

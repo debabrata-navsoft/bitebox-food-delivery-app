@@ -312,11 +312,18 @@ def list_public(query: dict[str, Any], page: Page) -> dict[str, Any]:
         )
 
     items, meta = paginate(qs.order_by(*SORTS[sort]), page)
+    # Each card's offer badge: the restaurant's best live offer (apps/coupons imports this module).
+    from apps.coupons.services import best_offers
+
+    offers = best_offers(r.pk for r in items)
     return {
         "items": [
-            restaurant_json(
-                r, owner="public", distance_m=getattr(r, "distance_m", None) if geo else None
-            )
+            {
+                **restaurant_json(
+                    r, owner="public", distance_m=getattr(r, "distance_m", None) if geo else None
+                ),
+                "offer": offers.get(str(r.pk)),
+            }
             for r in items
         ],
         "pagination": meta,

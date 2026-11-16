@@ -140,11 +140,13 @@ export async function clear(userId) {
 export async function applyCoupon(userId, code) {
   const quote = await buildQuote(userId);
   if (!quote.cart) throw ApiError.badRequest("Add dishes to your cart first");
-  // Validate against the current cart before saving the code.
+  // Validate against the current cart before saving the code (with each line's dish and
+  // category, for category and dish coupons).
   await couponService.assertEligible(code, {
     userId,
     restaurantId: quote.cart.restaurant.id,
     subtotalPaise: quote.pricing.subtotalPaise,
+    lines: quote.engineLines,
   });
   return mutateCart(userId, async (cart) => {
     cart.couponCode = String(code).trim().toUpperCase();
@@ -258,6 +260,15 @@ export async function buildQuote(userId, { addressId, cart: saved } = {}) {
     });
   }
 
+  // What the coupon engine sees: each orderable line's dish, category and total.
+  const engineLines = lines
+    .filter((l) => l.isAvailable)
+    .map((l) => ({
+      foodItemId: l.foodItemId,
+      categoryId: String(foodById.get(l.foodItemId)?.category ?? ""),
+      totalPaise: l.lineTotalPaise,
+    }));
+
   // Coupon: re-validated on every read; an invalid coupon is reported, not silently applied.
   let coupon = null;
   let couponError = null;
@@ -267,6 +278,7 @@ export async function buildQuote(userId, { addressId, cart: saved } = {}) {
         userId,
         restaurantId: cart.restaurant,
         subtotalPaise,
+        lines: engineLines,
       });
     } catch (error) {
       couponError = { code: cart.couponCode, message: error.message };
@@ -290,20 +302,23 @@ export async function buildQuote(userId, { addressId, cart: saved } = {}) {
     }
   }
 
+  // A category or dish coupon discounts only those lines.
+  const couponBasePaise = coupon ? couponService.couponBase(coupon, engineLines) : null;
   // Coins: worked out on the food value after the coupon, then taken off the payable total.
   const coins = coinsService.redemptionQuote({
     ...coinsBase,
     requested: cart.coinsToRedeem ?? 0,
-    foodPaise: subtotalPaise - couponDiscount(coupon, subtotalPaise),
+    foodPaise: subtotalPaise - couponDiscount(coupon, subtotalPaise, couponBasePaise),
   });
   const pricing = computePricing({
     subtotalPaise,
     coupon,
     distanceMeters,
     coinDiscountPaise: coins.discountPaise,
+    couponBasePaise,
   });
 
-  return {
+  const quote = {
     cart: {
       id: String(cart._id),
       version: cart.__v,
@@ -325,7 +340,9 @@ export async function buildQuote(userId, { addressId, cart: saved } = {}) {
       ? {
           code: coupon.code,
           description: coupon.description,
-          discountPaise: pricing.discountPaise,
+          discountType: coupon.discountType,
+          // What the customer saves: food discount plus any delivery fee it waived.
+          discountPaise: pricing.discountPaise + pricing.deliveryDiscountPaise,
         }
       : null,
     couponError,
@@ -344,4 +361,7 @@ export async function buildQuote(userId, { addressId, cart: saved } = {}) {
     issues,
     canCheckout: issues.length === 0 && !couponError,
   };
+  // For applyCoupon only; non-enumerable, so it is never sent to clients.
+  Object.defineProperty(quote, "engineLines", { value: engineLines, enumerable: false });
+  return quote;
 }

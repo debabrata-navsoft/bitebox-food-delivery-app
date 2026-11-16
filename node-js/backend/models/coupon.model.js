@@ -1,9 +1,30 @@
 import mongoose from "mongoose";
 
+/**
+ * Coupons and restaurant offers (Django: apps/coupons/models.py). One collection holds both:
+ * platform coupons (`source: platform`, made by admins) and restaurant offers (`source: restaurant`,
+ * made by a partner for their own restaurant, `restaurant` set). Restaurant offers go through
+ * approval (`approvalStatus`) when OFFER_APPROVAL_REQUIRED; platform coupons are approved when
+ * created. Customers only ever see approved, active coupons inside their dates.
+ */
 export const DISCOUNT_TYPES = Object.freeze({
   PERCENT: "percent",
   FLAT: "flat",
+  FREE_DELIVERY: "free_delivery", // waives the delivery fee; discountValue is 0
 });
+export const AUDIENCES = Object.freeze({
+  ALL: "all",
+  NEW: "new", // no orders yet (other than cancelled or rejected ones)
+  EXISTING: "existing",
+});
+export const COUPON_SOURCES = Object.freeze({ PLATFORM: "platform", RESTAURANT: "restaurant" });
+export const APPROVAL_STATUS = Object.freeze({
+  DRAFT: "draft",
+  PENDING: "pending",
+  APPROVED: "approved",
+  REJECTED: "rejected",
+});
+const ref = (model) => ({ type: mongoose.Schema.Types.ObjectId, ref: model, default: null });
 
 const couponSchema = new mongoose.Schema(
   {
@@ -14,16 +35,19 @@ const couponSchema = new mongoose.Schema(
       uppercase: true,
       match: /^[A-Z0-9_-]{3,30}$/,
     },
+    name: { type: String, trim: true, maxlength: 80 },
     description: { type: String, trim: true, maxlength: 200 },
+    terms: { type: String, trim: true, maxlength: 2000 },
     discountType: {
       type: String,
       enum: Object.values(DISCOUNT_TYPES),
       required: true,
     },
+    // Percent (1-100), paise, or 0 for free delivery (checked below).
     discountValue: {
       type: Number,
-      required: true,
-      min: 1,
+      default: 0,
+      min: 0,
       validate: Number.isInteger,
     },
     maxDiscountPaise: {
@@ -44,11 +68,28 @@ const couponSchema = new mongoose.Schema(
     usageLimit: { type: Number, min: 1, default: null },
     usedCount: { type: Number, default: 0, min: 0 },
     perUserLimit: { type: Number, min: 1, default: 1 },
+    // Only valid at this restaurant (and, for restaurant offers, the restaurant that owns it).
     restaurant: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Restaurant",
       default: null,
     },
+    // Further scope (empty: no limit). A discount on categories or dishes applies to those lines.
+    restaurants: [{ type: mongoose.Schema.Types.ObjectId, ref: "Restaurant" }],
+    categories: [{ type: mongoose.Schema.Types.ObjectId, ref: "FoodCategory" }],
+    foodItems: [{ type: mongoose.Schema.Types.ObjectId, ref: "FoodItem" }],
+    audience: { type: String, enum: Object.values(AUDIENCES), default: AUDIENCES.ALL },
+    source: { type: String, enum: Object.values(COUPON_SOURCES), default: COUPON_SOURCES.PLATFORM },
+    approvalStatus: {
+      type: String,
+      enum: Object.values(APPROVAL_STATUS),
+      default: APPROVAL_STATUS.APPROVED,
+    },
+    rejectionReason: { type: String, trim: true, maxlength: 300 },
+    reviewedBy: ref("User"),
+    reviewedAt: { type: Date, default: null },
+    bannerUrl: { type: String, trim: true, maxlength: 500 },
+    createdBy: ref("User"),
   },
   {
     timestamps: true,
@@ -64,6 +105,15 @@ const couponSchema = new mongoose.Schema(
 );
 
 couponSchema.pre("validate", function checkCoupon() {
+  if (this.discountType === DISCOUNT_TYPES.FREE_DELIVERY) {
+    this.discountValue = 0;
+    this.maxDiscountPaise = null;
+  } else if (!(this.discountValue >= 1)) {
+    this.invalidate("discountValue", "Discount must be a positive whole number");
+  }
+  if (this.source === COUPON_SOURCES.RESTAURANT && !this.restaurant) {
+    this.invalidate("restaurant", "A restaurant offer needs its restaurant");
+  }
   if (
     this.discountType === DISCOUNT_TYPES.PERCENT &&
     this.discountValue > 100
@@ -77,6 +127,7 @@ couponSchema.pre("validate", function checkCoupon() {
 
 couponSchema.index({ code: 1 }, { unique: true });
 couponSchema.index({ isActive: 1, validUntil: 1 });
+couponSchema.index({ source: 1, approvalStatus: 1 });
 
 export const Coupon = mongoose.model("Coupon", couponSchema);
 

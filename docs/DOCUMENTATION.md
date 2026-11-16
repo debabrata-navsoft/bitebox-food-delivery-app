@@ -929,7 +929,28 @@ The service worker only runs in **production builds** (`npm run build`, then `np
 | GET | `/orders/{id}/timeline` | My order's status changes |
 | POST | `/orders/{id}/cancel` | Cancel before the restaurant accepts |
 
-Admin coupons (`catalog:manage`): `GET/POST /admin/coupons`, `PATCH/DELETE /admin/coupons/{id}`.
+#### Coupons and restaurant offers
+
+One collection/table holds platform coupons (`source: platform`, created by admins) and restaurant offers (`source: restaurant`, created by a partner for their own restaurant). Types: `percent`, `flat`, `free_delivery` (waives the delivery fee, shown as `pricing.deliveryDiscountPaise`). Optional scope: restaurants, food categories and dishes (a category or dish coupon discounts only those cart lines); audience `all`, `new` (no orders yet) or `existing`. Restaurant offers need admin approval when `OFFER_APPROVAL_REQUIRED` is on (default); customers only see approved, active coupons inside their dates. All discounts are computed on the server (`coupons/services.py` / `coupon.service.js` and the cart pricing).
+
+| Method | Path | Who | Purpose |
+|---|---|---|---|
+| GET | `/coupons/available?restaurantId=` | customer | Coupons usable on this cart (best first) |
+| GET | `/coupons/offers?type=` | customer | Offers page: `percent`, `flat`, `free_delivery`, `first_order`, `restaurant`, `category` |
+| GET | `/restaurants/{slugOrId}/offers` | public | A restaurant's offers & deals (its own first, then platform-wide) |
+| GET/POST | `/admin/coupons` | `catalog:manage` | List (`search`, `status`, `owner`, `sort`, `from`, `to`, paging) / create (code generated when left out) |
+| GET | `/admin/coupons/analytics` | `catalog:manage` | Counts by status, redemptions, discount given, top coupons |
+| GET/PATCH/DELETE | `/admin/coupons/{id}` | `catalog:manage` | One coupon / edit / delete (unused only) |
+| PATCH | `/admin/coupons/{id}/status` | `catalog:manage` | `{ isActive }` |
+| POST | `/admin/coupons/{id}/duplicate` | `catalog:manage` | A switched-off copy with a new code |
+| GET | `/admin/restaurant-offers/pending` | `catalog:manage` | Restaurant offers waiting for review |
+| POST | `/admin/restaurant-offers/{id}/approve`, `/reject` | `catalog:manage` | Decide (reject needs `reason`); the partner is notified |
+| GET/POST | `/my/restaurant/offers` | restaurant partner | Own offers / create (`draft: true` saves without submitting) |
+| GET | `/my/restaurant/offers/analytics` | restaurant partner | Own offers' counts, redemptions and discount given |
+| GET/PATCH/DELETE | `/my/restaurant/offers/{id}` | restaurant partner | One offer / edit (sends it for review again) / delete |
+| PATCH | `/my/restaurant/offers/{id}/status` | restaurant partner | Pause or resume `{ isActive }` |
+
+The public restaurant list (`GET /restaurants`) includes each restaurant's best live offer as `offer` (for card badges).
 
 ### Restaurant and rider operations
 

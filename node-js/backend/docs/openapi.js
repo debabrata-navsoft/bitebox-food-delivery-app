@@ -25,6 +25,7 @@ import {
   rewardsTags,
 } from "./openapi.rewards.js";
 import { kycPaths, kycTags } from "./openapi.kyc.js";
+import { offersPaths, offersTags } from "./openapi.offers.js";
 import { pushPaths, pushSchemas, pushTags } from "./openapi.push.js";
 import {
   reviewsPaths,
@@ -97,6 +98,7 @@ export const openApiDocument = {
     ...rewardsTags,
     ...pushTags,
     ...kycTags,
+    ...offersTags,
   ],
   components: {
     securitySchemes: {
@@ -233,6 +235,7 @@ export const openApiDocument = {
     ...rewardsPaths,
     ...pushPaths,
     ...kycPaths,
+    ...offersPaths,
     "/health": {
       get: {
         tags: ["Health"],

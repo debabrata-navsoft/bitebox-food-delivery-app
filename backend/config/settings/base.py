@@ -232,6 +232,9 @@ FIELD_ENCRYPTION_KEY = env.str("FIELD_ENCRYPTION_KEY", default="")
 RESTAURANT_KYC_REQUIRED = env.bool("RESTAURANT_KYC_REQUIRED", default=True)
 # A rider goes online only once approved: documents, bank account and address (apps/delivery).
 RIDER_KYC_REQUIRED = env.bool("RIDER_KYC_REQUIRED", default=True)
+# Restaurant offers wait for an admin's approval before customers see them (apps/coupons); off:
+# they go live as soon as they are saved (admins can still pause them).
+OFFER_APPROVAL_REQUIRED = env.bool("OFFER_APPROVAL_REQUIRED", default=True)
 CLOUDINARY_CLOUD_NAME = env.str("CLOUDINARY_CLOUD_NAME", default="")
 CLOUDINARY_API_KEY = env.str("CLOUDINARY_API_KEY", default="")
 CLOUDINARY_API_SECRET = env.str("CLOUDINARY_API_SECRET", default="")

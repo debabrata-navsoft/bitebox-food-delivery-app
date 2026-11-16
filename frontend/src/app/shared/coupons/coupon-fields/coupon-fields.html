@@ -1,0 +1,74 @@
+@let f = form();
+@let type = f.discountType().value();
+<h3 class="bb-form-section">Offer</h3>
+<div class="bb-form-row">
+  <np-text-input [formField]="f.name" label="Name" [placeholder]="namePlaceholder()" cdkFocusInitial [error]="shownError(f.name)" />
+  <np-text-input
+    [formField]="f.code"
+    label="Code"
+    [placeholder]="editing() ? '' : 'Generated if blank'"
+    autocapitalize="characters"
+    [error]="shownError(f.code)"
+  />
+</div>
+<np-text-input [formField]="f.description" label="Short description for customers" [error]="shownError(f.description)" />
+
+<h3 class="bb-form-section">Discount</h3>
+<np-button-toggle class="type" [formField]="f.discountType" [options]="discountTypes" ariaLabel="Discount type" />
+@if (type === 'free_delivery') {
+  <p class="hint">Waives the delivery fee. Other charges and taxes still apply.</p>
+} @else {
+  <div class="bb-form-row">
+    <div class="bb-field">
+      <np-input-number
+        [formField]="f.discount"
+        [label]="type === 'percent' ? 'Discount' : 'Discount amount'"
+        [prefix]="type === 'percent' ? '' : '₹ '"
+        [suffix]="type === 'percent' ? ' %' : ''"
+        [maxFractionDigits]="type === 'percent' ? 0 : 2"
+      />
+      <bb-field-error [field]="f.discount" />
+    </div>
+    @if (type === 'percent') {
+      <div class="bb-field">
+        <np-input-number [formField]="f.maxDiscount" label="Max discount (optional)" prefix="₹ " [maxFractionDigits]="2" />
+        <bb-field-error [field]="f.maxDiscount" />
+      </div>
+    }
+  </div>
+}
+<div class="bb-form-row">
+  <div class="bb-field">
+    <np-input-number [formField]="f.minOrder" label="Minimum order" prefix="₹ " [maxFractionDigits]="2" />
+    <bb-field-error [field]="f.minOrder" />
+  </div>
+  <div class="bb-field">
+    <np-select [formField]="f.audience" label="Customers" [options]="audienceOptions" />
+  </div>
+</div>
+
+<ng-content />
+
+<h3 class="bb-form-section">Limits and dates</h3>
+<div class="bb-form-row">
+  <div class="bb-field">
+    <np-input-number [formField]="f.perUserLimit" label="Uses per customer" [maxFractionDigits]="0" />
+    <bb-field-error [field]="f.perUserLimit" />
+  </div>
+  <div class="bb-field">
+    <np-input-number [formField]="f.usageLimit" label="Total uses allowed" placeholder="Unlimited" [maxFractionDigits]="0" />
+    <bb-field-error [field]="f.usageLimit" />
+  </div>
+</div>
+<div class="bb-form-row">
+  <div class="bb-field">
+    <np-calendar [formField]="f.validFrom" label="Starts" dateFormat="dd M yy" showIcon />
+    <bb-field-error [field]="f.validFrom" />
+  </div>
+  <div class="bb-field">
+    <np-calendar [formField]="f.validUntil" label="Ends" dateFormat="dd M yy" [minDate]="f.validFrom().value()" showIcon />
+    <bb-field-error [field]="f.validUntil" />
+  </div>
+</div>
+<np-textarea [formField]="f.terms" label="Terms and conditions (optional)" [rows]="3" autoResize />
+<bb-field-error [field]="f.terms" />

@@ -1,3 +1,4 @@
+import { restaurantOffers } from "../services/coupon.service.js";
 import { Router } from "express";
 import { param } from "express-validator";
 import * as categories from "../controllers/category.controller.js";
@@ -29,6 +30,14 @@ export const restaurantsRouter = Router()
   .get("/cuisines", restaurants.listCuisines)
   .get("/:slugOrId", validate([slugOrId]), restaurants.getPublic)
   .get("/:slugOrId/menu", validate([slugOrId]), restaurants.getPublicMenu)
+  // "Offers & deals" on a restaurant page: its own offers, then platform-wide ones.
+  .get(
+    "/:slugOrId/offers",
+    validate([slugOrId]),
+    respond(async (req) => ({
+      offers: await restaurantOffers(await getPublicBySlugOrId(req.params.slugOrId)),
+    })),
+  )
   .get(
     "/:slugOrId/reviews",
     validate([slugOrId, ...reviewRules.publicListRules]),

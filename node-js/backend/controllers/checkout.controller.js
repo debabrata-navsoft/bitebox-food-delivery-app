@@ -1,7 +1,6 @@
 import { Cart } from "../models/cart.model.js";
 import * as addressService from "../services/address.service.js";
 import * as cartService from "../services/cart.service.js";
-import * as couponService from "../services/coupon.service.js";
 import * as orderService from "../services/order.service.js";
 import * as payments from "../services/payments/payment.service.js";
 import { respond, sendSuccess } from "../utils/api-response.js";
@@ -49,12 +48,3 @@ export async function placeOrder(req, res) {
 }
 export const listMyOrders = respond((req) => orderService.listMine(req.user._id, parsePagination(req.validatedQuery, { defaultLimit: 10 })));
 
-// Coupons
-export const availableCoupons = respond(async (req) => ({ coupons: await couponService.listAvailable({ restaurantId: req.validatedQuery.restaurantId }) }));
-export const adminListCoupons = respond((req) => couponService.adminList(req.validatedQuery, parsePagination(req.validatedQuery)));
-export const adminCreateCoupon = respond(async (req) => ({ coupon: await couponService.create(req.body) }), "Coupon created", 201);
-export const adminUpdateCoupon = respond(async (req) => ({ coupon: await couponService.update(req.params.id, req.body) }), "Coupon saved");
-export const adminDeleteCoupon = respond(async (req) => {
-  await couponService.remove(req.params.id);
-  return null;
-}, "Coupon deleted");

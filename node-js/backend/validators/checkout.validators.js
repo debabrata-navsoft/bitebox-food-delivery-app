@@ -1,12 +1,9 @@
 import { body, header, param, query } from "express-validator";
 import { MAX_ITEM_QUANTITY } from "../models/cart.model.js";
-import { DISCOUNT_TYPES } from "../models/coupon.model.js";
 import { PAYMENT_METHODS } from "../models/order.model.js";
 import {
-  booleanQuery,
   mongoIdParam,
   paginationRules,
-  searchQuery,
 } from "./common.validators.js";
 
 // Cart
@@ -121,59 +118,3 @@ export const placeOrderRules = [
 
 export const listOrdersRules = paginationRules;
 
-// Coupons (admin)
-const nullableInt = (field, min) =>
-  body(field)
-    .optional()
-    .custom(
-      (v) =>
-        v === null ||
-        (Number.isInteger(Number(v)) && Number(v) >= min && v !== ""),
-    )
-    .withMessage(`${field} must be a whole number of at least ${min}, or null`)
-    .customSanitizer((v) => (v === null ? null : Number(v)));
-
-function couponRules({ partial }) {
-  const field = (name) => (partial ? body(name).optional() : body(name));
-  return [
-    field("code")
-      .isString()
-      .trim()
-      .toUpperCase()
-      .matches(/^[A-Z0-9_-]{3,30}$/)
-      .withMessage("Code: 3-30 letters, digits, - or _"),
-    body("description").optional().isString().trim().isLength({ max: 200 }),
-    field("discountType")
-      .isIn(Object.values(DISCOUNT_TYPES))
-      .withMessage("Choose percent or flat"),
-    field("discountValue")
-      .isInt({ min: 1 })
-      .withMessage("Discount must be a positive whole number")
-      .toInt(),
-    nullableInt("maxDiscountPaise", 0),
-    body("minOrderPaise").optional().isInt({ min: 0 }).toInt(),
-    field("validFrom").isISO8601().withMessage("Invalid start date").toDate(),
-    field("validUntil").isISO8601().withMessage("Invalid end date").toDate(),
-    body("isActive").optional().isBoolean().toBoolean(),
-    nullableInt("usageLimit", 1),
-    body("perUserLimit").optional().isInt({ min: 1, max: 100 }).toInt(),
-    body("restaurant")
-      .optional()
-      .custom((v) => v === null || /^[a-f0-9]{24}$/i.test(String(v)))
-      .withMessage("Invalid restaurant"),
-  ];
-}
-
-export const createCouponRules = couponRules({ partial: false });
-export const updateCouponRules = [
-  mongoIdParam(),
-  ...couponRules({ partial: true }),
-];
-export const adminCouponListRules = [
-  ...paginationRules,
-  searchQuery(),
-  booleanQuery("active"),
-];
-export const availableCouponRules = [
-  query("restaurantId").optional().isMongoId(),
-];

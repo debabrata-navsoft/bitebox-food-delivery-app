@@ -1,0 +1,15 @@
+// Laid out as part of the dialog's .bb-form column.
+:host {
+  display: contents;
+}
+.type {
+  align-self: flex-start;
+}
+.hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--bb-ink-muted);
+}
+.bb-form-section:first-child {
+  margin-top: 0;
+}

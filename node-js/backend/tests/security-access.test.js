@@ -26,6 +26,7 @@ const PUBLIC = [
   "get /api/v1/restaurants/cuisines",
   "get /api/v1/restaurants/{slugOrId}",
   "get /api/v1/restaurants/{slugOrId}/menu",
+  "get /api/v1/restaurants/{slugOrId}/offers",
   "get /api/v1/restaurants/{slugOrId}/reviews",
   "post /api/v1/auth/forgot-password",
   "post /api/v1/auth/login",

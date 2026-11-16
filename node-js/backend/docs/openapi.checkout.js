@@ -589,6 +589,13 @@ export const checkoutPaths = {
     },
   },
   "/admin/coupons/{id}": {
+    get: {
+      tags: T.admin,
+      summary: "One coupon",
+      security: bearer,
+      parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+      responses: { 200: ok({ type: "object" }), 404: err("Not found") },
+    },
     patch: {
       tags: T.admin,
       summary: "Update a coupon",

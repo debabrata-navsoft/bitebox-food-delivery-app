@@ -1,0 +1,17 @@
+.code {
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.04em;
+}
+.terms {
+  max-width: 320px;
+  white-space: pre-line;
+}
+.actions {
+  width: 1%;
+}
+.decide {
+  display: flex;
+  gap: var(--bb-space-2);
+  justify-content: flex-end;
+  white-space: nowrap;
+}
