@@ -272,17 +272,16 @@ def _after_transition(order: Order, now: Any) -> None:
 
 
 def release_coupon(order: Order) -> None:
-    """A closed order gives its coupon use back, once (the redemption record is the token)."""
-    if not order.coupon_code:
-        return
-    redemption = CouponRedemption.objects.filter(order=order).first()
-    if redemption is None:
-        return
-    deleted, _ = CouponRedemption.objects.filter(pk=redemption.pk).delete()
-    if deleted:
-        Coupon.objects.filter(pk=redemption.coupon_id, used_count__gt=0).update(
-            used_count=F("used_count") - 1
-        )
+    """
+    A closed order gives back one use of each discount it had, once each (deleting the
+    redemption record is the token, so a repeat or a concurrent release does nothing).
+    """
+    for pk, coupon_id in CouponRedemption.objects.filter(order=order).values_list("pk", "coupon"):
+        deleted, _ = CouponRedemption.objects.filter(pk=pk).delete()
+        if deleted:
+            Coupon.objects.filter(pk=coupon_id, used_count__gt=0).update(
+                used_count=F("used_count") - 1
+            )
 
 
 def settle_cancelled_payment(order: Order) -> None:

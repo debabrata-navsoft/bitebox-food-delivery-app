@@ -29,7 +29,8 @@ import { VegBadge } from '../../shared/components/veg-badge/veg-badge';
 import { CouponOffer, DeliveryAddress } from '../../shared/models/checkout.models';
 import { InrPipe, formatPaise } from '../../shared/pipes/money.pipes';
 import { BbDialog } from '../../shared/dialog/bb-dialog';
-import { appliedMessage, openCoupons } from './coupon-dialog/coupon-dialog';
+import { openCoupons } from './coupon-dialog/coupon-dialog';
+import { codeApplier } from '../../shared/coupons/cart-offers';
 
 
 import { NP_FORM_FIELDS } from '../../shared/forms/np-form-fields';
@@ -118,6 +119,11 @@ export class Checkout {
       .subscribe({ next: (list) => this.offers.set(list), error: () => this.offers.set([]) });
   }
 
+  /** The one restaurant offer on this cart (the best, or the one the customer picked). */
+  protected readonly restaurantOffer = computed(
+    () => this.cart.quote()?.restaurantOffers?.find((o) => o.applied) ?? null,
+  );
+
   /** The server's best coupon for this cart, when it saves more than the applied one. */
   protected readonly suggestion = computed(() => {
     const q = this.cart.quote();
@@ -128,12 +134,8 @@ export class Checkout {
   });
 
   /** One tap on the suggested coupon (the server's pick for this cart). */
-  protected applyBest(code: string): void {
-    this.cart.applyCoupon(code).subscribe({
-      next: (quote) => this.notify.success(appliedMessage(quote)),
-      error: (err: unknown) => this.notify.error(errorMessage(err)),
-    });
-  }
+  private readonly applier = codeApplier();
+  protected readonly applyBest = this.applier.apply;
 
   /** "Apply coupon": every coupon for this cart; the quote refreshes once one is applied. */
   protected showCoupons(): void {

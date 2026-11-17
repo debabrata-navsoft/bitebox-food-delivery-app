@@ -100,6 +100,10 @@ def _items_json(order: Order) -> list[dict[str, Any]]:
 def order_json(order: Order) -> dict[str, Any]:
     payment = payment_of(order)
     cancellation = _cancellation(order)
+    # Every discount, in the order it applied, with what it saved and who funds it.
+    discounts = [
+        {**d, "saving_paise": d["food_paise"] + d["delivery_paise"]} for d in order.discounts
+    ]
     data: dict[str, Any] = {
         "id": str(order.pk),
         "order_number": order.order_number,
@@ -136,7 +140,9 @@ def order_json(order: Order) -> dict[str, Any]:
             for h in order.status_history.all()
         ],
         "payment_method": order.payment_method,
+        "payment_channel": order.payment_channel or None,
         "payment_status": order.payment_status,
+        "discounts": discounts,
         "payment": str(payment.pk) if payment else None,
         "submitted_at": order.submitted_at,
         "delivery_partner": str(order.delivery_partner_id) if order.delivery_partner_id else None,
@@ -147,7 +153,10 @@ def order_json(order: Order) -> dict[str, Any]:
         "updated_at": order.updated_at,
     }
     if order.coupon_code:
-        data["coupon"] = {"code": order.coupon_code, "discount_paise": order.discount_paise}
+        # The coupon code's own saving (other discounts are in `discounts`).
+        coupon = next((d for d in discounts if d["code"] == order.coupon_code), None)
+        saving = coupon["saving_paise"] if coupon else order.discount_paise
+        data["coupon"] = {"code": order.coupon_code, "discount_paise": saving}
     if order.note:
         data["note"] = order.note
     if cancellation:

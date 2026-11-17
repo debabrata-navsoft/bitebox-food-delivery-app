@@ -21,6 +21,8 @@ export class CouponFields {
   /** Editing an existing coupon: the code is required (a new one is generated when blank). */
   readonly editing = input(false);
   readonly namePlaceholder = input('');
+  /** Coupons have a code customers enter; offers apply by themselves and keep theirs hidden. */
+  readonly showCode = input(true);
   protected readonly shownError = shownError;
   protected readonly discountTypes = DISCOUNT_TYPE_OPTIONS;
   protected readonly audienceOptions = AUDIENCE_OPTIONS;

@@ -136,7 +136,7 @@ export class RestaurantOffers {
 
   protected remove(o: AdminCoupon): void {
     confirmed(this.bbDialog, {
-      title: `Delete ${o.code}?`,
+      title: `Delete ${o.name || 'this offer'}?`,
       message: 'Customers will no longer see or use this offer.',
       confirmLabel: 'Delete',
       danger: true,

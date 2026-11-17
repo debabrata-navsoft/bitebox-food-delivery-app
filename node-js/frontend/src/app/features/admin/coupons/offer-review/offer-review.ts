@@ -36,17 +36,22 @@ export class OfferReview {
   protected readonly busy = this.actions.busy;
 
   protected approve(o: AdminCoupon): void {
-    this.actions.run(o.id, this.service.approve(o.id), `${o.code} approved. Customers can use it now.`);
+    this.actions.run(o.id, this.service.approve(o.id), `${this.title(o)} approved. It now applies automatically.`);
   }
 
   protected reject(o: AdminCoupon): void {
     confirmed(this.bbDialog, {
-      title: `Reject ${o.code}?`,
+      title: `Reject ${this.title(o)}?`,
       message: 'The restaurant sees your reason and can edit the offer and send it again.',
       confirmLabel: 'Reject',
       danger: true,
       reasonLabel: 'Reason',
       reasonMax: 300,
-    }).subscribe((reason) => this.actions.run(o.id, this.service.reject(o.id, String(reason)), `${o.code} rejected`));
+    }).subscribe((reason) => this.actions.run(o.id, this.service.reject(o.id, String(reason)), `${this.title(o)} rejected`));
+  }
+
+  /** Offers apply automatically, so admins know them by name rather than their internal code. */
+  protected title(o: AdminCoupon): string {
+    return o.name || o.description || discountLabel(o);
   }
 }

@@ -6,8 +6,14 @@
 // The kinds scroll sideways on phones instead of wrapping.
 .kinds {
   overflow-x: auto;
-  margin-bottom: var(--bb-space-4);
+  margin-bottom: var(--bb-space-2);
   padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.section {
+  margin: var(--bb-space-4) 0 var(--bb-space-2);
+  font-size: 1.05rem;
+  font-weight: 800;
 }
 .grid {
   list-style: none;
@@ -18,39 +24,34 @@
   @include bp.tablet-up {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  @include bp.desktop-up {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 li {
   display: grid;
-  gap: var(--bb-space-1);
-  align-content: start;
 }
 .card {
-  height: 120px;
+  height: 150px;
+  border-radius: 16px;
 }
-.where {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.85rem;
-  color: var(--bb-ink);
-  --bb-icon-size: 14px;
-  a {
-    color: var(--bb-plum);
-    font-weight: 600;
+// APPLY / COPY / VIEW: bold text in the ticket's corner.
+.action {
+  flex-shrink: 0;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--bb-amber-600);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  cursor: pointer;
+  &:disabled {
+    color: var(--bb-ink-muted);
+    cursor: default;
+    opacity: 0.6;
   }
-}
-details {
-  font-size: 0.8rem;
-  color: var(--bb-ink-muted);
-  summary {
-    cursor: pointer;
-    width: fit-content;
-  }
-  p {
-    margin: var(--bb-space-1) 0 0;
-    white-space: pre-line;
+  &.done:disabled {
+    color: var(--bb-success);
+    opacity: 1;
   }
 }

@@ -27,7 +27,7 @@ from apps.restaurants.models import Restaurant
 from common.api import ApiError
 from common.pagination import Page, paginate
 
-from .models import ApprovalStatus, Audience, Coupon, CouponRedemption, DiscountType, Source
+from .models import ApprovalStatus, Audience, Coupon, CouponRedemption, DiscountType, Kind, Source
 
 FIELDS = (
     "code",
@@ -46,7 +46,10 @@ FIELDS = (
     "restaurant",
     "audience",
     "banner_url",
+    "kind",
+    "payment_channels",
 )
+CHANNEL_LABELS = {"upi": "UPI", "card": "card", "netbanking": "net banking", "wallet": "wallet"}
 SCOPES = ("restaurants", "categories", "food_items")
 # A typical basket for ranking offers on restaurant cards (what each would save on it).
 REFERENCE_ORDER_PAISE = 50_000
@@ -139,12 +142,14 @@ def problem(
     lines: Iterable[Line] | None = None,
     new_customer: bool | None = None,
     used: int | None = None,
+    payment: str | None = None,
     now: datetime | None = None,
 ) -> ApiError | None:
     """
     Why this coupon cannot be used on this cart, or None. The one place the rules live.
     `new_customer` and `used` (this customer's redemptions of it) can be passed in when checking
-    many coupons at once; they are looked up otherwise.
+    many coupons at once; they are looked up otherwise. `payment` is the online channel the
+    customer picked (None for cash), which payment offers depend on.
     """
     now = now or timezone.now()
     if not c.is_active or c.approval_status != ApprovalStatus.APPROVED:
@@ -156,6 +161,8 @@ def problem(
     restaurants = _restaurant_ids(c)
     if restaurants and str(restaurant_id) not in restaurants:
         return _invalid("This coupon is not valid at this restaurant", "COUPON_NOT_APPLICABLE")
+    if c.kind == Kind.PAYMENT_OFFER and not pays_with(c, payment):
+        return _invalid(f"Pay {_channels_label(c)} to use this offer", "COUPON_PAYMENT_METHOD")
     if c.audience != Audience.ALL:
         new = is_new_customer(user_id) if new_customer is None else new_customer
         if c.audience == Audience.NEW and not new:
@@ -180,9 +187,21 @@ def problem(
     return None
 
 
+def pays_with(c: Coupon, payment: str | None) -> bool:
+    """A payment offer needs an online payment, through one of its channels when it lists any."""
+    return bool(payment) and (not c.payment_channels or payment in c.payment_channels)
+
+
+def _channels_label(c: Coupon) -> str:
+    """ "online", or "by UPI or card"."""
+    names = [CHANNEL_LABELS.get(ch, ch) for ch in c.payment_channels]
+    return "by " + " or ".join(names) if names else "online"
+
+
 def assert_eligible(
     code: str,
     *,
+    kinds: tuple[str, ...] = (Kind.COUPON,),
     user_id: Any,
     restaurant_id: Any,
     subtotal_paise: int,
@@ -191,6 +210,9 @@ def assert_eligible(
     coupon = _with_scopes(Coupon.objects.filter(code=str(code).strip().upper())).first()
     if coupon is None:
         raise _invalid("This coupon code is not valid")
+    if coupon.kind not in kinds:
+        # Offers apply by themselves; only coupons are entered as codes.
+        raise _invalid("This offer is applied automatically at checkout", "COUPON_AUTOMATIC")
     error = problem(
         coupon,
         user_id=user_id,
@@ -234,6 +256,8 @@ def offer_json(c: Coupon) -> dict[str, Any]:
         "name": c.name or None,
         "description": c.description or None,
         "terms": c.terms or None,
+        "kind": c.kind,
+        "payment_channels": c.payment_channels,
         "discount_type": c.discount_type,
         "discount_value": c.discount_value,
         "max_discount_paise": c.max_discount_paise,
@@ -274,7 +298,7 @@ def _usable_by(user: User | None, coupons: Iterable[Coupon]) -> list[Coupon]:
 def usable_at(restaurant_id: Any = None) -> QuerySet[Coupon]:
     """Live coupons for an order from this restaurant (platform-wide only when none is given)."""
     scope = _for_restaurant(restaurant_id) if restaurant_id else PLATFORM_WIDE
-    return _live(scope).order_by("valid_until")[:30]
+    return _live(scope).order_by("valid_until")[:60]
 
 
 def _best_first(user: User | None, coupons: Iterable[Coupon]) -> list[dict[str, Any]]:
@@ -283,8 +307,9 @@ def _best_first(user: User | None, coupons: Iterable[Coupon]) -> list[dict[str, 
 
 
 def list_available(restaurant_id: Any = None, user: User | None = None) -> list[dict[str, Any]]:
-    """Checkout: platform-wide coupons, plus this restaurant's, that the customer can use."""
-    return _best_first(user, usable_at(restaurant_id))
+    """Checkout's coupon codes: platform-wide ones plus this restaurant's, for this customer."""
+    codes = [c for c in usable_at(restaurant_id) if c.kind == Kind.COUPON]
+    return _best_first(user, codes)
 
 
 OFFER_KINDS = {
@@ -292,7 +317,9 @@ OFFER_KINDS = {
     "flat": Q(discount_type=DiscountType.FLAT),
     "free_delivery": Q(discount_type=DiscountType.FREE_DELIVERY),
     "first_order": Q(audience=Audience.NEW),
-    "restaurant": Q(source=Source.RESTAURANT),
+    "restaurant": Q(kind=Kind.RESTAURANT_OFFER),
+    "coupon": Q(kind=Kind.COUPON),
+    "payment": Q(kind=Kind.PAYMENT_OFFER),
     "category": Q(categories__isnull=False) | Q(food_items__isnull=False),
 }
 
@@ -331,6 +358,7 @@ def best_offers(restaurant_ids: Iterable[Any]) -> dict[str, dict[str, Any]]:
         best = max(offers, key=offer_value)
         result[rid] = {
             "code": best.code,
+            "kind": best.kind,
             "name": best.name or None,
             "discount_type": best.discount_type,
             "discount_value": best.discount_value,
@@ -366,6 +394,8 @@ def coupon_json(c: Coupon) -> dict[str, Any]:
         "code": c.code,
         "name": c.name or None,
         "terms": c.terms or None,
+        "kind": c.kind,
+        "payment_channels": c.payment_channels,
         "discount_type": c.discount_type,
         "discount_value": c.discount_value,
         "max_discount_paise": c.max_discount_paise,
@@ -424,6 +454,8 @@ def _list(qs: QuerySet[Coupon], query: dict[str, Any], page: Page) -> dict[str, 
         qs = qs.filter(is_active=query["active"])
     if status := query.get("status"):
         qs = qs.filter(STATUS_FILTERS[status](now))
+    if kind := query.get("kind"):
+        qs = qs.filter(kind=kind)
     if owner := query.get("owner"):
         qs = qs.filter(source=owner)
     if query.get("from"):
@@ -474,6 +506,12 @@ def admin_analytics() -> dict[str, Any]:
 def _check(coupon: Coupon) -> None:
     """Cross-field rules (422, not a database error); the same as the Node model's checks."""
     details = []
+    if coupon.source == Source.RESTAURANT:
+        coupon.kind = Kind.RESTAURANT_OFFER  # a restaurant's discounts are its automatic offers
+    elif coupon.kind == Kind.RESTAURANT_OFFER:
+        details.append({"field": "kind", "message": "Restaurants create their own offers"})
+    if coupon.kind != Kind.PAYMENT_OFFER:
+        coupon.payment_channels = []
     if coupon.discount_type == DiscountType.FREE_DELIVERY:
         coupon.discount_value = 0
         coupon.max_discount_paise = None

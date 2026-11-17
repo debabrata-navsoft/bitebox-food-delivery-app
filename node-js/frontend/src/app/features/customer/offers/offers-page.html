@@ -1,5 +1,5 @@
 <section class="bb-container page">
-  <bb-page-header title="Offers for you" subtitle="Coupons you can use right now. Apply a code at checkout." />
+  <bb-page-header title="Offers for you" subtitle="Coupons and offers you can use right now." />
 
   <div class="kinds">
     <np-button-toggle [options]="kinds" [value]="kind()" (valueChange)="pick($event)" ariaLabel="Kind of offer" />
@@ -19,28 +19,34 @@
   } @else if (list()!.length === 0) {
     <bb-empty-state icon="ticket-percent" title="No offers here right now" message="Check back soon, or try another kind of offer." />
   } @else {
-    <ul class="grid" [class.bb-dim]="loading()">
-      @for (o of list()!; track o.code) {
-        @let place = placeOf(o);
-        <li>
-          <bb-offer-card [offer]="o">
-            <span offerNote class="where">
-              <np-icon name="store" class="mat-icon" matButtonIcon />
-              @if (place.slug) {
-                <a [routerLink]="['/restaurants', place.slug]">{{ place.name }}</a>
-              } @else {
-                {{ place.name }}
+    @for (s of sections(); track s.title) {
+      <h2 class="section">{{ s.title }}</h2>
+      <ul class="grid" [class.bb-dim]="loading()">
+        @for (o of s.items; track o.code) {
+          @let a = action(o);
+          <li>
+            <bb-coupon-ticket [offer]="o" [highlight]="highlight(o)" [locked]="minOrderLeft(o) > 0 && a?.label !== 'APPLIED'">
+              <!-- One block per projected element (nested blocks are not projected by selector). -->
+              @if (a?.label === 'VIEW') {
+                <a ticketAction class="action" [routerLink]="['/restaurants', a!.slug]">VIEW</a>
               }
-            </span>
-          </bb-offer-card>
-          @if (o.terms) {
-            <details>
-              <summary>Terms and conditions</summary>
-              <p>{{ o.terms }}</p>
-            </details>
-          }
-        </li>
-      }
-    </ul>
+              @if (a && a.label !== 'VIEW') {
+                <button
+                  ticketAction
+                  type="button"
+                  class="action"
+                  [class.done]="a.label === 'APPLIED'"
+                  [disabled]="a.label === 'APPLIED' || busy() !== null || (a.label === 'APPLY' && minOrderLeft(o) > 0)"
+                  [attr.aria-label]="a.label + ' ' + o.code"
+                  (click)="act(o, a.label)"
+                >
+                  {{ a.label }}
+                </button>
+              }
+            </bb-coupon-ticket>
+          </li>
+        }
+      </ul>
+    }
   }
 </section>

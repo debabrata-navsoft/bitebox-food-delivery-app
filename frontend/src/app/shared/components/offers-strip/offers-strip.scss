@@ -1,9 +1,30 @@
 :host {
   display: block;
 }
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--bb-space-2);
+  margin-bottom: var(--bb-space-2);
+}
 h2 {
-  margin: 0 0 var(--bb-space-2);
+  margin: 0;
   font-size: 1.1rem;
+}
+.more {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--bb-plum);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  --bb-icon-size: 18px;
+  &:hover {
+    text-decoration: underline;
+  }
 }
 // One row that scrolls sideways, each offer snapping into place.
 ul {
@@ -17,6 +38,11 @@ ul {
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   overscroll-behavior-x: contain;
+  // Swipe or shift-scroll; no scrollbar under the cards.
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 li {
   scroll-snap-align: start;
@@ -28,8 +54,28 @@ li {
   text-decoration: underline dotted;
   cursor: help;
 }
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  --bb-icon-size: 15px;
+  &.applied {
+    color: var(--bb-success);
+  }
+  &.short {
+    color: var(--bb-ink-muted);
+    font-weight: 600;
+  }
+}
+.apply {
+  flex-shrink: 0;
+  align-self: center;
+}
 .hint {
-  margin: 0;
+  margin: var(--bb-space-1) 0 0;
   font-size: 0.8rem;
   color: var(--bb-ink-muted);
 }

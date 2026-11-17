@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormRoot, form, pattern } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
-import { ButtonComponent } from 'nexprime';
+import { ButtonComponent, IconComponent } from 'nexprime';
 import { CartService } from '../../../core/services/cart.service';
 import { errorMessage } from '../../../core/services/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -14,8 +14,10 @@ import {
 import { shownError } from '../../../shared/forms/form-errors';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { CartQuote, CouponOffer } from '../../../shared/models/checkout.models';
-import { InrPipe, formatPaise } from '../../../shared/pipes/money.pipes';
+import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { OfferCard } from '../../../shared/components/offer-card/offer-card';
+import { appliedMessage } from '../../../shared/coupons/coupon-labels';
+import { minOrderLeft } from '../../../shared/coupons/cart-offers';
 
 /**
  * Every coupon for this cart: a code box and the available offers. An offer below its minimum order
@@ -23,7 +25,7 @@ import { OfferCard } from '../../../shared/components/offer-card/offer-card';
  */
 @Component({
   selector: 'bb-coupon-dialog',
-  imports: [FormRoot, NP_FORM_FIELDS, MatButtonModule, ButtonComponent, InrPipe, BbDialogTitle, OfferCard],
+  imports: [FormRoot, NP_FORM_FIELDS, MatButtonModule, ButtonComponent, IconComponent, InrPipe, BbDialogTitle, OfferCard],
   templateUrl: './coupon-dialog.html',
   styleUrl: './coupon-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,6 +41,8 @@ export class CouponDialog {
   protected readonly applying = signal(false);
   /** The server's pick: the coupon that saves most on this cart. */
   protected readonly best = computed(() => this.cart.quote()?.bestCoupon ?? null);
+  /** The restaurant's offers for this cart: one is applied, the others can replace it. */
+  protected readonly restaurantOffers = computed(() => this.cart.quote()?.restaurantOffers ?? []);
   private readonly codeModel = signal({ code: '' });
   protected readonly codeForm = form(
     this.codeModel,
@@ -51,7 +55,7 @@ export class CouponDialog {
 
   /** How much more the cart needs before this offer applies (0: it can be used now). */
   protected minOrderLeft(o: CouponOffer): number {
-    return Math.max(0, o.minOrderPaise - (this.cart.quote()?.pricing.subtotalPaise ?? 0));
+    return minOrderLeft(o, this.cart.quote());
   }
 
   protected apply(code: string): void {
@@ -61,7 +65,7 @@ export class CouponDialog {
     this.error.set(null);
     this.cart.applyCoupon(value).subscribe({
       next: (quote) => {
-        this.notify.success(appliedMessage(quote));
+        this.notify.success(appliedMessage(quote, value.toUpperCase()));
         this.ref.close(quote);
       },
       error: (err: unknown) => {
@@ -73,9 +77,5 @@ export class CouponDialog {
 }
 
 /** Opens the coupons dialog; emits the quote once a coupon is applied (nothing when closed). */
-/** "FLAT60 applied — you save ₹60" (the saving includes any delivery fee it waived). */
-export const appliedMessage = (quote: CartQuote): string =>
-  `${quote.coupon?.code} applied — you save ${formatPaise(quote.coupon?.discountPaise ?? 0)}`;
-
 export const openCoupons = (dialog: BbDialog, offers: CouponOffer[]) =>
   dialog.result<CouponDialog, CouponOffer[], CartQuote>(CouponDialog, { data: offers, width: '480px' });

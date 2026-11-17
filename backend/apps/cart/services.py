@@ -10,16 +10,9 @@ from django.db import IntegrityError, transaction
 
 from apps.accounts.models import User
 from apps.coins import quote as coins
-from apps.coupons.models import Coupon
+from apps.coupons.models import Coupon, Kind
 from apps.coupons.services import Line as CouponLine
-from apps.coupons.services import (
-    assert_eligible,
-    coupon_base,
-    is_new_customer,
-    problem,
-    redemption_counts,
-    usable_at,
-)
+from apps.coupons.services import assert_eligible
 from apps.customers.models import Address
 from apps.customers.services import address_json
 from apps.menus.models import FoodItem
@@ -28,8 +21,9 @@ from apps.restaurants.presenters import is_open_now
 from common.api import ApiError
 from common.geo import haversine_m
 
+from .discounts import Stack, discount_lines, summary
 from .models import MAX_ITEM_QUANTITY, Cart, CartItem
-from .pricing import PRICING, compute_pricing, coupon_discount, js_round
+from .pricing import PRICING, compute_pricing, js_round
 
 
 def _cart_for_update(user: User) -> Cart:
@@ -46,6 +40,7 @@ def _finish(cart: Cart) -> None:
     if not cart.items.exists():
         cart.restaurant = None
         cart.coupon_code = ""
+        cart.offer_code = ""
         cart.coins_to_redeem = 0
     cart.save()
 
@@ -98,6 +93,7 @@ def add_item(user: User, food_item_id: uuid.UUID, quantity: int = 1, replace: bo
             )
         cart.items.all().delete()
         cart.coupon_code = ""
+        cart.offer_code = ""
     cart.restaurant_id = item.restaurant_id
     line = cart.items.filter(food_item=item).first()
     if line:
@@ -144,8 +140,10 @@ def apply_coupon(user: User, code: str) -> None:
             pk__in=[i["food_item_id"] for i in items]
         ).values_list("pk", "category_id")
     }
-    assert_eligible(
+    # A coupon code, or one of the restaurant's offers chosen instead of the best one.
+    found = assert_eligible(
         code,
+        kinds=(Kind.COUPON, Kind.RESTAURANT_OFFER),
         user_id=user.pk,
         restaurant_id=quote["cart"]["restaurant"]["id"],
         subtotal_paise=quote["pricing"]["subtotal_paise"],
@@ -154,7 +152,8 @@ def apply_coupon(user: User, code: str) -> None:
             for i in items
         ],
     )
-    _set_on_cart(user, coupon_code=code.strip().upper())
+    field = "offer_code" if found.kind == Kind.RESTAURANT_OFFER else "coupon_code"
+    _set_on_cart(user, **{field: found.code})
 
 
 def remove_coupon(user: User) -> None:
@@ -174,44 +173,6 @@ def remove_coins(user: User) -> None:
     _set_on_cart(user, coins_to_redeem=0)
 
 
-def _best_coupon(
-    user: User, restaurant_id: Any, subtotal: int, lines: list[CouponLine], distance_m: int | None
-) -> dict[str, Any] | None:
-    """The coupon that saves this customer most on this cart, priced here (never on the client)."""
-    if not restaurant_id or subtotal <= 0:
-        return None
-    coupons = list(usable_at(restaurant_id))
-    # Looked up once for every coupon, rather than once per coupon inside problem().
-    new = is_new_customer(user.pk)
-    used = redemption_counts(user.pk, coupons)
-    best: tuple[Coupon, int] | None = None
-    for c in coupons:
-        if problem(
-            c,
-            user_id=user.pk,
-            restaurant_id=restaurant_id,
-            subtotal_paise=subtotal,
-            lines=lines,
-            new_customer=new,
-            used=used.get(c.pk, 0),
-        ):
-            continue
-        p = compute_pricing(subtotal, c, distance_m, 0, coupon_base(c, lines))
-        saving = p.discount_paise + p.delivery_discount_paise
-        if saving > 0 and (best is None or saving > best[1]):
-            best = (c, saving)
-    if best is None:
-        return None
-    c, saving = best
-    return {
-        "code": c.code,
-        "name": c.name or None,
-        "description": c.description or None,
-        "discount_type": c.discount_type,
-        "saving_paise": saving,
-    }
-
-
 def _restaurant_summary(r: Restaurant) -> dict[str, Any]:
     data = {
         "id": str(r.pk),
@@ -226,8 +187,14 @@ def _restaurant_summary(r: Restaurant) -> dict[str, Any]:
     return data
 
 
-def build_quote(user: User, address_id: uuid.UUID | None = None) -> dict[str, Any]:
-    """Everything the checkout shows, computed from the database, plus what blocks checkout."""
+def build_quote(
+    user: User, address_id: uuid.UUID | None = None, payment: str | None = None
+) -> dict[str, Any]:
+    """
+    Everything the checkout shows, computed from the database, plus what blocks checkout.
+    `payment` is the online channel the customer picked (upi, card, ...; None for cash): the
+    payment offer for it joins the stack (apps/cart/discounts.py).
+    """
     cart = Cart.objects.filter(user=user).first()
     lines_qs = list(cart.items.select_related("food_item").order_by("created_at")) if cart else []
     if cart is None or not lines_qs:
@@ -236,6 +203,10 @@ def build_quote(user: User, address_id: uuid.UUID | None = None) -> dict[str, An
             "coupon": None,
             "coupon_error": None,
             "best_coupon": None,
+            "discounts": [],
+            "payment_offers": [],
+            "restaurant_offers": [],
+            "payment_channel": None,
             "coins": None,
             "address": None,
             "delivery": None,
@@ -351,16 +322,41 @@ def build_quote(user: User, address_id: uuid.UUID | None = None) -> dict[str, An
                 }
             )
 
-    # A category or dish coupon discounts only those lines.
-    base = coupon_base(coupon, engine_lines) if coupon else None
+    # The discounts: the best automatic offers, the coupon, then the payment offer.
+    stack = Stack(user, cart.restaurant_id, subtotal, engine_lines, distance_m)
+    chosen: list[Coupon] = []
+    # The restaurant offer the customer picked (while it still applies), else the best one.
+    picked = next(
+        (
+            c
+            for c in stack.coupons
+            if c.code == cart.offer_code and c.kind == Kind.RESTAURANT_OFFER and stack.usable(c)
+        ),
+        None,
+    )
+    if offer := picked or stack.best(Kind.RESTAURANT_OFFER, chosen):
+        chosen.append(offer)
+    if offer := stack.best(Kind.PLATFORM_OFFER, chosen):
+        chosen.append(offer)
+    if coupon:
+        chosen.append(coupon)
+    before_payment = list(chosen)
+    if payment and (offer := stack.best(Kind.PAYMENT_OFFER, chosen, payment)):
+        chosen.append(offer)
+    # The best coupon code the customer could add (what it saves next to the automatic offers).
+    others = [c for c in chosen if c.kind != Kind.COUPON]
+    best_code = stack.best(Kind.COUPON, others)
+
     wallet = coins.load_cart_coins(user.pk)
     coin_quote = coins.redemption_quote(
         wallet["config"],
         wallet["available"],
         cart.coins_to_redeem or 0,
-        subtotal - coupon_discount(coupon, subtotal, base),
+        subtotal - stack.price(chosen)[0].discount_paise,
     )
-    pricing = compute_pricing(subtotal, coupon, distance_m, coin_quote["discount_paise"], base)
+    pricing, parts = stack.price(chosen, coin_quote["discount_paise"])
+    lines_out = discount_lines(chosen, parts)
+    applied = next((d for d in lines_out if d["kind"] == Kind.COUPON), None)
 
     return {
         "cart": {
@@ -371,17 +367,26 @@ def build_quote(user: User, address_id: uuid.UUID | None = None) -> dict[str, An
             "item_count": sum(entry["quantity"] for entry in lines),
         },
         "coupon": {
-            "code": coupon.code,
-            "description": coupon.description or None,
-            "discount_type": coupon.discount_type,
-            # What the customer saves: food discount plus any delivery fee it waived.
-            "discount_paise": pricing.discount_paise + pricing.delivery_discount_paise,
+            "code": applied["code"],
+            "description": applied["description"],
+            "discount_type": applied["discount_type"],
+            # What the coupon saves: food discount plus any delivery fee it waived.
+            "discount_paise": applied["saving_paise"],
         }
-        if coupon
+        if applied
         else None,
         "coupon_error": coupon_error,
-        # The best coupon for this cart, so checkout can suggest it (null when none applies).
-        "best_coupon": _best_coupon(user, cart.restaurant_id, subtotal, engine_lines, distance_m),
+        # Every discount on the bill, in the order it applied.
+        "discounts": lines_out,
+        # The best coupon code for this cart, so checkout can suggest it (null when none saves).
+        "best_coupon": {**summary(best_code), "saving_paise": stack.saving(best_code, others)}
+        if best_code
+        else None,
+        # Every restaurant offer this cart can use (only one applies), best first.
+        "restaurant_offers": stack.restaurant_offers(chosen),
+        # The best payment offer for each online channel, for the payment step.
+        "payment_offers": stack.payment_offers(before_payment),
+        "payment_channel": payment,
         "coins": coin_quote,
         "address": address_json(address) if address else None,
         "delivery": None

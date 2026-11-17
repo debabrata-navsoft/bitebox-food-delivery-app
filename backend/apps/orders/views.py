@@ -25,7 +25,7 @@ from common.throttling import rate_limit
 from common.validation import PageQuery, parse_id, validated
 
 from . import services
-from .models import OrderStatus, PaymentMethod
+from .models import OrderStatus, PaymentChannel, PaymentMethod
 from .presenters import order_json
 
 S = OrderStatus
@@ -84,6 +84,12 @@ class PlaceOrderInput(serializers.Serializer):
         },
     )
     payment_method = _choice(PaymentMethod.values, "Choose a payment method")
+    # Online orders: how the customer pays (its payment offer applies). Ignored for cash.
+    payment_channel = serializers.ChoiceField(
+        choices=PaymentChannel.values,
+        required=False,
+        error_messages={"invalid_choice": "Choose UPI, card, net banking or wallet"},
+    )
     note = serializers.CharField(required=False, allow_blank=True, max_length=300)
     expected_total_paise = serializers.IntegerField(required=False, min_value=0)
 

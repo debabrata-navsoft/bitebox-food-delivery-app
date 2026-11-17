@@ -1,17 +1,41 @@
 @if (list().length) {
   <section aria-labelledby="offers-title">
-    <h2 id="offers-title">Offers &amp; deals</h2>
+    <div class="head">
+      <h2 id="offers-title">Offers &amp; deals</h2>
+      <a class="more" routerLink="/offers">
+        See all offers<np-icon name="chevron-right" class="mat-icon" matButtonIcon />
+      </a>
+    </div>
     <ul>
       @for (o of list(); track o.code) {
         <li>
-          <bb-offer-card [offer]="o">
+          <bb-offer-card [offer]="o" [autoTag]="!inCart()">
             @if (o.terms) {
               <small offerNote class="terms" [title]="o.terms">T&amp;C apply</small>
+            }
+            @if (inCart() && applied(o)) {
+              <span offerNote class="state applied"><np-icon name="circle-check" class="mat-icon" matButtonIcon />Applied</span>
+            }
+            @if (inCart() && !applied(o) && minOrderLeft(o) > 0) {
+              <span offerNote class="state short">Add {{ minOrderLeft(o) | inr }} more</span>
+            }
+            @if (canApply(o)) {
+              <button
+                class="bb-btn bb-btn--small apply"
+                type="button"
+                [disabled]="applying() !== null || cart.busy()"
+                [attr.aria-label]="'Apply ' + (o.name || 'this offer') + ' instead'"
+                (click)="apply(o)"
+              >
+                Apply
+              </button>
             }
           </bb-offer-card>
         </li>
       }
     </ul>
-    <p class="hint">Apply a code at checkout.</p>
+    @if (inCart() && list().length > 1) {
+      <p class="hint">One restaurant offer applies per order: the best one, or the one you pick.</p>
+    }
   </section>
 }

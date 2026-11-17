@@ -13,6 +13,7 @@ import { ApiError } from "../utils/api-error.js";
 import { paginationMeta } from "../utils/pagination.js";
 import { paymentView } from "./payments/payment.service.js";
 import { CommissionRule } from "../models/commission-rule.model.js";
+import { RESTAURANT_FOOD_EXPR, restaurantFood } from "./earnings.service.js";
 import { postPayoutPaid, postRefund } from "./ledger.service.js";
 import { notify } from "./notification.service.js";
 import { rupees } from "./order-notifications.js";
@@ -371,9 +372,7 @@ export async function commission(days) {
         _id: "$restaurant",
         name: { $first: "$restaurantSnapshot.name" },
         orders: { $sum: 1 },
-        foodPaise: {
-          $sum: { $subtract: ["$pricing.subtotalPaise", { $ifNull: ["$pricing.discountPaise", 0] }] },
-        },
+        foodPaise: { $sum: RESTAURANT_FOOD_EXPR },
         restaurantPaise: { $sum: "$settlement.restaurantPaise" },
         platformPaise: { $sum: "$settlement.platformPaise" },
       },
@@ -520,7 +519,7 @@ export async function settlementHistory(type, match, pagination) {
       .sort({ "settlement.at": -1 })
       .skip(pagination.skip)
       .limit(pagination.limit)
-      .select("orderNumber pricing settlement payouts")
+      .select("orderNumber pricing restaurantDiscountPaise settlement payouts")
       .populate(`payouts.${link}`, "status paidAt")
       .lean(),
     Order.countDocuments(filter),
@@ -528,7 +527,7 @@ export async function settlementHistory(type, match, pagination) {
   return {
     items: orders.map((o) => {
       const s = o.settlement;
-      const food = o.pricing.subtotalPaise - (o.pricing.discountPaise ?? 0);
+      const food = restaurantFood(o);
       const adjustment = s.refundAdjustmentPaise ?? 0;
       const payout = o.payouts?.[link];
       return {

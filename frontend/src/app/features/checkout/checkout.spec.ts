@@ -97,7 +97,7 @@ describe('Checkout', () => {
     await fixture.whenStable();
     const card = (fixture.nativeElement as HTMLElement).querySelector('bb-checkout-coins')!;
     expect(card.textContent).toContain('500 available');
-    const useMax = Array.from(card.querySelectorAll('button')).find((b) => b.textContent?.includes('Use maximum'))!;
+    const useMax = Array.from(card.querySelectorAll('button')).find((b) => b.textContent?.includes('Use max'))!;
     useMax.click();
     expect(cart.setCoins).toHaveBeenCalledWith(500);
   });

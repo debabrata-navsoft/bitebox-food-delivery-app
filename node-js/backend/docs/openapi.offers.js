@@ -17,6 +17,7 @@ const listQuery = [
   { in: "query", name: "search", schema: { type: "string" } },
   { in: "query", name: "status", schema: { enum: ["active", "scheduled", "expired", "paused", "draft", "pending", "rejected"] } },
   { in: "query", name: "owner", schema: { enum: ["platform", "restaurant"] } },
+  { in: "query", name: "kind", schema: { enum: ["coupon", "restaurant_offer", "platform_offer", "payment_offer"] } },
   { in: "query", name: "sort", schema: { enum: ["newest", "oldest", "expiring", "most_used", "code"] } },
   { in: "query", name: "from", schema: { type: "string", format: "date-time" } },
   { in: "query", name: "to", schema: { type: "string", format: "date-time" } },
@@ -31,7 +32,8 @@ const offerBody = {
     "application/json": {
       schema: {
         type: "object",
-        description: "As POST /admin/coupons, without restaurant(s); `draft: true` saves without submitting for approval",
+        description:
+          "As POST /admin/coupons, without restaurant(s), kind or paymentChannels (always a restaurant_offer); `draft: true` saves without submitting for approval",
         properties: { draft: { type: "boolean" } },
       },
     },
@@ -46,7 +48,7 @@ export const offersPaths = {
       tags: ["Checkout"],
       summary: "Every offer the customer can use, best first",
       security: bearer,
-      parameters: [{ in: "query", name: "type", schema: { enum: ["percent", "flat", "free_delivery", "first_order", "restaurant", "category"] } }],
+      parameters: [{ in: "query", name: "type", schema: { enum: ["percent", "flat", "free_delivery", "first_order", "restaurant", "coupon", "payment", "category"] } }],
       responses: { 200: offers },
     },
   },

@@ -1,5 +1,15 @@
 import { CouponOffer } from '../models/checkout.models';
-import { badgeLabel, conditionsLabel, discountLabel, discountParts, scopeLabel } from './coupon-labels';
+import {
+  badgeLabel,
+  billLabel,
+  channelsLabel,
+  conditionsLabel,
+  describe as describeOffer,
+  discountLabel,
+  discountParts,
+  isAutomatic,
+  scopeLabel,
+} from './coupon-labels';
 
 const base: CouponOffer = { code: 'X', discountType: 'percent', discountValue: 20, minOrderPaise: 0, validUntil: '' };
 
@@ -34,5 +44,37 @@ describe('coupon labels', () => {
   it('lists the conditions', () => {
     expect(conditionsLabel(base)).toBe('No minimum');
     expect(conditionsLabel({ ...base, minOrderPaise: 29900, audience: 'new' })).toBe('On ₹299+ · New customers');
+  });
+
+  it('tells offers from coupons and names payment methods', () => {
+    expect(isAutomatic(base)).toBe(false); // older records have no kind: coupons
+    expect(isAutomatic({ ...base, kind: 'platform_offer' })).toBe(true);
+    expect(channelsLabel({ paymentChannels: ['upi', 'card'] })).toBe('UPI or Card');
+    expect(channelsLabel({ paymentChannels: [] })).toBe('Any online payment');
+  });
+
+  it('labels each discount on the bill', () => {
+    const line = { code: 'X', name: null, foodPaise: 0, deliveryPaise: 0, savingPaise: 0 };
+    expect(billLabel({ ...line, kind: 'restaurant_offer', discountType: 'percent', discountValue: 20 })).toBe(
+      'Restaurant offer (20% OFF)',
+    );
+    expect(billLabel({ ...line, kind: 'coupon', code: 'BITE100', discountType: 'flat', discountValue: 10000 })).toBe(
+      'Coupon (BITE100)',
+    );
+    expect(billLabel({ ...line, kind: 'payment_offer', discountType: 'flat', discountValue: 2500 })).toBe(
+      'Payment offer (₹25 OFF)',
+    );
+  });
+
+  it('describes an offer in a sentence', () => {
+    expect(describeOffer({ ...base, code: 'WELCOMEBACK', discountValue: 60, minOrderPaise: 15900, maxDiscountPaise: 10000 })).toBe(
+      'Use code WELCOMEBACK & get 60% off on orders above ₹159. Maximum discount: ₹100.',
+    );
+    expect(describeOffer({ ...base, kind: 'payment_offer', paymentChannels: ['upi'], discountType: 'flat', discountValue: 2500 })).toBe(
+      'Pay with UPI to get ₹25 off on any order.',
+    );
+    expect(describeOffer({ ...base, kind: 'restaurant_offer', discountValue: 20 })).toBe(
+      'Get 20% off on any order. Applies by itself, no code needed.',
+    );
   });
 });

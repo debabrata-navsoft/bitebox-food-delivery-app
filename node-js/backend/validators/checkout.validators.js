@@ -1,5 +1,6 @@
 import { body, header, param, query } from "express-validator";
 import { MAX_ITEM_QUANTITY } from "../models/cart.model.js";
+import { PAYMENT_CHANNELS } from "../models/coupon.model.js";
 import { PAYMENT_METHODS } from "../models/order.model.js";
 import {
   mongoIdParam,
@@ -38,8 +39,12 @@ export const couponCodeRules = [
     .withMessage("Enter a valid coupon code"),
 ];
 
+const CHANNEL_MESSAGE = "Choose UPI, card, net banking or wallet";
+
 export const quoteRules = [
   query("addressId").optional().isMongoId().withMessage("Invalid address"),
+  // The online channel (upi, card, netbanking, wallet) prices that channel's payment offer.
+  query("payment").optional().isIn(Object.values(PAYMENT_CHANNELS)).withMessage(CHANNEL_MESSAGE),
 ];
 
 // Addresses
@@ -112,6 +117,8 @@ export const placeOrderRules = [
   body("paymentMethod")
     .isIn(Object.values(PAYMENT_METHODS))
     .withMessage("Choose a payment method"),
+  // Online orders: how the customer pays (its payment offer applies). Ignored for cash.
+  body("paymentChannel").optional().isIn(Object.values(PAYMENT_CHANNELS)).withMessage(CHANNEL_MESSAGE),
   body("note").optional().isString().trim().isLength({ max: 300 }),
   body("expectedTotalPaise").optional().isInt({ min: 0 }).toInt(),
 ];

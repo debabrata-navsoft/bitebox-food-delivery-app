@@ -1,6 +1,3 @@
-.coins {
-  border-left: 4px solid var(--bb-amber);
-}
 .head {
   display: flex;
   justify-content: space-between;
@@ -14,11 +11,40 @@
     // Same size as the other checkout card titles ("Offers", "Bill details").
     font-size: 1.1rem;
     --bb-icon-size: 20px;
+    np-icon {
+      color: var(--bb-amber-600);
+    }
   }
 }
+// The balance as a small amber pill.
 .balance {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--bb-amber-100);
+  color: var(--bb-ink);
+  font-size: 0.8rem;
   font-weight: 700;
   white-space: nowrap;
+}
+// "Use up to 150 coins · save ₹15" with "Use max" on the right.
+.limit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--bb-space-2);
+  margin: var(--bb-space-2) 0;
+  font-size: 0.85rem;
+  color: var(--bb-ink-muted);
+  strong {
+    color: var(--bb-ink);
+  }
+  small {
+    display: block;
+    font-size: 0.75rem;
+  }
+  button {
+    flex-shrink: 0;
+  }
 }
 .applied {
   display: flex;
@@ -31,15 +57,19 @@
     flex-direction: column;
   }
 }
+// The amount and Apply side by side, the same height; an error line sits under the input.
 .coins-form {
   display: flex;
   align-items: flex-start;
   gap: var(--bb-space-2);
   .bb-field {
     flex: 1;
+    min-width: 0;
   }
   button {
-    margin-top: 2px;
+    flex-shrink: 0;
+    height: 44px;
+    min-width: 96px;
   }
 }
 .small {

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { Pricing } from '../../models/checkout.models';
+import { billLabel } from '../../coupons/coupon-labels';
+import { DiscountLine, Pricing } from '../../models/checkout.models';
 import { DistancePipe, InrPipe } from '../../pipes/money.pipes';
 
 @Component({
@@ -12,6 +13,9 @@ import { DistancePipe, InrPipe } from '../../pipes/money.pipes';
 export class BillSummary {
   readonly pricing = input.required<Pricing>();
   readonly couponCode = input<string | undefined>();
+  /** Each discount on its own line; older orders without them show one "Coupon discount" line. */
+  readonly discounts = input<DiscountLine[] | null | undefined>();
+  protected readonly billLabel = billLabel;
   readonly distanceMeters = input<number | null | undefined>();
   /** Coins used for the coin discount line. */
   readonly coinsRedeemed = input<number | null | undefined>();

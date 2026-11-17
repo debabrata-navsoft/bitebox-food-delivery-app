@@ -71,3 +71,14 @@
   font-weight: 700;
   letter-spacing: 0.04em;
 }
+.auto {
+  margin-top: 4px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--bb-success);
+  --bb-icon-size: 14px;
+}

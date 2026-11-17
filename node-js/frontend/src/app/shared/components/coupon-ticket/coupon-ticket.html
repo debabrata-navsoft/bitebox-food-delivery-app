@@ -1,0 +1,22 @@
+@let o = offer();
+<div class="side" aria-hidden="true"><span>{{ side() }}</span></div>
+<div class="body">
+  <header>
+    <strong class="title">{{ title() }}</strong>
+    <ng-content select="[ticketAction]" />
+  </header>
+  @if (highlight(); as line) {
+    <p class="highlight">{{ line }}</p>
+  }
+  <ng-content select="[ticketNote]" />
+  <hr />
+  <p class="desc">{{ sentence() }}</p>
+  @if (o.terms) {
+    <button type="button" class="more" [attr.aria-expanded]="more()" (click)="more.set(!more())">
+      {{ more() ? '− LESS' : '+ MORE' }}
+    </button>
+    @if (more()) {
+      <p class="terms">{{ o.terms }}</p>
+    }
+  }
+</div>

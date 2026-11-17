@@ -32,7 +32,7 @@ from common.api import ApiError
 from common.pagination import Page, paginate
 
 from . import ledger
-from .earnings import EARNINGS, commission_bp_for
+from .earnings import EARNINGS, commission_bp_for, restaurant_food
 from .models import CommissionRule, OrderSettlement, Payout, PayoutStatus, PayoutType
 from .reports import day_keys
 
@@ -228,7 +228,7 @@ def commission_report(days: int) -> dict[str, Any]:
         .annotate(
             name=Max("order__restaurant__name"),
             orders=Count("pk"),
-            food=Sum(F("order__subtotal_paise") - F("order__discount_paise")),
+            food=Sum(F("order__subtotal_paise") - F("order__restaurant_discount_paise")),
             restaurant=Sum("restaurant_paise"),
             platform=Sum("platform_paise"),
         )
@@ -537,7 +537,7 @@ def settlement_history(page: Page, type: str, **scope: Any) -> dict[str, Any]:
     for s in rows:
         o = s.order
         payout = getattr(s, link)
-        food = o.subtotal_paise - o.discount_paise
+        food = restaurant_food(o)
         net = (
             s.rider_paise
             if type == PayoutType.RIDER

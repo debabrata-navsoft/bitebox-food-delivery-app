@@ -32,9 +32,12 @@ import { providerFor } from "./payments/payment.service.js";
 const conflict = (message, code, details) =>
   new ApiError(409, message, { code, details });
 
+/** What an order keeps of each discount (the quote's lines, minus display-only fields). */
+const SNAPSHOT_KEYS = ["kind", "code", "name", "discountType", "discountValue", "foodPaise", "deliveryPaise", "fundedBy"];
+
 export async function placeOrder(
   userId,
-  { addressId, paymentMethod, note, expectedTotalPaise },
+  { addressId, paymentMethod, paymentChannel, note, expectedTotalPaise },
   idempotencyKey,
 ) {
   if (idempotencyKey) {
@@ -42,9 +45,11 @@ export async function placeOrder(
     if (existing) return { order: existing, created: false };
   }
   const provider = providerFor(paymentMethod); // throws when online payment is unavailable
+  // The online channel decides the payment offer; cash orders have none.
+  const channel = paymentMethod === PAYMENT_METHODS.ONLINE ? (paymentChannel ?? null) : null;
 
   const address = await addressService.getOwn(userId, addressId);
-  const quote = await cartService.buildQuote(userId, { addressId });
+  const quote = await cartService.buildQuote(userId, { addressId, payment: channel });
   if (!quote.cart) throw ApiError.badRequest("Your cart is empty");
   if (quote.couponError) {
     throw conflict(
@@ -125,10 +130,14 @@ export async function placeOrder(
       location: address.location,
     },
     pricing: quote.pricing,
-    // The saving, including any delivery fee a free-delivery coupon waived.
+    // The coupon code's own saving, including any delivery fee it waived.
     coupon: quote.coupon
       ? { code: quote.coupon.code, discountPaise: quote.coupon.discountPaise }
       : undefined,
+    discounts: quote.discounts.map((d) => Object.fromEntries(SNAPSHOT_KEYS.map((k) => [k, d[k]]))),
+    restaurantDiscountPaise: quote.discounts
+      .filter((d) => d.fundedBy === "restaurant")
+      .reduce((sum, d) => sum + d.foodPaise, 0),
     coins: coinsRedeemed
       ? {
           redeemed: coinsRedeemed,
@@ -145,6 +154,7 @@ export async function placeOrder(
     status: ORDER_STATUS.PENDING,
     statusHistory: [{ status: ORDER_STATUS.PENDING, at: now, by: userId, actor: "customer" }],
     paymentMethod,
+    paymentChannel: channel,
     paymentStatus: PAYMENT_STATUS.PENDING,
     // Cash orders go to the restaurant now; online ones once paid (see payments/payment.service.js).
     submittedAt: paymentMethod === PAYMENT_METHODS.COD ? now : null,
@@ -201,10 +211,10 @@ async function commitOrder(
       );
     undo.push(() => Cart.create([claimed.toObject()]));
 
-    // 2. Reserve a coupon use atomically (respecting the global usage limit) and re-check per-user use.
-    let coupon = null;
+    // 2. Reserve one use of every discount atomically (respecting usage limits); the coupon
+    // code's per-user use is checked again.
     if (quote.coupon) {
-      coupon = await couponService.assertEligible(
+      await couponService.assertEligible(
         quote.coupon.code,
         {
           userId,
@@ -213,26 +223,34 @@ async function commitOrder(
         },
         session,
       );
-      const reserved = await Coupon.findOneAndUpdate(
-        {
-          _id: coupon._id,
-          isActive: true,
-          $or: [
-            { usageLimit: null },
-            { $expr: { $lt: ["$usedCount", "$usageLimit"] } },
-          ],
-        },
-        { $inc: { usedCount: 1 } },
-        { session, returnDocument: "after" },
-      );
+    }
+    const found = await Coupon.find({ code: { $in: quote.discounts.map((d) => d.code) } })
+      .select("code")
+      .session(session)
+      .lean();
+    const idOf = new Map(found.map((c) => [c.code, c._id]));
+    for (const d of quote.discounts) {
+      const _id = idOf.get(d.code);
+      const reserved =
+        _id &&
+        (await Coupon.findOneAndUpdate(
+          {
+            _id,
+            isActive: true,
+            $or: [
+              { usageLimit: null },
+              { $expr: { $lt: ["$usedCount", "$usageLimit"] } },
+            ],
+          },
+          { $inc: { usedCount: 1 } },
+          { session, returnDocument: "after" },
+        ));
       if (!reserved)
         throw conflict(
-          "This coupon has just been fully redeemed",
+          `${d.name || d.code} has just run out. Please review your order.`,
           "COUPON_EXHAUSTED",
         );
-      undo.push(() =>
-        Coupon.updateOne({ _id: coupon._id }, { $inc: { usedCount: -1 } }),
-      );
+      undo.push(() => Coupon.updateOne({ _id }, { $inc: { usedCount: -1 } }));
     }
 
     // 3. Create the order and its payment record.
@@ -257,20 +275,19 @@ async function commitOrder(
     order.payment = payment._id;
     await order.save({ session });
 
-    if (coupon) {
-      await CouponRedemption.create(
-        [
-          {
-            coupon: coupon._id,
-            user: userId,
-            order: order._id,
-            discountPaise: quote.coupon.discountPaise,
-          },
-        ],
+    // One redemption per discount: what it saved, including any delivery fee it waived.
+    if (quote.discounts.length) {
+      // Without the undo, a later failure would leave the discounts counted as used.
+      undo.push(() => CouponRedemption.deleteMany({ order: order._id }));
+      await CouponRedemption.insertMany(
+        quote.discounts.map((d) => ({
+          coupon: idOf.get(d.code),
+          user: userId,
+          order: order._id,
+          discountPaise: d.savingPaise,
+        })),
         { session },
       );
-      // Without this, a later failure would leave the coupon counted as used by this customer.
-      undo.push(() => CouponRedemption.deleteOne({ order: order._id }));
     }
 
     // 4. Hold the redeemed coins (cash orders spend them straight away).

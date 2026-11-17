@@ -3,6 +3,7 @@ import { INVOICE_KINDS, Invoice, InvoiceSequence } from "../models/invoice.model
 import { ORDER_STATUS, Order } from "../models/order.model.js";
 import { PAYOUT_TYPES } from "../models/payout.model.js";
 import { ApiError } from "../utils/api-error.js";
+import { restaurantFood } from "./earnings.service.js";
 import { Pdf } from "../utils/pdf.js";
 
 /**
@@ -152,16 +153,17 @@ export async function payoutStatement(payout) {
   if (payout.reference) pdf.text(320, 166, `Bank reference ${payout.reference}`, { size: 9 });
   const orders = await Order.find({ [restaurant ? "payouts.restaurant" : "payouts.rider"]: payout._id })
     .sort({ "settlement.at": 1 })
-    .select("orderNumber pricing settlement")
+    .select("orderNumber pricing restaurantDiscountPaise settlement")
     .lean();
   // Restaurants also see the commission and refund deductions per order.
   const columns = restaurant
     ? [[LEFT, "Order"], [200, "Delivered"], [380, "Commission", true], [460, "Refunds", true], [RIGHT, "Amount", true]]
     : [[LEFT, "Order"], [200, "Delivered"], [RIGHT, "Amount", true]];
-  const rows = orders.map(({ orderNumber, pricing, settlement: s }) => {
+  const rows = orders.map((order) => {
+    const { orderNumber, settlement: s } = order;
     const adj = s.refundAdjustmentPaise ?? 0;
     if (!restaurant) return [orderNumber, when(s.at), rs(s.riderPaise)];
-    const food = pricing.subtotalPaise - (pricing.discountPaise ?? 0);
+    const food = restaurantFood(order);
     return [orderNumber, when(s.at), rs(food - s.restaurantPaise), adj ? rs(-adj) : "-", rs(s.restaurantPaise - adj)];
   });
   const y = table(pdf, 200, columns, rows, 740);

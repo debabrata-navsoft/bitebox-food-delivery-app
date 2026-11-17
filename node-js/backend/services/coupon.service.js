@@ -4,10 +4,12 @@ import { PERMISSIONS } from "../config/permissions.js";
 import {
   APPROVAL_STATUS,
   AUDIENCES,
+  COUPON_KINDS,
   COUPON_SOURCES,
   Coupon,
   CouponRedemption,
   DISCOUNT_TYPES,
+  kindOf,
 } from "../models/coupon.model.js";
 import { FoodItem } from "../models/food-item.model.js";
 import { ORDER_STATUS, Order } from "../models/order.model.js";
@@ -30,6 +32,7 @@ import { couponDiscount } from "./pricing.service.js";
 const REFERENCE_ORDER_PAISE = 50_000;
 const FREE_DELIVERY_VALUE_PAISE = 4_000;
 const SCOPES = ["restaurants", "categories", "foodItems"];
+const CHANNEL_LABELS = { upi: "UPI", card: "card", netbanking: "net banking", wallet: "wallet" };
 
 let approvalOverride = null;
 /** Tests: require approval of restaurant offers (true/false), or null for the configured value. */
@@ -51,6 +54,15 @@ const ids = (list) => (list ?? []).map((x) => String(x?._id ?? x));
  */
 const APPROVED = { $in: [APPROVAL_STATUS.APPROVED, null] };
 const platformWide = { restaurant: null, "restaurants.0": { $exists: false } };
+
+/** Coupons of one kind. Old ones have no `kind`: a restaurant's are its offers, others coupons. */
+export function kindFilter(kind) {
+  if (kind === COUPON_KINDS.COUPON)
+    return { $or: [{ kind }, { kind: null, source: { $ne: COUPON_SOURCES.RESTAURANT } }] };
+  if (kind === COUPON_KINDS.RESTAURANT_OFFER)
+    return { $or: [{ kind }, { kind: null, source: COUPON_SOURCES.RESTAURANT }] };
+  return { kind };
+}
 
 /** Coupons a customer may see now: approved, switched on, inside their dates, not used up. */
 export const visibleFilter = (now = new Date()) => ({
@@ -97,10 +109,21 @@ export async function redemptionCounts(userId, couponIds) {
 /**
  * Why this coupon cannot be used on this cart, or null. The one place the rules live.
  * `newCustomer` and `used` (this customer's redemptions of it) are looked up when not given.
+ * `payment` is the online channel the customer picked (null for cash), which payment offers
+ * depend on.
  */
 export async function problem(
   c,
-  { userId, restaurantId, subtotalPaise, lines = null, newCustomer = null, used = null, now = new Date() },
+  {
+    userId,
+    restaurantId,
+    subtotalPaise,
+    lines = null,
+    newCustomer = null,
+    used = null,
+    payment = null,
+    now = new Date(),
+  },
   session = null,
 ) {
   if (!c.isActive || c.approvalStatus !== APPROVAL_STATUS.APPROVED)
@@ -110,6 +133,8 @@ export async function problem(
   const restaurants = restaurantIds(c);
   if (restaurants.size && !restaurants.has(String(restaurantId)))
     return invalid("This coupon is not valid at this restaurant", "COUPON_NOT_APPLICABLE");
+  if (kindOf(c) === COUPON_KINDS.PAYMENT_OFFER && !paysWith(c, payment))
+    return invalid(`Pay ${channelsLabel(c)} to use this offer`, "COUPON_PAYMENT_METHOD");
   if (c.audience !== AUDIENCES.ALL) {
     const isNew = newCustomer ?? (await isNewCustomer(userId));
     if (c.audience === AUDIENCES.NEW && !isNew)
@@ -132,9 +157,22 @@ export async function problem(
   return null;
 }
 
-export async function assertEligible(code, context, session = null) {
+/** A payment offer needs an online payment, through one of its channels when it lists any. */
+export const paysWith = (c, payment) =>
+  Boolean(payment) && (!c.paymentChannels?.length || c.paymentChannels.includes(payment));
+
+/** "online", or "by UPI or card". */
+const channelsLabel = (c) => {
+  const names = (c.paymentChannels ?? []).map((ch) => CHANNEL_LABELS[ch] ?? ch);
+  return names.length ? `by ${names.join(" or ")}` : "online";
+};
+
+export async function assertEligible(code, context, session = null, kinds = [COUPON_KINDS.COUPON]) {
   const coupon = await Coupon.findOne({ code: String(code).trim().toUpperCase() }).session(session);
   if (!coupon) throw invalid("This coupon code is not valid");
+  // Offers apply by themselves; only coupons are entered as codes.
+  if (!kinds.includes(kindOf(coupon)))
+    throw invalid("This offer is applied automatically at checkout", "COUPON_AUTOMATIC");
   const error = await problem(coupon, context, session);
   if (error) throw error;
   return coupon;
@@ -170,6 +208,8 @@ export const offerJson = (c) => ({
   name: c.name || null,
   description: c.description || null,
   terms: c.terms || null,
+  kind: kindOf(c),
+  paymentChannels: [...(c.paymentChannels ?? [])],
   discountType: c.discountType,
   discountValue: c.discountValue,
   maxDiscountPaise: c.maxDiscountPaise,
@@ -208,12 +248,13 @@ export const usableAt = (restaurantId) =>
   populated(
     Coupon.find({ $and: [visibleFilter(), restaurantId ? forRestaurant(restaurantId) : platformWide] })
       .sort({ validUntil: 1 })
-      .limit(30),
+      .limit(60),
   );
 
-/** Checkout: platform-wide coupons, plus this restaurant's, that the customer can use. */
+/** Checkout's coupon codes: platform-wide ones plus this restaurant's, for this customer. */
 export async function listAvailable({ restaurantId, user = null } = {}) {
-  return best(await usableBy(user, await usableAt(restaurantId))).map(offerJson);
+  const codes = (await usableAt(restaurantId)).filter((c) => kindOf(c) === COUPON_KINDS.COUPON);
+  return best(await usableBy(user, codes)).map(offerJson);
 }
 
 export const OFFER_KINDS = {
@@ -221,7 +262,9 @@ export const OFFER_KINDS = {
   flat: { discountType: DISCOUNT_TYPES.FLAT },
   free_delivery: { discountType: DISCOUNT_TYPES.FREE_DELIVERY },
   first_order: { audience: AUDIENCES.NEW },
-  restaurant: { source: COUPON_SOURCES.RESTAURANT },
+  restaurant: kindFilter(COUPON_KINDS.RESTAURANT_OFFER),
+  coupon: kindFilter(COUPON_KINDS.COUPON),
+  payment: kindFilter(COUPON_KINDS.PAYMENT_OFFER),
   category: { $or: [{ "categories.0": { $exists: true } }, { "foodItems.0": { $exists: true } }] },
 };
 
@@ -258,6 +301,7 @@ export async function bestOffers(restaurantIdList) {
       if (wanted.has(rid)) byRestaurant.set(rid, [...(byRestaurant.get(rid) ?? []), c]);
   const badge = (top, count) => ({
     code: top.code,
+    kind: kindOf(top),
     name: top.name || null,
     discountType: top.discountType,
     discountValue: top.discountValue,
@@ -287,6 +331,8 @@ export const couponJson = (c) => {
     ...json,
     name: c.name || null,
     terms: c.terms || null,
+    kind: kindOf(c),
+    paymentChannels: [...(c.paymentChannels ?? [])],
     rejectionReason: c.rejectionReason || null,
     bannerUrl: c.bannerUrl || null,
     createdBy: c.createdBy ? String(c.createdBy) : null,
@@ -322,6 +368,7 @@ async function list(base, query, pagination) {
   }
   if (query.active !== undefined) and.push({ isActive: query.active });
   if (query.status) and.push(STATUS_FILTERS[query.status](now));
+  if (query.kind) and.push(kindFilter(query.kind));
   if (query.owner)
     and.push({ source: query.owner === COUPON_SOURCES.PLATFORM ? { $in: [query.owner, null] } : query.owner });
   if (query.from) and.push({ validUntil: { $gte: new Date(query.from) } });
@@ -400,6 +447,8 @@ const FIELDS = [
   "restaurant",
   "audience",
   "bannerUrl",
+  "kind",
+  "paymentChannels",
   ...SCOPES,
 ];
 const pick = (source) =>
@@ -508,7 +557,7 @@ async function checkOwnItems(restaurant, input) {
   const items = input.foodItems ?? [];
   if (items.length && (await FoodItem.exists({ _id: { $in: items }, restaurant: { $ne: restaurant._id } })))
     throw fieldError("foodItems", "Choose dishes from your own menu");
-  const { restaurants: _r, restaurant: _o, ...rest } = input;
+  const { restaurants: _r, restaurant: _o, kind: _k, paymentChannels: _p, ...rest } = input;
   return rest;
 }
 

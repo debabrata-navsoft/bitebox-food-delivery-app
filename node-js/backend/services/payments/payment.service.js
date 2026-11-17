@@ -107,6 +107,9 @@ function checkoutInfo(order, payment) {
     amountPaise: payment.amountPaise,
     currency: payment.currency,
     orderNumber: order.orderNumber,
+    // The channel the customer chose (its payment offer is priced in): checkout opens with only
+    // that method. Null when any method will do.
+    channel: order.paymentChannel ?? null,
   };
 }
 

@@ -15,6 +15,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.authentication import current_user
 from apps.audit.services import audited
+from apps.orders.models import PaymentChannel
 from apps.rbac.roles import Permission, Role
 from apps.restaurants.services import get_public, require_own_restaurant
 from common.api import ok
@@ -23,18 +24,17 @@ from common.http import PublicCacheMixin
 from common.pagination import Page
 from common.permissions import PUBLIC, permission_required, role_required
 from common.schema import envelope, errors
-from common.throttling import rate_limit
 from common.validation import PageQuery, parse_id, validated
 
 from . import services
-from .models import Audience, DiscountType, Source
+from .models import Audience, DiscountType, Kind, Source
 
 ANY = envelope("CouponResponse")
 ADMIN = [permission_required(Permission.CATALOG_MANAGE)]
 PARTNER = [role_required(Role.RESTAURANT)]
 CUSTOMER = [role_required(Role.CUSTOMER)]
-# The same budget as applying coupons in the cart (COUPON_RATE_LIMIT).
-OfferLimit = rate_limit("COUPON_RATE_LIMIT", "Too many coupon requests. Try again later.")
+# The lists of usable coupons are not rate-limited like applying a code in the cart
+# (COUPON_RATE_LIMIT): they can't be used to guess codes, and the Offers page reloads them.
 
 
 class NullableInt(serializers.IntegerField):
@@ -101,6 +101,21 @@ class CouponInput(serializers.Serializer):
     food_items = _ids("Invalid dish")
     audience = serializers.ChoiceField(choices=Audience.values, required=False)
     banner_url = ImageUrlField(max_length=500)
+    # Admins make coupons (codes), platform offers and payment offers (both automatic).
+    kind = serializers.ChoiceField(
+        choices=[Kind.COUPON, Kind.PLATFORM_OFFER, Kind.PAYMENT_OFFER],
+        required=False,
+        error_messages={"invalid_choice": "Choose a coupon, platform offer or payment offer"},
+    )
+    payment_channels = serializers.ListField(
+        child=serializers.ChoiceField(
+            choices=PaymentChannel.values,
+            error_messages={"invalid_choice": "Choose UPI, card, net banking or wallet"},
+        ),
+        required=False,
+        allow_empty=True,
+        max_length=4,
+    )
 
     def to_internal_value(self, data: Any) -> Any:
         value = super().to_internal_value(data)
@@ -123,6 +138,8 @@ class OfferInput(CouponInput):
 
     restaurant = None  # type: ignore[assignment]
     restaurants = None  # type: ignore[assignment]
+    kind = None  # type: ignore[assignment]
+    payment_channels = None  # type: ignore[assignment]
     draft = serializers.BooleanField(required=False, default=False)
 
 
@@ -131,6 +148,7 @@ class ListQuery(PageQuery):
     status = serializers.ChoiceField(choices=list(services.STATUS_FILTERS), required=False)
     # Platform coupons or restaurant offers ("source" would clash with DRF's Field.source).
     owner = serializers.ChoiceField(choices=Source.values, required=False)
+    kind = serializers.ChoiceField(choices=Kind.values, required=False)
     sort = serializers.ChoiceField(choices=list(services.SORTS), required=False)
     from_ = serializers.DateTimeField(required=False)
     to = serializers.DateTimeField(required=False)
@@ -193,7 +211,6 @@ class PartnerView(APIView):
 # ---------------------------------------------------------------------------
 class AvailableView(APIView):
     permission_classes = CUSTOMER
-    throttle_classes = [OfferLimit]
 
     @extend_schema(
         tags=["Coupons"],
@@ -208,7 +225,6 @@ class AvailableView(APIView):
 
 class CustomerOffersView(APIView):
     permission_classes = CUSTOMER
-    throttle_classes = [OfferLimit]
 
     @extend_schema(
         tags=["Coupons"],

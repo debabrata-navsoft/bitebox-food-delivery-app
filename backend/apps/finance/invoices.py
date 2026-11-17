@@ -22,6 +22,7 @@ from apps.orders.models import Order, OrderStatus
 from common.api import ApiError
 from common.pdf import Pdf
 
+from .earnings import restaurant_food
 from .models import Invoice, InvoiceKind, InvoiceSequence, OrderSettlement, Payout, PayoutType
 
 SERIES = {InvoiceKind.CUSTOMER_TAX_INVOICE: "INV", InvoiceKind.PAYOUT_STATEMENT: "STM"}
@@ -186,7 +187,7 @@ def payout_statement(payout: Payout) -> tuple[str, bytes]:
         if y > 740:
             pdf.new_page()
             y = 60
-        food = s.order.subtotal_paise - s.order.discount_paise
+        food = restaurant_food(s.order)
         net = s.restaurant_paise - s.refund_adjustment_paise if restaurant else s.rider_paise
         pdf.text(LEFT, y, s.order.order_number, 10)
         pdf.text(200, y, _when(s.settled_at), 10)

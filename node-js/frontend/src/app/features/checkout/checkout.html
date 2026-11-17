@@ -125,6 +125,18 @@
         <!-- Coupon: a row that opens every coupon in a dialog -->
         <section class="bb-card" aria-labelledby="coupon-title">
           <h2 id="coupon-title">Offers &amp; benefits</h2>
+          @if (restaurantOffer(); as ro) {
+            <div class="applied offer">
+              <np-icon name="store" class="mat-icon" matButtonIcon />
+              <div>
+                <strong>{{ ro.name || 'Restaurant offer' }}</strong> applied
+                <span class="bb-muted small">Restaurant offer · you save {{ ro.savingPaise | inr }}</span>
+              </div>
+              @if ((q.restaurantOffers?.length ?? 0) > 1) {
+                <button mat-button type="button" (click)="showCoupons()">Change</button>
+              }
+            </div>
+          }
           @if (suggestion(); as s) {
             <div class="best">
               <np-icon name="sparkles" class="mat-icon" matButtonIcon />
@@ -185,6 +197,7 @@
           <bb-bill-summary
             [pricing]="q.pricing"
             [couponCode]="q.coupon?.code"
+            [discounts]="q.discounts"
             [distanceMeters]="q.delivery?.distanceMeters ?? null"
             [coinsRedeemed]="q.coins?.applied"
           />

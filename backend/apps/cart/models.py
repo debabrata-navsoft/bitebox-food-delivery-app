@@ -23,6 +23,8 @@ class Cart(BaseModel):
         Restaurant, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
     coupon_code = models.CharField(max_length=30, blank=True, default="")
+    # The restaurant offer the customer picked; empty means the best one applies by itself.
+    offer_code = models.CharField(max_length=30, blank=True, default="")
     coins_to_redeem = models.PositiveIntegerField(default=0)
 
     class Meta:

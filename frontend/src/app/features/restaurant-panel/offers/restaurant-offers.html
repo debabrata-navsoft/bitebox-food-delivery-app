@@ -1,4 +1,4 @@
-<bb-page-header title="Offers" subtitle="Discounts for your restaurant. BiteBox reviews each offer before customers see it.">
+<bb-page-header title="Offers" subtitle="Your best live offer applies by itself to every eligible order. BiteBox reviews each offer first.">
   <np-button severity="primary" icon="plus" label="New offer" (clicked)="open()" />
 </bb-page-header>
 
@@ -12,7 +12,7 @@
 }
 
 <div class="bb-filters">
-  <np-text-input [formField]="filters.search" placeholder="Search by code or name" ariaLabel="Search offers" icon="search" clearable />
+  <np-text-input [formField]="filters.search" placeholder="Search by name" ariaLabel="Search offers" icon="search" clearable />
   <np-select [formField]="filters.status" ariaLabel="Status" [options]="statusOptions" />
 </div>
 
@@ -50,10 +50,8 @@
           @for (o of list.data()!.items; track o.id) {
             <tr>
               <td>
-                <button type="button" class="bb-link-button code" (click)="open(o)">{{ o.code }}</button>
-                @if (o.name || o.description) {
-                  <span class="sub">{{ o.name || o.description }}</span>
-                }
+                <button type="button" class="bb-link-button title" (click)="open(o)">{{ o.name || o.description || discountLabel(o) }}</button>
+                <span class="sub">Applies automatically</span>
               </td>
               <td>
                 {{ discountLabel(o) }}
@@ -76,7 +74,7 @@
                   severity="secondary"
                   icon="ellipsis-vertical"
                   label=""
-                  [ariaLabel]="'Actions for ' + o.code"
+                  [ariaLabel]="'Actions for ' + (o.name || o.code)"
                   [disabled]="busy() === o.id"
                   (clicked)="toggleMenu(menu, $event)"
                 />

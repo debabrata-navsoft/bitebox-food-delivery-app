@@ -40,3 +40,10 @@
     padding: var(--bb-space-1) 0;
   }
 }
+// The coupon's type under its name: "Platform offer", "Payment offer · UPI or Card".
+.kind {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--bb-plum);
+}

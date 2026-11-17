@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.authentication import current_user
 from apps.accounts.models import User
+from apps.orders.models import PaymentChannel
 from apps.rbac.roles import Role
 from common.api import ok
 from common.fields import UUIDRef
@@ -24,11 +25,17 @@ from .models import MAX_ITEM_QUANTITY
 
 CUSTOMER = [role_required(Role.CUSTOMER)]
 QUOTE = envelope("CartQuote")
-ADDRESS_PARAM = [OpenApiParameter("addressId", str)]
+# The payment channel (upi, card, netbanking, wallet) prices that channel's payment offer.
+ADDRESS_PARAM = [OpenApiParameter("addressId", str), OpenApiParameter("payment", str)]
 
 
 class QuoteQuery(serializers.Serializer):
     address_id = UUIDRef(message="Invalid address", required=False)
+    payment = serializers.ChoiceField(
+        choices=PaymentChannel.values,
+        required=False,
+        error_messages={"invalid_choice": "Choose UPI, card, net banking or wallet"},
+    )
 
 
 class AddItemInput(serializers.Serializer):
@@ -74,10 +81,12 @@ def _respond(
     request: Request, change: Callable[[User], Any] | None, message: str = "OK"
 ) -> Response:
     user = current_user(request)
-    address = validated(QuoteQuery, request.query_params).get("address_id")
+    query = validated(QuoteQuery, request.query_params)
     if change is not None:
         change(user)
-    return ok(services.build_quote(user, address), message=message)
+    return ok(
+        services.build_quote(user, query.get("address_id"), query.get("payment")), message=message
+    )
 
 
 class CartView(APIView):

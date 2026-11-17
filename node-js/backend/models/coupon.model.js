@@ -18,6 +18,34 @@ export const AUDIENCES = Object.freeze({
   EXISTING: "existing",
 });
 export const COUPON_SOURCES = Object.freeze({ PLATFORM: "platform", RESTAURANT: "restaurant" });
+/** A coupon needs a code; offers apply by themselves (the best one of each kind). */
+export const COUPON_KINDS = Object.freeze({
+  COUPON: "coupon",
+  RESTAURANT_OFFER: "restaurant_offer", // funded by the restaurant
+  PLATFORM_OFFER: "platform_offer",
+  PAYMENT_OFFER: "payment_offer", // for online payments, optionally some channels only
+});
+/** The order discounts stack in: each applies to the food left after the ones before. */
+export const STACK_ORDER = Object.freeze([
+  COUPON_KINDS.RESTAURANT_OFFER,
+  COUPON_KINDS.PLATFORM_OFFER,
+  COUPON_KINDS.COUPON,
+  COUPON_KINDS.PAYMENT_OFFER,
+]);
+/** How an online order is paid; payment offers can depend on it (cash orders have none). */
+export const PAYMENT_CHANNELS = Object.freeze({
+  UPI: "upi",
+  CARD: "card",
+  NETBANKING: "netbanking",
+  WALLET: "wallet",
+});
+/**
+ * A coupon's kind. Coupons saved before kinds existed have none: a restaurant's were its offers,
+ * everything else a coupon (the same rule the Django migration applied).
+ */
+export const kindOf = (c) =>
+  c.kind ??
+  (c.source === COUPON_SOURCES.RESTAURANT ? COUPON_KINDS.RESTAURANT_OFFER : COUPON_KINDS.COUPON);
 export const APPROVAL_STATUS = Object.freeze({
   DRAFT: "draft",
   PENDING: "pending",
@@ -38,6 +66,16 @@ const couponSchema = new mongoose.Schema(
     name: { type: String, trim: true, maxlength: 80 },
     description: { type: String, trim: true, maxlength: 200 },
     terms: { type: String, trim: true, maxlength: 2000 },
+    // Left out on old documents; read through kindOf() (Mongoose fills it in when loading).
+    kind: {
+      type: String,
+      enum: Object.values(COUPON_KINDS),
+      default() {
+        return kindOf({ source: this.source });
+      },
+    },
+    // Payment offers only: the online channels it is for; empty means any online payment.
+    paymentChannels: { type: [{ type: String, enum: Object.values(PAYMENT_CHANNELS) }], default: [] },
     discountType: {
       type: String,
       enum: Object.values(DISCOUNT_TYPES),
@@ -105,6 +143,12 @@ const couponSchema = new mongoose.Schema(
 );
 
 couponSchema.pre("validate", function checkCoupon() {
+  if (this.source === COUPON_SOURCES.RESTAURANT) {
+    this.kind = COUPON_KINDS.RESTAURANT_OFFER; // a restaurant's discounts are its automatic offers
+  } else if (this.kind === COUPON_KINDS.RESTAURANT_OFFER) {
+    this.invalidate("kind", "Restaurants create their own offers");
+  }
+  if (this.kind !== COUPON_KINDS.PAYMENT_OFFER) this.paymentChannels = [];
   if (this.discountType === DISCOUNT_TYPES.FREE_DELIVERY) {
     this.discountValue = 0;
     this.maxDiscountPaise = null;
@@ -126,6 +170,7 @@ couponSchema.pre("validate", function checkCoupon() {
 });
 
 couponSchema.index({ code: 1 }, { unique: true });
+couponSchema.index({ kind: 1, isActive: 1, validUntil: 1 });
 couponSchema.index({ isActive: 1, validUntil: 1 });
 couponSchema.index({ source: 1, approvalStatus: 1 });
 
@@ -139,6 +184,7 @@ const redemptionSchema = new mongoose.Schema(
       required: true,
     },
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    // One per discount on the order (a coupon plus automatic offers).
     order: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Order",
@@ -150,7 +196,8 @@ const redemptionSchema = new mongoose.Schema(
 );
 
 redemptionSchema.index({ coupon: 1, user: 1 });
-redemptionSchema.index({ order: 1 }, { unique: true });
+// Replaces the old unique { order: 1 } index (an order now has a redemption per discount).
+redemptionSchema.index({ order: 1, coupon: 1 }, { unique: true });
 
 export const CouponRedemption = mongoose.model(
   "CouponRedemption",

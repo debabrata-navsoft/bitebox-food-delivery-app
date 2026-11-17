@@ -99,6 +99,10 @@ export const paymentsSchemas = {
       amountPaise: { type: "integer" },
       currency: { type: "string" },
       orderNumber: { type: "string" },
+      channel: {
+        type: ["string", "null"],
+        description: "The channel the customer chose (its payment offer is priced in); null when any will do",
+      },
     },
   },
   Notification: {

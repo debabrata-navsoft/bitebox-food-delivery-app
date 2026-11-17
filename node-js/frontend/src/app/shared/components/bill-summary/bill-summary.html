@@ -4,15 +4,23 @@
     <dt>Item total</dt>
     <dd>{{ p.subtotalPaise | inr }}</dd>
   </div>
-  @if (p.discountPaise > 0) {
+  @for (d of discounts() ?? []; track d.code) {
     <div class="discount">
-      <dt>Coupon discount{{ couponCode() ? ' (' + couponCode() + ')' : '' }}</dt>
-      <dd>−{{ p.discountPaise | inr }}</dd>
+      <dt>{{ billLabel(d) }}</dt>
+      <!-- A free-delivery discount shows on the delivery fee below. -->
+      <dd>{{ d.foodPaise ? '−' + (d.foodPaise | inr) : 'Free delivery' }}</dd>
     </div>
+  } @empty {
+    @if (p.discountPaise > 0) {
+      <div class="discount">
+        <dt>Coupon discount{{ couponCode() ? ' (' + couponCode() + ')' : '' }}</dt>
+        <dd>−{{ p.discountPaise | inr }}</dd>
+      </div>
+    }
   }
   <div>
     <dt>
-      Delivery fee{{ p.deliveryDiscountPaise && couponCode() ? ' (' + couponCode() + ')' : '' }}
+      Delivery fee
       @if (distanceMeters() !== null && distanceMeters() !== undefined) {
         <small>{{ distanceMeters() | distance }} (straight-line)</small>
       }

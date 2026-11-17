@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { COUPON_KINDS, PAYMENT_CHANNELS } from "./coupon.model.js";
 
 export const ORDER_STATUS = Object.freeze({
   PENDING: "pending",
@@ -70,6 +71,22 @@ const orderItemSchema = new mongoose.Schema(
   { _id: false },
 );
 
+/** One discount on the order, as it applied (cart.service.js#buildQuote). */
+const discountSchema = new mongoose.Schema(
+  {
+    kind: { type: String, enum: Object.values(COUPON_KINDS), required: true },
+    code: { type: String, required: true },
+    name: { type: String, default: null },
+    // For the bill: "Restaurant offer (20% OFF)".
+    discountType: { type: String, default: null },
+    discountValue: { type: Number, default: null },
+    foodPaise: { type: Number, required: true, min: 0 },
+    deliveryPaise: { type: Number, default: 0, min: 0 },
+    fundedBy: { type: String, enum: ["restaurant", "platform"], required: true },
+  },
+  { _id: false },
+);
+
 const pointSchema = new mongoose.Schema(
   {
     type: { type: String, enum: ["Point"], default: "Point" },
@@ -124,7 +141,13 @@ const orderSchema = new mongoose.Schema(
       // The delivery fee a free-delivery coupon waived (already left out of deliveryFeePaise).
       deliveryDiscountPaise: { type: Number, default: 0, min: 0 },
     },
+    // The coupon code and its own saving (other discounts are in `discounts`).
     coupon: { code: String, discountPaise: Number },
+    // Every discount on the order, in the order they applied, and who funds each.
+    discounts: { type: [discountSchema], default: [] },
+    // The food discount the restaurant's own offers gave (funded by the restaurant; settlement).
+    // No default: orders placed before stacked discounts have none (earnings.service.js#restaurantFood).
+    restaurantDiscountPaise: { type: Number, min: 0 },
     coins: {
       redeemed: { type: Number, default: 0, min: 0 },
       discountPaise: { type: Number, default: 0, min: 0 },
@@ -160,6 +183,12 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: Object.values(PAYMENT_METHODS),
       required: true,
+    },
+    // How an online order is paid; payment offers can depend on it (null for cash).
+    paymentChannel: {
+      type: String,
+      enum: [...Object.values(PAYMENT_CHANNELS), null],
+      default: null,
     },
     paymentStatus: {
       type: String,
@@ -226,6 +255,13 @@ const orderSchema = new mongoose.Schema(
         delete ret.deliveryOtp;
         delete ret.deliveryOtpAttempts;
         delete ret.arrivalDistanceMeters;
+        delete ret.restaurantDiscountPaise;
+        // What each discount saved: food plus any delivery fee it waived.
+        if (Array.isArray(ret.discounts))
+          ret.discounts = ret.discounts.map((d) => ({
+            ...d,
+            savingPaise: d.foodPaise + (d.deliveryPaise ?? 0),
+          }));
         return ret;
       },
     },

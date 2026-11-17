@@ -213,17 +213,19 @@ async function afterTransition(order) {
   }
 }
 
-/** A rejected/cancelled order gives its coupon use back (once: the redemption record is the token). */
+/**
+ * A rejected/cancelled order gives back one use of each discount it had, once each (deleting the
+ * redemption record is the token, so a repeat or a concurrent release does nothing).
+ */
 async function releaseCoupon(order) {
-  if (!order.coupon?.code) return;
-  const redemption = await CouponRedemption.findOneAndDelete({
-    order: order._id,
-  });
-  if (redemption)
-    await Coupon.updateOne(
-      { _id: redemption.coupon, usedCount: { $gt: 0 } },
-      { $inc: { usedCount: -1 } },
-    );
+  for (const { _id } of await CouponRedemption.find({ order: order._id }).select("_id").lean()) {
+    const redemption = await CouponRedemption.findOneAndDelete({ _id });
+    if (redemption)
+      await Coupon.updateOne(
+        { _id: redemption.coupon, usedCount: { $gt: 0 } },
+        { $inc: { usedCount: -1 } },
+      );
+  }
 }
 
 /** Frees whichever rider was offered or carrying this order. */

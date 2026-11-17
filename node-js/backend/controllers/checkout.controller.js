@@ -7,7 +7,11 @@ import { respond, sendSuccess } from "../utils/api-response.js";
 import { parsePagination } from "../utils/pagination.js";
 
 const quoteFor = (req, cart) =>
-  cartService.buildQuote(req.user._id, { addressId: req.validatedQuery?.addressId, cart });
+  cartService.buildQuote(req.user._id, {
+    addressId: req.validatedQuery?.addressId,
+    payment: req.validatedQuery?.payment,
+    cart,
+  });
 /** Cart mutations answer with the freshly priced cart (reusing the cart they just saved). */
 const thenQuote = (change, message) =>
   respond(async (req) => {

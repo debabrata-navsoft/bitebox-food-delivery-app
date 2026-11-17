@@ -141,6 +141,9 @@ def _checkout_info(order: Order, payment: Payment) -> dict[str, Any]:
         "amount_paise": payment.amount_paise,
         "currency": payment.currency,
         "order_number": order.order_number,
+        # The channel the customer chose (its payment offer is priced in): checkout opens
+        # with only that method. Null when any method will do.
+        "channel": order.payment_channel or None,
     }
 
 

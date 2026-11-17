@@ -1,16 +1,20 @@
 @let f = form();
 @let type = f.discountType().value();
 <h3 class="bb-form-section">Offer</h3>
-<div class="bb-form-row">
+@if (showCode()) {
+  <div class="bb-form-row">
+    <np-text-input [formField]="f.name" label="Name" [placeholder]="namePlaceholder()" cdkFocusInitial [error]="shownError(f.name)" />
+    <np-text-input
+      [formField]="f.code"
+      label="Code"
+      [placeholder]="editing() ? '' : 'Generated if blank'"
+      autocapitalize="characters"
+      [error]="shownError(f.code)"
+    />
+  </div>
+} @else {
   <np-text-input [formField]="f.name" label="Name" [placeholder]="namePlaceholder()" cdkFocusInitial [error]="shownError(f.name)" />
-  <np-text-input
-    [formField]="f.code"
-    label="Code"
-    [placeholder]="editing() ? '' : 'Generated if blank'"
-    autocapitalize="characters"
-    [error]="shownError(f.code)"
-  />
-</div>
+}
 <np-text-input [formField]="f.description" label="Short description for customers" [error]="shownError(f.description)" />
 
 <h3 class="bb-form-section">Discount</h3>

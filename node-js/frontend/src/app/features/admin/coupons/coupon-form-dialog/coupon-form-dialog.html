@@ -1,4 +1,4 @@
-<h2 bbDialogTitle>{{ data ? 'Edit ' + data.code : 'New coupon' }}</h2>
+<h2 bbDialogTitle>{{ data ? 'Edit ' + (data.name || data.code) : 'New ' + kindLabel().toLowerCase() }}</h2>
 <form [formRoot]="form">
   <div class="bb-dialog__content bb-form">
     @if (error()) {
@@ -12,7 +12,42 @@
       </div>
     }
 
-    <bb-coupon-fields [form]="form" [editing]="!!data" namePlaceholder="Weekend saver">
+    @if (!restaurantOffer) {
+      <div class="bb-field">
+        <np-button-toggle [options]="kinds" [value]="kind()" (valueChange)="pickKind($event)" ariaLabel="Type" />
+        <p class="hint">
+          @switch (kind()) {
+            @case ('coupon') {
+              Customers enter or pick the code at checkout.
+            }
+            @case ('platform_offer') {
+              Applies by itself to every eligible order (the best one, together with a restaurant offer and a coupon).
+            }
+            @case ('payment_offer') {
+              Applies by itself when the customer pays online with one of the methods below.
+            }
+          }
+        </p>
+      </div>
+    }
+
+    <bb-coupon-fields
+      [form]="form"
+      [editing]="!!data"
+      [showCode]="kind() === 'coupon'"
+      namePlaceholder="Weekend saver"
+    >
+      @if (kind() === 'payment_offer') {
+        <h3 class="bb-form-section">Payment methods</h3>
+        <np-select
+          label="Pay with"
+          placeholder="Any online payment"
+          multiple
+          [options]="channelOptions"
+          [values]="channels()"
+          (valuesChange)="channels.set($event)"
+        />
+      }
       <h3 class="bb-form-section">Where it applies</h3>
       @if (restaurantOffer) {
         <p class="hint">Only at {{ restaurantName ?? 'this restaurant' }} (a restaurant's own offer).</p>

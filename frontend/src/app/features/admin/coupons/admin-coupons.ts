@@ -18,7 +18,7 @@ import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dia
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
-import { conditionsLabel, discountLabel, scopeLabel } from '../../../shared/coupons/coupon-labels';
+import { channelsLabel, conditionsLabel, discountLabel, scopeLabel } from '../../../shared/coupons/coupon-labels';
 import { STATUS_OPTIONS, loaded, rowActions } from '../../../shared/coupons/coupon-list';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
@@ -27,6 +27,7 @@ import { pagedList } from '../../../shared/list/paged-list';
 import { TableLabels } from '../../../shared/list/table-labels';
 import {
   AdminCoupon,
+  COUPON_KIND_LABEL,
   COUPON_STATUS_LABEL,
   COUPON_STATUS_TONE,
   CouponQuery,
@@ -64,15 +65,21 @@ export class AdminCoupons {
   protected readonly discountLabel = discountLabel;
   protected readonly scopeLabel = scopeLabel;
   protected readonly conditionsLabel = conditionsLabel;
+  protected readonly channelsLabel = channelsLabel;
   protected readonly formatPaise = formatPaise;
 
   private readonly stats = rxResource({ stream: () => this.service.analytics() });
   /** Hidden while loading or after an error. */
   protected readonly totals = computed(() => loaded(this.stats));
 
-  protected readonly filterModel = signal({ search: '', status: '', owner: '', sort: 'newest' });
+  protected readonly filterModel = signal({ search: '', status: '', kind: '', owner: '', sort: 'newest' });
   protected readonly filters = form(this.filterModel);
   protected readonly statusOptions = STATUS_OPTIONS;
+  protected readonly kindLabel = COUPON_KIND_LABEL;
+  protected readonly kindOptions: SelectOption[] = [
+    { value: '', label: 'Every type' },
+    ...Object.entries(COUPON_KIND_LABEL).map(([value, label]) => ({ value, label })),
+  ];
   protected readonly ownerOptions: SelectOption[] = [
     { value: '', label: 'Everyone' },
     { value: 'platform', label: 'BiteBox coupons' },
@@ -93,6 +100,7 @@ export class AdminCoupons {
         search: f.search.trim() || undefined,
         status: (f.status || undefined) as CouponQuery['status'],
         owner: (f.owner || undefined) as CouponQuery['owner'],
+        kind: (f.kind || undefined) as CouponQuery['kind'],
         sort: f.sort as CouponQuery['sort'],
         page,
         limit,

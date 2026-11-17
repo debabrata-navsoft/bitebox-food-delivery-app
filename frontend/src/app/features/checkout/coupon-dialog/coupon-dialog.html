@@ -21,6 +21,25 @@
     <p class="field-error" role="alert">{{ error() }}</p>
   }
 
+  @if (restaurantOffers().length) {
+    <h3>Restaurant offers <small>· one applies per order</small></h3>
+    <ul class="choices">
+      @for (o of restaurantOffers(); track o.code) {
+        <li [class.on]="o.applied">
+          <div>
+            <strong>{{ o.name || o.description || 'Restaurant offer' }}</strong>
+            <span class="bb-muted">Saves {{ o.savingPaise | inr }} on this cart</span>
+          </div>
+          @if (o.applied) {
+            <span class="tag"><np-icon name="circle-check" class="mat-icon" matButtonIcon />Applied</span>
+          } @else {
+            <button mat-stroked-button type="button" [disabled]="applying()" (click)="apply(o.code)">Apply</button>
+          }
+        </li>
+      }
+    </ul>
+  }
+
   @if (offers.length) {
     <h3>Available coupons</h3>
     <ul class="offers">

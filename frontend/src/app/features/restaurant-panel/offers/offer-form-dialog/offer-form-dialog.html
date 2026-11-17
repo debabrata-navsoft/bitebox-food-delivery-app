@@ -1,4 +1,4 @@
-<h2 bbDialogTitle>{{ data ? 'Edit offer ' + data.code : 'New offer' }}</h2>
+<h2 bbDialogTitle>{{ data ? 'Edit ' + (data.name || 'offer') : 'New offer' }}</h2>
 <form [formRoot]="form">
   <div class="bb-dialog__content layout">
     <aside class="preview" aria-label="Preview">
@@ -10,7 +10,7 @@
       <p class="hint">
         {{ wasApproved
           ? "Saving changes sends the offer for approval again. Until then customers don't see it."
-          : 'Customers see the offer once BiteBox approves it.' }}
+          : 'Once BiteBox approves it, your offer applies by itself to every eligible order. Customers don\'t enter a code.' }}
       </p>
     </aside>
 
@@ -25,7 +25,7 @@
           <np-icon name="info" class="mat-icon" matButtonIcon /><span>BiteBox rejected this offer: {{ reason }}</span>
         </div>
       }
-      <bb-coupon-fields [form]="form" [editing]="!!data" namePlaceholder="Weekday lunch treat">
+      <bb-coupon-fields [form]="form" [editing]="!!data" [showCode]="false" namePlaceholder="Weekday lunch treat">
         <h3 class="bb-form-section">Dishes</h3>
         <np-select
           label="Categories"

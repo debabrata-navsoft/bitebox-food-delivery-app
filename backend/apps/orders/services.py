@@ -90,6 +90,19 @@ def _own_restaurant(owner: User) -> Restaurant:
 # ---------------------------------------------------------------------------
 # Customer
 # ---------------------------------------------------------------------------
+# What an order keeps of each discount (the quote's lines, minus display-only fields).
+SNAPSHOT_KEYS = (
+    "kind",
+    "code",
+    "name",
+    "discount_type",
+    "discount_value",
+    "food_paise",
+    "delivery_paise",
+    "funded_by",
+)
+
+
 def place_order(
     user: User, data: dict[str, Any], idempotency_key: str | None
 ) -> tuple[Order, bool]:
@@ -100,9 +113,11 @@ def place_order(
         return existing, False
     method = data["payment_method"]
     provider = provider_for(method)
+    # The online channel decides the payment offer; cash orders have none.
+    channel = data.get("payment_channel") if method == PaymentMethod.ONLINE else None
 
     address = get_own(user, data["address_id"])
-    quote = cart_services.build_quote(user, data["address_id"])
+    quote = cart_services.build_quote(user, data["address_id"], channel)
     if quote["cart"] is None:
         raise ApiError.bad_request("Your cart is empty")
     if quote["coupon_error"]:
@@ -189,6 +204,13 @@ def place_order(
                     ),
                     "total_paise": pricing["total_paise"],
                     "coupon_code": quote["coupon"]["code"] if quote["coupon"] else "",
+                    "payment_channel": channel or "",
+                    "restaurant_discount_paise": sum(
+                        d["food_paise"]
+                        for d in quote["discounts"]
+                        if d["funded_by"] == "restaurant"
+                    ),
+                    "discounts": [{k: d[k] for k in SNAPSHOT_KEYS} for d in quote["discounts"]],
                     "distance_m": quote["delivery"]["distance_meters"],
                     "note": data.get("note") or "",
                     "status": S.PENDING,
@@ -226,22 +248,30 @@ def _commit_order(
         raise _conflict("Your cart changed. Please review it and try again.", "CART_CHANGED")
     claimed.delete()
 
-    # 2. Reserve a coupon use atomically (respecting the usage limit); re-check per-user use.
-    coupon: Coupon | None = None
+    # 2. Reserve one use of every discount atomically (respecting usage limits); the coupon
+    # code's per-user use is checked again.
     if quote["coupon"]:
-        coupon = assert_eligible(
+        assert_eligible(
             quote["coupon"]["code"],
             user_id=user.pk,
             restaurant_id=cart["restaurant"]["id"],
             subtotal_paise=quote["pricing"]["subtotal_paise"],
         )
-        reserved = (
-            Coupon.objects.filter(pk=coupon.pk, is_active=True)
+    discounts = quote["discounts"]
+    ids = dict(
+        Coupon.objects.filter(code__in=[d["code"] for d in discounts]).values_list("code", "pk")
+    )
+    for d in discounts:
+        reserved = d["code"] in ids and (
+            Coupon.objects.filter(pk=ids[d["code"]], is_active=True)
             .filter(Q(usage_limit__isnull=True) | Q(used_count__lt=F("usage_limit")))
             .update(used_count=F("used_count") + 1)
         )
         if not reserved:
-            raise _conflict("This coupon has just been fully redeemed", "COUPON_EXHAUSTED")
+            raise _conflict(
+                f"{d['name'] or d['code']} has just run out. Please review your order.",
+                "COUPON_EXHAUSTED",
+            )
 
     # 3. The order, its lines, its first history entry and its payment record.
     order = Order.objects.create(**fields)
@@ -270,11 +300,15 @@ def _commit_order(
         amount_paise=order.total_paise,
         status=PaymentStatus.PENDING,
     )
-    if coupon is not None:
-        # The saving, including any delivery fee a free-delivery coupon waived (for analytics).
-        CouponRedemption.objects.create(
-            coupon=coupon, user=user, order=order, discount_paise=quote["coupon"]["discount_paise"]
-        )
+    # One redemption per discount: what it saved, including any delivery fee it waived.
+    CouponRedemption.objects.bulk_create(
+        [
+            CouponRedemption(
+                coupon_id=ids[d["code"]], user=user, order=order, discount_paise=d["saving_paise"]
+            )
+            for d in discounts
+        ]
+    )
 
     # 4. Hold the redeemed coins (cash orders spend them straight away); a short balance stops
     # the whole order.

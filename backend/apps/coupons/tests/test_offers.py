@@ -260,3 +260,138 @@ def test_the_quote_suggests_the_coupon_that_saves_most(w: dict[str, Any]) -> Non
     assert (best["code"], best["savingPaise"]) == ("FLAT60", 6000)
     quote = apply(w, "FLAT60").json()["data"]
     assert quote["coupon"]["discountPaise"] == best["savingPaise"]  # the suggestion is exact
+
+
+def stacked(w: dict[str, Any], settings: Any) -> None:
+    """One of each kind: the kitchen's 20% offer, ₹30 platform offer, 10% coupon, ₹25 on UPI."""
+    settings.OFFER_APPROVAL_REQUIRED = False
+    offer(w, code="KITCHEN20", discountValue=20)
+    admin_coupon(w, code="ALL30", kind="platform_offer", discountType="flat", discountValue=3000)
+    admin_coupon(w, code="TENOFF")
+    admin_coupon(
+        w,
+        code="UPI25",
+        kind="payment_offer",
+        paymentChannels=["upi"],
+        discountType="flat",
+        discountValue=2500,
+    )
+    add(w, "Masala Dosa", "Gulab Jamun (2 pcs)")  # ₹248
+
+
+def test_discounts_stack_in_order_each_on_what_is_left(w: dict[str, Any], settings: Any) -> None:
+    stacked(w, settings)
+    # Without a payment channel: the two automatic offers; UPI's offer is listed for later.
+    quote = w["client"].get("/api/v1/cart").json()["data"]
+    assert [(d["code"], d["foodPaise"]) for d in quote["discounts"]] == [
+        ("KITCHEN20", 4960),  # 20% of ₹248
+        ("ALL30", 3000),
+    ]
+    assert quote["bestCoupon"]["code"] == "TENOFF"
+    assert [(p["channel"], p["code"], p["savingPaise"]) for p in quote["paymentOffers"]] == [
+        ("upi", "UPI25", 2500)
+    ]
+    # Codes are only for coupons: an automatic offer can't be entered.
+    assert apply(w, "ALL30").json()["error"]["code"] == "COUPON_AUTOMATIC"
+
+    apply(w, "TENOFF")
+    quote = w["client"].get("/api/v1/cart?payment=upi").json()["data"]
+    assert [(d["kind"], d["code"], d["foodPaise"]) for d in quote["discounts"]] == [
+        ("restaurant_offer", "KITCHEN20", 4960),
+        ("platform_offer", "ALL30", 3000),
+        ("coupon", "TENOFF", 1684),  # 10% of the ₹168.40 left
+        ("payment_offer", "UPI25", 2500),
+    ]
+    assert quote["pricing"]["discountPaise"] == 4960 + 3000 + 1684 + 2500
+    assert quote["coupon"] == {
+        "code": "TENOFF",
+        "description": None,
+        "discountType": "percent",
+        "discountPaise": 1684,
+    }
+    card = w["client"].get("/api/v1/cart?payment=card").json()["data"]
+    assert "UPI25" not in [d["code"] for d in card["discounts"]]
+
+
+def test_orders_keep_every_discount_and_give_the_uses_back(
+    w: dict[str, Any], settings: Any
+) -> None:
+    from apps.finance.earnings import settlement_for
+    from apps.orders.models import Order
+
+    stacked(w, settings)
+    apply(w, "TENOFF")
+    address_id = w["client"].get("/api/v1/cart").json()["data"]["address"]["id"]
+    placed = w["client"].post(
+        "/api/v1/orders",
+        {"paymentMethod": "online", "paymentChannel": "upi", "addressId": address_id},
+        format="json",
+    )
+    assert placed.status_code == 201, placed.json()
+    data = placed.json()["data"]["order"]
+    assert data["paymentChannel"] == "upi"
+    assert [d["code"] for d in data["discounts"]] == ["KITCHEN20", "ALL30", "TENOFF", "UPI25"]
+    assert data["coupon"] == {"code": "TENOFF", "discountPaise": 1684}
+    assert CouponRedemption.objects.filter(order_id=data["id"]).count() == 4
+    assert set(Coupon.objects.values_list("used_count", flat=True)) == {1}
+
+    # Only the restaurant's own offer comes out of its payout (15% commission on the rest).
+    order = Order.objects.get(pk=data["id"])
+    assert order.restaurant_discount_paise == 4960
+    assert settlement_for(order, 1500)["restaurant_paise"] == (24800 - 4960) * 85 // 100
+
+    cancelled = w["client"].post(f"/api/v1/orders/{data['id']}/cancel", {}, format="json")
+    assert cancelled.status_code == 200, cancelled.json()
+    assert set(Coupon.objects.values_list("used_count", flat=True)) == {0}
+    assert not CouponRedemption.objects.filter(order_id=data["id"]).exists()
+
+
+def test_one_restaurant_offer_applies_and_the_customer_can_pick_another(
+    w: dict[str, Any], settings: Any
+) -> None:
+    settings.OFFER_APPROVAL_REQUIRED = False
+    offer(w, code="KITCHEN20", discountValue=20)
+    offer(w, code="KITCHEN10", discountValue=10)
+    admin_coupon(w, code="ALL30", kind="platform_offer", discountType="flat", discountValue=3000)
+    add(w, "Masala Dosa", "Gulab Jamun (2 pcs)")  # ₹248
+
+    def restaurant_offers() -> list[tuple[str, bool]]:
+        quote = w["client"].get("/api/v1/cart").json()["data"]
+        applied = [d["code"] for d in quote["discounts"] if d["kind"] == "restaurant_offer"]
+        listed = [(o["code"], o["applied"]) for o in quote["restaurantOffers"]]
+        assert len(applied) == 1  # only one ever applies
+        assert (applied[0], True) in listed
+        return listed
+
+    assert restaurant_offers() == [("KITCHEN20", True), ("KITCHEN10", False)]  # best first
+    picked = apply(w, "KITCHEN10")
+    assert picked.status_code == 200, picked.json()
+    assert restaurant_offers() == [("KITCHEN20", False), ("KITCHEN10", True)]
+    assert picked.json()["data"]["coupon"] is None  # the coupon slot is untouched
+    # Platform offers still can't be entered as codes.
+    assert apply(w, "ALL30").json()["error"]["code"] == "COUPON_AUTOMATIC"
+
+
+def test_a_restaurants_offer_only_applies_to_its_own_dishes(w: dict[str, Any]) -> None:
+    from datetime import timedelta
+
+    from apps.coupons.models import ApprovalStatus, Kind, Source
+
+    other = make.restaurant(name="Harbor Grill")
+    now = timezone.now()
+    Coupon.objects.create(
+        code="HARBOR30",
+        kind=Kind.RESTAURANT_OFFER,
+        source=Source.RESTAURANT,
+        restaurant=other,
+        approval_status=ApprovalStatus.APPROVED,
+        discount_type="percent",
+        discount_value=30,
+        valid_from=now - timedelta(days=1),
+        valid_until=now + timedelta(days=1),
+    )
+    add(w, "Masala Dosa")  # from the seeded kitchen, not Harbor Grill
+    quote = w["client"].get("/api/v1/cart").json()["data"]
+    assert quote["discounts"] == []
+    assert quote["restaurantOffers"] == []
+    assert apply(w, "HARBOR30").json()["error"]["code"] == "COUPON_NOT_APPLICABLE"

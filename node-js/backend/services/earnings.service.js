@@ -15,11 +15,30 @@ export async function commissionBpFor(restaurantId) {
   return (own ?? global)?.basisPoints ?? EARNINGS.restaurantCommissionBasisPoints;
 }
 
+/**
+ * The food value the restaurant is paid on: after its own offers only. BiteBox funds every other
+ * discount, so the restaurant is paid as if those were not there. Orders placed before stacked
+ * discounts have no `restaurantDiscountPaise`: their one discount counts, as it did then.
+ */
+export function restaurantFood(order) {
+  return order.pricing.subtotalPaise - (order.restaurantDiscountPaise ?? order.pricing.discountPaise ?? 0);
+}
+
+/** The same, inside an aggregation over orders. */
+export const RESTAURANT_FOOD_EXPR = {
+  $subtract: [
+    "$pricing.subtotalPaise",
+    { $ifNull: ["$restaurantDiscountPaise", { $ifNull: ["$pricing.discountPaise", 0] }] },
+  ],
+};
+
 /** How a delivered order's money splits (`bp`: the commission in basis points). */
 export function settlementFor(order, bp = EARNINGS.restaurantCommissionBasisPoints) {
-  const foodPaise =
-    order.pricing.subtotalPaise - (order.pricing.discountPaise ?? 0);
-  const restaurantPaise = Math.round((foodPaise * (10_000 - bp)) / 10_000);
+  // A restaurant's own free-delivery offer is paid for out of its share too.
+  const waived = (order.discounts ?? [])
+    .filter((d) => d.fundedBy === "restaurant")
+    .reduce((sum, d) => sum + (d.deliveryPaise ?? 0), 0);
+  const restaurantPaise = Math.round((restaurantFood(order) * (10_000 - bp)) / 10_000) - waived;
   const riderPaise =
     EARNINGS.riderBasePaise +
     Math.ceil((order.distanceMeters ?? 0) / 1000) * EARNINGS.riderPerKmPaise;

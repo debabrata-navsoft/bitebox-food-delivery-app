@@ -1,4 +1,12 @@
-import { CardOffer, CouponOffer, NamedRef } from '../models/checkout.models';
+import {
+  CardOffer,
+  CartQuote,
+  COUPON_KIND_LABEL,
+  CouponOffer,
+  DiscountLine,
+  NamedRef,
+  PAYMENT_CHANNEL_LABEL,
+} from '../models/checkout.models';
 import { formatPaise } from '../pipes/money.pipes';
 
 /** "20% off up to ₹100", "₹50 off" or "Free delivery". */
@@ -54,4 +62,61 @@ export function badgeLabel(c: DiscountFields): string {
   const { big, small } = discountParts(c);
   const cap = c.discountType === 'percent' && c.maxDiscountPaise ? ` UPTO ${formatPaise(c.maxDiscountPaise)}` : '';
   return `${big} ${small}${cap}`;
+}
+
+/** A bill line's label: "Restaurant offer (20% OFF)", "Coupon (BITE100)", "Payment offer (₹25 OFF)". */
+export function billLabel(d: DiscountLine): string {
+  const detail =
+    d.kind === 'coupon' || !d.discountType
+      ? d.code
+      : d.discountType === 'free_delivery'
+        ? 'FREE DELIVERY'
+        : `${d.discountType === 'percent' ? `${d.discountValue}%` : formatPaise(d.discountValue)} OFF`;
+  return `${COUPON_KIND_LABEL[d.kind]} (${detail})`;
+}
+
+/** Offers apply by themselves; only coupons are entered as codes (older records are coupons). */
+export const isAutomatic = (c: Pick<CouponOffer, 'kind'>): boolean => (c.kind ?? 'coupon') !== 'coupon';
+
+/** A payment offer's channels: "UPI or Card", or "Any online payment". */
+export function channelsLabel(c: Pick<CouponOffer, 'paymentChannels'>): string {
+  const names = (c.paymentChannels ?? []).map((ch) => PAYMENT_CHANNEL_LABEL[ch]);
+  return names.length ? names.join(' or ') : 'Any online payment';
+}
+
+/**
+ * The offer in a sentence: "Use code WELCOMEBACK & get 60% off on orders above ₹159. Maximum
+ * discount: ₹100." (coupons), "Pay with UPI to get ₹25 off on any order." (payment offers).
+ */
+export function describe(c: CouponOffer): string {
+  const what =
+    c.discountType === 'free_delivery'
+      ? 'free delivery'
+      : c.discountType === 'percent'
+        ? `${c.discountValue}% off`
+        : `${formatPaise(c.discountValue)} off`;
+  const min = c.minOrderPaise ? ` on orders above ${formatPaise(c.minOrderPaise)}` : ' on any order';
+  const items = itemsLabel(c);
+  const on = items ? ` (on ${items})` : '';
+  const cap =
+    c.discountType === 'percent' && c.maxDiscountPaise
+      ? ` Maximum discount: ${formatPaise(c.maxDiscountPaise)}.`
+      : '';
+  const sentence =
+    c.kind === 'payment_offer'
+      ? `Pay ${c.paymentChannels?.length ? 'with ' + channelsLabel(c) : 'online'} to get ${what}${min}${on}.`
+      : isAutomatic(c)
+        ? `Get ${what}${min}${on}. Applies by itself, no code needed.`
+        : `Use code ${c.code} & get ${what}${min}${on}.`;
+  return sentence + cap + (c.audience === 'new' ? ' For your first order.' : '');
+}
+
+/**
+ * "FLAT60 applied — you save ₹60" (the saving includes any delivery fee it waived), or for a
+ * restaurant offer picked instead of the best one, "Lunch deal applied — you save ₹60".
+ */
+export function appliedMessage(quote: CartQuote, code?: string): string {
+  const offer = quote.restaurantOffers?.find((o) => o.code === code && o.applied);
+  if (offer) return `${offer.name || 'Restaurant offer'} applied — you save ${formatPaise(offer.savingPaise)}`;
+  return `${quote.coupon?.code} applied — you save ${formatPaise(quote.coupon?.discountPaise ?? 0)}`;
 }

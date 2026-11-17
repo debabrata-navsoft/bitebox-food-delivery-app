@@ -35,8 +35,10 @@
           @for (o of list.data()!.items; track o.id) {
             <tr>
               <td>
-                <strong class="code">{{ o.code }}</strong>
-                <span class="sub">{{ o.name || o.description || '—' }}</span>
+                <strong>{{ title(o) }}</strong>
+                @if (o.name && o.description) {
+                  <span class="sub">{{ o.description }}</span>
+                }
                 @if (o.terms) {
                   <span class="sub terms">{{ o.terms }}</span>
                 }

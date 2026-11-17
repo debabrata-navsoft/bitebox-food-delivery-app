@@ -7,8 +7,10 @@ import { RESTAURANT_STATUS, Restaurant } from "../models/restaurant.model.js";
 import { ApiError } from "../utils/api-error.js";
 import { haversineMeters } from "../utils/geo.js";
 import * as coinsService from "./coins.service.js";
+import { COUPON_KINDS, kindOf } from "../models/coupon.model.js";
 import * as couponService from "./coupon.service.js";
-import { computePricing, couponDiscount } from "./pricing.service.js";
+import { Stack, discountLines, summary } from "./discount-stack.js";
+import { computePricing } from "./pricing.service.js";
 
 const loadCart = (userId) => Cart.findOne({ user: userId }).exec();
 
@@ -26,6 +28,7 @@ async function mutateCart(userId, mutate, firstLoad) {
       if (cart.items.length === 0) {
         cart.restaurant = undefined;
         cart.couponCode = undefined;
+        cart.offerCode = undefined;
         cart.coinsToRedeem = 0;
       }
       return await cart.save();
@@ -102,6 +105,7 @@ export async function addItem(
       }
       cart.items = [];
       cart.couponCode = undefined;
+      cart.offerCode = undefined;
     }
     cart.restaurant = restaurantId;
     const line = cart.items.find((l) => l.foodItem.equals(item._id));
@@ -140,16 +144,22 @@ export async function clear(userId) {
 export async function applyCoupon(userId, code) {
   const quote = await buildQuote(userId);
   if (!quote.cart) throw ApiError.badRequest("Add dishes to your cart first");
-  // Validate against the current cart before saving the code (with each line's dish and
-  // category, for category and dish coupons).
-  await couponService.assertEligible(code, {
-    userId,
-    restaurantId: quote.cart.restaurant.id,
-    subtotalPaise: quote.pricing.subtotalPaise,
-    lines: quote.engineLines,
-  });
+  // A coupon code, or one of the restaurant's offers chosen instead of the best one: validated
+  // against the current cart (with each line's dish and category) before it is saved.
+  const found = await couponService.assertEligible(
+    code,
+    {
+      userId,
+      restaurantId: quote.cart.restaurant.id,
+      subtotalPaise: quote.pricing.subtotalPaise,
+      lines: quote.engineLines,
+    },
+    null,
+    [COUPON_KINDS.COUPON, COUPON_KINDS.RESTAURANT_OFFER],
+  );
   return mutateCart(userId, async (cart) => {
-    cart.couponCode = String(code).trim().toUpperCase();
+    if (kindOf(found) === COUPON_KINDS.RESTAURANT_OFFER) cart.offerCode = found.code;
+    else cart.couponCode = found.code;
   });
 }
 
@@ -182,9 +192,10 @@ export async function removeCoins(userId) {
 /**
  * Prices the customer's cart from current database values and reports
  * anything that blocks checkout. This is the single source of truth used by
- * both the cart page and order placement.
+ * both the cart page and order placement. `payment` is the online channel the customer picked
+ * (upi, card, ...; null for cash): the payment offer for it joins the stack (discount-stack.js).
  */
-export async function buildQuote(userId, { addressId, cart: saved } = {}) {
+export async function buildQuote(userId, { addressId, payment = null, cart: saved } = {}) {
   // A cart the caller just saved needs no second read.
   const cart = saved ?? (await loadCart(userId));
   const empty = {
@@ -192,6 +203,10 @@ export async function buildQuote(userId, { addressId, cart: saved } = {}) {
     coupon: null,
     couponError: null,
     bestCoupon: null,
+    discounts: [],
+    paymentOffers: [],
+    restaurantOffers: [],
+    paymentChannel: null,
     coins: null,
     address: null,
     delivery: null,
@@ -303,21 +318,40 @@ export async function buildQuote(userId, { addressId, cart: saved } = {}) {
     }
   }
 
-  // A category or dish coupon discounts only those lines.
-  const couponBasePaise = coupon ? couponService.couponBase(coupon, engineLines) : null;
-  // Coins: worked out on the food value after the coupon, then taken off the payable total.
+  // The discounts: the best automatic offers, the coupon, then the payment offer.
+  const stack = await Stack.load({
+    userId,
+    restaurantId: cart.restaurant,
+    subtotalPaise,
+    lines: engineLines,
+    distanceMeters,
+  });
+  // The restaurant offer the customer picked (while it still applies), else the best one.
+  const picked = stack.coupons.find(
+    (c) => c.code === cart.offerCode && kindOf(c) === COUPON_KINDS.RESTAURANT_OFFER,
+  );
+  const restaurantOffer =
+    picked && (await stack.usable(picked)) ? picked : (await stack.best(COUPON_KINDS.RESTAURANT_OFFER, []))?.c;
+  const chosen = restaurantOffer ? [restaurantOffer] : [];
+  const platformOffer = (await stack.best(COUPON_KINDS.PLATFORM_OFFER, chosen))?.c;
+  if (platformOffer) chosen.push(platformOffer);
+  if (coupon) chosen.push(coupon);
+  const beforePayment = [...chosen];
+  const paymentOffer = payment && (await stack.best(COUPON_KINDS.PAYMENT_OFFER, chosen, payment))?.c;
+  if (paymentOffer) chosen.push(paymentOffer);
+  // The best coupon code the customer could add (what it saves next to the automatic offers).
+  const others = chosen.filter((c) => kindOf(c) !== COUPON_KINDS.COUPON);
+  const bestCode = await stack.best(COUPON_KINDS.COUPON, others);
+
+  // Coins: worked out on the food value after every discount, then taken off the payable total.
   const coins = coinsService.redemptionQuote({
     ...coinsBase,
     requested: cart.coinsToRedeem ?? 0,
-    foodPaise: subtotalPaise - couponDiscount(coupon, subtotalPaise, couponBasePaise),
+    foodPaise: subtotalPaise - stack.price(chosen).pricing.discountPaise,
   });
-  const pricing = computePricing({
-    subtotalPaise,
-    coupon,
-    distanceMeters,
-    coinDiscountPaise: coins.discountPaise,
-    couponBasePaise,
-  });
+  const { pricing, parts } = stack.price(chosen, coins.discountPaise);
+  const discountRows = discountLines(chosen, parts);
+  const applied = discountRows.find((d) => d.kind === COUPON_KINDS.COUPON);
 
   const quote = {
     cart: {
@@ -337,18 +371,25 @@ export async function buildQuote(userId, { addressId, cart: saved } = {}) {
       items: lines,
       itemCount: lines.reduce((n, l) => n + l.quantity, 0),
     },
-    coupon: coupon
+    coupon: applied
       ? {
-          code: coupon.code,
-          description: coupon.description,
-          discountType: coupon.discountType,
-          // What the customer saves: food discount plus any delivery fee it waived.
-          discountPaise: pricing.discountPaise + pricing.deliveryDiscountPaise,
+          code: applied.code,
+          description: applied.description,
+          discountType: applied.discountType,
+          // What the coupon saves: food discount plus any delivery fee it waived.
+          discountPaise: applied.savingPaise,
         }
       : null,
     couponError,
-    // The best coupon for this cart, so checkout can suggest it (null when none applies).
-    bestCoupon: await bestCoupon({ userId, restaurantId: cart.restaurant, subtotalPaise, lines: engineLines, distanceMeters }),
+    // Every discount on the bill, in the order it applied.
+    discounts: discountRows,
+    // The best coupon code for this cart, so checkout can suggest it (null when none saves).
+    bestCoupon: bestCode ? { ...summary(bestCode.c), savingPaise: bestCode.savingPaise } : null,
+    // The best payment offer for each online channel, for the payment step.
+    paymentOffers: await stack.paymentOffers(beforePayment),
+    // Every restaurant offer this cart can use (only one applies), best first.
+    restaurantOffers: await stack.restaurantOffers(chosen),
+    paymentChannel: payment ?? null,
     coins,
     address: address?.toJSON() ?? null,
     delivery:
@@ -367,33 +408,4 @@ export async function buildQuote(userId, { addressId, cart: saved } = {}) {
   // For applyCoupon only; non-enumerable, so it is never sent to clients.
   Object.defineProperty(quote, "engineLines", { value: engineLines, enumerable: false });
   return quote;
-}
-
-/** The coupon that saves this customer most on this cart, priced here (never on the client). */
-async function bestCoupon({ userId, restaurantId, subtotalPaise, lines, distanceMeters }) {
-  if (!restaurantId || subtotalPaise <= 0) return null;
-  const [newCustomer, coupons] = await Promise.all([
-    couponService.isNewCustomer(userId),
-    couponService.usableAt(restaurantId),
-  ]);
-  // The customer's redemptions in one query, rather than one per coupon inside problem().
-  const used = await couponService.redemptionCounts(userId, coupons.map((c) => c._id));
-  const ctx = { userId, restaurantId, subtotalPaise, lines, newCustomer };
-  let best = null;
-  for (const c of coupons) {
-    if (await couponService.problem(c, { ...ctx, used: used.get(String(c._id)) ?? 0 })) continue;
-    const couponBasePaise = couponService.couponBase(c, lines);
-    const p = computePricing({ subtotalPaise, coupon: c, distanceMeters, couponBasePaise });
-    const saving = p.discountPaise + p.deliveryDiscountPaise;
-    if (saving > 0 && saving > (best?.savingPaise ?? 0)) {
-      best = {
-        code: c.code,
-        name: c.name || null,
-        description: c.description || null,
-        discountType: c.discountType,
-        savingPaise: saving,
-      };
-    }
-  }
-  return best;
 }

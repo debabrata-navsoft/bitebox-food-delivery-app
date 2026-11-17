@@ -52,6 +52,10 @@ export interface CartQuote {
   couponError: { code: string; message: string } | null;
   /** The coupon that saves most on this cart, priced by the server (null when none applies). */
   bestCoupon?: BestCoupon | null;
+  /** Every discount on the bill, in the order it applied. */
+  discounts?: DiscountLine[];
+  /** The restaurant's offers this cart can use, best first; only the `applied` one counts. */
+  restaurantOffers?: RestaurantOfferOption[];
   /** Coins the customer can use on this cart (null for an empty cart). */
   coins: CoinQuote | null;
   address: DeliveryAddress | null;
@@ -90,6 +94,49 @@ export interface DeliveryAddress extends Omit<AddressInput, 'location'> {
 }
 
 export type DiscountType = 'percent' | 'flat' | 'free_delivery';
+/** A coupon needs a code; the three offers apply by themselves (the best one of each). */
+export type CouponKind = 'coupon' | 'restaurant_offer' | 'platform_offer' | 'payment_offer';
+export type PaymentChannel = 'upi' | 'card' | 'netbanking' | 'wallet';
+
+export const COUPON_KIND_LABEL: Record<CouponKind, string> = {
+  coupon: 'Coupon',
+  restaurant_offer: 'Restaurant offer',
+  platform_offer: 'Platform offer',
+  payment_offer: 'Payment offer',
+};
+
+export const PAYMENT_CHANNEL_LABEL: Record<PaymentChannel, string> = {
+  upi: 'UPI',
+  card: 'Card',
+  netbanking: 'Net banking',
+  wallet: 'Wallet',
+};
+
+/** One discount on a bill, in the order it applied (quotes and orders). */
+export interface DiscountLine {
+  kind: CouponKind;
+  code: string;
+  name: string | null;
+  discountType?: DiscountType;
+  discountValue?: number;
+  /** Off the food; a free-delivery discount's saving is in `deliveryPaise`. */
+  foodPaise: number;
+  deliveryPaise: number;
+  savingPaise: number;
+  fundedBy?: 'restaurant' | 'platform';
+}
+
+/** One of the restaurant's offers for this cart: the applied one, or one to switch to. */
+export interface RestaurantOfferOption {
+  kind: 'restaurant_offer';
+  code: string;
+  name: string | null;
+  description: string | null;
+  discountType: DiscountType;
+  discountValue: number;
+  savingPaise: number;
+  applied: boolean;
+}
 
 export interface BestCoupon {
   code: string;
@@ -102,11 +149,26 @@ export interface BestCoupon {
 /** A restaurant card's badge: its best own offer and how many it runs. */
 export type CardOffer = Pick<
   CouponOffer,
-  'code' | 'name' | 'discountType' | 'discountValue' | 'maxDiscountPaise' | 'minOrderPaise' | 'audience'
+  | 'code'
+  | 'kind'
+  | 'name'
+  | 'discountType'
+  | 'discountValue'
+  | 'maxDiscountPaise'
+  | 'minOrderPaise'
+  | 'audience'
 > & { count: number };
 
 /** The customer Offers page filters (the API's `type`). */
-export type OfferKind = 'percent' | 'flat' | 'free_delivery' | 'first_order' | 'restaurant' | 'category';
+export type OfferKind =
+  | 'percent'
+  | 'flat'
+  | 'free_delivery'
+  | 'first_order'
+  | 'restaurant'
+  | 'category'
+  | 'coupon'
+  | 'payment';
 export type CouponAudience = 'all' | 'new';
 export type CouponSource = 'platform' | 'restaurant';
 export type ApprovalStatus = 'draft' | 'pending' | 'approved' | 'rejected';
@@ -132,6 +194,10 @@ export interface CouponOffer {
   name?: string | null;
   description?: string | null;
   terms?: string | null;
+  /** Missing on older records: treat as a coupon. */
+  kind?: CouponKind;
+  /** Payment offers: the channels it is for (empty: any online payment). */
+  paymentChannels?: PaymentChannel[];
   discountType: DiscountType;
   /** Percent (1-100), paise for flat, 0 for free delivery. */
   discountValue: number;
@@ -182,12 +248,15 @@ export interface AdminCouponInput {
   restaurants?: string[];
   categories?: string[];
   foodItems?: string[];
+  kind?: Exclude<CouponKind, 'restaurant_offer'>;
+  paymentChannels?: PaymentChannel[];
 }
 
 export interface CouponQuery {
   search?: string;
   status?: CouponStatus;
   owner?: CouponSource;
+  kind?: CouponKind;
   sort?: 'newest' | 'oldest' | 'expiring' | 'most_used' | 'code';
   page?: number;
   limit?: number;
@@ -261,6 +330,8 @@ export interface Order {
   deliveryAddress: Omit<DeliveryAddress, 'id' | 'isDefault'>;
   pricing: Pricing;
   coupon?: { code: string; discountPaise: number };
+  /** Every discount on the order (older orders: empty, see `coupon`). */
+  discounts?: DiscountLine[];
   /** Coins redeemed on (and earned by) this order. */
   coins?: OrderCoins;
   distanceMeters: number;

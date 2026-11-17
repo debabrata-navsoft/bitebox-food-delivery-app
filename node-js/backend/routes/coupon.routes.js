@@ -1,9 +1,7 @@
 import { Router } from "express";
-import { env } from "../config/env.js";
 import { PERMISSIONS } from "../config/permissions.js";
 import * as c from "../controllers/coupon.controller.js";
 import { authenticate, authorize, can } from "../middleware/auth.middleware.js";
-import { createRateLimiter } from "../middleware/security.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
 import { ROLES } from "../models/user.model.js";
 import { audited } from "../services/audit.service.js";
@@ -12,16 +10,13 @@ import * as rules from "../validators/coupon.validators.js";
 
 /** Coupons and restaurant offers (Django: apps/coupons/urls.py). */
 const admin = [authenticate, can(PERMISSIONS.CATALOG_MANAGE)];
-// The same budget as applying coupons in the cart.
-const couponLimiter = createRateLimiter({
-  windowMs: 15 * 60_000,
-  limit: env.isTest ? 1000 : 30,
-  message: "Too many coupon requests. Try again later.",
-});
-
-/** /api/v1/coupons (signed-in customers) */
+/**
+ * /api/v1/coupons (signed-in customers). Reading the lists isn't rate-limited like applying a
+ * code in the cart: they only show what this customer can already use, so they can't be used
+ * to guess codes, and the Offers page reloads them on every filter.
+ */
 export const couponsRouter = Router()
-  .use(authenticate, authorize(ROLES.CUSTOMER), couponLimiter)
+  .use(authenticate, authorize(ROLES.CUSTOMER))
   .get("/available", validate(rules.availableCouponRules), c.available)
   .get("/offers", validate(rules.offersRules), c.offers);
 

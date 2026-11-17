@@ -22,6 +22,19 @@ class DiscountType(models.TextChoices):
     FREE_DELIVERY = "free_delivery"  # waives the delivery fee; discount_value is 0
 
 
+class Kind(models.TextChoices):
+    """A coupon needs a code; offers apply by themselves (the best one of each kind)."""
+
+    COUPON = "coupon"
+    RESTAURANT_OFFER = "restaurant_offer"  # funded by the restaurant
+    PLATFORM_OFFER = "platform_offer"
+    PAYMENT_OFFER = "payment_offer"  # for online payments, optionally some channels only
+
+
+# The order discounts stack in: each applies to the food left after the ones before.
+STACK_ORDER = (Kind.RESTAURANT_OFFER, Kind.PLATFORM_OFFER, Kind.COUPON, Kind.PAYMENT_OFFER)
+
+
 class Audience(models.TextChoices):
     ALL = "all"
     NEW = "new"  # no orders yet (other than cancelled or rejected ones)
@@ -47,6 +60,10 @@ class Coupon(BaseModel):
     name = models.CharField(max_length=80, blank=True, default="")
     description = models.CharField(max_length=200, blank=True, default="")
     terms = models.TextField(max_length=2000, blank=True, default="")
+    kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.COUPON)
+    # Payment offers only: the online channels it is for (upi, card, netbanking, wallet);
+    # empty means any online payment.
+    payment_channels = models.JSONField(default=list, blank=True)
     discount_type = models.CharField(max_length=16, choices=DiscountType.choices)
     discount_value = models.PositiveIntegerField()  # percent (1–100), paise, or 0 (free delivery)
     max_discount_paise = models.BigIntegerField(null=True, blank=True)
@@ -87,6 +104,13 @@ class Coupon(BaseModel):
             one_of("discount_type", DiscountType, "coupons_discount_type_valid"),
             one_of("audience", Audience, "coupons_audience_valid"),
             one_of("source", Source, "coupons_source_valid"),
+            one_of("kind", Kind, "coupons_kind_valid"),
+            models.CheckConstraint(
+                # A restaurant's discounts are always its own automatic offers, and only those.
+                condition=models.Q(source=Source.RESTAURANT, kind=Kind.RESTAURANT_OFFER)
+                | (~models.Q(source=Source.RESTAURANT) & ~models.Q(kind=Kind.RESTAURANT_OFFER)),
+                name="coupons_restaurant_offers_are_restaurants",
+            ),
             one_of("approval_status", ApprovalStatus, "coupons_approval_status_valid"),
             models.CheckConstraint(
                 condition=models.Q(discount_value__gte=1)
@@ -121,6 +145,7 @@ class Coupon(BaseModel):
             ),
         ]
         indexes = [
+            models.Index(fields=["kind", "is_active", "valid_until"], name="coupons_kind_live"),
             models.Index(fields=["is_active", "valid_until"], name="coupons_active_until"),
             models.Index(fields=["source", "approval_status"], name="coupons_source_approval"),
         ]
@@ -132,12 +157,18 @@ class Coupon(BaseModel):
 class CouponRedemption(BaseModel):
     coupon = models.ForeignKey(Coupon, on_delete=models.PROTECT, related_name="redemptions")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
-    order = models.OneToOneField(
-        "orders.Order", on_delete=models.CASCADE, related_name="coupon_redemption"
+    # One per discount on the order (a coupon plus automatic offers).
+    order = models.ForeignKey(
+        "orders.Order", on_delete=models.CASCADE, related_name="coupon_redemptions"
     )
     discount_paise = models.BigIntegerField()
 
     class Meta:
         db_table = "coupon_redemptions"
-        constraints = [non_negative("discount_paise", "coupon_redemptions_discount_non_negative")]
+        constraints = [
+            non_negative("discount_paise", "coupon_redemptions_discount_non_negative"),
+            models.UniqueConstraint(
+                fields=["order", "coupon"], name="coupon_redemptions_once_per_order"
+            ),
+        ]
         indexes = [models.Index(fields=["coupon", "user"], name="coupon_redemptions_per_user")]

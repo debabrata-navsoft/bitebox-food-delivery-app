@@ -67,6 +67,7 @@ export class OfferFormDialog {
   }
   protected readonly preview = computed(() =>
     previewOffer(this.model(), {
+      kind: 'restaurant_offer',
       categories: this.picked(this.categoryIds(), this.categoryOptions()),
       foodItems: this.picked(this.dishIds(), this.dishOptions()),
     }),

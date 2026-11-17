@@ -6,7 +6,7 @@
       <span class="count" [attr.aria-label]="pending + ' waiting'">{{ pending }}</span>
     }
   </a>
-  <np-button severity="primary" icon="plus" label="New coupon" (clicked)="open()" />
+  <np-button severity="primary" icon="plus" label="New coupon or offer" (clicked)="open()" />
 </bb-page-header>
 
 @if (totals(); as s) {
@@ -24,8 +24,9 @@
 }
 
 <div class="bb-filters">
-  <np-text-input [formField]="filters.search" placeholder="Search by code or name" ariaLabel="Search coupons" icon="search" clearable />
+  <np-text-input [formField]="filters.search" placeholder="Search" ariaLabel="Search coupons by code or name" icon="search" clearable />
   <np-select [formField]="filters.status" ariaLabel="Status" [options]="statusOptions" />
+  <np-select [formField]="filters.kind" ariaLabel="Type" [options]="kindOptions" />
   <np-select [formField]="filters.owner" ariaLabel="Created by" [options]="ownerOptions" />
   <np-select [formField]="filters.sort" ariaLabel="Sort" [options]="sortOptions" />
 </div>
@@ -66,6 +67,7 @@
               <td>
                 <button type="button" class="bb-link-button code" (click)="open(c)">{{ c.code }}</button>
                 <span class="sub">{{ c.name || c.description ? (c.name || c.description) + ' · ' : '' }}{{ owner(c) }}</span>
+                <span class="kind">{{ kindLabel[c.kind ?? 'coupon'] }}{{ c.kind === 'payment_offer' ? ' · ' + channelsLabel(c) : '' }}</span>
               </td>
               <td>
                 {{ discountLabel(c) }}

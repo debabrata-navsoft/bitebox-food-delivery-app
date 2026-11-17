@@ -1,10 +1,9 @@
 .tiles {
   margin-bottom: var(--bb-space-4);
 }
-.code {
-  font-family: ui-monospace, monospace;
-  letter-spacing: 0.04em;
+.title {
   font-weight: 700;
+  text-align: left;
 }
 .reason {
   max-width: 220px;

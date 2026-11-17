@@ -4,8 +4,12 @@ import { after, before, beforeEach, describe, it } from "node:test";
 import { Coupon, CouponRedemption } from "../models/coupon.model.js";
 import { FoodItem } from "../models/food-item.model.js";
 import { Notification } from "../models/notification.model.js";
+import { Order } from "../models/order.model.js";
 import { Restaurant } from "../models/restaurant.model.js";
 import { useOfferApproval } from "../services/coupon.service.js";
+import { settlementFor } from "../services/earnings.service.js";
+import { mockProvider } from "../services/payments/mock.provider.js";
+import { useOnlineProvider } from "../services/payments/payment.service.js";
 import {
   buildApp,
   createAndLogin,
@@ -244,5 +248,137 @@ describe("coupons and restaurant offers", () => {
     assert.deepEqual([best.code, best.savingPaise], ["FLAT60", 6000]);
     const quote = (await apply("FLAT60")).body.data;
     assert.equal(quote.coupon.discountPaise, best.savingPaise); // the suggestion is exact
+  });
+
+  /** One of each kind: the kitchen's 20% offer, ₹30 platform offer, 10% coupon, ₹25 on UPI. */
+  const stacked = async () => {
+    useOfferApproval(false);
+    await offer({ code: "KITCHEN20", discountValue: 20 });
+    await adminCoupon({ code: "ALL30", kind: "platform_offer", discountType: "flat", discountValue: 3000 });
+    await adminCoupon({ code: "TENOFF" });
+    await adminCoupon({
+      code: "UPI25",
+      kind: "payment_offer",
+      paymentChannels: ["upi"],
+      discountType: "flat",
+      discountValue: 2500,
+    });
+    await add("Masala Dosa", "Gulab Jamun (2 pcs)"); // ₹248
+  };
+
+  it("stacks discounts in order, each on what is left", async () => {
+    await stacked();
+    // Without a payment channel: the two automatic offers; UPI's offer is listed for later.
+    let quote = (await as(customer).get("/api/v1/cart")).body.data;
+    assert.deepEqual(
+      quote.discounts.map((d) => [d.code, d.foodPaise]),
+      [
+        ["KITCHEN20", 4960], // 20% of ₹248
+        ["ALL30", 3000],
+      ],
+    );
+    assert.equal(quote.bestCoupon.code, "TENOFF");
+    assert.deepEqual(
+      quote.paymentOffers.map((p) => [p.channel, p.code, p.savingPaise]),
+      [["upi", "UPI25", 2500]],
+    );
+    // Codes are only for coupons: an automatic offer can't be entered.
+    assert.equal((await apply("ALL30")).body.error.code, "COUPON_AUTOMATIC");
+
+    await apply("TENOFF");
+    quote = (await as(customer).get("/api/v1/cart?payment=upi")).body.data;
+    assert.deepEqual(
+      quote.discounts.map((d) => [d.kind, d.code, d.foodPaise]),
+      [
+        ["restaurant_offer", "KITCHEN20", 4960],
+        ["platform_offer", "ALL30", 3000],
+        ["coupon", "TENOFF", 1684], // 10% of the ₹168.40 left
+        ["payment_offer", "UPI25", 2500],
+      ],
+    );
+    assert.equal(quote.pricing.discountPaise, 4960 + 3000 + 1684 + 2500);
+    assert.deepEqual(quote.coupon, {
+      code: "TENOFF",
+      description: null,
+      discountType: "percent",
+      discountPaise: 1684,
+    });
+    const card = (await as(customer).get("/api/v1/cart?payment=card")).body.data;
+    assert.ok(!card.discounts.map((d) => d.code).includes("UPI25"));
+  });
+
+  it("keeps every discount on the order and gives the uses back", async () => {
+    const restore = useOnlineProvider(mockProvider);
+    try {
+      await stacked();
+      await apply("TENOFF");
+      const addressId = (await as(customer).get("/api/v1/cart")).body.data.address.id;
+      const placed = await as(customer).post("/api/v1/orders", {
+        paymentMethod: "online",
+        paymentChannel: "upi",
+        addressId,
+      });
+      assert.equal(placed.status, 201, JSON.stringify(placed.body));
+      const data = placed.body.data.order;
+      assert.equal(data.paymentChannel, "upi");
+      assert.deepEqual(data.discounts.map((d) => d.code), ["KITCHEN20", "ALL30", "TENOFF", "UPI25"]);
+      assert.deepEqual(data.coupon, { code: "TENOFF", discountPaise: 1684 });
+      assert.equal(await CouponRedemption.countDocuments({ order: data.id }), 4);
+      assert.deepEqual(await Coupon.distinct("usedCount"), [1]);
+
+      // Only the restaurant's own offer comes out of its payout (15% commission on the rest).
+      const order = await Order.findById(data.id);
+      assert.equal(order.restaurantDiscountPaise, 4960);
+      assert.equal(settlementFor(order, 1500).restaurantPaise, Math.floor(((24800 - 4960) * 85) / 100));
+
+      const cancelled = await as(customer).post(`/api/v1/orders/${data.id}/cancel`, {});
+      assert.equal(cancelled.status, 200, JSON.stringify(cancelled.body));
+      assert.deepEqual(await Coupon.distinct("usedCount"), [0]);
+      assert.equal(await CouponRedemption.exists({ order: data.id }), null);
+    } finally {
+      restore();
+    }
+  });
+
+  it("applies one restaurant offer and lets the customer pick another", async () => {
+    useOfferApproval(false);
+    await offer({ code: "KITCHEN20", discountValue: 20 });
+    await offer({ code: "KITCHEN10", discountValue: 10 });
+    await adminCoupon({ code: "ALL30", kind: "platform_offer", discountType: "flat", discountValue: 3000 });
+    await add("Masala Dosa", "Gulab Jamun (2 pcs)"); // ₹248
+    const restaurantOffers = async () => {
+      const quote = (await as(customer).get("/api/v1/cart")).body.data;
+      const applied = quote.discounts.filter((d) => d.kind === "restaurant_offer").map((d) => d.code);
+      const listed = quote.restaurantOffers.map((o) => [o.code, o.applied]);
+      assert.equal(applied.length, 1); // only one ever applies
+      assert.ok(listed.some(([code, on]) => code === applied[0] && on));
+      return listed;
+    };
+    assert.deepEqual(await restaurantOffers(), [["KITCHEN20", true], ["KITCHEN10", false]]); // best first
+    const picked = await apply("KITCHEN10");
+    assert.equal(picked.status, 200, JSON.stringify(picked.body));
+    assert.deepEqual(await restaurantOffers(), [["KITCHEN20", false], ["KITCHEN10", true]]);
+    assert.equal(picked.body.data.coupon, null); // the coupon slot is untouched
+    assert.equal((await apply("ALL30")).body.error.code, "COUPON_AUTOMATIC");
+  });
+
+  it("applies a restaurant's offer only to its own dishes", async () => {
+    const now = Date.now();
+    await Coupon.create({
+      code: "HARBOR30",
+      kind: "restaurant_offer",
+      source: "restaurant",
+      restaurant: new mongoose.Types.ObjectId(), // another restaurant
+      approvalStatus: "approved",
+      discountType: "percent",
+      discountValue: 30,
+      validFrom: new Date(now - 864e5),
+      validUntil: new Date(now + 864e5),
+    });
+    await add("Masala Dosa"); // from the seeded kitchen
+    const quote = (await as(customer).get("/api/v1/cart")).body.data;
+    assert.deepEqual(quote.discounts, []);
+    assert.deepEqual(quote.restaurantOffers, []);
+    assert.equal((await apply("HARBOR30")).body.error.code, "COUPON_NOT_APPLICABLE");
   });
 });

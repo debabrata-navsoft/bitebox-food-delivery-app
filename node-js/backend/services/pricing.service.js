@@ -28,29 +28,41 @@ export function deliveryFee(distanceMeters, discountedSubtotalPaise) {
   );
 }
 
-export function computePricing({
+/**
+ * The bill with several discounts, each `{ coupon, basePaise }` in the order they apply
+ * (restaurant offer, platform offer, coupon, payment offer). Each takes its share of the food
+ * that is left; a scoped discount never reaches past its own lines. The first free-delivery
+ * discount waives the fee. Coins come last and never change tax, fees or the threshold.
+ * Returns the pricing and one part per discount: `{ foodPaise, deliveryPaise, savingPaise }`.
+ */
+export function stackPricing({
   subtotalPaise,
-  coupon = null,
+  discounts = [],
   distanceMeters = null,
   coinDiscountPaise = 0,
-  couponBasePaise = null,
 }) {
-  const discountPaise = couponDiscount(coupon, subtotalPaise, couponBasePaise);
-  const discounted = subtotalPaise - discountPaise;
-  const fee = distanceMeters === null ? 0 : deliveryFee(distanceMeters, discounted);
-  // A free-delivery coupon waives the fee; the waived amount is shown separately.
-  const deliveryDiscountPaise = coupon?.discountType === DISCOUNT_TYPES.FREE_DELIVERY ? fee : 0;
+  let left = subtotalPaise;
+  const foods = discounts.map(({ coupon, basePaise = null }) => {
+    const food = couponDiscount(coupon, left, basePaise);
+    left -= food;
+    return food;
+  });
+  const fee = distanceMeters === null ? 0 : deliveryFee(distanceMeters, left);
+  const waiver = discounts.findIndex(({ coupon }) => coupon.discountType === DISCOUNT_TYPES.FREE_DELIVERY);
+  // The waived fee is shown separately (deliveryDiscountPaise).
+  const deliveryDiscountPaise = waiver === -1 ? 0 : fee;
+  const parts = foods.map((foodPaise, i) => {
+    const deliveryPaise = i === waiver ? deliveryDiscountPaise : 0;
+    return { foodPaise, deliveryPaise, savingPaise: foodPaise + deliveryPaise };
+  });
   const deliveryFeePaise = fee - deliveryDiscountPaise;
-  const taxPaise = Math.round(
-    (discounted * PRICING.foodTaxBasisPoints) / 10_000,
-  );
+  const taxPaise = Math.round((left * PRICING.foodTaxBasisPoints) / 10_000);
   const platformFeePaise = subtotalPaise > 0 ? PRICING.platformFeePaise : 0;
-  const beforeCoins = discounted + deliveryFeePaise + platformFeePaise + taxPaise;
-  // Coins pay part of the bill; they never change the tax, fees or the free-delivery threshold.
+  const beforeCoins = left + deliveryFeePaise + platformFeePaise + taxPaise;
   const coins = Math.max(0, Math.min(coinDiscountPaise, beforeCoins));
-  return {
+  const pricing = {
     subtotalPaise,
-    discountPaise,
+    discountPaise: subtotalPaise - left, // every food discount together
     deliveryFeePaise,
     platformFeePaise,
     taxPaise,
@@ -58,4 +70,17 @@ export function computePricing({
     totalPaise: beforeCoins - coins,
     deliveryDiscountPaise,
   };
+  return { pricing, parts };
+}
+
+/** The bill with at most one discount (see stackPricing). */
+export function computePricing({
+  subtotalPaise,
+  coupon = null,
+  distanceMeters = null,
+  coinDiscountPaise = 0,
+  couponBasePaise = null,
+}) {
+  const discounts = coupon ? [{ coupon, basePaise: couponBasePaise }] : [];
+  return stackPricing({ subtotalPaise, discounts, distanceMeters, coinDiscountPaise }).pricing;
 }
