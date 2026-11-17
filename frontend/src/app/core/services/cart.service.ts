@@ -12,7 +12,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { Observable, catchError, finalize, map, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../../shared/models/api.models';
-import { CartQuote } from '../../shared/models/checkout.models';
+import { CartQuote, PaymentChannel } from '../../shared/models/checkout.models';
 import { AuthService } from '../auth/auth.service';
 import { DeliveryLocationService } from './delivery-location.service';
 import { toParams } from './http-params';
@@ -27,6 +27,8 @@ export class CartService {
   private readonly _quote = signal<CartQuote | null>(null);
   private readonly _busy = signal(false);
   readonly selectedAddressId = signal<string | null>(null);
+  /** The online channel checkout is pricing (its payment offer); null for cash. */
+  readonly paymentChannel = signal<PaymentChannel | null>(null);
 
   readonly quote = this._quote.asReadonly();
   readonly busy = this._busy.asReadonly();
@@ -43,6 +45,7 @@ export class CartService {
         else {
           this._quote.set(null);
           this.selectedAddressId.set(null);
+          this.paymentChannel.set(null);
         }
       });
     });
@@ -137,7 +140,10 @@ export class CartService {
   }
 
   private addressParams() {
-    return toParams({ addressId: this.selectedAddressId() ?? undefined });
+    return toParams({
+      addressId: this.selectedAddressId() ?? undefined,
+      payment: this.paymentChannel() ?? undefined,
+    });
   }
 
   private apply() {

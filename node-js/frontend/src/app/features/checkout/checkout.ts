@@ -26,7 +26,7 @@ import { CheckoutCoins } from './checkout-coins/checkout-coins';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { QtyStepper } from '../../shared/components/qty-stepper/qty-stepper';
 import { VegBadge } from '../../shared/components/veg-badge/veg-badge';
-import { CouponOffer, DeliveryAddress } from '../../shared/models/checkout.models';
+import { CouponOffer, DeliveryAddress, PaymentChannel } from '../../shared/models/checkout.models';
 import { InrPipe, formatPaise } from '../../shared/pipes/money.pipes';
 import { BbDialog } from '../../shared/dialog/bb-dialog';
 import { openCoupons } from './coupon-dialog/coupon-dialog';
@@ -84,7 +84,26 @@ export class Checkout {
   protected readonly onlineAvailable = computed(() =>
     this.methods().some((m) => m.method === 'online'),
   );
-  protected readonly paymentMethod = signal<PaymentMethod>('cod');
+  /** Cash, or the online channel (UPI, card, ...): the bill is priced with its payment offer. */
+  protected readonly payWith = computed(() => this.cart.paymentChannel() ?? 'cod');
+  protected readonly paymentMethod = computed<PaymentMethod>(() => (this.payWith() === 'cod' ? 'cod' : 'online'));
+  protected readonly channels: { value: PaymentChannel; label: string; icon: string }[] = [
+    { value: 'upi', label: 'UPI', icon: 'smartphone' },
+    { value: 'card', label: 'Credit or debit card', icon: 'credit-card' },
+    { value: 'netbanking', label: 'Net banking', icon: 'landmark' },
+    { value: 'wallet', label: 'Wallet', icon: 'wallet' },
+  ];
+
+  /** The best payment offer for each channel on this cart (the server's figures). */
+  protected readonly paymentOffers = computed(
+    () => new Map((this.cart.quote()?.paymentOffers ?? []).map((o) => [o.channel, o])),
+  );
+
+  /** Re-prices the cart for the chosen way to pay (a channel's payment offer joins the bill). */
+  protected choosePay(value: 'cod' | PaymentChannel): void {
+    this.cart.paymentChannel.set(value === 'cod' ? null : value);
+    this.cart.refresh().subscribe({ error: (err: unknown) => this.notify.error(errorMessage(err)) });
+  }
   protected readonly placing = signal(false);
   protected readonly placeError = signal<string | null>(null);
 
@@ -100,6 +119,7 @@ export class Checkout {
     if (location?.source === 'address' && location.addressId && !this.cart.selectedAddressId()) {
       this.cart.selectedAddressId.set(location.addressId);
     }
+    this.cart.paymentChannel.set(null); // priced for cash until the customer picks a channel
     this.cart.refresh().subscribe({
       next: (quote) => {
         this.loading.set(false);
@@ -204,6 +224,7 @@ export class Checkout {
         {
           addressId,
           paymentMethod: this.paymentMethod(),
+          paymentChannel: this.cart.paymentChannel() ?? undefined,
           note: this.noteForm.note().value().trim() || undefined,
           expectedTotalPaise: quote.pricing.totalPaise,
         },

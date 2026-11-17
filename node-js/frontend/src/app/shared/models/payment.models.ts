@@ -1,4 +1,4 @@
-import { OrderStatus, PaymentStatus } from './checkout.models';
+import { OrderStatus, PaymentChannel, PaymentStatus } from './checkout.models';
 
 export type PaymentMethod = 'cod' | 'online';
 export type PaymentProvider = 'cash_on_delivery' | 'razorpay' | 'mock';
@@ -79,6 +79,8 @@ export interface CheckoutSession {
   amountPaise: number;
   currency: string;
   orderNumber: string;
+  /** The channel the customer chose (its payment offer is priced in); null: any method. */
+  channel?: PaymentChannel | null;
 }
 
 export interface AppNotification {

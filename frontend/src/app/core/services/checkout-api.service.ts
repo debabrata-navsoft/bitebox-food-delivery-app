@@ -9,6 +9,7 @@ import {
   AdminCoupon,
   AdminCouponInput,
   OfferKind,
+  PaymentChannel,
   CouponOffer,
   DeliveryAddress,
   Order,
@@ -54,6 +55,8 @@ export class AddressService {
 export interface PlaceOrderRequest {
   addressId: string;
   paymentMethod: PaymentMethod;
+  /** Online orders: UPI, card, net banking or wallet (prices that channel's payment offer). */
+  paymentChannel?: PaymentChannel;
   note?: string;
   expectedTotalPaise: number;
 }

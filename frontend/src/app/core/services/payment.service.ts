@@ -21,6 +21,15 @@ interface RazorpayResult {
   razorpay_order_id: string;
   razorpay_signature: string;
 }
+/** Razorpay Checkout's display config that shows a single payment method. */
+const onlyMethod = (method: string) => ({
+  display: {
+    blocks: { chosen: { name: 'Your payment method', instruments: [{ method }] } },
+    sequence: ['block.chosen'],
+    preferences: { show_default_blocks: false },
+  },
+});
+
 type RazorpayCtor = new (options: Record<string, unknown>) => { open(): void };
 
 @Injectable({ providedIn: 'root' })
@@ -89,6 +98,8 @@ export class PaymentService {
         name: 'BiteBox',
         description: `Order ${session.orderNumber}`,
         theme: { color: '#2e1a3d' },
+        // The order was priced for one channel (its payment offer): offer only that one.
+        ...(session.channel ? { config: onlyMethod(session.channel) } : {}),
         handler: (result: RazorpayResult) => resolve(result),
         modal: { ondismiss: () => resolve(null) },
       }).open();

@@ -309,3 +309,10 @@ h2 {
   font-weight: 400;
   color: var(--bb-ink-muted);
 }
+
+// A channel's payment offer under its name in the payment list.
+.pay-offer {
+  color: var(--bb-success);
+  font-size: 0.8rem;
+  font-weight: 600;
+}

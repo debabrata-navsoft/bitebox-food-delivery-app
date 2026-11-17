@@ -97,20 +97,25 @@
         <!-- Payment -->
         <section class="bb-card" aria-labelledby="payment-title">
           <h2 id="payment-title">Payment</h2>
-          <mat-radio-group class="pay-methods" [value]="paymentMethod()" (change)="paymentMethod.set($event.value)" aria-labelledby="payment-title">
-            <mat-radio-button value="cod">
+          <mat-radio-group class="pay-methods" [value]="payWith()" (change)="choosePay($event.value)" aria-labelledby="payment-title">
+            <mat-radio-button value="cod" [disabled]="cart.busy()">
               <span class="pay-option"><np-icon name="banknote" class="mat-icon" matButtonIcon /> Cash on delivery</span>
             </mat-radio-button>
             @if (onlineAvailable()) {
-              <mat-radio-button value="online">
-                <span class="pay-option">
-                  <np-icon name="credit-card" class="mat-icon" matButtonIcon />
-                  <span class="pay-text">
-                    <span>Pay online</span>
-                    <span class="pay-hint">UPI, cards, netbanking & wallets</span>
+              @for (ch of channels; track ch.value) {
+                @let offer = paymentOffers().get(ch.value);
+                <mat-radio-button [value]="ch.value" [disabled]="cart.busy()">
+                  <span class="pay-option">
+                    <np-icon [name]="ch.icon" class="mat-icon" matButtonIcon />
+                    <span class="pay-text">
+                      <span>{{ ch.label }}</span>
+                      @if (offer) {
+                        <span class="pay-offer">Save {{ offer.savingPaise | inr }} · {{ offer.name || 'Payment offer' }}</span>
+                      }
+                    </span>
                   </span>
-                </span>
-              </mat-radio-button>
+                </mat-radio-button>
+              }
             }
           </mat-radio-group>
           @if (paymentMethod() === 'online') {

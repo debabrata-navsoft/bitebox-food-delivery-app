@@ -35,6 +35,7 @@ describe('Checkout', () => {
     busy: signal(false).asReadonly(),
     refresh: vi.fn(),
     selectedAddressId: signal<string | null>(null),
+    paymentChannel: signal<string | null>(null),
     reset: vi.fn(),
     selectAddress: vi.fn(),
     setCoins: vi.fn(),
@@ -72,6 +73,11 @@ describe('Checkout', () => {
   });
 
   const placeButton = () => (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('button.place')!;
+  /** The UPI payment option's radio input. */
+  const upiOption = () =>
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('mat-radio-button'))
+      .find((b) => b.textContent?.includes('UPI'))
+      ?.querySelector<HTMLInputElement>('input') as HTMLInputElement;
   const coinQuote = (overrides: Partial<NonNullable<CartQuote['coins']>> = {}): CartQuote['coins'] => ({
     enabled: true,
     available: 500,
@@ -151,19 +157,30 @@ describe('Checkout', () => {
     expect(navigate).toHaveBeenCalledWith(['/orders', 'o1'], { queryParams: { placed: 1 } });
   });
 
+  it('re-prices the cart for the payment channel the customer picks', async () => {
+    cart.refresh.mockClear();
+    upiOption().click();
+    await fixture.whenStable();
+    expect(cart.paymentChannel()).toBe('upi');
+    expect(cart.refresh).toHaveBeenCalled();
+  });
+
   it('pays online with the checkout session, then opens the order', async () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const checkout = { provider: 'mock', simulated: true, providerOrderId: 'mock_order_1', amountPaise: 73790, currency: 'INR', orderNumber: 'BB-1' };
     orders.place.mockReturnValue(of({ order: { id: 'o1' }, checkout }));
     payments.pay.mockResolvedValue({ status: 'paid' });
-    const online = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('mat-radio-button[value="online"] input')!;
+    const online = upiOption();
     expect(online).toBeTruthy();
     online.click();
     await fixture.whenStable();
     expect(placeButton().textContent).toContain('Place order & pay');
     placeButton().click();
     await fixture.whenStable();
-    expect(orders.place).toHaveBeenCalledWith(expect.objectContaining({ paymentMethod: 'online' }), expect.any(String));
+    expect(orders.place).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentMethod: 'online', paymentChannel: 'upi' }),
+      expect.any(String),
+    );
     expect(payments.pay).toHaveBeenCalledWith('o1', checkout);
     expect(navigate).toHaveBeenCalledWith(['/orders', 'o1'], { queryParams: { placed: 1 } });
   });
@@ -195,7 +212,7 @@ describe('Checkout', () => {
     const checkout = { provider: 'mock', simulated: true, providerOrderId: 'mock_order_1', amountPaise: 73790, currency: 'INR', orderNumber: 'BB-1' };
     orders.place.mockReturnValue(of({ order: { id: 'o1' }, checkout }));
     payments.pay.mockResolvedValue(null);
-    (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('mat-radio-button[value="online"] input')!.click();
+    upiOption().click();
     await fixture.whenStable();
     placeButton().click();
     await fixture.whenStable();

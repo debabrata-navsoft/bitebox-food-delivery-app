@@ -56,6 +56,10 @@ export interface CartQuote {
   discounts?: DiscountLine[];
   /** The restaurant's offers this cart can use, best first; only the `applied` one counts. */
   restaurantOffers?: RestaurantOfferOption[];
+  /** The best payment offer for each online channel (for the payment step). */
+  paymentOffers?: PaymentOfferOption[];
+  /** The channel this quote was priced for (null: cash or not chosen). */
+  paymentChannel?: PaymentChannel | null;
   /** Coins the customer can use on this cart (null for an empty cart). */
   coins: CoinQuote | null;
   address: DeliveryAddress | null;
@@ -136,6 +140,17 @@ export interface RestaurantOfferOption {
   discountValue: number;
   savingPaise: number;
   applied: boolean;
+}
+
+/** A channel's best payment offer on this cart. */
+export interface PaymentOfferOption {
+  channel: PaymentChannel;
+  code: string;
+  name: string | null;
+  description: string | null;
+  discountType: DiscountType;
+  discountValue: number;
+  savingPaise: number;
 }
 
 export interface BestCoupon {
