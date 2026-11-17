@@ -6,6 +6,16 @@ from django.db import models
 from common.models import AppendOnlyModel
 
 
+class AccountType(models.TextChoices):
+    """The kind of account an entry is about, when the resource is a user ("" otherwise)."""
+
+    NONE = "", "none"
+    CUSTOMER = "customer"
+    RESTAURANT = "restaurant"
+    DELIVERY = "delivery"
+    ADMIN = "admin"
+
+
 class AuditLog(AppendOnlyModel):
     admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     admin_role = models.CharField(max_length=24)
@@ -14,6 +24,12 @@ class AuditLog(AppendOnlyModel):
     resource_type = models.CharField(max_length=40, blank=True, default="")
     resource_id = models.CharField(max_length=64, blank=True, default="")
     ip = models.GenericIPAddressField(null=True, blank=True)
+    account_type = models.CharField(
+        max_length=16, choices=AccountType.choices, blank=True, default=""
+    )
+    # { field: { from, to } } (camelCase field names, as in the API). Never secrets.
+    changes = models.JSONField(default=dict, blank=True)
+    reason = models.CharField(max_length=500, blank=True, default="")
 
     class Meta:
         db_table = "audit_logs"
@@ -22,4 +38,5 @@ class AuditLog(AppendOnlyModel):
             models.Index(fields=["admin", "-created_at"], name="audit_logs_admin"),
             models.Index(fields=["action", "-created_at"], name="audit_logs_action"),
             models.Index(fields=["resource_id", "-created_at"], name="audit_logs_resource"),
+            models.Index(fields=["account_type", "-created_at"], name="audit_logs_account_type"),
         ]

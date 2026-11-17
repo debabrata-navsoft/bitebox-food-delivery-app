@@ -162,6 +162,12 @@ export class AdminOrdersService {
   list(query: {
     status?: OrderStatus | 'active';
     search?: string;
+    /** Only this customer's orders (user id). */
+    customer?: string;
+    /** Only this restaurant's orders. */
+    restaurant?: string;
+    /** Only orders assigned to this rider (user id). */
+    rider?: string;
     page?: number;
     limit?: number;
   }): Observable<AdminOrderList> {

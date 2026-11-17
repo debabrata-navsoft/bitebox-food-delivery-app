@@ -1,0 +1,24 @@
+@use 'breakpoints' as bp;
+@use '../account-list';
+
+.bb-filters {
+  @include bp.desktop-up {
+    grid-template-columns: minmax(240px, 2fr) repeat(5, minmax(140px, 1fr));
+  }
+}
+
+.checks {
+  white-space: nowrap;
+  --bb-icon-size: 18px;
+
+  span {
+    display: inline-flex;
+    margin-right: var(--bb-space-1);
+    color: var(--bb-ink-muted);
+    opacity: 0.5;
+  }
+  .ok {
+    color: var(--bb-success);
+    opacity: 1;
+  }
+}

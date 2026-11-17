@@ -1,6 +1,10 @@
 """
 /api/v1/admin/users, /admin/admins and /admin/audit-logs (Node: routes/admin-users.routes.js,
 routes/admin-staff.routes.js). Each needs an admin permission, never just a role.
+
+/admin/users checks per kind of member: the route needs any of the matching keys (e.g. any
+`<kind>:view`), then the service checks the key for the target's kind (customers / restaurants /
+riders) and answers 403 when the admin lacks it.
 """
 
 from typing import Any
@@ -11,17 +15,32 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.audit.services import audited, list_entries
-from apps.rbac.roles import ADMIN_ROLES, MEMBER_ROLES, ROLE_LABEL, Permission, Role
+from apps.audit.models import AccountType
+from apps.audit.services import account_type_of, audited, list_entries, note
+from apps.customers import services as addresses
+from apps.customers.views import SavedAddressInput
+from apps.rbac.roles import (
+    ADMIN_ROLES,
+    MEMBER_ROLES,
+    ROLE_LABEL,
+    Permission,
+    Role,
+    permission_catalogue,
+)
 from common.api import ok
 from common.pagination import Page
 from common.permissions import permission_required
-from common.schema import envelope, errors
+from common.schema import envelope, errors, pagination
 from common.validation import PageQuery, parse_id, validated
 
 from . import admin_services as admin
 from .authentication import current_user
+from .models import USER_STATUS_VALUES, User, UserStatus
 from .serializers import (
+    CUSTOMER_SORT_VALUES,
+    VERIFICATION_VALUES,
+    CustomerListQuery,
+    MemberUpdateInput,
     StaffCreateInput,
     StaffUpdateInput,
     StatusInput,
@@ -30,10 +49,7 @@ from .serializers import (
     user_json,
 )
 
-PAGINATION = inline_serializer(
-    name="Pagination",
-    fields={k: serializers.IntegerField() for k in ("page", "limit", "total", "total_pages")},
-)
+PAGINATION = pagination("Pagination")
 USER_PAGE = envelope(
     "UserPage",
     inline_serializer(
@@ -48,7 +64,15 @@ LIST_PARAMS = [
     OpenApiParameter("limit", int),
     OpenApiParameter("search", str),
     OpenApiParameter("role", str),
-    OpenApiParameter("status", str, enum=["active", "suspended"]),
+    OpenApiParameter("status", str, enum=USER_STATUS_VALUES),
+]
+P = Permission
+ANY_VIEW = [permission_required(P.CUSTOMERS_VIEW, P.RESTAURANTS_VIEW, P.RIDERS_VIEW)]
+ANY_EDIT = [permission_required(P.CUSTOMERS_EDIT, P.RESTAURANTS_EDIT, P.RIDERS_EDIT)]
+ANY_STATUS = [
+    permission_required(
+        P.CUSTOMERS_STATUS, P.RESTAURANTS_STATUS, P.RIDERS_STATUS, P.ACCOUNTS_SUSPEND
+    )
 ]
 
 
@@ -57,8 +81,15 @@ def _list_query(request: Request, roles: tuple[Role, ...]) -> tuple[dict[str, An
     return query, Page.from_query(query)
 
 
+def _audit(request: Request, changes: dict[str, Any], target: User) -> None:
+    """The entry records the changes even when there are none (an edit that changed nothing)."""
+    note(request, changes, account_type=account_type_of(target.role), skip_unchanged=False)
+
+
 class MembersView(APIView):
-    permission_classes = [permission_required(Permission.USERS_MANAGE)]
+    """Customers, restaurant partners and riders: only the kinds the admin may view."""
+
+    permission_classes = ANY_VIEW
 
     @extend_schema(
         tags=["Admin: users"],
@@ -67,11 +98,25 @@ class MembersView(APIView):
     )
     def get(self, request: Request) -> Response:
         query, page = _list_query(request, MEMBER_ROLES)
-        return ok(admin.list_members(query, page))
+        return ok(admin.list_members(current_user(request), query, page))
+
+
+def status_changed(
+    request: Request, user_id: Any, status: str, reason: str | None, roles: tuple[Role, ...]
+) -> User:
+    """Sets the status and fills in the audit entry (none for a no-op)."""
+    user, changes = admin.set_account_status(current_user(request), user_id, status, reason, roles)
+    note(request, changes, reason=reason, account_type=account_type_of(user.role))
+    return user
 
 
 class MemberStatusView(APIView):
-    permission_classes = [permission_required(Permission.USERS_MANAGE)]
+    """
+    active / inactive need `<kind>:status`; suspended / blocked need accounts:suspend. Any status
+    but active needs a reason and signs the person out everywhere.
+    """
+
+    permission_classes = ANY_STATUS
 
     @extend_schema(
         tags=["Admin: users"],
@@ -80,12 +125,232 @@ class MemberStatusView(APIView):
     )
     @audited("user.status", "user", lambda r: f"Set account status to {r.data.get('status')}")
     def patch(self, request: Request, id: str) -> Response:
-        status = validated(StatusInput, request.data)["status"]
-        user = admin.set_account_status(current_user(request), parse_id(id), status, MEMBER_ROLES)
+        user_id = parse_id(id)
+        data = validated(StatusInput, request.data)
+        status = data["status"]
+        user = status_changed(request, user_id, status, data["reason"], MEMBER_ROLES)
         return ok(
             {"user": user_json(user)},
-            message="User reactivated" if status == "active" else "User suspended",
+            message=f"User {admin.STATUS_MESSAGES[UserStatus(status)]}",
         )
+
+
+MEMBER_DETAIL = envelope(
+    "AdminMemberDetail",
+    inline_serializer(
+        name="AdminMemberDetailData",
+        fields={
+            "user": UserOut(),
+            "addresses": serializers.ListField(child=serializers.DictField()),
+            "stats": inline_serializer(
+                name="AdminMemberStats",
+                fields={
+                    "orders": serializers.IntegerField(),
+                    "delivered": serializers.IntegerField(),
+                    "cancelled": serializers.IntegerField(),
+                    "spent_paise": serializers.IntegerField(),
+                    "last_order_at": serializers.DateTimeField(allow_null=True),
+                },
+            ),
+            "restaurant": inline_serializer(
+                name="AdminMemberRestaurant",
+                fields={
+                    "id": serializers.UUIDField(),
+                    "name": serializers.CharField(),
+                    "slug": serializers.CharField(),
+                    "status": serializers.CharField(),
+                },
+                allow_null=True,
+            ),
+        },
+    ),
+)
+ADDRESS = envelope("AdminMemberAddress")
+
+
+class MemberDetailView(APIView):
+    """One customer, restaurant partner or rider: view (`<kind>:view`) and correct their details
+    (`<kind>:edit`)."""
+
+    def get_permissions(self) -> list[Any]:
+        guard = ANY_VIEW if self.request.method == "GET" else ANY_EDIT
+        return [p() for p in guard]
+
+    @extend_schema(
+        tags=["Admin: users"],
+        operation_id="admin_users_detail",
+        responses={200: MEMBER_DETAIL, **errors(401, 403, 404, 422)},
+    )
+    def get(self, request: Request, id: str) -> Response:
+        user = admin.get_member_for(current_user(request), parse_id(id), "view")
+        return ok(admin.member_detail(user))
+
+    @extend_schema(
+        tags=["Admin: users"],
+        operation_id="admin_users_update",
+        request=MemberUpdateInput,
+        responses={200: USER, **errors(401, 403, 404, 409, 422)},
+    )
+    @audited("user.update", "user", lambda r: "Updated user details")
+    def patch(self, request: Request, id: str) -> Response:
+        target = admin.get_member_for(current_user(request), parse_id(id), "edit")
+        data = validated(MemberUpdateInput, request.data, partial=True)
+        user, changes = admin.update_member(target, data)
+        _audit(request, changes, user)
+        return ok({"user": user_json(user)}, message="User updated")
+
+
+class MemberAddressesView(APIView):
+    """A customer's saved addresses, managed by support (same rules as /addresses)."""
+
+    permission_classes = ANY_EDIT
+
+    @extend_schema(
+        tags=["Admin: users"],
+        operation_id="admin_users_addresses_create",
+        request=SavedAddressInput,
+        responses={201: ADDRESS, **errors(400, 401, 403, 404, 409, 422)},
+    )
+    @audited("user.address.create", "user", lambda r: "Added a saved address")
+    def post(self, request: Request, id: str) -> Response:
+        customer = admin.get_customer(current_user(request), parse_id(id))
+        address = addresses.create(customer, validated(SavedAddressInput, request.data))
+        return ok({"address": addresses.address_json(address)}, message="Address saved", status=201)
+
+
+class MemberAddressView(APIView):
+    permission_classes = ANY_EDIT
+
+    @extend_schema(
+        tags=["Admin: users"],
+        operation_id="admin_users_addresses_update",
+        request=SavedAddressInput,
+        responses={200: ADDRESS, **errors(400, 401, 403, 404, 422)},
+    )
+    @audited("user.address.update", "user", lambda r: "Updated a saved address")
+    def patch(self, request: Request, id: str, address_id: str) -> Response:
+        customer = admin.get_customer(current_user(request), parse_id(id))
+        address_pk = parse_id(address_id, "addressId")
+        data = validated(SavedAddressInput, request.data, partial=True)
+        address = addresses.update(customer, address_pk, data)
+        return ok({"address": addresses.address_json(address)}, message="Address updated")
+
+    @extend_schema(
+        tags=["Admin: users"],
+        operation_id="admin_users_addresses_delete",
+        responses={200: ADDRESS, **errors(400, 401, 403, 404, 422)},
+    )
+    @audited("user.address.delete", "user", lambda r: "Deleted a saved address")
+    def delete(self, request: Request, id: str, address_id: str) -> Response:
+        customer = admin.get_customer(current_user(request), parse_id(id))
+        addresses.remove(customer, parse_id(address_id, "addressId"))
+        return ok(None, message="Address deleted")
+
+
+class MemberDefaultAddressView(APIView):
+    permission_classes = ANY_EDIT
+
+    @extend_schema(
+        tags=["Admin: users"],
+        operation_id="admin_users_addresses_default",
+        request=None,
+        responses={200: ADDRESS, **errors(400, 401, 403, 404, 422)},
+    )
+    @audited("user.address.default", "user", lambda r: "Changed the default address")
+    def patch(self, request: Request, id: str, address_id: str) -> Response:
+        customer = admin.get_customer(current_user(request), parse_id(id))
+        address = addresses.set_default(customer, parse_id(address_id, "addressId"))
+        return ok({"address": addresses.address_json(address)}, message="Default address updated")
+
+
+# --- customers (Account management phase 2) -----------------------------------------------------
+class CustomerListStats(serializers.Serializer):
+    orders = serializers.IntegerField()
+    spent_paise = serializers.IntegerField()
+    last_order_at = serializers.DateTimeField(allow_null=True)
+
+
+class CustomerListItem(UserOut):
+    """The user JSON plus order totals."""
+
+    stats = CustomerListStats()
+
+
+CUSTOMER_PAGE = envelope(
+    "CustomerPage",
+    inline_serializer(
+        name="CustomerPageData",
+        fields={"items": CustomerListItem(many=True), "pagination": PAGINATION},
+    ),
+)
+NO_DATA = envelope("CustomerHelpSent")
+
+
+class CustomersView(APIView):
+    """Customers with their order totals (customers:view)."""
+
+    permission_classes = [permission_required(P.CUSTOMERS_VIEW)]
+
+    @extend_schema(
+        tags=["Admin: customers"],
+        operation_id="admin_customers_list",
+        parameters=[
+            OpenApiParameter("page", int),
+            OpenApiParameter("limit", int),
+            OpenApiParameter(
+                "search", str, description="Name, email, phone, the id or its last 6+ characters"
+            ),
+            OpenApiParameter("status", str, enum=USER_STATUS_VALUES),
+            OpenApiParameter("verification", str, enum=VERIFICATION_VALUES),
+            OpenApiParameter("joinedFrom", str, description="YYYY-MM-DD (report time zone)"),
+            OpenApiParameter("joinedTo", str, description="YYYY-MM-DD, inclusive"),
+            OpenApiParameter("sort", str, enum=CUSTOMER_SORT_VALUES),
+        ],
+        responses={200: CUSTOMER_PAGE, **errors(401, 403, 422)},
+    )
+    def get(self, request: Request) -> Response:
+        query = validated(CustomerListQuery, request.query_params)
+        return ok(admin.list_customers(query, Page.from_query(query)))
+
+
+def _help_target(request: Request, id: str) -> User:
+    user = admin.get_customer_account(parse_id(id))
+    request.audit_account_type = AccountType.CUSTOMER  # type: ignore[attr-defined]
+    return user
+
+
+class CustomerPasswordResetView(APIView):
+    """Emails the customer the forgot-password link; the admin never sees or sets a password."""
+
+    permission_classes = [permission_required(P.CUSTOMERS_EDIT)]
+
+    @extend_schema(
+        tags=["Admin: customers"],
+        operation_id="admin_customers_password_reset",
+        request=None,
+        responses={200: NO_DATA, **errors(401, 403, 404, 409, 422, 429)},
+    )
+    @audited("customer.password_reset", "user", lambda r: "Sent a password reset link")
+    def post(self, request: Request, id: str) -> Response:
+        admin.send_customer_password_reset(_help_target(request, id))
+        return ok(None, message="Password reset link sent")
+
+
+class CustomerEmailVerificationView(APIView):
+    """(Re)sends the email verification link."""
+
+    permission_classes = [permission_required(P.CUSTOMERS_EDIT)]
+
+    @extend_schema(
+        tags=["Admin: customers"],
+        operation_id="admin_customers_email_verification",
+        request=None,
+        responses={200: NO_DATA, **errors(401, 403, 404, 409, 422, 429)},
+    )
+    @audited("customer.email_verification", "user", lambda r: "Sent an email verification link")
+    def post(self, request: Request, id: str) -> Response:
+        admin.send_customer_email_verification(_help_target(request, id))
+        return ok(None, message="Verification email sent")
 
 
 def _role_label(value: object) -> str:
@@ -124,9 +389,52 @@ class StaffListView(APIView):
         lambda r: f"Created {_role_label(r.data.get('role'))} {r.data.get('email')}",
     )
     def post(self, request: Request) -> Response:
-        user = admin.create_staff(validated(StaffCreateInput, request.data))
+        user, changes = admin.create_staff(validated(StaffCreateInput, request.data))
         request.audit_resource_id = user.pk  # type: ignore[attr-defined]
+        _audit(request, changes, user)
         return ok({"user": user_json(user)}, message="Admin created", status=201)
+
+
+PERMISSION_CATALOGUE = envelope(
+    "PermissionCatalogue",
+    inline_serializer(
+        name="PermissionCatalogueData",
+        fields={
+            "permissions": inline_serializer(
+                name="PermissionInfo",
+                fields={
+                    "key": serializers.CharField(),
+                    "label": serializers.CharField(),
+                    "group": serializers.CharField(),
+                },
+                many=True,
+            ),
+            "presets": inline_serializer(
+                name="PermissionPreset",
+                fields={
+                    "key": serializers.CharField(),
+                    "label": serializers.CharField(),
+                    "permissions": serializers.ListField(child=serializers.CharField()),
+                },
+                many=True,
+            ),
+        },
+    ),
+)
+
+
+class StaffPermissionsView(APIView):
+    """Every permission (with a label and group) and the editor's presets."""
+
+    permission_classes = [permission_required(Permission.ADMINS_MANAGE)]
+
+    @extend_schema(
+        tags=["Admin: staff"],
+        operation_id="admin_admins_permissions",
+        responses={200: PERMISSION_CATALOGUE, **errors(401, 403)},
+    )
+    def get(self, request: Request) -> Response:
+        return ok(permission_catalogue())
 
 
 class StaffDetailView(APIView):
@@ -148,7 +456,8 @@ class StaffDetailView(APIView):
     @audited("admin.update", "user", _staff_update_description)
     def patch(self, request: Request, id: str) -> Response:
         data = validated(StaffUpdateInput, request.data, partial=True)
-        user = admin.update_staff(current_user(request), parse_id(id), data)
+        user, changes = admin.update_staff(current_user(request), parse_id(id), data)
+        _audit(request, changes, user)
         return ok({"user": user_json(user)}, message="Admin updated")
 
 
@@ -166,26 +475,40 @@ class StaffStatusView(APIView):
         lambda r: "Activated admin" if r.data.get("status") == "active" else "Deactivated admin",
     )
     def patch(self, request: Request, id: str) -> Response:
-        status = validated(StatusInput, request.data)["status"]
-        user = admin.set_account_status(current_user(request), parse_id(id), status, ADMIN_ROLES)
+        user_id = parse_id(id)
+        data = validated(StatusInput, request.data)
+        status = data["status"]
+        user = status_changed(request, user_id, status, data["reason"], ADMIN_ROLES)
         return ok(
             {"user": user_json(user)},
             message="Admin activated" if status == "active" else "Admin deactivated",
         )
 
 
-class AuditQuery(serializers.Serializer):
-    page = serializers.IntegerField(required=False, min_value=1, max_value=10_000)
-    limit = serializers.IntegerField(required=False, min_value=1, max_value=100)
-    search = serializers.CharField(required=False, allow_blank=True, max_length=100)
+class AuditQuery(PageQuery):
     action = serializers.CharField(required=False, max_length=60)
     role = serializers.ChoiceField(choices=[r.value for r in ADMIN_ROLES], required=False)
+    account_type = serializers.ChoiceField(
+        choices=[v for v in AccountType.values if v], required=False
+    )
+    # One id, or up to 5 separated by commas (a restaurant's entries and its owner's).
+    resource_id = serializers.CharField(
+        required=False,
+        max_length=5 * 65,
+        error_messages=dict.fromkeys(("max_length",), "Invalid value"),
+    )
     to = serializers.DateTimeField(required=False)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         # "from" is a Python keyword, so it can't be declared as a class attribute.
         self.fields["from"] = serializers.DateTimeField(required=False)
+
+    def validate_resource_id(self, value: str) -> list[str]:
+        ids = [v.strip() for v in value.split(",") if v.strip()]
+        if not ids or len(ids) > 5 or any(len(v) > 64 for v in ids):
+            raise serializers.ValidationError("Invalid value")
+        return ids
 
 
 AUDIT_ENTRY = inline_serializer(
@@ -207,6 +530,9 @@ AUDIT_ENTRY = inline_serializer(
         "resource_type": serializers.CharField(),
         "resource_id": serializers.CharField(),
         "ip": serializers.IPAddressField(allow_null=True),
+        "account_type": serializers.CharField(),
+        "changes": serializers.DictField(),
+        "reason": serializers.CharField(),
         "created_at": serializers.DateTimeField(),
     },
     many=True,
@@ -222,6 +548,8 @@ class AuditLogView(APIView):
             *LIST_PARAMS[:3],
             OpenApiParameter("action", str),
             OpenApiParameter("role", str),
+            OpenApiParameter("accountType", str, enum=[v for v in AccountType.values if v]),
+            OpenApiParameter("resourceId", str, description="One id, or up to 5 comma-separated"),
             OpenApiParameter("from", str),
             OpenApiParameter("to", str),
         ],
@@ -243,8 +571,12 @@ class AuditLogView(APIView):
 class _LoginHistoryView(APIView):
     roles: tuple[Role, ...] = ()
 
+    def check(self, request: Request, user_id: Any) -> None:
+        """Extra per-target checks (members: `<kind>:view`)."""
+
     def get(self, request: Request, id: str) -> Response:
         user_id = parse_id(id)
+        self.check(request, user_id)
         query = validated(PageQuery, request.query_params)
         return ok(admin.login_history(user_id, self.roles, Page.from_query(query)))
 
@@ -252,8 +584,11 @@ class _LoginHistoryView(APIView):
 class MemberLoginsView(_LoginHistoryView):
     """Sign-ins of a customer, restaurant partner or rider."""
 
-    permission_classes = [permission_required(Permission.USERS_MANAGE)]
+    permission_classes = ANY_VIEW
     roles = MEMBER_ROLES
+
+    def check(self, request: Request, user_id: Any) -> None:
+        admin.get_member_for(current_user(request), user_id, "view")
 
     @extend_schema(
         tags=["Admin: users"],

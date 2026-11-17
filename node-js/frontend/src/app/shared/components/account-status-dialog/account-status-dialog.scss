@@ -1,0 +1,11 @@
+.now {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--bb-space-2);
+}
+
+.hint {
+  margin: calc(var(--bb-space-2) * -1) 0 0;
+}

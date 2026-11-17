@@ -1,4 +1,4 @@
-import { PERMISSIONS, hasPermission } from "../config/permissions.js";
+import { PERMISSIONS, hasPermission, permissionFilter } from "../config/permissions.js";
 import { Order } from "../models/order.model.js";
 import { Restaurant } from "../models/restaurant.model.js";
 import {
@@ -283,6 +283,7 @@ export async function list(staff, query, pagination) {
   if (query.priority) filter.priority = query.priority;
   if (query.requesterRole) filter.requesterRole = query.requesterRole;
   if (query.type) filter.type = query.type;
+  if (query.requester) filter.raisedBy = query.requester;
   if (query.assignee === "me") filter.assignee = staff._id;
   else if (query.assignee === "unassigned") filter.assignee = null;
   if (query.search) {
@@ -316,8 +317,10 @@ export const get = async (id) => staffView(await findTicket(id));
 
 /** People a ticket can be assigned to: active admins with the support permission. */
 export async function staffList() {
-  const roles = ADMIN_ROLES.filter((r) => hasPermission(r, PERMISSIONS.SUPPORT_MANAGE));
-  const users = await User.find({ role: { $in: roles }, status: USER_STATUS.ACTIVE })
+  const users = await User.find({
+    ...permissionFilter(PERMISSIONS.SUPPORT_MANAGE),
+    status: USER_STATUS.ACTIVE,
+  })
     .sort({ name: 1 })
     .select("name role");
   return { items: users.map((u) => ({ id: String(u._id), name: u.name, role: u.role })) };
@@ -346,8 +349,8 @@ export async function update(staff, id, { status, priority, assigneeId, note }) 
           _id: assigneeId,
           status: USER_STATUS.ACTIVE,
           role: { $in: ADMIN_ROLES },
-        }).select("name role");
-        if (!assignee || !hasPermission(assignee.role, PERMISSIONS.SUPPORT_MANAGE))
+        }).select("name role customPermissions");
+        if (!assignee || !hasPermission(assignee, PERMISSIONS.SUPPORT_MANAGE))
           throw ApiError.badRequest("Assign the ticket to an active support admin");
       }
       changes.push(historyEntry(staff, "assigned", { to: assignee?.name ?? "Unassigned" }));

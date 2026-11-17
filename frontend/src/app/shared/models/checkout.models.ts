@@ -275,6 +275,8 @@ export interface CouponQuery {
   status?: CouponStatus;
   owner?: CouponSource;
   kind?: CouponKind;
+  /** One restaurant's offers and the coupons scoped to it (admin). */
+  restaurant?: string;
   sort?: 'newest' | 'oldest' | 'expiring' | 'most_used' | 'code';
   page?: number;
   limit?: number;

@@ -646,6 +646,12 @@ export const checkoutPaths = {
         ...paging,
         { in: "query", name: "search", schema: { type: "string" } },
         { in: "query", name: "active", schema: { type: "boolean" } },
+        {
+          in: "query",
+          name: "restaurant",
+          schema: { type: "string" },
+          description: "This restaurant's own offers and the coupons limited to it (restaurant id)",
+        },
       ],
       responses: { 200: ok({ type: "object" }), 403: err("Not an admin") },
     },

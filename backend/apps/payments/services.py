@@ -690,14 +690,16 @@ ORDER_STATES: dict[str, tuple[str, ...]] = {
 
 
 def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
-    """Newest first; filters by status, method, provider, the order's state, dates and a search
-    over the order number and the customer's name, email or phone."""
+    """Newest first; filters by status, method, provider, the order's state, the customer, dates
+    and a search over the order number and the customer's name, email or phone."""
     qs = Payment.objects.select_related("order", "user")
     for field in ("status", "method", "provider"):
         if query.get(field):
             qs = qs.filter(**{field: query[field]})
     if query.get("order_state"):
         qs = qs.filter(order__status__in=ORDER_STATES[query["order_state"]])
+    if query.get("customer"):
+        qs = qs.filter(order__customer_id=query["customer"])
     if query.get("from"):
         qs = qs.filter(created_at__gte=query["from"])
     if query.get("to"):

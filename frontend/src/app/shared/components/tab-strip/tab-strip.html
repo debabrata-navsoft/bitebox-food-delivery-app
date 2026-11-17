@@ -1,0 +1,23 @@
+<button
+  type="button"
+  class="arrow back"
+  [class.shown]="canBack()"
+  [attr.aria-hidden]="!canBack()"
+  [tabIndex]="canBack() ? 0 : -1"
+  aria-label="Earlier tabs"
+  (click)="scroll(-1)"
+>
+  <np-icon name="chevron-left" class="mat-icon" matButtonIcon />
+</button>
+<np-tabs class="bb-tab-strip" variant="underline" [tabs]="tabs()" [(activeTab)]="activeTab" />
+<button
+  type="button"
+  class="arrow forward"
+  [class.shown]="canForward()"
+  [attr.aria-hidden]="!canForward()"
+  [tabIndex]="canForward() ? 0 : -1"
+  aria-label="More tabs"
+  (click)="scroll(1)"
+>
+  <np-icon name="chevron-right" class="mat-icon" matButtonIcon />
+</button>

@@ -30,8 +30,87 @@ export const ADMIN_ROUTES: Routes = [
   {
     path: 'users',
     title: 'Users | BiteBox Admin',
-    canActivate: [can('users:manage')],
+    canActivate: [can('customers:view', 'restaurants:view', 'riders:view')],
     loadComponent: () => import('./users/admin-users').then((m) => m.AdminUsers),
+  },
+  {
+    path: 'restaurant-accounts',
+    title: 'Restaurant accounts | BiteBox Admin',
+    canActivate: [can('restaurants:view')],
+    loadComponent: () =>
+      import('./restaurant-accounts/admin-restaurant-accounts').then((m) => m.AdminRestaurantAccounts),
+  },
+  {
+    path: 'restaurant-accounts/:id',
+    title: 'Restaurant account | BiteBox Admin',
+    canActivate: [can('restaurants:view')],
+    loadComponent: () =>
+      import('./restaurant-accounts/restaurant-account/restaurant-account').then((m) => m.RestaurantAccount),
+  },
+  {
+    path: 'restaurant-accounts/:id/edit',
+    title: 'Edit restaurant | BiteBox Admin',
+    canActivate: [can('restaurants:edit')],
+    loadComponent: () =>
+      import('./restaurant-accounts/restaurant-account-edit/restaurant-account-edit').then(
+        (m) => m.RestaurantAccountEdit,
+      ),
+  },
+  {
+    path: 'delivery-partner-accounts',
+    title: 'Delivery partner accounts | BiteBox Admin',
+    canActivate: [can('riders:view')],
+    loadComponent: () => import('./rider-accounts/admin-rider-accounts').then((m) => m.AdminRiderAccounts),
+  },
+  {
+    path: 'delivery-partner-accounts/:id',
+    title: 'Delivery partner | BiteBox Admin',
+    canActivate: [can('riders:view')],
+    loadComponent: () => import('./rider-accounts/rider-account/rider-account').then((m) => m.RiderAccount),
+  },
+  {
+    path: 'delivery-partner-accounts/:id/edit',
+    title: 'Edit delivery partner | BiteBox Admin',
+    canActivate: [can('riders:edit')],
+    loadComponent: () =>
+      import('./rider-accounts/rider-account-edit/rider-account-edit').then((m) => m.RiderAccountEdit),
+  },
+  {
+    path: 'customers',
+    title: 'Customers | BiteBox Admin',
+    canActivate: [can('customers:view')],
+    loadComponent: () => import('./customers/admin-customers').then((m) => m.AdminCustomers),
+  },
+  {
+    path: 'customers/:id',
+    title: 'Customer | BiteBox Admin',
+    canActivate: [can('customers:view')],
+    data: { base: '/admin/customers' },
+    loadComponent: () =>
+      import('./users/user-detail/admin-user-detail').then((m) => m.AdminUserDetail),
+  },
+  {
+    path: 'customers/:id/edit',
+    title: 'Edit customer | BiteBox Admin',
+    canActivate: [can('customers:edit')],
+    data: { base: '/admin/customers', edit: true },
+    loadComponent: () =>
+      import('./users/user-detail/admin-user-detail').then((m) => m.AdminUserDetail),
+  },
+  {
+    path: 'users/:id',
+    title: 'User | BiteBox Admin',
+    canActivate: [can('customers:view', 'restaurants:view', 'riders:view')],
+    loadComponent: () =>
+      import('./users/user-detail/admin-user-detail').then((m) => m.AdminUserDetail),
+  },
+  {
+    path: 'users/:id/edit',
+    title: 'Edit user | BiteBox Admin',
+    canActivate: [can('customers:view', 'restaurants:view', 'riders:view')],
+    data: { edit: true },
+    loadComponent: () =>
+      import('./users/user-detail/admin-user-detail').then((m) => m.AdminUserDetail),
   },
   {
     path: 'categories',

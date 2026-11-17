@@ -78,7 +78,5 @@ class AdminDashboardView(APIView):
     def get(self, request: Request) -> Response:
         user = current_user(request)
         return ok(
-            operations.platform_summary(
-                include_money=has_permission(user.role, Permission.FINANCE_VIEW)
-            )
+            operations.platform_summary(include_money=has_permission(user, Permission.FINANCE_VIEW))
         )

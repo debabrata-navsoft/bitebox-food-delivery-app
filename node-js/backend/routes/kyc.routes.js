@@ -20,7 +20,12 @@ import { mongoIdParam } from "../validators/common.validators.js";
  * (review). Same as backend-django/apps/kyc/views.py. Document files are only ever sent to their
  * owner or to an admin who reviews that kind of partner, and every admin view is audited.
  */
-const REVIEWER = { [ROLES.RESTAURANT]: PERMISSIONS.RESTAURANTS_MANAGE, [ROLES.DELIVERY]: PERMISSIONS.RIDERS_MANAGE };
+// Who reviews which partner: the existing manage permission or the narrower KYC one (either works;
+// the KYC permissions cover documents only, not bank account edits).
+const REVIEWER = {
+  [ROLES.RESTAURANT]: [PERMISSIONS.RESTAURANTS_MANAGE, PERMISSIONS.RESTAURANTS_KYC],
+  [ROLES.DELIVERY]: [PERMISSIONS.RIDERS_MANAGE, PERMISSIONS.RIDERS_KYC],
+};
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: kyc.MAX_DOCUMENT_BYTES, files: 1 } });
 const singleFile = (req, res, next) =>
@@ -46,8 +51,8 @@ function sendFile(res, doc) {
 }
 
 function reviewable(admin, partner) {
-  const permission = partner && REVIEWER[partner.role];
-  if (!permission || !hasPermission(admin.role, permission)) throw ApiError.notFound("Not found");
+  const permissions = (partner && REVIEWER[partner.role]) ?? [];
+  if (!permissions.some((p) => hasPermission(admin, p))) throw ApiError.notFound("Not found");
 }
 
 // --- partner --------------------------------------------------------------------------------------
@@ -91,7 +96,7 @@ export const kycRouter = Router()
 // --- admin ----------------------------------------------------------------------------------------
 
 export const adminKycRouter = Router()
-  .use(authenticate, can(PERMISSIONS.RESTAURANTS_MANAGE, PERMISSIONS.RIDERS_MANAGE))
+  .use(authenticate, can(...Object.values(REVIEWER).flat()))
   .get(
     "/partners/:id",
     validate([mongoIdParam()]),

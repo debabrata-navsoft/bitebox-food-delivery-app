@@ -5,18 +5,33 @@ from typing import Any, ClassVar
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.db import models
 
-from apps.rbac.roles import Role, permissions_for
+from apps.rbac.roles import Role, effective_permissions
 from common.models import BaseModel, one_of
 
 PHONE_PATTERN = r"^\+?[0-9]{10,15}$"
 
 
 class UserStatus(models.TextChoices):
+    """
+    Every status but `active` signs the person out and keeps them out (sign-in, dispatch,
+    notifications). inactive: switched off (e.g. closed on request); suspended: a temporary
+    sanction; blocked: a permanent ban.
+    """
+
     ACTIVE = "active"
+    INACTIVE = "inactive"
     SUSPENDED = "suspended"
+    BLOCKED = "blocked"
 
 
 USER_STATUS_VALUES = UserStatus.values  # plain list (OpenAPI enum name)
+
+
+class Gender(models.TextChoices):
+    FEMALE = "female"
+    MALE = "male"
+    OTHER = "other"
+    PREFER_NOT_TO_SAY = "prefer_not_to_say"
 
 
 class UserManager(BaseUserManager["User"]):
@@ -48,6 +63,11 @@ class User(AbstractBaseUser, BaseModel):
         max_length=24, choices=[(r.value, r.value) for r in Role], default=Role.CUSTOMER
     )
     status = models.CharField(max_length=16, choices=UserStatus.choices, default=UserStatus.ACTIVE)
+    # Why an admin set the current status (null once reactivated) and when.
+    status_reason = models.CharField(max_length=500, null=True, blank=True)
+    status_changed_at = models.DateTimeField(null=True, blank=True)
+    # Admin-panel accounts only: their own permission keys; null = the role preset.
+    custom_permissions = models.JSONField(null=True, blank=True)
     # Bumped on password change, suspension and role change: every access token and session dies.
     token_version = models.PositiveIntegerField(default=0)
     password_reset_token_hash = models.CharField(
@@ -64,6 +84,7 @@ class User(AbstractBaseUser, BaseModel):
     avatar_url = models.URLField(max_length=500, null=True, blank=True)
     referral_code = models.CharField(max_length=40, null=True, blank=True)
     birth_date = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=20, choices=Gender.choices, null=True, blank=True)
     # Web Push categories (Node pushPreferences.*)
     push_orders = models.BooleanField(default=True)
     push_account = models.BooleanField(default=True)
@@ -90,6 +111,10 @@ class User(AbstractBaseUser, BaseModel):
                 condition=models.Q(role__in=[r.value for r in Role]), name="users_role_valid"
             ),
             one_of("status", UserStatus, "users_status_valid"),
+            models.CheckConstraint(
+                condition=models.Q(gender__isnull=True) | models.Q(gender__in=Gender.values),
+                name="users_gender_valid",
+            ),
         ]
         indexes = [
             models.Index(fields=["role", "status", "-created_at"], name="users_role_status_created")
@@ -108,7 +133,8 @@ class User(AbstractBaseUser, BaseModel):
 
     @property
     def permissions(self) -> list[str]:
-        return sorted(p.value for p in permissions_for(self.role))
+        """Effective permissions: what this person may do (not just their role's preset)."""
+        return sorted(p.value for p in effective_permissions(self.role, self.custom_permissions))
 
     # Django admin (Phase 5) treats only the super admin as staff.
     @property

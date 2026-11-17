@@ -459,6 +459,18 @@ export const reviewsPaths = {
         { in: "query", name: "status", schema: { type: "string" } },
         { in: "query", name: "reported", schema: { type: "boolean" } },
         { in: "query", name: "restaurantId", schema: { type: "string" } },
+        {
+          in: "query",
+          name: "customer",
+          schema: { type: "string" },
+          description: "Orders of this customer (user id) that have reviews",
+        },
+        {
+          in: "query",
+          name: "rider",
+          schema: { type: "string" },
+          description: "Orders with a review of this rider (user id)",
+        },
         ratingFilter,
         { in: "query", name: "search", schema: { type: "string" } },
         ...paging,

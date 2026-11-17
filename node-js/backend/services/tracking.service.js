@@ -61,7 +61,7 @@ export async function trackedOrderId(riderId) {
 }
 
 const canView = (user, order) =>
-  hasPermission(user.role, PERMISSIONS.ORDERS_VIEW) ||
+  hasPermission(user, PERMISSIONS.ORDERS_VIEW) ||
   (user.role === ROLES.CUSTOMER && String(order.customer) === String(user._id)) ||
   (user.role === ROLES.DELIVERY && String(order.deliveryPartner) === String(user._id));
 

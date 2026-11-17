@@ -6,13 +6,32 @@ import { CommissionRule } from "../models/commission-rule.model.js";
  * else the default (config/earnings.js).
  */
 export async function commissionBpFor(restaurantId) {
+  return (await commissionsFor([restaurantId])).get(String(restaurantId)).basisPoints;
+}
+
+/**
+ * The same for several restaurants at once: id -> { basisPoints, source }, where `source` is
+ * "restaurant" (its own rule) or "default" (the global rule or the configured default).
+ */
+export async function commissionsFor(restaurantIds) {
   const rules = await CommissionRule.find({
     effectiveTo: null,
-    restaurant: { $in: [restaurantId, null] },
+    restaurant: { $in: [...restaurantIds, null] },
   }).lean();
-  const own = rules.find((r) => r.restaurant && String(r.restaurant) === String(restaurantId));
+  const own = new Map(rules.filter((r) => r.restaurant).map((r) => [String(r.restaurant), r]));
   const global = rules.find((r) => !r.restaurant);
-  return (own ?? global)?.basisPoints ?? EARNINGS.restaurantCommissionBasisPoints;
+  const fallback = global?.basisPoints ?? EARNINGS.restaurantCommissionBasisPoints;
+  return new Map(
+    restaurantIds.map((id) => {
+      const rule = own.get(String(id));
+      return [
+        String(id),
+        rule
+          ? { basisPoints: rule.basisPoints, source: "restaurant" }
+          : { basisPoints: fallback, source: "default" },
+      ];
+    }),
+  );
 }
 
 /**

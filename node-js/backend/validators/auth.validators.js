@@ -1,5 +1,5 @@
 import { body } from "express-validator";
-import { ALL_ROLES, SELF_REGISTER_ROLES } from "../models/user.model.js";
+import { ALL_ROLES, GENDERS, SELF_REGISTER_ROLES } from "../models/user.model.js";
 
 export const email = () =>
   body("email")
@@ -95,6 +95,13 @@ export const changePasswordRules = [
   newPassword("newPassword"),
 ];
 
+/** Optional gender: one of GENDERS, or null to clear it. */
+export const gender = () =>
+  body("gender")
+    .optional()
+    .custom((v) => v === null || GENDERS.includes(v))
+    .withMessage(`Gender must be one of: ${GENDERS.join(", ")}`);
+
 export const updateProfileRules = [
   name().optional(),
   body("phone")
@@ -109,6 +116,7 @@ export const updateProfileRules = [
     .optional()
     .custom((v) => v === null || v === "" || (typeof v === "string" && v.length <= 500 && /^https?:\/\//.test(v)))
     .withMessage("Enter a valid photo URL"),
+  gender(),
 ];
 
 const requiredPhone = () =>

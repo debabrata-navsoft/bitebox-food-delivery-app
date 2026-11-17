@@ -153,6 +153,10 @@ export const adminListRules = [
   query("target").optional().isIn(Object.values(T)),
   query("status").optional().isIn(Object.values(REVIEW_STATUS)),
   query("restaurantId").optional().isMongoId(),
+  // Orders of one customer that have reviews (the admin customer profile).
+  query("customer").optional().isMongoId().withMessage("Invalid id"),
+  // Orders with a review of one rider (the admin delivery partner account view).
+  query("rider").optional().isMongoId().withMessage("Invalid id"),
   booleanQuery("reported"),
   ratingQuery(),
   searchQuery(),

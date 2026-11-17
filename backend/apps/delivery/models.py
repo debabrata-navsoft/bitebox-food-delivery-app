@@ -5,9 +5,10 @@ in apps/kyc; the verification decision is here.
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 from common.geo import PointField
-from common.models import BaseModel, RatingSummary, one_of
+from common.models import AppendOnlyModel, BaseModel, RatingSummary, one_of
 
 
 class VehicleType(models.TextChoices):
@@ -70,6 +71,9 @@ class DeliveryPartner(BaseModel, RatingSummary):
     verified_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
+    # Someone to call if something happens on a delivery: {name, phone, relation} (admin-edited).
+    emergency_contact = models.JSONField(null=True, blank=True)
+    zone = models.CharField(max_length=60, null=True, blank=True)  # delivery zone/area name
 
     class Meta:
         db_table = "delivery_partners"
@@ -95,3 +99,26 @@ class RiderVehicle(BaseModel):
     class Meta:
         db_table = "rider_vehicles"
         constraints = [one_of("vehicle_type", VehicleType, "rider_vehicles_type_valid")]
+
+
+class AvailabilitySource(models.TextChoices):
+    RIDER = "rider"  # their own toggle
+    ADMIN = "admin"  # an admin took them offline
+    SYSTEM = (
+        "system"  # the account stopped being active, verification was withdrawn, a missed offer
+    )
+
+
+class RiderAvailabilityLog(AppendOnlyModel):
+    """One row per online/offline change of a rider (append-only)."""
+
+    rider = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    is_online = models.BooleanField()
+    at = models.DateTimeField(default=timezone.now)
+    source = models.CharField(max_length=8, choices=AvailabilitySource.choices)
+    reason = models.CharField(max_length=500, blank=True, default="")
+
+    class Meta:
+        db_table = "rider_availability_logs"
+        constraints = [one_of("source", AvailabilitySource, "rider_availability_logs_source_valid")]
+        indexes = [models.Index(fields=["rider", "-at"], name="rider_availability_recent")]

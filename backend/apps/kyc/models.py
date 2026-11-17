@@ -28,6 +28,11 @@ class DocumentStatus(models.TextChoices):
     REJECTED = "rejected"
 
 
+# A partner account's overall verification state (kyc.services.with_state), as the admin lists
+# filter by it.
+ACCOUNT_KYC_STATES = ["verified", "pending", "incomplete", "rejected"]
+
+
 class KycDocument(BaseModel):
     """One document per kind and person; uploading again replaces it and needs a new review."""
 

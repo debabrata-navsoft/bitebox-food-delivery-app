@@ -2,30 +2,22 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
   inject,
   signal,
-  untracked,
 } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { FormRoot, TreeValidationResult, form, pattern, validate } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
-import { ToggleComponent } from 'nexprime';
-import { firstValueFrom } from 'rxjs';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
+import { errorMessage } from '../../../core/services/api-error';
 import { KycService } from '../../../core/services/kyc.service';
 import { MyRestaurantService } from '../../../core/services/my-restaurant.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { KycDocuments } from '../../../shared/components/kyc/kyc-documents/kyc-documents';
 import { PayoutAccountForm } from '../../../shared/components/kyc/payout-account-form/payout-account-form';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { serverErrors, shownError } from '../../../shared/forms/form-errors';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { Restaurant } from '../../../shared/models/catalog.models';
 import { KycSummary } from '../../../shared/models/kyc.models';
 import { StatusBanner } from '../status-banner/status-banner';
-
-const GSTIN = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+import { RestaurantLegalForm } from './legal-form/restaurant-legal-form';
 
 /**
  * What BiteBox needs before a restaurant goes live: legal and tax details (FSSAI, GST),
@@ -34,10 +26,8 @@ const GSTIN = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 @Component({
   selector: 'bb-restaurant-verification',
   imports: [
-    FormRoot,
-    NP_FORM_FIELDS,
     RouterLink,
-    ToggleComponent,
+    RestaurantLegalForm,
     PageHeader,
     StatusBanner,
     KycDocuments,
@@ -61,30 +51,6 @@ export class RestaurantVerification {
     ['rejected', 'resubmission_requested'].includes(this.restaurant()?.status ?? ''),
   );
   protected readonly resubmitting = signal(false);
-  protected readonly shownError = shownError;
-
-  protected readonly model = signal({
-    ownerName: '',
-    gstRegistered: false,
-    gstin: '',
-    fssaiNumber: '',
-    fssaiValidUntil: null as Date | null,
-  });
-  protected readonly form = form(
-    this.model,
-    (p) => {
-      pattern(p.fssaiNumber, /^(\d{14})?$/, { message: 'An FSSAI number has 14 digits' });
-      validate(p.gstin, ({ value, valueOf }) => {
-        const gstin = value().trim().toUpperCase();
-        if (valueOf(p.gstRegistered) && !gstin)
-          return { kind: 'required', message: 'Enter your GSTIN' };
-        return gstin && !GSTIN.test(gstin)
-          ? { kind: 'gstin', message: 'Enter a valid 15-character GSTIN' }
-          : undefined;
-      });
-    },
-    { submission: { action: () => this.saveLegal() } },
-  );
 
   constructor() {
     this.restaurants.get().subscribe({
@@ -94,51 +60,12 @@ export class RestaurantVerification {
         this.notify.error(errorMessage(err));
       },
     });
-    effect(() => {
-      const r = this.restaurant();
-      if (r && !untracked(() => this.form().dirty()))
-        untracked(() =>
-          this.form().reset({
-            ownerName: r.ownerName ?? '',
-            gstRegistered: r.gstRegistered ?? false,
-            gstin: r.gstin ?? '',
-            fssaiNumber: r.fssaiNumber ?? '',
-            fssaiValidUntil: r.fssaiValidUntil ? new Date(r.fssaiValidUntil) : null,
-          }),
-        );
-    });
   }
 
-  protected setGst(on: boolean): void {
-    this.model.update((m) => ({ ...m, gstRegistered: on }));
-    this.form.gstRegistered().markAsDirty();
-  }
-
-  private async saveLegal(): Promise<TreeValidationResult> {
-    const m = this.model();
-    const until = m.fssaiValidUntil;
-    try {
-      const restaurant = await firstValueFrom(
-        this.restaurants.update({
-          ownerName: m.ownerName.trim(),
-          gstRegistered: m.gstRegistered,
-          gstin: m.gstin.trim().toUpperCase(),
-          fssaiNumber: m.fssaiNumber.trim(),
-          fssaiValidUntil: until
-            ? `${until.getFullYear()}-${String(until.getMonth() + 1).padStart(2, '0')}-${String(until.getDate()).padStart(2, '0')}`
-            : null,
-        }),
-      );
-      this.restaurant.set(restaurant);
-      this.form().reset(this.model());
-      this.kycData.reload(); // GST changes which documents are needed
-      this.notify.success('Details saved');
-      return undefined;
-    } catch (err) {
-      const fields = fieldErrors(err);
-      if (!fields.length) this.notify.error(errorMessage(err));
-      return serverErrors(this.form, fields);
-    }
+  /** The legal details changed: GST decides which documents are needed. */
+  protected legalSaved(restaurant: Restaurant): void {
+    this.restaurant.set(restaurant);
+    this.kycData.reload();
   }
 
   protected resubmit(): void {

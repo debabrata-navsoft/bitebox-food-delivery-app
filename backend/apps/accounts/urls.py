@@ -25,9 +25,29 @@ auth_urls = [
 
 admin_urls = [
     path("admin/users", views_admin.MembersView.as_view()),
+    path("admin/users/<str:id>", views_admin.MemberDetailView.as_view()),
     path("admin/users/<str:id>/status", views_admin.MemberStatusView.as_view()),
+    path("admin/users/<str:id>/addresses", views_admin.MemberAddressesView.as_view()),
+    path(
+        "admin/users/<str:id>/addresses/<str:address_id>",
+        views_admin.MemberAddressView.as_view(),
+    ),
+    path(
+        "admin/users/<str:id>/addresses/<str:address_id>/default",
+        views_admin.MemberDefaultAddressView.as_view(),
+    ),
     path("admin/users/<str:id>/logins", views_admin.MemberLoginsView.as_view()),
+    path("admin/customers", views_admin.CustomersView.as_view()),
+    path(
+        "admin/customers/<str:id>/password-reset",
+        views_admin.CustomerPasswordResetView.as_view(),
+    ),
+    path(
+        "admin/customers/<str:id>/email-verification",
+        views_admin.CustomerEmailVerificationView.as_view(),
+    ),
     path("admin/admins", views_admin.StaffListView.as_view()),
+    path("admin/admins/permissions", views_admin.StaffPermissionsView.as_view()),
     path("admin/admins/<str:id>", views_admin.StaffDetailView.as_view()),
     path("admin/admins/<str:id>/status", views_admin.StaffStatusView.as_view()),
     path("admin/admins/<str:id>/logins", views_admin.StaffLoginsView.as_view()),

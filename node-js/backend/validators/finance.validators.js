@@ -12,6 +12,10 @@ export const listPayoutRules = [
   ...paginationRules,
   query("type").optional().isIn(Object.values(PAYOUT_TYPES)),
   query("status").optional().isIn(Object.values(PAYOUT_STATUS)),
+  // One restaurant's payouts (the admin restaurant account view).
+  query("restaurant").optional().isMongoId().withMessage("Invalid id"),
+  // One rider's payouts (the admin delivery partner account view; the rider's user id).
+  query("rider").optional().isMongoId().withMessage("Invalid id"),
 ];
 export const createPayoutRules = [
   payoutType(body),

@@ -6,6 +6,7 @@ global one, else the default below. Rider pay is a base plus a rate per started 
 """
 
 import math
+from collections.abc import Iterable
 from typing import Any
 
 from django.db.models import Q
@@ -22,14 +23,27 @@ EARNINGS = {
 
 def commission_bp_for(restaurant_id: Any) -> int:
     """The commission rate in effect now for this restaurant."""
+    return commissions_for([restaurant_id])[restaurant_id][0]
+
+
+def commissions_for(restaurant_ids: Iterable[Any]) -> dict[Any, tuple[int, str]]:
+    """
+    The rate in effect now for each restaurant, and where it comes from: "restaurant" (its own
+    rule) or "default" (the global rule, else the built-in default). One query for all of them.
+    """
     from .models import CommissionRule
 
+    ids = list(restaurant_ids)
     rules: dict[Any, int] = dict(
         CommissionRule.objects.filter(
-            Q(restaurant_id=restaurant_id) | Q(restaurant__isnull=True), effective_to__isnull=True
+            Q(restaurant_id__in=ids) | Q(restaurant__isnull=True), effective_to__isnull=True
         ).values_list("restaurant_id", "basis_points")
     )
-    return rules.get(restaurant_id, rules.get(None, EARNINGS["restaurant_commission_basis_points"]))
+    default = rules.get(None, EARNINGS["restaurant_commission_basis_points"])
+    return {
+        i: (rules[i], "restaurant") if i is not None and i in rules else (default, "default")
+        for i in ids
+    }
 
 
 def restaurant_food(order: Any) -> int:

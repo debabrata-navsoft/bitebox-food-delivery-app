@@ -444,7 +444,9 @@ def test_admins_suspend_and_reactivate_a_user() -> None:
     as_admin = {"HTTP_AUTHORIZATION": f"Bearer {admin['token']}"}
     path = f"/api/v1/admin/users/{customer['user']['id']}/status"
 
-    off = APIClient().patch(path, {"status": "suspended"}, format="json", **as_admin)
+    off = APIClient().patch(
+        path, {"status": "suspended", "reason": "Policy review"}, format="json", **as_admin
+    )
     assert off.status_code == 200
     assert off.json()["data"]["user"]["status"] == "suspended"
     assert me(customer["token"]).status_code == 401
@@ -460,7 +462,7 @@ def test_admins_cannot_suspend_themselves() -> None:
     admin = create_and_login("admin")
     res = APIClient().patch(
         f"/api/v1/admin/users/{admin['user']['id']}/status",
-        {"status": "suspended"},
+        {"status": "suspended", "reason": "Policy review"},
         format="json",
         HTTP_AUTHORIZATION=f"Bearer {admin['token']}",
     )
@@ -472,7 +474,7 @@ def test_invalid_ids_are_422() -> None:
     admin = create_and_login("admin")
     res = APIClient().patch(
         "/api/v1/admin/users/not-an-id/status",
-        {"status": "suspended"},
+        {"status": "suspended", "reason": "Policy review"},
         format="json",
         HTTP_AUTHORIZATION=f"Bearer {admin['token']}",
     )

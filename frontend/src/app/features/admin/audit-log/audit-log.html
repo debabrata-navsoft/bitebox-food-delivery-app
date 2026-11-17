@@ -1,6 +1,6 @@
 <bb-page-header
   title="Audit log"
-  subtitle="Important admin actions: who did what, to which record, and when."
+  subtitle="Every sensitive admin action: who did what, to which account, what changed and why. Entries can't be changed or removed."
 />
 
 <div class="bb-filters">
@@ -13,6 +13,9 @@
   />
   <np-select [formField]="filters.action" ariaLabel="Action" [options]="actionOptions" />
   <np-select [formField]="filters.role" ariaLabel="Admin role" [options]="roleOptions" />
+  <np-select [formField]="filters.accountType" ariaLabel="Account type" [options]="accountOptions" />
+  <np-calendar [formField]="filters.from" placeholder="From" dateFormat="dd M yy" showIcon />
+  <np-calendar [formField]="filters.to" placeholder="To" dateFormat="dd M yy" showIcon />
 </div>
 
 @if (list.error(); as message) {
@@ -41,7 +44,8 @@
             <th scope="col">When</th>
             <th scope="col">Admin</th>
             <th scope="col">Action</th>
-            <th scope="col">Details</th>
+            <th scope="col">Account</th>
+            <th scope="col">Changes</th>
           </tr>
         </thead>
         <tbody>
@@ -54,11 +58,31 @@
               </td>
               <td>
                 <span class="bb-badge tone-info">{{ actionLabel(e.action) }}</span>
+                <span class="sub">{{ e.description }}</span>
+                @if (e.reason) {
+                  <span class="sub reason">Reason: {{ e.reason }}</span>
+                }
               </td>
               <td>
-                {{ e.description }}
+                @if (e.accountType) {
+                  <span class="bb-badge">{{ accountLabel(e.accountType) }}</span>
+                }
                 @if (e.resourceId) {
-                  <span class="sub ref">{{ e.resourceType }} {{ e.resourceId }}</span>
+                  @if (accountLink(e); as link) {
+                    <a class="sub ref" [routerLink]="link">#{{ e.resourceId.slice(-8).toUpperCase() }}</a>
+                  } @else {
+                    <span class="sub ref">{{ e.resourceType }} #{{ e.resourceId.slice(-8).toUpperCase() }}</span>
+                  }
+                }
+              </td>
+              <td class="changes">
+                @for (line of changeLines(e); track $index) {
+                  <span>{{ line }}</span>
+                } @empty {
+                  <span class="bb-muted">—</span>
+                }
+                @if (e.ip) {
+                  <span class="sub ref">IP {{ e.ip }}</span>
                 }
               </td>
             </tr>

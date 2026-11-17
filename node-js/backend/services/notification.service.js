@@ -1,8 +1,8 @@
 import { logger } from "../config/logger.js";
 import { Notification } from "../models/notification.model.js";
 import { Restaurant } from "../models/restaurant.model.js";
-import { hasPermission } from "../config/permissions.js";
-import { ADMIN_ROLES, ROLES, USER_STATUS, User } from "../models/user.model.js";
+import { permissionFilter } from "../config/permissions.js";
+import { ROLES, USER_STATUS, User } from "../models/user.model.js";
 import { emitToUsers } from "../sockets/events.js";
 import { CHANNELS, DELIVERY_STATUS, NotificationDelivery } from "../models/notification-delivery.model.js";
 import { DeviceToken } from "../models/device-token.model.js";
@@ -160,15 +160,13 @@ export const startNotificationLoop = (intervalMs = 60_000) =>
   startSweepLoop("Notifications", () => retryDue(), intervalMs, (s) => s.retried > 0);
 
 /**
- * Every active admin whose role has `permission` gets the notification (the super admin always
- * does), e.g. operations admins for a restaurant waiting for review.
+ * Every active admin whose effective permissions include `permission` gets the notification (the
+ * super admin always does), e.g. operations admins for a restaurant waiting for review, or an
+ * operator whose custom list has the permission.
  */
 export async function notifyAdmins(payload, permission) {
-  const roles = ADMIN_ROLES.filter(
-    (role) => role === ROLES.ADMIN || hasPermission(role, permission),
-  );
   const admins = await User.find({
-    role: { $in: roles },
+    ...permissionFilter(permission),
     status: USER_STATUS.ACTIVE,
   }).select("_id");
   await notify(

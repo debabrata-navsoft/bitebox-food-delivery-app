@@ -1,4 +1,5 @@
-export type StaffAdminRole = 'operations_admin' | 'finance_admin' | 'support_admin';
+/** `operator` has no preset: only the permissions the super admin ticks for that person. */
+export type StaffAdminRole = 'operations_admin' | 'finance_admin' | 'support_admin' | 'operator';
 /** `admin` is the super admin; the staff admin roles each get a slice of the admin panel. */
 export type AdminRole = 'admin' | StaffAdminRole;
 export type Role = 'customer' | 'restaurant' | 'delivery' | AdminRole;
@@ -8,6 +9,7 @@ export const STAFF_ADMIN_ROLES: readonly StaffAdminRole[] = [
   'operations_admin',
   'finance_admin',
   'support_admin',
+  'operator',
 ];
 export const ADMIN_ROLES: readonly AdminRole[] = ['admin', ...STAFF_ADMIN_ROLES];
 export const isAdminRole = (role: Role | null | undefined): role is AdminRole =>
@@ -16,7 +18,20 @@ export const isAdminRole = (role: Role | null | undefined): role is AdminRole =>
 /** Mirrors backend config/permissions.js. The API enforces them; the app only shapes menus. */
 export type Permission =
   | 'admins:manage'
-  | 'users:manage'
+  | 'customers:view'
+  | 'customers:edit'
+  | 'customers:status'
+  | 'restaurants:view'
+  | 'restaurants:edit'
+  | 'restaurants:status'
+  | 'restaurants:approve'
+  | 'restaurants:kyc'
+  | 'riders:view'
+  | 'riders:edit'
+  | 'riders:status'
+  | 'riders:approve'
+  | 'riders:kyc'
+  | 'accounts:suspend'
   | 'audit:view'
   | 'catalog:manage'
   | 'operations:view'
@@ -32,7 +47,22 @@ export type Permission =
   | 'rewards:manage'
   | 'rewards:view'
   | 'promotions:send';
-export type UserStatus = 'active' | 'suspended';
+/** Any status but `active` signs the person out and keeps them out. */
+export type UserStatus = 'active' | 'inactive' | 'suspended' | 'blocked';
+export const USER_STATUS_META: Record<UserStatus, { label: string; tone: string; hint: string }> = {
+  active: { label: 'Active', tone: 'tone-good', hint: 'Can sign in and use BiteBox.' },
+  inactive: { label: 'Inactive', tone: '', hint: 'Switched off, e.g. closed on request.' },
+  suspended: { label: 'Suspended', tone: 'tone-warn', hint: 'Temporarily locked out.' },
+  blocked: { label: 'Blocked', tone: 'tone-bad', hint: 'Permanently banned.' },
+};
+
+export type Gender = 'female' | 'male' | 'other' | 'prefer_not_to_say';
+export const GENDER_LABEL: Record<Gender, string> = {
+  female: 'Female',
+  male: 'Male',
+  other: 'Other',
+  prefer_not_to_say: 'Prefer not to say',
+};
 
 export interface User {
   id: string;
@@ -41,13 +71,22 @@ export interface User {
   phone?: string;
   role: Role;
   status: UserStatus;
-  /** Admin roles only. */
+  /** Admin roles only: what they can do (the role's preset, or their own list). */
   permissions?: Permission[];
+  /** Admin roles only: their own list; null/absent = the role's preset. */
+  customPermissions?: Permission[] | null;
+  /** Why the account is not active (admins see it). */
+  statusReason?: string;
+  statusChangedAt?: string;
+  gender?: Gender;
   lastLoginAt?: string;
   /** Set once the person confirmed the address (link) or the number (SMS code). */
   emailVerified?: boolean;
   phoneVerified?: boolean;
   avatarUrl?: string;
+  /** "1995-11-05" (customers who saved it). */
+  birthDate?: string;
+  referralCode?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -89,6 +128,8 @@ export interface UpdateProfileRequest {
   phone?: string;
   /** null removes the photo. */
   avatarUrl?: string | null;
+  /** null clears it. */
+  gender?: Gender | null;
 }
 
 export interface ChangePasswordRequest {
@@ -105,6 +146,7 @@ export const ROLE_META: Record<
   operations_admin: { label: 'Operations admin', home: '/admin/operations', login: '/login' },
   finance_admin: { label: 'Finance admin', home: '/admin/finance', login: '/login' },
   support_admin: { label: 'Support admin', home: '/admin/support', login: '/login' },
+  operator: { label: 'Operator', home: '/admin/profile', login: '/login' },
   restaurant: {
     label: 'Restaurant partner',
     home: '/restaurant',
@@ -117,6 +159,16 @@ export const ROLE_META: Record<
     login: '/login',
     register: '/delivery/register',
   },
+};
+
+/** The permission family of each member role (customers:edit, riders:status...). */
+export const MEMBER_KIND = { customer: 'customers', restaurant: 'restaurants', delivery: 'riders' } as const;
+
+/** The permission to see each kind of member account (Account management). */
+export const MEMBER_VIEW_PERMISSION: Record<'customer' | 'restaurant' | 'delivery', Permission> = {
+  customer: 'customers:view',
+  restaurant: 'restaurants:view',
+  delivery: 'riders:view',
 };
 
 export const initialsOf = (name = ''): string =>

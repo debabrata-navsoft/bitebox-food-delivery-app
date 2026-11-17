@@ -1,0 +1,65 @@
+@if (list.error(); as message) {
+  <div class="bb-alert error" role="alert">
+    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
+    <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
+  </div>
+}
+@let t = tab();
+@if (list.showSkeleton()) {
+  @for (i of [1, 2, 3]; track i) {
+    <span class="bb-skeleton row"></span>
+  }
+} @else if (list.empty()) {
+  <p class="bb-muted empty">{{ t.empty }}</p>
+} @else {
+  <div class="bb-table-scroll" [class.bb-dim]="list.loading()">
+    <table class="bb-table" [attr.aria-label]="label()">
+      <thead>
+        <tr>
+          @for (c of t.columns; track c.label) {
+            <th scope="col" [class.num]="c.num">{{ c.label }}</th>
+          }
+          @if (t.open) {
+            <th scope="col"><span class="bb-sr-only">Open</span></th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track $index) {
+          <tr [class.clickable]="!!t.open" (click)="t.open?.(row)">
+            @for (c of t.columns; track c.label) {
+              <td [class.num]="c.num">
+                @if (c.badge) {
+                  @if (c.badge(row); as b) {
+                    <span class="bb-badge {{ b.tone ?? '' }}">{{ b.label }}</span>
+                  }
+                } @else {
+                  {{ c.text?.(row) ?? '—' }}
+                }
+                @if (c.sub?.(row); as sub) {
+                  <span class="sub">{{ sub }}</span>
+                }
+              </td>
+            }
+            @if (t.open) {
+              <td class="open">
+                <button type="button" class="bb-link-button" [attr.aria-label]="'Open'" (click)="$event.stopPropagation(); t.open(row)">
+                  <np-icon name="chevron-right" class="mat-icon" matButtonIcon />
+                </button>
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <np-pagination
+    variant="compact"
+    [page]="list.data()!.pagination.page"
+    [rows]="list.data()!.pagination.limit"
+    [totalRecords]="list.data()!.pagination.total"
+    [rowsOptions]="[10, 25, 50]"
+    (pageChange)="list.goTo($event)"
+    (rowsChange)="list.goTo(1, $event)"
+  />
+}

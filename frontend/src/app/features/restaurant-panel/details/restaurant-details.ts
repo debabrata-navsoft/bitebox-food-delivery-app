@@ -1,4 +1,6 @@
 import {
+  booleanAttribute,
+  input,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -108,6 +110,8 @@ export class RestaurantDetails {
   private readonly places = inject(DeliveryLocationService);
 
   protected readonly shownError = shownError;
+  /** Inside another page (the admin's restaurant edit): no page title or status banner. */
+  readonly embedded = input(false, { transform: booleanAttribute });
 
   protected readonly restaurant = signal<Restaurant | null>(null);
   protected readonly loading = signal(true);

@@ -16,6 +16,7 @@ from apps.orders.models import Order
 from apps.orders.notifications import rupees
 from apps.rbac.roles import Permission, Role
 from common.api import ApiError, ok
+from common.fields import UUIDRef
 from common.pagination import Page
 from common.permissions import permission_required, role_required
 from common.schema import envelope, errors
@@ -218,6 +219,8 @@ class PayoutTypeQuery(serializers.Serializer):
 class PayoutListQuery(PageQuery):
     type = serializers.ChoiceField(choices=PayoutType.values, required=False)
     status = serializers.ChoiceField(choices=PayoutStatus.values, required=False)
+    restaurant = UUIDRef(required=False)  # that restaurant's payouts (its account page)
+    rider = UUIDRef(required=False)  # that rider's payouts (user id; their account page)
 
 
 class CreatePayoutInput(serializers.Serializer):

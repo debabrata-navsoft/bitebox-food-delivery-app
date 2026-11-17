@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import views, views_accounts
 
 urlpatterns = [
     path("delivery/me", views.DashboardView.as_view()),
@@ -21,5 +21,16 @@ urlpatterns = [
     path("admin/delivery-partners/<str:id>/status", views.AdminRiderStatusView.as_view()),
     path(
         "admin/delivery-partners/<str:id>/verification", views.AdminRiderVerificationView.as_view()
+    ),
+    path("admin/delivery-partner-accounts", views_accounts.RiderAccountsView.as_view()),
+    path("admin/delivery-partner-accounts/zones", views_accounts.RiderAccountZonesView.as_view()),
+    path("admin/delivery-partner-accounts/<str:id>", views_accounts.RiderAccountView.as_view()),
+    path(
+        "admin/delivery-partner-accounts/<str:id>/verification",
+        views_accounts.RiderAccountVerificationView.as_view(),
+    ),
+    path(
+        "admin/delivery-partner-accounts/<str:id>/availability",
+        views_accounts.RiderAccountAvailabilityView.as_view(),
     ),
 ]

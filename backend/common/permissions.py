@@ -4,6 +4,9 @@ Node API. Use them in `permission_classes`:
 
     permission_classes = [role_required(Role.RESTAURANT)]
     permission_classes = [permission_required(Permission.ORDERS_MANAGE)]
+    permission_classes = [permission_required(Permission.CUSTOMERS_VIEW, Permission.RIDERS_VIEW)]
+
+With several permissions, any one of them is enough.
 
 Admin routes check a permission, never a role. Ownership (a restaurant's own orders, a rider's
 own delivery) is enforced in selectors from `request.user`, never from ids sent by the client.
@@ -47,14 +50,27 @@ def role_required(*roles: Role) -> type[BasePermission]:
     return RoleRequired
 
 
-def permission_required(permission: Permission) -> type[BasePermission]:
-    """An admin permission (the super admin has every one). Anonymous → 401, missing → 403."""
+NO_ACCESS = "You do not have access to this area"  # Node: can(...)
+
+
+def _user(request: Request) -> Any:
+    return getattr(request, "user", None) if _user_role(request) is not None else None
+
+
+def permission_required(*permissions: Permission) -> type[BasePermission]:
+    """
+    An admin permission, checked against the person's effective permissions (role preset or
+    their custom list; the super admin has every one). With several, any one of them is enough.
+    Anonymous → 401, missing → 403.
+    """
+    wanted = tuple(permissions)
 
     class PermissionRequired(IsSignedIn):
-        message = "You do not have access to this area"  # Node: can(...)
+        message = NO_ACCESS
 
         def has_permission(self, request: Request, view: Any) -> bool:
-            return has_permission(_user_role(request), permission)
+            user = _user(request)
+            return any(has_permission(user, p) for p in wanted)
 
-    PermissionRequired.__name__ = f"PermissionRequired({permission})"
+    PermissionRequired.__name__ = f"PermissionRequired({' | '.join(wanted)})"
     return PermissionRequired

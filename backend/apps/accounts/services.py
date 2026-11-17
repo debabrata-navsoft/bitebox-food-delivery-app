@@ -167,9 +167,19 @@ def _safe(hook: RegistrationHook, *args: Any) -> Callable[[], None]:
     return run
 
 
+# Why a non-active account cannot sign in (403 FORBIDDEN, as for a suspension before).
+BLOCKED_SIGN_IN: dict[str, str] = {
+    UserStatus.INACTIVE: "This account is inactive",
+    UserStatus.SUSPENDED: "This account has been suspended",
+    UserStatus.BLOCKED: "This account is blocked",
+}
+
+
 def _signed_in(user: User, portal: str | None, meta: RequestMeta, *fields: str) -> IssuedSession:
     if user.status != UserStatus.ACTIVE:
-        raise ApiError.forbidden("This account has been suspended")
+        raise ApiError.forbidden(
+            BLOCKED_SIGN_IN.get(user.status, BLOCKED_SIGN_IN[UserStatus.SUSPENDED])
+        )
     # Each panel has its own sign-in page: a customer can't use the admin login, and so on.
     if portal and user.role != portal:
         raise ApiError.forbidden("This account cannot sign in to this portal")
@@ -346,6 +356,11 @@ def forgot_password(email: str) -> None:
     user = User.objects.filter(email=email, status=UserStatus.ACTIVE).first()
     if user is None:
         return  # same response either way: never reveal which emails exist
+    send_password_reset(user)
+
+
+def send_password_reset(user: User) -> None:
+    """Emails a one-time reset link (PASSWORD_RESET_TTL_MINUTES); forgot-password and support."""
     token = random_token(32)
     minutes = settings.PASSWORD_RESET_TTL_MINUTES
     user.password_reset_token_hash = hash_token(token)
@@ -427,6 +442,9 @@ def update_profile(user: User, data: dict[str, Any]) -> User:
             raise ApiError.bad_request("Upload the photo first")
         user.avatar_url = url
         fields.append("avatar_url")
+    if "gender" in data:  # null clears it
+        user.gender = data["gender"] or None
+        fields.append("gender")
     if fields:
         user.save(update_fields=[*fields, "updated_at"])
     return user

@@ -45,7 +45,7 @@ def client(token: str) -> APIClient:
 MATRIX = [
     ("/admin/admins", ["admin"]),
     ("/admin/audit-logs", ["admin"]),
-    ("/admin/users", ["admin"]),
+    ("/admin/users", ["admin", "operations_admin", "support_admin"]),  # each sees its kinds
 ]
 
 
@@ -64,7 +64,7 @@ def test_users_lists_only_members(as_: dict[str, Any]) -> None:
     assert admin.get("/api/v1/admin/users?role=finance_admin").status_code == 422
     suspend = admin.patch(
         f"/api/v1/admin/users/{as_['finance_admin']['user']['id']}/status",
-        {"status": "suspended"},
+        {"status": "suspended", "reason": "Policy review"},
         format="json",
     )
     assert suspend.status_code == 400, "admins are managed in Admin management"
@@ -148,7 +148,9 @@ def test_deactivates_an_admin_and_cannot_edit_own_account(as_: dict[str, Any]) -
     admin = client(as_["admin"]["token"])
     created = admin.post("/api/v1/admin/admins", NEW, format="json").json()["data"]["user"]
     off = admin.patch(
-        f"/api/v1/admin/admins/{created['id']}/status", {"status": "suspended"}, format="json"
+        f"/api/v1/admin/admins/{created['id']}/status",
+        {"status": "suspended", "reason": "Policy review"},
+        format="json",
     )
     assert off.status_code == 200
     assert login(NEW["email"], NEW["password"]).status_code == 403
@@ -202,10 +204,15 @@ def test_a_rider_carrying_an_order_cannot_be_suspended(as_: dict[str, Any]) -> N
 
     admin = client(as_["admin"]["token"])
     path = f"/api/v1/admin/users/{rider['user']['id']}/status"
-    busy = admin.patch(path, {"status": "suspended"}, format="json")
+    busy = admin.patch(path, {"status": "suspended", "reason": "Policy review"}, format="json")
     assert busy.status_code == 409
     assert busy.json()["error"]["code"] == "DELIVERY_IN_PROGRESS"
 
     DeliveryPartner.objects.filter(pk=profile.pk).update(active_order=None)
-    assert admin.patch(path, {"status": "suspended"}, format="json").status_code == 200
+    assert (
+        admin.patch(
+            path, {"status": "suspended", "reason": "Policy review"}, format="json"
+        ).status_code
+        == 200
+    )
     assert DeliveryPartner.objects.get(pk=profile.pk).is_online is False

@@ -862,12 +862,12 @@ def test_admin_manages_riders_and_cannot_suspend_one_mid_delivery(
     assert everyone["pagination"]["total"] == 1
 
     url = f"/api/v1/admin/delivery-partners/{w.rider['user']['id']}/status"
-    busy = admin.patch(url, {"status": "suspended"}, format="json")
+    busy = admin.patch(url, {"status": "suspended", "reason": "Policy review"}, format="json")
     assert busy.status_code == 409
 
     for status in ("picked_up", "on_the_way", "delivered"):
         w.rider_set(w.r, order_id, status)
-    suspend = admin.patch(url, {"status": "suspended"}, format="json")
+    suspend = admin.patch(url, {"status": "suspended", "reason": "Policy review"}, format="json")
     assert suspend.status_code == 200
     assert suspend.json()["message"] == "Rider suspended"
     assert DeliveryPartner.objects.get(user_id=w.rider["user"]["id"]).is_online is False
@@ -886,7 +886,12 @@ def test_suspending_a_rider_with_an_open_offer_passes_the_offer_on(
     w.go_online(w.r, NEAR)
     order_id = w.ready_order()
     url = f"/api/v1/admin/delivery-partners/{w.rider['user']['id']}/status"
-    assert admin.patch(url, {"status": "suspended"}, format="json").status_code == 200
+    assert (
+        admin.patch(
+            url, {"status": "suspended", "reason": "Policy review"}, format="json"
+        ).status_code
+        == 200
+    )
     assert w.offer_id(second) == order_id
 
 

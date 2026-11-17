@@ -2,12 +2,16 @@ import { body, query } from "express-validator";
 import { RESTAURANT_STATUS } from "../models/restaurant.model.js";
 import {
   booleanQuery,
+  dayRangeRules,
   imageUrlBody,
   mongoIdParam,
   paginationRules,
   paiseBody,
+  requiredReason,
   searchQuery,
 } from "./common.validators.js";
+import { USER_STATUS } from "../models/user.model.js";
+import { KYC_STATES } from "../services/kyc.service.js";
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -181,4 +185,48 @@ export const adminStatusRules = [
     .isIn(Object.values(RESTAURANT_STATUS))
     .withMessage("Invalid status"),
   body("reason").optional().isString().trim().isLength({ max: 500 }),
+];
+
+// Admin restaurant accounts (/admin/restaurant-accounts).
+export const RESTAURANT_ACCOUNT_SORTS = ["newest", "oldest", "name", "orders", "rating"];
+
+export const accountListRules = [
+  searchQuery(),
+  query("status").optional().isIn(Object.values(RESTAURANT_STATUS)),
+  query("accountStatus").optional().isIn(Object.values(USER_STATUS)),
+  query("kyc").optional().isIn(KYC_STATES),
+  query("city").optional().isString().trim().isLength({ min: 1, max: 60 }),
+  ...dayRangeRules("joinedFrom", "joinedTo", { message: "Invalid value" }),
+  query("sort").optional().isIn(RESTAURANT_ACCOUNT_SORTS),
+  ...paginationRules,
+];
+
+/** The partner's own edit rules; anything else (status, commission, bank, owner sign-in) is dropped. */
+export const accountUpdateRules = [mongoIdParam(), ...updateRestaurantRules];
+
+const optionalReason = () =>
+  body("reason").optional({ values: "null" }).isString().trim().isLength({ max: 500 });
+
+export const ACCOUNT_STATUSES = [
+  RESTAURANT_STATUS.APPROVED,
+  RESTAURANT_STATUS.REJECTED,
+  RESTAURANT_STATUS.RESUBMISSION_REQUESTED,
+  RESTAURANT_STATUS.SUSPENDED,
+];
+
+export const accountStatusRules = [
+  mongoIdParam(),
+  body("status").isIn(ACCOUNT_STATUSES).withMessage("Invalid status"),
+  requiredReason(body("status").isIn(ACCOUNT_STATUSES.filter((s) => s !== RESTAURANT_STATUS.APPROVED))),
+  optionalReason(),
+];
+
+export const accountAcceptingRules = [
+  mongoIdParam(),
+  body("isAcceptingOrders")
+    .isBoolean({ strict: true })
+    .withMessage("isAcceptingOrders must be true or false")
+    .toBoolean(),
+  requiredReason(body("isAcceptingOrders").equals("false")),
+  optionalReason(),
 ];

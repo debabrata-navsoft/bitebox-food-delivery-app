@@ -5,9 +5,24 @@ checklist of what each partner type needs, and admin review.
 
 import re
 import uuid
+from collections.abc import Iterable
 from typing import Any
 
 from django.db import transaction
+from django.db.models import (
+    Case,
+    Count,
+    Exists,
+    F,
+    IntegerField,
+    OuterRef,
+    Q,
+    QuerySet,
+    Subquery,
+    Value,
+    When,
+)
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from apps.accounts.models import User
@@ -119,6 +134,63 @@ def missing(user: User) -> list[str]:
     if s["payout_account"] is None:
         gaps.append("Bank account")
     return gaps
+
+
+# --- verification state on the admin account pages (models.ACCOUNT_KYC_STATES) -------------------
+def with_state(
+    qs: QuerySet[Any], user_ref: str, required: QuerySet[KycDocument], needed: Any
+) -> QuerySet[Any]:
+    """
+    Annotates `kyc_state`: rejected if a required document is rejected; else incomplete if one of
+    the `needed` documents or the bank account is missing; else pending if one awaits review; else
+    verified. `required` is the account's required documents (filtered on OuterRef(user_ref)).
+    In SQL, so the lists can filter and page by it.
+    """
+    uploaded = Coalesce(
+        Subquery(
+            required.order_by().values("user").annotate(n=Count("pk")).values("n"),
+            output_field=IntegerField(),
+        ),
+        Value(0),
+    )
+    return qs.annotate(
+        kyc_uploaded=uploaded,
+        kyc_needed=needed,
+        kyc_state=Case(
+            When(Exists(required.filter(status=DocumentStatus.REJECTED)), then=Value("rejected")),
+            When(
+                Q(kyc_uploaded__lt=F("kyc_needed"))
+                | ~Exists(PayoutAccount.objects.filter(user=OuterRef(user_ref))),
+                then=Value("incomplete"),
+            ),
+            When(Exists(required.filter(status=DocumentStatus.PENDING)), then=Value("pending")),
+            default=Value("verified"),
+        ),
+    )
+
+
+def state_json(state: str | None, user: User) -> dict[str, Any]:
+    """{ status, missing: the required kinds with no document }."""
+    have = set(KycDocument.objects.filter(user=user).values_list("kind", flat=True))
+    return {"status": state, "missing": [k for k in required_kinds(user) if k not in have]}
+
+
+def reverify(user_id: Any, kinds: Iterable[str]) -> list[str]:
+    """Sends the approved documents of `kinds` back for review (a number on them changed by an
+    admin). Returns those kinds, sorted."""
+    approved = KycDocument.objects.filter(
+        user_id=user_id, kind__in=list(kinds), status=DocumentStatus.APPROVED
+    )
+    reverified = sorted(approved.values_list("kind", flat=True))
+    if reverified:
+        KycDocument.objects.filter(user_id=user_id, kind__in=reverified).update(
+            status=DocumentStatus.PENDING,
+            review_note="",
+            reviewed_at=None,
+            reviewed_by=None,
+            updated_at=timezone.now(),
+        )
+    return reverified
 
 
 # --- partner --------------------------------------------------------------------------------------

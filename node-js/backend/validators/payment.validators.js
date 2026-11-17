@@ -34,6 +34,8 @@ export const adminPaymentListRules = [
   query("search").optional().isString().trim().isLength({ max: 100 }),
   query("from").optional().isISO8601().toDate(),
   query("to").optional().isISO8601().toDate(),
+  // Payments of one customer's orders (the admin customer profile).
+  query("customer").optional().isMongoId().withMessage("Invalid id"),
   ...paginationRules,
 ];
 export const paymentIdRules = [mongoIdParam()];

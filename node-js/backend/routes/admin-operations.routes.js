@@ -39,6 +39,6 @@ export const adminDashboardRouter = Router()
   .get(
     "/",
     respond((req) =>
-      ops.platformSummary(hasPermission(req.user.role, PERMISSIONS.FINANCE_VIEW)),
+      ops.platformSummary(hasPermission(req.user, PERMISSIONS.FINANCE_VIEW)),
     ),
   );

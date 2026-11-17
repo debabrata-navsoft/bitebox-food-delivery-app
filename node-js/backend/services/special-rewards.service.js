@@ -158,8 +158,11 @@ export async function birthdaySweep({ now = new Date(), limit = 500 } = {}) {
   return { issued };
 }
 
-/** The customer sets their date of birth, once (support can correct it). */
-export async function setBirthDate(userId, isoDate, now = new Date()) {
+/**
+ * A YYYY-MM-DD date of birth as UTC midnight, or a 422 on `birthDate` when it is not a real day
+ * or the age is outside 13-120 years. Shared by the customer's own endpoint and the admin edit.
+ */
+export function parseBirthDate(isoDate, now = new Date()) {
   const [y, m, d] = isoDate.split("-").map(Number);
   const date = new Date(Date.UTC(y, m - 1, d));
   if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d)
@@ -167,6 +170,12 @@ export async function setBirthDate(userId, isoDate, now = new Date()) {
   const age = (now - date) / (365.25 * DAY_MS);
   if (age < 13 || age > 120)
     throw new ApiError(422, "Enter your real date of birth", { code: "VALIDATION_ERROR", details: [{ field: "birthDate", message: "Enter your real date of birth" }] });
+  return date;
+}
+
+/** The customer sets their date of birth, once (support can correct it). */
+export async function setBirthDate(userId, isoDate, now = new Date()) {
+  const date = parseBirthDate(isoDate, now);
   const updated = await User.findOneAndUpdate(
     { _id: userId, role: ROLES.CUSTOMER, birthDate: { $exists: false } },
     { $set: { birthDate: date } },

@@ -9,7 +9,16 @@ const sessionSchema = new mongoose.Schema(
     revokedAt: { type: Date },
     revokedReason: {
       type: String,
-      enum: ["rotated", "logout", "reuse", "password-change", "suspended", "role-change"],
+      enum: [
+        "rotated",
+        "logout",
+        "reuse",
+        "password-change",
+        "inactive",
+        "suspended",
+        "blocked",
+        "role-change",
+      ],
     },
     userAgent: { type: String, maxlength: 512 },
     ip: { type: String, maxlength: 64 },

@@ -1,16 +1,18 @@
-<bb-page-header
-  [title]="restaurant() ? 'Restaurant details' : 'Add your restaurant'"
-  [subtitle]="
-    restaurant()
-      ? 'Keep your business information up to date.'
-      : 'Tell customers about your restaurant. We will review it before it goes live.'
-  "
-/>
+@if (!embedded()) {
+  <bb-page-header
+    [title]="restaurant() ? 'Restaurant details' : 'Add your restaurant'"
+    [subtitle]="
+      restaurant()
+        ? 'Keep your business information up to date.'
+        : 'Tell customers about your restaurant. We will review it before it goes live.'
+    "
+  />
+}
 
 @if (loading()) {
   <span class="bb-skeleton" style="height: 420px"></span>
 } @else {
-  @if (restaurant(); as r) {
+  @if (!embedded() && restaurant(); as r) {
     <bb-status-banner [restaurant]="r" [showFixLink]="false" class="banner" />
   }
   @if (error()) {

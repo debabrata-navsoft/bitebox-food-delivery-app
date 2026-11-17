@@ -15,7 +15,7 @@ from django.db.models import Count, Q, QuerySet
 from django.utils import timezone
 
 from apps.accounts.models import User, UserStatus
-from apps.notifications.services import notify, notify_admins
+from apps.notifications.services import admins_with, notify, notify_admins
 from apps.orders.models import Order
 from apps.rbac.roles import ADMIN_ROLES, Permission, Role, has_permission
 from common.api import ApiError
@@ -372,21 +372,15 @@ def dashboard() -> dict[str, Any]:
 
 def staff_list() -> dict[str, Any]:
     """People a ticket can be assigned to: active admins with the support permission."""
-    users = User.objects.filter(role__in=_support_roles(), status=UserStatus.ACTIVE).order_by(
-        "name", "id"
-    )
+    users = admins_with(Permission.SUPPORT_MANAGE)
     return {"items": [{"id": str(u.pk), "name": u.name, "role": u.role} for u in users]}
-
-
-def _support_roles() -> list[str]:
-    return [r.value for r in ADMIN_ROLES if has_permission(r, Permission.SUPPORT_MANAGE)]
 
 
 def _support_admin(user_id: uuid.UUID) -> User:
     assignee = User.objects.filter(
         pk=user_id, status=UserStatus.ACTIVE, role__in=list(ADMIN_ROLES)
     ).first()
-    if assignee is None or not has_permission(assignee.role, Permission.SUPPORT_MANAGE):
+    if assignee is None or not has_permission(assignee, Permission.SUPPORT_MANAGE):
         raise ApiError.bad_request("Assign the ticket to an active support admin")
     return assignee
 
@@ -405,6 +399,8 @@ def staff_tickets(staff: User, query: dict[str, Any], page: Page) -> dict[str, A
         qs = qs.filter(assignee=staff)
     elif query.get("assignee") == "unassigned":
         qs = qs.filter(assignee__isnull=True)
+    if query.get("requester"):
+        qs = qs.filter(raised_by_id=query["requester"])
     search = (query.get("search") or "").strip()
     if search:
         qs = qs.filter(

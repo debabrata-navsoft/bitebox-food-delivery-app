@@ -300,10 +300,15 @@ export async function cancelPayout(id, note) {
   return payout.toJSON();
 }
 
-export async function listPayouts({ type, status }, pagination) {
+export async function listPayouts({ type, status, restaurant, rider }, pagination) {
   const filter = {};
   if (type) filter.type = type;
   if (status) filter.status = status;
+  if (restaurant) filter.restaurant = restaurant;
+  if (rider) {
+    filter.payee = rider;
+    filter.type ??= PAYOUT_TYPES.RIDER;
+  }
   const [items, total] = await Promise.all([
     Payout.find(filter)
       .sort({ createdAt: -1 })

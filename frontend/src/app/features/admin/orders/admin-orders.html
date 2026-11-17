@@ -15,6 +15,16 @@
   <np-select [formField]="filters.status" ariaLabel="Order status" [options]="statusOptions()" />
 </div>
 
+@if (customer(); as id) {
+  <div class="bb-alert info" role="status">
+    <np-icon name="user" class="mat-icon" matButtonIcon />
+    <span
+      >Showing one customer's orders. <a [routerLink]="['/admin/users', id]">Open customer</a> ·
+      <a routerLink="/admin/orders">Show all orders</a></span
+    >
+  </div>
+}
+
 @if (list.error(); as message) {
   <div class="bb-alert error" role="alert">
     <np-icon name="circle-alert" class="mat-icon" matButtonIcon />

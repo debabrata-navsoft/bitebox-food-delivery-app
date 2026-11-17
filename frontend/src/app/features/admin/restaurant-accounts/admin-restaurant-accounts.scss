@@ -1,0 +1,31 @@
+@use 'breakpoints' as bp;
+@use '../account-list';
+
+.bb-filters {
+  @include bp.desktop-up {
+    grid-template-columns: minmax(240px, 2fr) repeat(4, minmax(140px, 1fr));
+  }
+}
+
+// The restaurant column keeps its name on one or two lines, not one word per line.
+.who .name {
+  display: inline-block;
+  min-width: 140px;
+}
+
+.kyc {
+  margin-top: 4px;
+}
+
+.logo {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: var(--bb-radius-sm);
+  background: var(--bb-bg);
+  color: var(--bb-ink-muted);
+  --bb-icon-size: 20px;
+}

@@ -11,10 +11,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.admin_services import STATUS_MESSAGES
 from apps.accounts.authentication import current_user
 from apps.accounts.models import UserStatus
-from apps.accounts.serializers import user_json
-from apps.audit.services import audited
+from apps.accounts.serializers import StatusInput, user_json
+from apps.audit.services import audited, note
 from apps.dispatch import services as dispatch
 from apps.finance import reports
 from apps.finance.views import DaysQuery
@@ -277,11 +278,14 @@ class RiderDetailsInput(serializers.Serializer):
     address = RestaurantAddressInput()
 
 
-class AdminRiderStatusInput(serializers.Serializer):
+class AdminRiderStatusInput(StatusInput):
+    """Any account status; a reason (3-500 characters) unless reactivating."""
+
     status = serializers.ChoiceField(
         choices=UserStatus.values,
         error_messages=dict.fromkeys(
-            ("invalid_choice", "required", "null", "blank"), "Status must be active or suspended"
+            ("invalid_choice", "required", "null", "blank"),
+            "Status must be active, inactive, suspended or blocked",
         ),
     )
 
@@ -314,10 +318,11 @@ class AdminRiderStatusView(APIView):
     def patch(self, request: Request, id: str) -> Response:
         user_id = parse_id(id)
         data = validated(AdminRiderStatusInput, request.data)
-        user = services.admin_set_status(user_id, data["status"])
+        user, changes = services.admin_set_status(user_id, data["status"], data["reason"])
+        note(request, changes, reason=data["reason"])
         return ok(
             {"user": user_json(user)},
-            message="Rider reactivated" if user.status == UserStatus.ACTIVE else "Rider suspended",
+            message=f"Rider {STATUS_MESSAGES[UserStatus(user.status)]}",
         )
 
 

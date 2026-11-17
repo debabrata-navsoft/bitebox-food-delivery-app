@@ -16,6 +16,9 @@ import {
 } from "./middleware/security.middleware.js";
 import adminCatalogRoutes from "./routes/admin-catalog.routes.js";
 import adminUsersRoutes from "./routes/admin-users.routes.js";
+import adminCustomersRoutes from "./routes/admin-customers.routes.js";
+import adminDeliveryPartnerAccountsRoutes from "./routes/admin-delivery-partners.routes.js";
+import adminRestaurantAccountsRoutes from "./routes/admin-restaurants.routes.js";
 import { createAuthRouter } from "./routes/auth.routes.js";
 import {
   categoriesRouter,
@@ -133,6 +136,9 @@ export function createApp(options = {}) {
   app.use("/api/v1/health", healthRoutes);
   app.use("/api/v1/auth", createAuthRouter(options.rateLimits));
   app.use("/api/v1/admin/users", adminUsersRoutes);
+  app.use("/api/v1/admin/customers", adminCustomersRoutes);
+  app.use("/api/v1/admin/restaurant-accounts", adminRestaurantAccountsRoutes);
+  app.use("/api/v1/admin/delivery-partner-accounts", adminDeliveryPartnerAccountsRoutes);
   app.use("/api/v1/admin/coupons", adminCouponsRouter);
   app.use("/api/v1/admin/restaurant-offers", adminRestaurantOffersRouter);
   app.use("/api/v1/admin/orders", adminOrdersRouter);

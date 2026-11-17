@@ -88,7 +88,7 @@ def tracked_order_id(rider_id: Any) -> uuid.UUID | None:
 
 
 def _can_view(user: User, order: Order) -> bool:
-    if has_permission(user.role, Permission.ORDERS_VIEW):
+    if has_permission(user, Permission.ORDERS_VIEW):
         return True
     if user.role == Role.CUSTOMER:
         return order.customer_id == user.pk

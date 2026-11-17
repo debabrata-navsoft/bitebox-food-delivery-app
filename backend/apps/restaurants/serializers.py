@@ -5,7 +5,16 @@ from typing import Any
 
 from rest_framework import serializers
 
-from apps.accounts.serializers import EmailField
+from apps.accounts.models import UserStatus
+from apps.accounts.serializers import (
+    EmailField,
+    JoinedListQuery,
+    ReasonInput,
+    clean_reason,
+    day_field,
+    optional_choice,
+)
+from apps.kyc.models import ACCOUNT_KYC_STATES
 from apps.restaurants.presenters import DAYS
 from common.fields import ImageUrlField, PaiseField, QueryBoolean, UUIDRef
 from common.validation import PageQuery
@@ -236,3 +245,48 @@ class AdminStatusInput(serializers.Serializer):
         choices=RestaurantStatus.values, error_messages={"invalid_choice": "Invalid status"}
     )
     reason = serializers.CharField(max_length=500, required=False, allow_blank=True)
+
+
+# --- restaurant accounts (Account management phase 3) ---------------------------------------------
+ACCOUNT_SORT_VALUES = ["newest", "oldest", "name", "orders", "rating"]
+
+
+class AccountListQuery(JoinedListQuery):
+    """GET /admin/restaurant-accounts."""
+
+    status = optional_choice(RestaurantStatus.values)
+    account_status = optional_choice(UserStatus.values)
+    kyc = optional_choice(ACCOUNT_KYC_STATES)
+    city = serializers.CharField(required=False, allow_blank=True, max_length=60)
+    joined_from = day_field()
+    joined_to = day_field()
+    sort = optional_choice(ACCOUNT_SORT_VALUES)
+
+
+ACCOUNT_STATUS_VALUES = [
+    RestaurantStatus.APPROVED,
+    RestaurantStatus.REJECTED,
+    RestaurantStatus.RESUBMISSION_REQUESTED,
+    RestaurantStatus.SUSPENDED,
+]
+
+
+class AccountStatusInput(ReasonInput):
+    """Approve, reject, ask for resubmission or suspend; all but approving need a reason."""
+
+    status = serializers.ChoiceField(
+        choices=[s.value for s in ACCOUNT_STATUS_VALUES],
+        error_messages={"invalid_choice": "Invalid status", "required": "Invalid status"},
+    )
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        attrs["reason"] = clean_reason(attrs, attrs["status"] != RestaurantStatus.APPROVED)
+        return attrs
+
+
+class AccountAcceptingOrdersInput(AcceptingOrdersInput, ReasonInput):
+    """Close (false, with a reason) or reopen (true) the restaurant for new orders."""
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        attrs["reason"] = clean_reason(attrs, not attrs["is_accepting_orders"])
+        return attrs

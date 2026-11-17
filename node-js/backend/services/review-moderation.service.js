@@ -72,12 +72,14 @@ function presentForAdmin(review) {
   };
 }
 
-function adminFilter({ target, status, reported, rating, search, restaurantId }) {
+function adminFilter({ target, status, reported, rating, search, restaurantId, customer, rider }) {
   const filter = {
     status: status ?? { $ne: S.DELETED },
     ...(target && { target }),
     ...(rating && { rating }),
     ...(restaurantId && { restaurant: toId(restaurantId) }),
+    ...(customer && { customer: toId(customer) }),
+    ...(rider && { deliveryPartner: toId(rider) }),
     ...(reported === true && { openReports: { $gt: 0 } }),
   };
   if (search) {

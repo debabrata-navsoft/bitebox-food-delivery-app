@@ -5,6 +5,7 @@ existing users rely on these strings. Once backend/ is removed, the parity test 
 
 import re
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -14,6 +15,7 @@ from apps.rbac.roles import (
     ROLE_PERMISSIONS,
     Permission,
     Role,
+    effective_permissions,
     has_permission,
     permissions_for,
 )
@@ -30,15 +32,35 @@ def test_super_admin_has_everything_and_members_nothing() -> None:
 
 
 def test_staff_roles() -> None:
-    assert has_permission("support_admin", Permission.ORDERS_VIEW)
-    assert not has_permission("support_admin", Permission.ORDERS_MANAGE)
-    assert not has_permission("finance_admin", Permission.ORDERS_VIEW)
+    assert Permission.ORDERS_VIEW in permissions_for("support_admin")
+    assert Permission.ORDERS_MANAGE not in permissions_for("support_admin")
+    assert Permission.ORDERS_VIEW not in permissions_for("finance_admin")
+    assert permissions_for(Role.OPERATOR) == frozenset()
     assert set(ADMIN_ROLES) == {
         Role.ADMIN,
         Role.OPERATIONS_ADMIN,
         Role.FINANCE_ADMIN,
         Role.SUPPORT_ADMIN,
+        Role.OPERATOR,
     }
+
+
+def test_has_permission_reads_the_person_not_the_role() -> None:
+    def person(role: str, custom: list[str] | None = None) -> SimpleNamespace:
+        return SimpleNamespace(role=role, custom_permissions=custom)
+
+    assert has_permission(person("support_admin"), Permission.ORDERS_VIEW)  # preset
+    assert not has_permission(person("support_admin", []), Permission.ORDERS_VIEW)  # own list
+    assert has_permission(person("operator", ["riders:view"]), Permission.RIDERS_VIEW)
+    assert not has_permission(person("operator"), Permission.RIDERS_VIEW)
+    # The super admin has everything whatever the list says; admins:manage is never granted.
+    assert has_permission(person("admin", []), Permission.ADMINS_MANAGE)
+    assert not has_permission(person("operator", ["admins:manage"]), Permission.ADMINS_MANAGE)
+    # Members never hold admin permissions, even with a list; strings are not people.
+    assert not has_permission(person("customer", ["orders:view"]), Permission.ORDERS_VIEW)
+    assert not has_permission(None, Permission.ORDERS_VIEW)
+    assert not has_permission("admin", Permission.ORDERS_VIEW)
+    assert effective_permissions("support_admin", None) == permissions_for("support_admin")
 
 
 @pytest.mark.skipif(not NODE_CONFIG.exists(), reason="Node API removed; nothing to compare with")

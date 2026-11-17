@@ -53,6 +53,13 @@ export const SEED_USERS = [
     phone: "9000000007",
     role: ROLES.SUPPORT_ADMIN,
   },
+  // An operator starts with no permissions; the super admin grants them in Admin management.
+  {
+    name: "Owen Operator",
+    email: "operator@bitebox.test",
+    phone: "9000000008",
+    role: ROLES.OPERATOR,
+  },
 ];
 
 export async function seedUsers(password, { resetPasswords = false } = {}) {

@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { DatePipe } from '@angular/common';
 import { form } from '@angular/forms/signals';
@@ -34,6 +35,7 @@ const PAYMENT_BADGE: Record<PaymentStatus, [string, string]> = {
   selector: 'bb-admin-orders',
   imports: [
     DatePipe,
+    RouterLink,
     NP_FORM_FIELDS,
     IconComponent,
     PaginationComponent,
@@ -53,6 +55,9 @@ export class AdminOrders {
   protected readonly statusLabel = customerStatusLabel;
   protected readonly payment = PAYMENT_BADGE;
 
+  /** ?customer=<user id>: one customer's orders (from the admin user page). */
+  readonly customer = input<string>();
+
   protected readonly filterModel = signal({ status: '', search: '' });
   protected readonly filters = form(this.filterModel);
 
@@ -62,12 +67,14 @@ export class AdminOrders {
       return this.api.list({
         status: (status || undefined) as OrderStatus | 'active' | undefined,
         search: search.trim() || undefined,
+        customer: this.customer() || undefined,
         page,
         limit,
       });
     },
     {
-      filterKey: () => `${this.filterModel().status}|${this.filterModel().search.trim()}`,
+      filterKey: () =>
+        `${this.filterModel().status}|${this.filterModel().search.trim()}|${this.customer() ?? ''}`,
       pollMs: 60_000,
       errorText: 'Could not load orders.',
     },

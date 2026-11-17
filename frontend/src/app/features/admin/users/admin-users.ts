@@ -11,22 +11,37 @@ import {
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { form } from '@angular/forms/signals';
+import { RouterLink } from '@angular/router';
 import { IconComponent, PaginationComponent, SelectOption } from 'nexprime';
 import { debounceTime, distinctUntilChanged, map, skip } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AdminUsersService } from '../../../core/services/admin/admin-users.service';
 import { errorMessage } from '../../../core/services/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
-import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { Pagination } from '../../../shared/models/api.models';
-import { ROLE_META, Role, User, UserStatus } from '../../../shared/models/user.models';
+import {
+  MEMBER_KIND,
+  ROLE_META,
+  Role,
+  USER_STATUS_META,
+  User,
+  UserStatus,
+} from '../../../shared/models/user.models';
+import { openAccountStatus, statusChanged } from '../../../shared/components/account-status-dialog/account-status-dialog';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
+import { selectOptions } from '../account-list';
+
+const ROLE_TITLE = {
+  customer: 'Customers',
+  restaurant: 'Restaurant accounts',
+  delivery: 'Delivery partner accounts',
+};
 
 @Component({
   selector: 'bb-admin-users',
-  imports: [DatePipe, NP_FORM_FIELDS, IconComponent, PaginationComponent, PageHeader],
+  imports: [DatePipe, RouterLink, NP_FORM_FIELDS, IconComponent, PaginationComponent, PageHeader],
   templateUrl: './admin-users.html',
   styleUrl: './admin-users.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,22 +60,26 @@ export class AdminUsers implements OnInit {
   protected readonly roles: Role[] = ['customer', 'restaurant', 'delivery'];
 
   protected readonly currentUserId = computed(() => this.auth.user()?.id);
-  protected readonly busyId = signal<string | null>(null);
 
   protected readonly roleOptions: SelectOption[] = [
     { value: '', label: 'All roles' },
     ...this.roles.map((r) => ({ value: r, label: ROLE_META[r].label })),
   ];
 
-  protected readonly statusOptions: SelectOption[] = [
-    { value: '', label: 'All statuses' },
-    { value: 'active', label: 'Active' },
-    { value: 'suspended', label: 'Inactive' },
-  ];
+  protected readonly statusOptions = selectOptions('All statuses', USER_STATUS_META);
+  protected readonly statusMeta = USER_STATUS_META;
 
   protected readonly filters = form(
     signal({ search: '', role: '' as Role | '', status: '' as UserStatus | '' }),
   );
+
+  /** The sidebar's account links (?role=) title the page after that role. */
+  protected readonly heading = computed(() => {
+    const role = this.filters.role().value();
+    return role
+      ? { title: ROLE_TITLE[role as keyof typeof ROLE_TITLE], subtitle: `Every ${ROLE_META[role].label.toLowerCase()} account.` }
+      : { title: 'Users', subtitle: 'Every BiteBox account across all roles.' };
+  });
 
   protected readonly users = signal<User[]>([]);
   protected readonly pagination = signal<Pagination>({
@@ -80,6 +99,9 @@ export class AdminUsers implements OnInit {
   );
 
   constructor() {
+    toObservable(this.role)
+      .pipe(skip(1), takeUntilDestroyed())
+      .subscribe((role) => this.filters.role().value.set(role && this.roles.includes(role) ? role : ''));
     toObservable(computed(() => this.filters.search().value().trim()))
       .pipe(skip(1), debounceTime(350), distinctUntilChanged(), takeUntilDestroyed())
       .subscribe(() => this.load(1));
@@ -127,40 +149,14 @@ export class AdminUsers implements OnInit {
       });
   }
 
-  protected toggleStatus(user: User): void {
-    const suspend = user.status === 'active';
-    confirmed(
-      this.dialog,
-      suspend
-        ? {
-            title: `Suspend ${user.name}?`,
-            message: 'They will be signed out immediately and cannot sign in.',
-            confirmLabel: 'Suspend',
-            danger: true,
-          }
-        : {
-            title: `Reactivate ${user.name}?`,
-            message: 'They can sign in again.',
-            confirmLabel: 'Reactivate',
-          },
-      '420px',
-    ).subscribe(() => {
-      this.busyId.set(user.id);
-      this.service.setStatus(user.id, suspend ? 'suspended' : 'active').subscribe({
-        next: (updatedUser) => {
-          this.busyId.set(null);
-          this.notify.success(suspend ? 'User suspended' : 'User reactivated');
-          this.users.update((list) =>
-            list.map((item) =>
-              item.id === updatedUser.id ? { ...item, status: updatedUser.status } : item,
-            ),
-          );
-        },
-        error: (err: unknown) => {
-          this.busyId.set(null);
-          this.notify.error(errorMessage(err, 'Failed to update user status'));
-        },
-      });
+  protected changeStatus(user: User): void {
+    openAccountStatus(this.dialog, {
+      user,
+      kind: MEMBER_KIND[user.role as keyof typeof MEMBER_KIND],
+      save: (status, reason) => this.service.setStatus(user.id, status, reason),
+    }).subscribe((updated) => {
+      this.notify.success(statusChanged(updated));
+      this.users.update((list) => list.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)));
     });
   }
 }

@@ -17,7 +17,9 @@ import { AuthService } from '../../core/auth/auth.service';
 import { errorMessage, fieldErrors } from '../../core/services/api-error';
 import { NotificationService } from '../../core/services/notification.service';
 import { PageHeader } from '../../shared/components/page-header/page-header';
-import { ROLE_META } from '../../shared/models/user.models';
+import { GENDER_LABEL, Gender, ROLE_META, User } from '../../shared/models/user.models';
+import { RewardsService } from '../../core/services/rewards.service';
+import { birthDateRange, fromIsoDay, isoDay } from '../../shared/forms/dates';
 import { serverErrors, shownError } from '../../shared/forms/form-errors';
 import { NP_FORM_FIELDS } from '../../shared/forms/np-form-fields';
 import {
@@ -30,6 +32,13 @@ import {
 import { PhoneInput } from '../../shared/components/phone-input/phone-input';
 import { ImageUpload } from '../../shared/components/image-upload/image-upload';
 import { AccountVerification } from './account-verification/account-verification';
+
+const detailsOf = (u: User | null) => ({
+  name: u?.name ?? '',
+  phone: u?.phone ?? '',
+  gender: (u?.gender ?? '') as Gender | '',
+  birthDate: fromIsoDay(u?.birthDate),
+});
 
 @Component({
   selector: 'bb-profile',
@@ -59,8 +68,17 @@ export class Profile {
     return role ? ROLE_META[role].label : '';
   });
 
-  // Personal details
-  protected readonly profileModel = signal({ name: '', phone: '' });
+  // Personal details. Customers also give their date of birth once (it drives the birthday treat;
+  // support can correct it), through the rewards birthday endpoint.
+  private readonly rewards = inject(RewardsService);
+  protected readonly isCustomer = computed(() => this.user()?.role === 'customer');
+  protected readonly savedBirthDate = computed(() => fromIsoDay(this.user()?.birthDate));
+  protected readonly born = birthDateRange(110);
+  protected readonly genderOptions = [
+    { value: '', label: 'Not set' },
+    ...(Object.keys(GENDER_LABEL) as Gender[]).map((g) => ({ value: g, label: GENDER_LABEL[g] })),
+  ];
+  protected readonly profileModel = signal(detailsOf(null));
   protected readonly profileForm = form(
     this.profileModel,
     (path) => {
@@ -95,7 +113,7 @@ export class Profile {
     effect(() => {
       const user = this.user();
       if (user && !untracked(() => this.profileForm().dirty())) {
-        untracked(() => this.profileForm().reset({ name: user.name, phone: user.phone ?? '' }));
+        untracked(() => this.profileForm().reset(detailsOf(user)));
       }
     });
   }
@@ -103,8 +121,13 @@ export class Profile {
   private async saveProfile(): Promise<TreeValidationResult> {
     this.profileError.set(null);
     try {
-      const user = await firstValueFrom(this.auth.updateProfile(this.profileModel()));
-      this.profileForm().reset({ name: user.name, phone: user.phone ?? '' });
+      const { name, phone, gender, birthDate } = this.profileModel();
+      if (birthDate && this.isCustomer() && !this.user()?.birthDate) {
+        await firstValueFrom(this.rewards.saveBirthday(isoDay(birthDate)));
+      }
+      // Saved last, so the user it returns carries the new date of birth too.
+      const user = await firstValueFrom(this.auth.updateProfile({ name, phone, gender: gender || null }));
+      this.profileForm().reset(detailsOf(user));
       this.notify.success('Profile updated');
       return undefined;
     } catch (err) {

@@ -52,3 +52,35 @@ export const longitudeRule = (chain) =>
     .isFloat({ min: -180, max: 180 })
     .withMessage("Invalid longitude")
     .toFloat();
+
+/** A real calendar day written YYYY-MM-DD. */
+const isDay = (value) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+  new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+
+/** Optional `from` and `to` days (YYYY-MM-DD); `to` before `from` fails on `to`. */
+export function dayRangeRules(from, to, { message, orderMessage = message } = {}) {
+  const day = (name) => query(name).optional().isString().custom(isDay).withMessage(message);
+  return [
+    day(from),
+    day(to)
+      .bail()
+      .custom((value, { req }) => {
+        const start = req.query[from];
+        return !(typeof start === "string" && isDay(start) && start > value);
+      })
+      .withMessage(orderMessage),
+  ];
+}
+
+/** A `reason` (3-500 characters, trimmed), required when `when` (a condition) holds. */
+export const requiredReason = (when) =>
+  body("reason")
+    .if(when)
+    .exists({ values: "falsy" })
+    .withMessage("Give a reason")
+    .bail()
+    .isString()
+    .trim()
+    .isLength({ min: 3, max: 500 })
+    .withMessage("The reason must be 3-500 characters");

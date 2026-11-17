@@ -279,6 +279,9 @@ class MyOrderStatusView(APIView):
 # ---------------------------------------------------------------------------
 class AdminOrderListQuery(PageQuery):
     status = _choice([*S.values, "active"], "Invalid value", required=False)
+    customer = UUIDRef(required=False)  # orders placed by this user (the admin's user page)
+    restaurant = UUIDRef(required=False)  # orders with this restaurant (its account page)
+    rider = UUIDRef(required=False)  # orders assigned to this rider (user id; their account page)
 
 
 class AdminCancelInput(serializers.Serializer):

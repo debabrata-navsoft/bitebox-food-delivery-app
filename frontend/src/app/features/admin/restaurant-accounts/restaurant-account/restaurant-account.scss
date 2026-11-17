@@ -1,0 +1,12 @@
+@use '../../partner-account';
+
+.contact {
+  margin-top: var(--bb-space-5);
+}
+
+.week {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bb-space-1) var(--bb-space-4);
+  font-weight: 400;
+}

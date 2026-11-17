@@ -167,6 +167,11 @@ export class ReviewService {
     reported?: boolean;
     rating?: number;
     search?: string;
+    /** Orders of one customer (user id). */
+    customer?: string;
+    restaurantId?: string;
+    /** Orders with a review of this rider (user id). */
+    rider?: string;
     page?: number;
     limit?: number;
   }): Observable<AdminOrderReviewPage> {

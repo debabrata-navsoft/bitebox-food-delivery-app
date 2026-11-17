@@ -459,7 +459,7 @@ describe("Authentication", () => {
       const suspendRes = await request(app)
         .patch(`/api/v1/admin/users/${customer.user.id}/status`)
         .set("Authorization", `Bearer ${admin.token}`)
-        .send({ status: "suspended" });
+        .send({ status: "suspended", reason: "Payment dispute under review" });
       assert.equal(suspendRes.status, 200);
       assert.equal(suspendRes.body.data.user.status, "suspended");
 
@@ -495,7 +495,7 @@ describe("Authentication", () => {
       const res = await request(app)
         .patch(`/api/v1/admin/users/${admin.user.id}/status`)
         .set("Authorization", `Bearer ${admin.token}`)
-        .send({ status: "suspended" });
+        .send({ status: "suspended", reason: "Testing the self rule" });
       assert.equal(res.status, 400);
       assert.match(res.body.message, /cannot suspend your own account/i);
     });

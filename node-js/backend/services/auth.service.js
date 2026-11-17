@@ -69,12 +69,25 @@ export async function endSessions(user, reason) {
   await revokeAllSessions(user._id, reason);
 }
 
+/**
+ * Sets an account's status (admin action). Any non-active status signs the person out everywhere
+ * at once; the reason is kept until they are reactivated. The caller handles role-specific steps
+ * first (riders are taken offline).
+ */
+export async function applyStatus(user, status, reason) {
+  const active = status === USER_STATUS.ACTIVE;
+  user.status = status;
+  user.statusReason = active ? null : reason;
+  user.statusChangedAt = new Date();
+  await endSessions(user, active ? "logout" : status);
+}
+
 /** Partner sign-ups admins are told about (customers sign up too often to notify). */
 const PARTNER_SIGNUP = {
   [ROLES.RESTAURANT]: {
     what: "restaurant partner",
     link: "/admin/users",
-    permission: PERMISSIONS.USERS_MANAGE,
+    permission: PERMISSIONS.CUSTOMERS_VIEW,
   },
   [ROLES.DELIVERY]: {
     what: "delivery partner",
@@ -182,9 +195,16 @@ export async function login({ email, password, portal }, meta) {
   return signedIn(user, portal, meta);
 }
 
+// Sign-in refused for a non-active account (same 403 for every status; the message names it).
+const STATUS_MESSAGE = {
+  [USER_STATUS.INACTIVE]: "This account is inactive",
+  [USER_STATUS.SUSPENDED]: "This account has been suspended",
+  [USER_STATUS.BLOCKED]: "This account is blocked",
+};
+
 async function signedIn(user, portal, meta) {
   if (user.status !== USER_STATUS.ACTIVE)
-    throw ApiError.forbidden("This account has been suspended");
+    throw ApiError.forbidden(STATUS_MESSAGE[user.status] ?? STATUS_MESSAGE.suspended);
   // Each panel has its own sign-in page; prevent e.g. a customer using the admin login.
   if (portal && user.role !== portal) {
     throw ApiError.forbidden("This account cannot sign in to this portal");
@@ -217,14 +237,43 @@ export async function verifyPhone(user, code) {
   return User.findByIdAndUpdate(user._id, { phoneVerifiedAt: new Date() }, { returnDocument: "after" });
 }
 
-/** Emails a one-time link (env.emailVerification.ttlHours) that confirms the address. */
-export async function sendEmailVerification(user) {
-  if (user.emailVerifiedAt) return;
+/**
+ * When `minGapMs` is set, only a link sent at least that long ago (or none) may be replaced: the
+ * check and the new token are one atomic write, so two quick requests send one email. Otherwise 429.
+ */
+async function storeLinkToken(userId, hashField, expiresField, ttlMs, minGapMs) {
   const token = randomToken(32);
+  const now = Date.now();
+  const filter = { _id: userId };
+  if (minGapMs)
+    filter.$or = [
+      { [expiresField]: null },
+      { [expiresField]: { $lte: new Date(now + ttlMs - minGapMs) } },
+    ];
+  const { matchedCount } = await User.updateOne(filter, {
+    [hashField]: hashToken(token),
+    [expiresField]: new Date(now + ttlMs),
+  });
+  if (!matchedCount)
+    throw new ApiError(429, "A link was sent a moment ago. Wait a minute before sending another", {
+      code: "RATE_LIMITED",
+    });
+  return token;
+}
+
+/**
+ * Emails a one-time link (env.emailVerification.ttlHours) that confirms the address.
+ * `minGapMs`: refuse (429) when a link went out more recently than that (see storeLinkToken).
+ */
+export async function sendEmailVerification(user, { minGapMs } = {}) {
+  if (user.emailVerifiedAt) return;
   const hours = env.emailVerification.ttlHours;
-  await User.updateOne(
-    { _id: user._id },
-    { emailVerificationTokenHash: hashToken(token), emailVerificationExpiresAt: new Date(Date.now() + hours * 3_600_000) },
+  const token = await storeLinkToken(
+    user._id,
+    "emailVerificationTokenHash",
+    "emailVerificationExpiresAt",
+    hours * 3_600_000,
+    minGapMs,
   );
   await sendEmail(user.email, {
     subject: "Confirm your BiteBox email",
@@ -319,14 +368,21 @@ export async function forgotPassword(email) {
   const user = await User.findOne({ email, status: USER_STATUS.ACTIVE });
   // Always behave the same to avoid revealing which emails are registered.
   if (!user) return;
+  await sendPasswordReset(user);
+}
 
-  const token = randomToken(32);
-  user.passwordResetTokenHash = hashToken(token);
-  user.passwordResetExpiresAt = new Date(
-    Date.now() + env.passwordReset.ttlMinutes * 60_000,
+/**
+ * Emails `user` a one-time password reset link (env.passwordReset.ttlMinutes): the forgot-password
+ * email, also sent by admins on request (with `minGapMs`, see storeLinkToken).
+ */
+export async function sendPasswordReset(user, { minGapMs } = {}) {
+  const token = await storeLinkToken(
+    user._id,
+    "passwordResetTokenHash",
+    "passwordResetExpiresAt",
+    env.passwordReset.ttlMinutes * 60_000,
+    minGapMs,
   );
-  await user.save();
-
   await sendEmail(user.email, {
     subject: "Reset your BiteBox password",
     title: "Reset your password",
@@ -380,7 +436,7 @@ export async function changePassword(userId, currentPassword, newPassword) {
   await endSessions(user, "password-change");
 }
 
-export async function updateProfile(userId, { name, phone, avatarUrl }) {
+export async function updateProfile(userId, { name, phone, avatarUrl, gender }) {
   if (phone && (await User.exists({ phone, _id: { $ne: userId } }))) {
     throw ApiError.conflict("An account with this phone number already exists");
   }
@@ -395,6 +451,8 @@ export async function updateProfile(userId, { name, phone, avatarUrl }) {
   if (phone !== undefined && (phone || null) !== (current?.phone ?? null)) unset.phoneVerifiedAt = 1;
   if (avatarUrl === "" || avatarUrl === null) unset.avatarUrl = 1;
   else if (avatarUrl !== undefined) set.avatarUrl = avatarUrl;
+  if (gender === null) unset.gender = 1;
+  else if (gender !== undefined) set.gender = gender;
 
   const user = await User.findByIdAndUpdate(
     userId,

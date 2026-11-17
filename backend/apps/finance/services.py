@@ -484,6 +484,10 @@ def list_payouts(query: dict[str, Any], page: Page, **scope: Any) -> dict[str, A
     for field in ("type", "status"):
         if query.get(field):
             qs = qs.filter(**{field: query[field]})
+    if query.get("restaurant"):
+        qs = qs.filter(restaurant_id=query["restaurant"])
+    if query.get("rider"):
+        qs = qs.filter(type=PayoutType.RIDER, payee_id=query["rider"])
     rows, meta = paginate(qs.order_by("-created_at"), page)
     return {"items": [payout_json(p) for p in rows], "pagination": meta}
 

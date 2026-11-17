@@ -82,3 +82,14 @@
 .narrow {
   max-width: 480px;
 }
+
+// A saved date of birth: shown, not editable (support corrects it).
+.locked {
+  display: grid;
+  gap: 2px;
+
+  .label {
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+}

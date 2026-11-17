@@ -1,4 +1,4 @@
-<bb-page-header title="Users" subtitle="Every BiteBox account across all roles." />
+<bb-page-header [title]="heading().title" [subtitle]="heading().subtitle" />
 
 <div class="filters">
   <np-text-input
@@ -68,24 +68,28 @@
                 <span class="bb-role-chip role-{{ u.role }}">{{ roleLabel(u.role) }}</span>
               </td>
               <td>
-                <span class="status status-{{ u.status }}">{{
-                  u.status === 'suspended' ? 'Inactive' : 'Active'
+                <span class="bb-badge {{ statusMeta[u.status].tone }}" [title]="u.statusReason ?? ''">{{
+                  statusMeta[u.status].label
                 }}</span>
               </td>
               <td>{{ u.createdAt | date: 'mediumDate' }}</td>
               <td class="td-actions">
+                <a class="bb-btn bb-btn--outlined bb-pill-action open" [routerLink]="[u.id]" [attr.aria-label]="'View ' + u.name">
+                  <np-icon name="eye" />View
+                </a>
+                <a class="bb-btn bb-btn--outlined bb-pill-action open" [routerLink]="[u.id, 'edit']" [attr.aria-label]="'Edit ' + u.name">
+                  <np-icon name="pencil" />Edit
+                </a>
                 @if (u.id === currentUserId()) {
                   <span class="you-chip">You</span>
                 } @else {
                   <button
                     type="button"
-                    class="bb-btn bb-btn--outlined bb-pill-action"
-                    [class.danger]="u.status === 'active'"
-                    [disabled]="busyId() === u.id"
-                    (click)="toggleStatus(u)"
+                    class="bb-btn bb-btn--outlined bb-pill-action open"
+                    [attr.aria-label]="'Change status of ' + u.name"
+                    (click)="changeStatus(u)"
                   >
-                    <np-icon [name]="u.status === 'active' ? 'user-x' : 'user-check'" />
-                    {{ u.status === 'active' ? 'Suspend' : 'Reactivate' }}
+                    <np-icon name="shield-alert" />Status
                   </button>
                 }
               </td>
@@ -105,24 +109,26 @@
           <span class="bb-muted small email">{{ u.email }}</span>
           <div class="card-meta small">
             <span>{{ u.phone || 'No phone' }}</span>
-            <span class="status status-{{ u.status }}">{{
-              u.status === 'suspended' ? 'Inactive' : 'Active'
-            }}</span>
+            <span class="bb-badge {{ statusMeta[u.status].tone }}">{{ statusMeta[u.status].label }}</span>
             <span class="bb-muted">Joined {{ u.createdAt | date: 'mediumDate' }}</span>
           </div>
-          @if (u.id !== currentUserId()) {
-            <div class="card-actions">
+          <div class="card-actions">
+            <a class="bb-btn bb-btn--outlined bb-pill-action open" [routerLink]="[u.id]" [attr.aria-label]="'View ' + u.name">
+              <np-icon name="eye" />View
+            </a>
+            <a class="bb-btn bb-btn--outlined bb-pill-action open" [routerLink]="[u.id, 'edit']" [attr.aria-label]="'Edit ' + u.name">
+              <np-icon name="pencil" />Edit
+            </a>
+            @if (u.id !== currentUserId()) {
               <button
-                class="bb-btn bb-btn--outlined bb-pill-action"
-                [class.danger]="u.status === 'active'"
-                [disabled]="busyId() === u.id"
-                (click)="toggleStatus(u)"
+                class="bb-btn bb-btn--outlined bb-pill-action open"
+                [attr.aria-label]="'Change status of ' + u.name"
+                (click)="changeStatus(u)"
               >
-                <np-icon [name]="u.status === 'active' ? 'user-x' : 'user-check'" />
-                {{ u.status === 'active' ? 'Suspend' : 'Reactivate' }}
+                <np-icon name="shield-alert" />Status
               </button>
-            </div>
-          }
+            }
+          </div>
         </li>
       }
     </ul>

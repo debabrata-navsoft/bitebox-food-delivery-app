@@ -60,3 +60,13 @@ export const DOCUMENT_LABEL: Record<DocumentStatus, string> = {
   approved: 'Approved',
   rejected: 'Needs a new upload',
 };
+
+/** A document kind as people read it (e.g. the profile's "Missing: FSSAI licence"). */
+const KIND_LABEL: Record<string, string> = {
+  fssai_licence: 'FSSAI licence',
+  gst_certificate: 'GST certificate',
+  pan_card: 'PAN card',
+  cancelled_cheque: 'Cancelled cheque',
+};
+export const kindLabel = (kind: string): string =>
+  KIND_LABEL[kind] ?? kind.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());

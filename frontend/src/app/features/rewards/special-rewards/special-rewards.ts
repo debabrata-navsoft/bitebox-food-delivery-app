@@ -21,10 +21,9 @@ import {
   RewardType,
 } from '../../../shared/models/rewards.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
+import { birthDateRange, isoDay } from '../../../shared/forms/dates';
 import { RewardsNav } from '../rewards-nav/rewards-nav';
 
-const pad = (n: number) => String(n).padStart(2, '0');
-const isoDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 /** Special rewards: birthday and welcome bonuses, campaigns to claim, and reward history. */
 @Component({
@@ -76,9 +75,7 @@ export class SpecialRewards {
   );
 
   // Birthday (set once).
-  private readonly today = new Date();
-  protected readonly latestBirthDate = new Date(this.today.getFullYear() - 13, this.today.getMonth(), this.today.getDate());
-  protected readonly earliestBirthDate = new Date(this.today.getFullYear() - 110, 0, 1);
+  protected readonly born = birthDateRange(110);
   protected readonly birthdayModel = signal({ birthDate: null as Date | null });
   protected readonly birthdayForm = form(
     this.birthdayModel,

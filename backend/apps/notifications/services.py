@@ -165,11 +165,18 @@ def _reachable(user: User, channel: str, with_browser: set[Any], with_app: set[A
     }[Channel(channel)]
 
 
+def admins_with(permission: Permission) -> list[User]:
+    """
+    Active admin-panel accounts whose *effective* permissions include `permission` (the super
+    admin always; others by their custom list, else their role preset).
+    """
+    admins = User.objects.filter(role__in=list(ADMIN_ROLES), status=UserStatus.ACTIVE)
+    return [u for u in admins.order_by("name", "id") if has_permission(u, permission)]
+
+
 def notify_admins(permission: Permission, **payload: Any) -> None:
-    """The super admin plus every admin role holding `permission` (active accounts only)."""
-    roles = [r for r in ADMIN_ROLES if r == Role.ADMIN or has_permission(r, permission)]
-    ids = User.objects.filter(role__in=roles, status=UserStatus.ACTIVE).values_list("id", flat=True)
-    notify(list(ids), **payload)
+    """The super admin plus every admin holding `permission` (active accounts only)."""
+    notify([u.pk for u in admins_with(permission)], **payload)
 
 
 # ---------------------------------------------------------------------------

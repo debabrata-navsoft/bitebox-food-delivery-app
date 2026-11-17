@@ -244,17 +244,22 @@ class RestaurantOffersView(PublicCacheMixin, APIView):
         return ok({"offers": services.restaurant_offers(get_public(slug_or_id))})
 
 
+class AdminListQuery(ListQuery):
+    # A restaurant's own offers and the coupons scoped to it (its account page).
+    restaurant = UUIDRef(required=False)
+
+
 # ---------------------------------------------------------------------------
 # Admins
 # ---------------------------------------------------------------------------
 class AdminCouponsView(AdminView):
     @extend_schema(
         tags=["Admin: coupons"],
-        parameters=LIST_PARAMS,
+        parameters=[*LIST_PARAMS, OpenApiParameter("restaurant", str)],
         responses={200: ANY, **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
-        query = validated(ListQuery, request.query_params)
+        query = validated(AdminListQuery, request.query_params)
         return ok(services.admin_list(query, Page.from_query(query)))
 
     @extend_schema(

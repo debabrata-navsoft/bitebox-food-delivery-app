@@ -1,6 +1,8 @@
 @use 'breakpoints' as bp;
 
 .back {
+  justify-self: start; // only the text is the link (the page is a grid)
+  align-self: start;
   margin-bottom: var(--bb-space-3);
 }
 

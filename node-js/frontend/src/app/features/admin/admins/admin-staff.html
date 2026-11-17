@@ -1,8 +1,8 @@
 <bb-page-header
-  title="Admin management"
-  subtitle="Operations, finance and support admins. Each role only sees its own part of the panel."
+  title="Admins & operators"
+  subtitle="Operations, finance and support admins, and operators with just the permissions you give them."
 >
-  <np-button severity="primary" icon="user-round-plus" label="New admin" (clicked)="create()" />
+  <np-button severity="primary" icon="user-round-plus" label="New admin or operator" (clicked)="create()" />
 </bb-page-header>
 
 <div class="bb-filters">
@@ -42,6 +42,7 @@
           <tr>
             <th scope="col">Admin</th>
             <th scope="col">Role</th>
+            <th scope="col">Permissions</th>
             <th scope="col">Status</th>
             <th scope="col">Last sign-in</th>
             <th scope="col" class="actions">Actions</th>
@@ -57,14 +58,9 @@
               <td>
                 <span class="bb-role-chip role-{{ u.role }}">{{ roleLabel(u.role) }}</span>
               </td>
+              <td class="perms">{{ u.role === 'admin' ? 'Everything' : permissionSummary(u) }}</td>
               <td>
-                <span
-                  class="bb-badge"
-                  [class.tone-good]="u.status === 'active'"
-                  [class.tone-bad]="u.status !== 'active'"
-                >
-                  {{ u.status === 'active' ? 'Active' : 'Inactive' }}
-                </span>
+                <span class="bb-badge {{ statusMeta[u.status].tone }}" [title]="u.statusReason ?? ''">{{ statusMeta[u.status].label }}</span>
               </td>
               <td>{{ u.lastLoginAt ? (u.lastLoginAt | date: 'd MMM, h:mm a') : 'Never' }}</td>
               <td class="actions">
@@ -89,15 +85,24 @@
                     title="Sign-in history"
                     (clicked)="showLogins(u)"
                   />
-                  <button
-                    type="button"
-                    class="bb-btn bb-btn--outlined bb-pill-action"
-                    [class.danger]="u.status === 'active'"
-                    [disabled]="busy() === u.id"
-                    (click)="toggle(u)"
-                  >
-                    {{ u.status === 'active' ? 'Deactivate' : 'Activate' }}
-                  </button>
+                  <np-button
+                    variant="text"
+                    severity="primary"
+                    icon="key-round"
+                    label=""
+                    [ariaLabel]="'Permissions of ' + u.name"
+                    title="Permissions"
+                    (clicked)="editPermissions(u)"
+                  />
+                  <np-button
+                    variant="text"
+                    severity="secondary"
+                    icon="shield-alert"
+                    label=""
+                    [ariaLabel]="'Change status of ' + u.name"
+                    title="Status"
+                    (clicked)="changeStatus(u)"
+                  />
                 } @else {
                   <span class="bb-muted small" title="Super admins are managed outside the panel"
                     >Super admin</span

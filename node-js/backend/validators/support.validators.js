@@ -47,6 +47,8 @@ export const staffListRules = [
   query("type").optional().isIn(Object.values(TICKET_TYPES)),
   query("assignee").optional().isIn(["me", "unassigned"]),
   query("search").optional().isString().trim().isLength({ max: 100 }),
+  // Tickets one person raised (the admin customer profile).
+  query("requester").optional().isMongoId().withMessage("Invalid id"),
 ];
 export const updateTicketRules = [
   mongoIdParam(),

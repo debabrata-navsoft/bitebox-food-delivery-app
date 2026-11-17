@@ -458,6 +458,15 @@ def _list(qs: QuerySet[Coupon], query: dict[str, Any], page: Page) -> dict[str, 
         qs = qs.filter(kind=kind)
     if owner := query.get("owner"):
         qs = qs.filter(source=owner)
+    if restaurant := query.get("restaurant"):
+        qs = qs.filter(
+            Q(restaurant_id=restaurant)
+            | Q(
+                pk__in=Coupon.restaurants.through.objects.filter(restaurant_id=restaurant).values(
+                    "coupon_id"
+                )
+            )
+        )
     if query.get("from"):
         qs = qs.filter(valid_until__gte=query["from"])
     if query.get("to"):

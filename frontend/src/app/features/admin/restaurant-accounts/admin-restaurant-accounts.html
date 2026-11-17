@@ -1,0 +1,131 @@
+<bb-page-header
+  title="Restaurant accounts"
+  subtitle="Restaurant partners: their restaurant, owner, approval, KYC and account status."
+/>
+
+<div class="bb-filters">
+  <np-text-input
+    class="search"
+    [formField]="filters.search"
+    ariaLabel="Search restaurants"
+    placeholder="Restaurant, owner, email, mobile or ID"
+    icon="search"
+    clearable
+  />
+  <np-select [formField]="filters.status" ariaLabel="Approval status" [options]="statusOptions" />
+  <np-select [formField]="filters.kyc" ariaLabel="KYC status" [options]="kycOptions" />
+  <np-select [formField]="filters.accountStatus" ariaLabel="Owner account status" [options]="accountOptions" />
+  <np-select [formField]="filters.city" ariaLabel="City" [options]="cityOptions()" />
+  <np-calendar [formField]="filters.joinedFrom" placeholder="Joined from" dateFormat="dd M yy" showIcon />
+  <np-calendar [formField]="filters.joinedTo" placeholder="Joined to" dateFormat="dd M yy" showIcon />
+  <np-select [formField]="filters.sort" ariaLabel="Sort" [options]="sortOptions" />
+</div>
+
+@if (list.error(); as message) {
+  <div class="bb-alert error" role="alert">
+    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
+    <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
+  </div>
+}
+
+<div class="bb-card bb-list-card" [attr.aria-busy]="list.loading()">
+  @if (list.showSkeleton()) {
+    @for (i of [1, 2, 3, 4, 5]; track i) {
+      <span class="bb-skeleton row"></span>
+    }
+  } @else if (list.empty()) {
+    <div class="empty">
+      <np-icon name="store" class="mat-icon" matButtonIcon />
+      <p>No restaurants match these filters.</p>
+      @if (accounts.filtered()) {
+        <button type="button" class="bb-link-button" (click)="accounts.clear()">Clear filters</button>
+      }
+    </div>
+  } @else {
+    <div class="bb-table-scroll" [class.bb-dim]="list.loading()">
+      <table class="bb-table">
+        <thead>
+          <tr>
+            <th scope="col">Restaurant</th>
+            <th scope="col">Owner</th>
+            <th scope="col" class="num">Orders</th>
+            <th scope="col" class="num">Rating</th>
+            <th scope="col" class="num">Commission</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of list.data()!.items; track r.id) {
+            <tr>
+              <td>
+                <div class="who">
+                  <span class="logo">
+                    @if (r.imageUrl) {
+                      <img [src]="r.imageUrl" alt="" width="40" height="40" />
+                    } @else {
+                      <np-icon name="store" class="mat-icon" matButtonIcon />
+                    }
+                  </span>
+                  <span>
+                    <a class="name" [routerLink]="[r.id]">{{ r.name }}</a>
+                    <span class="sub">{{ r.city }} · <span class="id">{{ shortId(r.id) }}</span></span>
+                    <span class="sub">Joined {{ r.createdAt | date: 'd MMM y' }}</span>
+                  </span>
+                </div>
+              </td>
+              <td>
+                @if (r.owner; as o) {
+                  {{ o.name }}
+                  <span class="sub">{{ o.email }}</span>
+                  <span class="sub">{{ o.phone || 'No mobile' }}</span>
+                  @if (o.status !== 'active') {
+                    <span class="bb-badge {{ accountMeta[o.status].tone }}">Account {{ accountMeta[o.status].label | lowercase }}</span>
+                  }
+                } @else {
+                  —
+                }
+              </td>
+              <td class="num">{{ r.stats.orders }}</td>
+              <td class="num">
+                @if (r.stats.rating.count) {
+                  ★ {{ r.stats.rating.average.toFixed(1) }}
+                  <span class="sub">{{ r.stats.rating.count }} ratings</span>
+                } @else {
+                  —
+                }
+              </td>
+              <td class="num">{{ r.commissionPercent }}%</td>
+              <td>
+                <span class="bb-badge {{ statusTone[r.status] }}" [title]="r.statusReason ?? ''">{{ statusLabel[r.status] }}</span>
+                <span class="sub kyc"><span class="bb-badge {{ kycMeta[r.kycStatus].tone }}">KYC {{ kycMeta[r.kycStatus].label | lowercase }}</span></span>
+                @if (r.status === 'approved' && !r.isAcceptingOrders) {
+                  <span class="sub">Closed for orders</span>
+                }
+              </td>
+              <td class="actions">
+                <a class="bb-btn bb-btn--outlined bb-btn--icon act" [routerLink]="[r.id]" [attr.aria-label]="'View ' + r.name" title="View">
+                  <np-icon name="eye" />
+                </a>
+                @if (auth.can('restaurants:edit')) {
+                  <a class="bb-btn bb-btn--outlined bb-btn--icon act" [routerLink]="[r.id, 'edit']" [attr.aria-label]="'Edit ' + r.name" title="Edit">
+                    <np-icon name="pencil" />
+                  </a>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <np-pagination
+      variant="compact"
+      [page]="list.data()!.pagination.page"
+      [rows]="list.data()!.pagination.limit"
+      [totalRecords]="list.data()!.pagination.total"
+      [rowsOptions]="[20, 50, 100]"
+      (pageChange)="list.goTo($event)"
+      (rowsChange)="list.goTo(1, $event)"
+    />
+  }
+</div>

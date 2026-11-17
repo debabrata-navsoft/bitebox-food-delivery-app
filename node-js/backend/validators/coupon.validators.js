@@ -109,6 +109,8 @@ export const couponListRules = [
   query("sort").optional().isIn(Object.keys(SORTS)),
   query("from").optional().isISO8601(),
   query("to").optional().isISO8601(),
+  // One restaurant's own offers and the coupons limited to it (the admin restaurant account view).
+  query("restaurant").optional().isMongoId().withMessage("Invalid id"),
 ];
 export const activeRules = [mongoIdParam(), body("isActive").isBoolean().withMessage("isActive must be true or false").toBoolean()];
 export const reasonRules = [mongoIdParam(), body("reason").optional().isString().trim().isLength({ max: 300 })];

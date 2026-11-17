@@ -693,7 +693,16 @@ np-tabs.bb-tab-strip .tab-panel {
 
 np-tabs.bb-tab-strip {
   display: block;
+  min-width: 0;
   margin-bottom: var(--bb-space-4);
+
+  // Many tabs (account profiles): one line that scrolls sideways (bb-tab-strip adds ← →
+  // buttons), so the page never widens.
+  .tab-list {
+    overflow-x: auto;
+    scrollbar-width: none;
+    scroll-behavior: smooth;
+  }
 }
 
 // A narrower np-menu popup for short action lists (e.g. Edit / Delete). Keep the width in sync with
@@ -1259,6 +1268,19 @@ np-time-picker .time-picker-field {
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
+}
+
+// "← All customers": a detail page's link back to its list. On pages laid out as a grid, only the
+// text is the link.
+.bb-back-link {
+  justify-self: start;
+  align-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--bb-space-2);
+  color: inherit;
+  font-weight: 600;
+  --bb-icon-size: 18px;
 }
 
 // Role badge used in admin lists

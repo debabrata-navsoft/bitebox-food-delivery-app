@@ -79,6 +79,99 @@ export async function requiredKinds(user) {
   return KINDS_FOR[user.role] ?? [];
 }
 
+/** A partner's verification state as one word (admin restaurant and delivery partner accounts). */
+export const KYC_STATES = Object.freeze(["verified", "pending", "incomplete", "rejected"]);
+
+/**
+ * Aggregation stages adding `kycStatus` (KYC_STATES) and `kycMissing` (the required kinds with no
+ * document) from the partner's documents and bank account. `userField` holds the partner's user
+ * id; `required` is the list of required kinds (an array or an expression).
+ *   rejected: a required document was rejected; incomplete: a required document or the bank
+ *   account is missing; pending: a required document awaits review; verified: all approved.
+ */
+function kycStages(userField, required) {
+  const has = (status) => ({ $in: [status, "$kycDocs.status"] });
+  return [
+    {
+      $lookup: {
+        from: KycDocument.collection.name,
+        localField: userField,
+        foreignField: "user",
+        pipeline: [{ $project: { kind: 1, status: 1 } }],
+        as: "kycDocs",
+      },
+    },
+    {
+      $lookup: {
+        from: PayoutAccount.collection.name,
+        localField: userField,
+        foreignField: "user",
+        pipeline: [{ $project: { _id: 1 } }],
+        as: "kycAccount",
+      },
+    },
+    { $addFields: { kycRequired: required } },
+    {
+      $addFields: {
+        kycDocs: { $filter: { input: "$kycDocs", cond: { $in: ["$$this.kind", "$kycRequired"] } } },
+      },
+    },
+    {
+      $addFields: {
+        kycMissing: {
+          $filter: { input: "$kycRequired", cond: { $not: [{ $in: ["$$this", "$kycDocs.kind"] }] } },
+        },
+      },
+    },
+    {
+      $addFields: {
+        kycStatus: {
+          $switch: {
+            branches: [
+              { case: has(DOCUMENT_STATUS.REJECTED), then: "rejected" },
+              {
+                case: {
+                  $or: [{ $gt: [{ $size: "$kycMissing" }, 0] }, { $eq: [{ $size: "$kycAccount" }, 0] }],
+                },
+                then: "incomplete",
+              },
+              { case: has(DOCUMENT_STATUS.PENDING), then: "pending" },
+            ],
+            default: "verified",
+          },
+        },
+      },
+    },
+    { $project: { kycDocs: 0, kycAccount: 0, kycRequired: 0 } },
+  ];
+}
+
+/** kycStages over restaurants (the owner's documents): KINDS_FOR restaurants, GST only when GST-registered. */
+export function restaurantKycStages() {
+  const all = KINDS_FOR[ROLES.RESTAURANT];
+  const withoutGst = all.filter((k) => k !== K.GST_CERTIFICATE);
+  return kycStages("owner", { $cond: [{ $eq: ["$gstRegistered", true] }, all, withoutGst] });
+}
+
+/** kycStages over rider users (`_id`): the rider checklist, plus the bank account. */
+export const riderKycStages = () => kycStages("_id", { $literal: KINDS_FOR[ROLES.DELIVERY] });
+
+/**
+ * An admin edit changed the number on an approved document (GSTIN, FSSAI number, a rider's
+ * vehicle number): those
+ * documents go back to awaiting review. Returns the kinds sent back.
+ */
+export async function reverify(userId, kinds) {
+  if (!kinds.length) return [];
+  const docs = await KycDocument.find({ user: userId, kind: { $in: kinds }, status: DOCUMENT_STATUS.APPROVED });
+  if (!docs.length) return [];
+  await KycDocument.updateMany(
+    { _id: { $in: docs.map((d) => d._id) } },
+    { status: DOCUMENT_STATUS.PENDING, reviewNote: "", reviewedAt: null, reviewedBy: null },
+  );
+  return kinds.filter((k) => docs.some((d) => d.kind === k));
+}
+
 export const documentJson = (d) => ({
   id: String(d._id),
   kind: d.kind,

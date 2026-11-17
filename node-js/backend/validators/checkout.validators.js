@@ -48,7 +48,7 @@ export const quoteRules = [
 ];
 
 // Addresses
-function addressRules({ partial }) {
+export function addressRules({ partial }) {
   const field = (name) => (partial ? body(name).optional() : body(name));
   return [
     body("label").optional().isIn(["home", "work", "other"]),

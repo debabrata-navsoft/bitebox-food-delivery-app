@@ -1,0 +1,8 @@
+@use '../../partner-account';
+
+// A vehicle registration number.
+.plate {
+  font-family: monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}

@@ -204,8 +204,8 @@ def birthday_sweep(*, now: datetime | None = None, limit: int = 500) -> dict[str
     return {"issued": issued}
 
 
-def set_birth_date(user_id: Any, iso_date: str, now: datetime | None = None) -> dict[str, str]:
-    """The customer sets their date of birth, once (support can correct it)."""
+def birth_date_from(iso_date: str, now: datetime | None = None) -> date:
+    """A `YYYY-MM-DD` date of birth, or 422 on `birthDate` unless the age is 13-120 years."""
     now = now or timezone.now()
     try:
         born = date.fromisoformat(iso_date)
@@ -219,6 +219,12 @@ def set_birth_date(user_id: Any, iso_date: str, now: datetime | None = None) -> 
             code="VALIDATION_ERROR",
             details=[{"field": "birthDate", "message": "Enter your real date of birth"}],
         )
+    return born
+
+
+def set_birth_date(user_id: Any, iso_date: str, now: datetime | None = None) -> dict[str, str]:
+    """The customer sets their date of birth, once (support can correct it)."""
+    born = birth_date_from(iso_date, now)
     if not User.objects.filter(pk=user_id, role=Role.CUSTOMER, birth_date__isnull=True).update(
         birth_date=born
     ):

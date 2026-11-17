@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, it } from "node:test";
 import mongoose from "mongoose";
-import { hasPermission, PERMISSIONS } from "../config/permissions.js";
+import { PERMISSIONS, roleHasPermission } from "../config/permissions.js";
 import { DEFAULT_REWARD_CONFIG } from "../config/rewards.js";
 import { RewardConfiguration } from "../models/reward-configuration.model.js";
 import {
@@ -112,9 +112,9 @@ describe("reward configuration", () => {
   });
 
   it("gives reward management to the super admin only", () => {
-    assert.ok(hasPermission("admin", PERMISSIONS.REWARDS_MANAGE));
-    assert.ok(hasPermission("admin", PERMISSIONS.REWARDS_VIEW));
+    assert.ok(roleHasPermission("admin", PERMISSIONS.REWARDS_MANAGE));
+    assert.ok(roleHasPermission("admin", PERMISSIONS.REWARDS_VIEW));
     for (const role of ["operations_admin", "finance_admin", "support_admin", "customer"])
-      assert.ok(!hasPermission(role, PERMISSIONS.REWARDS_MANAGE), role);
+      assert.ok(!roleHasPermission(role, PERMISSIONS.REWARDS_MANAGE), role);
   });
 });

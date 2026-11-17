@@ -1,5 +1,5 @@
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` });
-const ok = (description = "Success") => ({
+const ok = (description = "Success", data = { type: "object" }) => ({
   description,
   content: {
     "application/json": {
@@ -8,7 +8,7 @@ const ok = (description = "Success") => ({
         properties: {
           success: { const: true },
           message: { type: "string" },
-          data: { type: "object" },
+          data,
         },
       },
     },
@@ -24,6 +24,7 @@ const body = (properties, required = []) => ({
     "application/json": { schema: { type: "object", required, properties } },
   },
 });
+const strings = (...names) => Object.fromEntries(names.map((n) => [n, { type: "string" }]));
 const bearer = [{ bearerAuth: [] }];
 const id = { in: "path", name: "id", required: true, schema: { type: "string" } };
 const q = (name, schema) => ({ in: "query", name, schema });
@@ -45,7 +46,27 @@ const op = (tag, summary, { params = [], requestBody, status = 200, who } = {}) 
   responses: { [status]: ok(), ...forbidden },
 });
 
-const STAFF_ROLES = ["operations_admin", "finance_admin", "support_admin"];
+const STAFF_ROLES = ["operations_admin", "finance_admin", "support_admin", "operator"];
+const ACCOUNT_STATUS = ["active", "inactive", "suspended", "blocked"];
+const statusBody = body(
+  {
+    status: { type: "string", enum: ACCOUNT_STATUS },
+    reason: {
+      type: "string",
+      minLength: 3,
+      maxLength: 500,
+      description: "Required (trimmed) for every status but active",
+    },
+  },
+  ["status"],
+);
+const permissionList = {
+  type: "array",
+  nullable: true,
+  items: { type: "string" },
+  description:
+    "The person's own permission keys (unknown keys and admins:manage are 422), or null for the role preset. The user JSON's `permissions` is the effective list",
+};
 const TICKET_STATUS = ["open", "in_progress", "waiting_for_response", "resolved", "closed"];
 const TICKET_TYPES = ["order_issue", "delivery", "payment", "refund", "account", "other"];
 const PRIORITY = ["low", "medium", "high", "urgent"];
@@ -55,33 +76,318 @@ const O = "Admin - Operations";
 const F = "Admin - Finance";
 const S = "Admin - Support";
 const H = "Support tickets";
+const C = "Admin - Customers";
+const R = "Admin - Restaurant accounts";
+const D = "Admin - Delivery partner accounts";
 
 export const adminRolesTags = [
   {
     name: A,
     description:
-      "Super admin only: create and manage operations, finance and support admins; the audit log.",
+      "Super admin only: create and manage operations, finance and support admins and operators (role presets or per-person permissions); the audit log.",
   },
   { name: O, description: "Operations admins (and the super admin)." },
   { name: F, description: "Finance admins (and the super admin)." },
   { name: S, description: "Support admins (and the super admin)." },
+  {
+    name: C,
+    description:
+      "The customer list and account help. A customer's profile tabs use the other admin lists with their customer filters: /admin/orders?customer=, /admin/payments?customer=, /admin/reviews/orders?customer=, /admin/support/tickets?requester=, /admin/rewards/transactions?userId=, /admin/rewards/wallets/{id}, /admin/audit-logs?resourceId= (each under its own permission).",
+  },
+  {
+    name: R,
+    description:
+      "Restaurant accounts: the list, one restaurant's account view, admin edits, approval and suspension, and closing for orders. A restaurant's tabs use the other admin lists with their restaurant filters: /admin/orders?restaurant=, /admin/foods?restaurant=, /admin/coupons?restaurant=, /admin/finance/payouts?restaurant=, /admin/reviews/orders?restaurantId=, /admin/audit-logs?resourceId=<restaurant id>,<owner id> (each under its own permission).",
+  },
+  {
+    name: D,
+    description:
+      "Delivery partner accounts (rider user ids): the list, one rider's account view, admin edits, verification, taking a rider offline and the availability history. A rider's tabs use the other admin lists with their rider filters: /admin/orders?rider=, /admin/finance/payouts?rider=, /admin/reviews/orders?rider=, /admin/support/tickets?requester=, /admin/users/{id}/logins, /admin/audit-logs?resourceId= (each under its own permission).",
+  },
   { name: H, description: "Customers, restaurants and riders raise and follow their tickets." },
 ];
 
 export const adminRolesSchemas = {};
 
+const VERIFICATION = ["email_verified", "email_unverified", "phone_verified", "phone_unverified"];
+const described = (param, description) => ({ ...param, description });
+const search = (description) => described(q("search", { type: "string", maxLength: 100 }), description);
+/** joinedFrom and joinedTo: inclusive days in the report time zone; `what`: e.g. "day created". */
+const joinedDays = (what) => [
+  described(q("joinedFrom", { type: "string", format: "date" }), `First ${what} (inclusive), in the report time zone`),
+  described(
+    q("joinedTo", { type: "string", format: "date" }),
+    `Last ${what} (inclusive), in the report time zone; before joinedFrom is 422`,
+  ),
+];
+const sortParam = (values, description) =>
+  described(q("sort", { type: "string", enum: values, default: "newest" }), description);
+/** An operation of `tag` needing permission `who`; `extra.note` is added to the description. */
+const permOp = (tag) => (summary, who, extra = {}) => ({
+  ...op(tag, summary, extra),
+  description: `Permission: \`${who}\`.${extra.note ? ` ${extra.note}` : ""}`,
+});
+const help = (summary, action) => ({
+  ...op(C, summary, { params: [id] }),
+  description: `Permission: \`customers:edit\`. Customers only (any other id is 404). At most one per customer per minute (429). Audited as \`${action}\`.`,
+});
+
+const RESTAURANT_STATUS = ["pending", "approved", "rejected", "suspended", "resubmission_requested"];
+const KYC_STATES = ["verified", "pending", "incomplete", "rejected"];
+const restaurantOp = permOp(R);
+const reason = (when) => ({
+  type: "string",
+  minLength: 3,
+  maxLength: 500,
+  description: `Required (trimmed) ${when}`,
+});
+
+const RIDER_VERIFICATION = ["pending", "approved", "rejected", "resubmission_requested"];
+const VEHICLE_TYPES = ["bicycle", "scooter", "motorbike", "car"];
+const riderOp = permOp(D);
+const RIDER_DETAIL =
+  "One rider: { user (user JSON), rider (as GET /admin/delivery-partners/{id} profile, with emergencyContact { name, phone, relation } | null and zone), stats { deliveries (delivered), cancelled (assigned, then cancelled), earningsPaise (rider share of delivered orders), lastDeliveryAt, rating { average, count } }, kyc { status, missing: [kind] } }";
+
 export const adminRolesPaths = {
+  "/admin/restaurant-accounts": {
+    get: restaurantOp(
+      "Restaurant accounts. Item: { id, name, slug, imageUrl, city, status, statusReason, isAcceptingOrders, createdAt, owner: { id, name, email, phone, status, avatarUrl } | null, stats: { orders, rating: { average, count } }, commissionPercent, kycStatus }",
+      "restaurants:view",
+      {
+        params: [
+          ...paging,
+          search(
+            "Restaurant name or slug, owner name, email or phone (any stored form), or the restaurant id: the full id or its last 6+ characters (a leading # is ignored)",
+          ),
+          q("status", { type: "string", enum: RESTAURANT_STATUS }),
+          { ...q("accountStatus", { type: "string", enum: ACCOUNT_STATUS }), description: "The owner's account status" },
+          {
+            ...q("kyc", { type: "string", enum: KYC_STATES }),
+            description:
+              "rejected: a required document was rejected; incomplete: a required document or the bank account is missing; pending: a document awaits review; verified: everything approved",
+          },
+          { ...q("city", { type: "string" }), description: "Exact city, any letter case" },
+          ...joinedDays("day created"),
+          sortParam(
+            ["newest", "oldest", "name", "orders", "rating"],
+            "orders: most first; rating: highest average, then most ratings. Ties: newest first",
+          ),
+        ],
+      },
+    ),
+  },
+  "/admin/restaurant-accounts/cities": {
+    get: restaurantOp("Distinct restaurant cities, A to Z: { cities }", "restaurants:view"),
+  },
+  "/admin/restaurant-accounts/{id}": {
+    get: {
+      ...restaurantOp(
+        "One restaurant: { restaurant (as GET /my/restaurant, plus status, statusReason, reviewedAt), owner (user JSON) | null, stats { orders, delivered, cancelled (cancelled + rejected), grossPaise (delivered), lastOrderAt, rating { average, count } }, commission { percent, source: default | restaurant }, kyc { status, missing: [kind] } }",
+        "restaurants:view",
+        { params: [id] },
+      ),
+      responses: { 200: ok(), ...forbidden, 404: err("Restaurant not found"), 422: err("Invalid id") },
+    },
+    patch: restaurantOp(
+      "Edit the restaurant's details: any field PATCH /my/restaurant takes (same rules), including ownerName, gstRegistered, gstin, fssaiNumber and fssaiValidUntil. Status, commission, bank details and the owner's sign-in details are dropped; the approval status never changes. A new GSTIN or FSSAI number sends that approved document back for review. Responds { restaurant }",
+      "restaurants:edit",
+      {
+        params: [id],
+        requestBody: body({}),
+        note: "Audited as `restaurant.update` with changes (and `reverified` kinds); no changes, no audit row.",
+      },
+    ),
+  },
+  "/admin/restaurant-accounts/{id}/status": {
+    patch: restaurantOp(
+      "Approve, reject, ask for resubmission or suspend (the admin review: same transitions, KYC check and owner notice). The same status again changes nothing. Responds { restaurant }",
+      "restaurants:approve",
+      {
+        params: [id],
+        requestBody: body(
+          {
+            status: { type: "string", enum: ["approved", "rejected", "resubmission_requested", "suspended"] },
+            reason: reason("for rejected, resubmission_requested and suspended"),
+          },
+          ["status"],
+        ),
+        note: "Suspending, and approving a suspended restaurant (lifting the suspension), need `restaurants:status` instead. Audited as `restaurant.status`.",
+      },
+    ),
+  },
+  "/admin/restaurant-accounts/{id}/accepting-orders": {
+    patch: restaurantOp(
+      "Close the restaurant for new orders (false) or reopen it (true); the partner's own switch. Responds { restaurant }",
+      "restaurants:status",
+      {
+        params: [id],
+        requestBody: body(
+          { isAcceptingOrders: { type: "boolean" }, reason: reason("when closing") },
+          ["isAcceptingOrders"],
+        ),
+        note: "Audited as `restaurant.accepting_orders`.",
+      },
+    ),
+  },
+  "/admin/delivery-partner-accounts": {
+    get: riderOp(
+      "Delivery partner accounts. Item: { id, name, email, phone, avatarUrl, status, statusReason, createdAt, verificationStatus, isOnline, busy, vehicleType, vehicleNumber, zone, completedDeliveries, rating: { average, count }, kycStatus }",
+      "riders:view",
+      {
+        params: [
+          ...paging,
+          search(
+            "Name, email, phone (any stored form), vehicle number (any letter case, spaces ignored), or the rider id: the full id or its last 6+ characters (a leading # is ignored)",
+          ),
+          { ...q("accountStatus", { type: "string", enum: ACCOUNT_STATUS }), description: "The rider's account status" },
+          q("verification", { type: "string", enum: RIDER_VERIFICATION }),
+          {
+            ...q("availability", { type: "string", enum: ["online", "offline", "busy"] }),
+            description: "online: online and free; busy: online and carrying an order; offline",
+          },
+          {
+            ...q("kyc", { type: "string", enum: KYC_STATES }),
+            description:
+              "The rider checklist (driving licence, vehicle RC, identity proof) and bank account: rejected, incomplete (a document or the bank account missing), pending, verified",
+          },
+          { ...q("zone", { type: "string" }), description: "Exact zone, any letter case" },
+          q("vehicleType", { type: "string", enum: VEHICLE_TYPES }),
+          ...joinedDays("day joined"),
+          sortParam(
+            ["newest", "oldest", "name", "deliveries", "rating"],
+            "deliveries: most completed first; rating: highest average, then most ratings. Ties: newest first",
+          ),
+        ],
+      },
+    ),
+  },
+  "/admin/delivery-partner-accounts/zones": {
+    get: riderOp("Distinct delivery zones, A to Z: { zones }", "riders:view"),
+  },
+  "/admin/delivery-partner-accounts/{id}": {
+    get: {
+      ...riderOp(RIDER_DETAIL, "riders:view", { params: [id] }),
+      responses: { 200: ok(), ...forbidden, 404: err("Delivery partner not found"), 422: err("Invalid id") },
+    },
+    patch: riderOp(
+      "Edit the rider: name, gender, birthDate, avatarUrl (the admin member edit rules), address (the rider's PATCH /delivery/me/details rules), vehicleType and vehicleNumber (PUT /delivery/me/vehicle rules), emergencyContact { name, phone, relation } or null, zone or null. Email, phone, password, status and role are dropped; the verification status never changes. A new vehicle number sends an approved vehicle RC back for review. Responds with the account view",
+      "riders:edit",
+      {
+        params: [id],
+        requestBody: body({
+          name: { type: "string", minLength: 2, maxLength: 80 },
+          gender: { type: "string", nullable: true },
+          birthDate: { type: "string", format: "date", nullable: true },
+          avatarUrl: { type: "string", nullable: true },
+          address: {
+            type: "object",
+            properties: {
+              line1: { type: "string" },
+              line2: { type: "string" },
+              area: { type: "string" },
+              city: { type: "string" },
+              state: { type: "string" },
+              postalCode: { type: "string" },
+            },
+          },
+          emergencyContact: {
+            type: "object",
+            nullable: true,
+            properties: {
+              name: { type: "string", minLength: 2, maxLength: 80 },
+              phone: { type: "string", description: "10-15 digits, optional +" },
+              relation: { type: "string", maxLength: 40, nullable: true },
+            },
+          },
+          vehicleType: { type: "string", enum: VEHICLE_TYPES },
+          vehicleNumber: { type: "string" },
+          zone: { type: "string", maxLength: 60, nullable: true },
+        }),
+        note: "Audited as `rider.update` with changes (address per line, and `reverified` kinds); no changes, no audit row.",
+      },
+    ),
+  },
+  "/admin/delivery-partner-accounts/{id}/verification": {
+    patch: riderOp(
+      "Approve, reject or ask for documents (the rider verification service: same transitions, KYC check and notice; a rider no longer approved goes offline). The same status again changes nothing. Responds with the account view",
+      "riders:approve",
+      {
+        params: [id],
+        requestBody: body(
+          {
+            status: { type: "string", enum: ["approved", "rejected", "resubmission_requested"] },
+            reason: reason("for rejected and resubmission_requested"),
+          },
+          ["status"],
+        ),
+        note: "Audited as `rider.verification`.",
+      },
+    ),
+  },
+  "/admin/delivery-partner-accounts/{id}/availability": {
+    get: riderOp(
+      "Availability history, newest first: { items: [{ isOnline, at, source: rider | admin | system, reason }], pagination }",
+      "riders:view",
+      { params: [id, ...paging] },
+    ),
+    patch: {
+      ...riderOp(
+        "Take the rider offline (isOnline: false; true is 422, only the rider goes online). An open offer is passed on; already offline changes nothing. Responds with the account view",
+        "riders:status",
+        {
+          params: [id],
+          requestBody: body(
+            { isOnline: { type: "boolean", enum: [false] }, reason: reason("always") },
+            ["isOnline", "reason"],
+          ),
+          note: "Recorded in the availability history (source admin). Audited as `rider.availability`.",
+        },
+      ),
+      responses: { 200: ok(), ...forbidden, 409: err("The rider is on a delivery"), 422: err("Validation failed") },
+    },
+  },
+  "/admin/customers": {
+    get: op(
+      C,
+      "Customers with order figures: each item is the user JSON plus stats { orders (every order placed), spentPaise (delivered orders), lastOrderAt }",
+      {
+        who: "customers:view",
+        params: [
+          ...paging,
+          search(
+            "Name, email or phone (any stored form), or the customer id: the full id or its last 6+ characters (a leading # is ignored)",
+          ),
+          q("status", { type: "string", enum: ACCOUNT_STATUS }),
+          q("verification", { type: "string", enum: VERIFICATION }),
+          ...joinedDays("sign-up day"),
+          sortParam(["newest", "oldest", "name", "orders", "spent"], "orders and spent: most first. Ties: newest first"),
+        ],
+      },
+    ),
+  },
+  "/admin/customers/{id}/password-reset": {
+    post: help(
+      "Email the customer the standard password reset link (the forgot-password email); 409 when the account is not active",
+      "customer.password_reset",
+    ),
+  },
+  "/admin/customers/{id}/email-verification": {
+    post: help(
+      "Send the customer a new email verification link; 409 when the email is already verified",
+      "customer.email_verification",
+    ),
+  },
   "/admin/admins": {
     get: op(A, "List admin accounts", {
       who: "admins:manage",
       params: [
         ...paging,
         q("role", { type: "string", enum: ["admin", ...STAFF_ROLES] }),
-        q("status", { type: "string", enum: ["active", "suspended"] }),
+        q("status", { type: "string", enum: ACCOUNT_STATUS }),
         q("search", { type: "string" }),
       ],
     }),
-    post: op(A, "Create an operations, finance or support admin", {
+    post: op(A, "Create an operations, finance or support admin, or an operator", {
       who: "admins:manage",
       status: 201,
       requestBody: body(
@@ -91,42 +397,83 @@ export const adminRolesPaths = {
           phone: { type: "string" },
           password: { type: "string", minLength: 8 },
           role: { type: "string", enum: STAFF_ROLES },
+          permissions: permissionList,
         },
         ["name", "email", "password", "role"],
       ),
     }),
   },
+  "/admin/admins/permissions": {
+    get: {
+      ...op(A, "The permission editor's catalogue: every key (label, group) and starting presets", {
+        who: "admins:manage",
+      }),
+      responses: {
+        200: ok("Success", {
+          type: "object",
+          properties: {
+            permissions: {
+              type: "array",
+              items: { type: "object", properties: strings("key", "label", "group") },
+            },
+            presets: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: { ...strings("key", "label"), permissions: { type: "array", items: { type: "string" } } },
+              },
+            },
+          },
+        }),
+        ...forbidden,
+      },
+    },
+  },
   "/admin/admins/{id}": {
     get: op(A, "One admin account", { who: "admins:manage", params: [id] }),
-    patch: op(A, "Edit an admin (name, phone, role); a role change signs them out", {
-      who: "admins:manage",
-      params: [id],
-      requestBody: body({
-        name: { type: "string" },
-        phone: { type: "string" },
-        role: { type: "string", enum: STAFF_ROLES },
-      }),
-    }),
+    patch: op(
+      A,
+      "Edit an admin (name, phone, role, permissions); a role change signs them out, a permission change applies on their next request. Audited with the role/permission changes",
+      {
+        who: "admins:manage",
+        params: [id],
+        requestBody: body({
+          name: { type: "string" },
+          phone: { type: "string" },
+          role: { type: "string", enum: STAFF_ROLES },
+          permissions: permissionList,
+        }),
+      },
+    ),
   },
   "/admin/admins/{id}/status": {
-    patch: op(A, "Activate or deactivate an admin", {
+    patch: op(A, "Change an admin's status (any non-active status ends their sessions)", {
       who: "admins:manage",
       params: [id],
-      requestBody: body({ status: { type: "string", enum: ["active", "suspended"] } }, ["status"]),
+      requestBody: statusBody,
     }),
   },
   "/admin/audit-logs": {
-    get: op(A, "Audit log of important admin actions", {
+    get: op(
+      A,
+      "Audit log of important admin actions. Each item also has accountType (target user's kind), changes ({ field: { from, to } }) and reason",
+      {
       who: "audit:view",
       params: [
         ...paging,
         q("action", { type: "string" }),
         q("role", { type: "string" }),
+        q("accountType", { type: "string", enum: ["customer", "restaurant", "delivery", "admin"] }),
+        {
+          ...q("resourceId", { type: "string" }),
+          description: "One resource id, or up to 5 separated by commas (e.g. a restaurant and its owner)",
+        },
         q("search", { type: "string" }),
         q("from", { type: "string", format: "date-time" }),
         q("to", { type: "string", format: "date-time" }),
       ],
-    }),
+      },
+    ),
   },
 
   "/admin/operations/dashboard": {
@@ -182,6 +529,8 @@ export const adminRolesPaths = {
         ...paging,
         q("type", { type: "string", enum: ["restaurant", "rider"] }),
         q("status", { type: "string", enum: ["pending", "paid", "cancelled"] }),
+        { ...q("restaurant", { type: "string" }), description: "One restaurant's payouts (restaurant id)" },
+        { ...q("rider", { type: "string" }), description: "One rider's payouts (the rider's user id)" },
       ],
     }),
     post: op(F, "Create a payout for everything a payee is owed", {
@@ -266,6 +615,7 @@ export const adminRolesPaths = {
         q("type", { type: "string", enum: TICKET_TYPES }),
         q("assignee", { type: "string", enum: ["me", "unassigned"] }),
         q("search", { type: "string" }),
+        { ...q("requester", { type: "string" }), description: "Tickets raised by this user id" },
       ],
     }),
   },

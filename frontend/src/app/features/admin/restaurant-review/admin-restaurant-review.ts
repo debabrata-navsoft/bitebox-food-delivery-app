@@ -28,85 +28,12 @@ import { ClockTimePipe } from '../../../shared/pipes/clock-time.pipe';
 import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { KycReview } from '../../../shared/components/kyc/kyc-review/kyc-review';
-
-interface StatusAction {
-  status: RestaurantStatus;
-  label: string;
-  icon: string;
-  needsReason: boolean;
-  danger: boolean;
-}
-
-const ACTIONS: Record<RestaurantStatus, StatusAction[]> = {
-  pending: [
-    {
-      status: 'approved',
-      label: 'Approve',
-      icon: 'check_circle',
-      needsReason: false,
-      danger: false,
-    },
-    {
-      status: 'resubmission_requested',
-      label: 'Ask for documents',
-      icon: 'upload',
-      needsReason: true,
-      danger: false,
-    },
-    { status: 'rejected', label: 'Reject', icon: 'cancel', needsReason: true, danger: true },
-  ],
-  // The owner is fixing documents; they can still be approved or rejected meanwhile.
-  resubmission_requested: [
-    {
-      status: 'approved',
-      label: 'Approve',
-      icon: 'check_circle',
-      needsReason: false,
-      danger: false,
-    },
-    { status: 'rejected', label: 'Reject', icon: 'cancel', needsReason: true, danger: true },
-  ],
-  approved: [
-    { status: 'suspended', label: 'Suspend', icon: 'block', needsReason: true, danger: true },
-  ],
-  suspended: [
-    {
-      status: 'approved',
-      label: 'Reinstate',
-      icon: 'restart_alt',
-      needsReason: false,
-      danger: false,
-    },
-  ],
-  rejected: [
-    {
-      status: 'approved',
-      label: 'Approve anyway',
-      icon: 'check_circle',
-      needsReason: false,
-      danger: false,
-    },
-  ],
-};
-
-const HIDDEN = 'The restaurant will be hidden from customers. The owner will see your reason.';
-const CONFIRM_TEXT: Record<RestaurantStatus, string> = {
-  approved: 'The restaurant will become visible to customers.',
-  resubmission_requested:
-    'The owner is asked to fix what you describe and send the restaurant for review again.',
-  rejected: HIDDEN,
-  suspended: HIDDEN,
-  pending: '',
-};
-
-/** Status names as people read them. */
-export const RESTAURANT_STATUS_LABEL: Record<RestaurantStatus, string> = {
-  pending: 'Pending',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  suspended: 'Suspended',
-  resubmission_requested: 'Documents needed',
-};
+import {
+  CONFIRM_TEXT,
+  RESTAURANT_ACTIONS as ACTIONS,
+  RESTAURANT_STATUS_LABEL,
+  StatusAction,
+} from '../restaurant-accounts/restaurant-status';
 
 @Component({
   selector: 'bb-admin-restaurant-review',

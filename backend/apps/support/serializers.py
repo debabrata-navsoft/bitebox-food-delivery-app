@@ -11,6 +11,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from common.fields import UUIDRef
 from common.validation import PageQuery
 
 from .models import RequesterRole, TicketPriority, TicketStatus, TicketType
@@ -174,6 +175,8 @@ class StaffTicketQuery(PageQuery):
     requester_role = choice(RequesterRole.values, required=False)
     type = choice(TicketType.values, required=False)
     assignee = choice(["me", "unassigned"], required=False)
+    # Tickets one person raised (the admin customer profile).
+    requester = UUIDRef(message="Invalid value", required=False)
 
 
 class UpdateTicketInput(serializers.Serializer):

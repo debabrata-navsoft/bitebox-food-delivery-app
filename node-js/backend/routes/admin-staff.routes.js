@@ -10,7 +10,10 @@ import { parsePagination } from "../utils/pagination.js";
 import { mongoIdParam, paginationRules } from "../validators/common.validators.js";
 import * as rules from "../validators/admin-staff.validators.js";
 
-/** /api/v1/admin/admins: the super admin creates and manages operations, finance and support admins. */
+/**
+ * /api/v1/admin/admins: the super admin creates and manages staff admins and operators: their
+ * role and, optionally, their own permission list (`permissions`; null = the role preset).
+ */
 export const adminStaffRouter = Router()
   .use(authenticate, can(PERMISSIONS.ADMINS_MANAGE))
   .get(
@@ -19,6 +22,11 @@ export const adminStaffRouter = Router()
     respond((req) =>
       staff.listStaff(req.validatedQuery, parsePagination(req.validatedQuery)),
     ),
+  )
+  // The permission editor's catalogue: every key with its label and group, and starting presets.
+  .get(
+    "/permissions",
+    respond(() => staff.permissionCatalogue()),
   )
   .get(
     "/:id",
@@ -45,6 +53,13 @@ export const adminStaffRouter = Router()
       async (req) => {
         const user = await staff.createStaff(req.body);
         req.auditResourceId = user.id;
+        req.audit = {
+          accountType: "admin",
+          changes: {
+            role: { from: null, to: user.role },
+            permissions: { from: null, to: user.permissions },
+          },
+        };
         return { user };
       },
       "Admin created",
@@ -57,12 +72,16 @@ export const adminStaffRouter = Router()
     audit.audited("admin.update", "user", (req) =>
       req.body.role
         ? `Updated admin; role set to ${ROLE_LABEL[req.body.role]}`
-        : "Updated admin details",
+        : req.body.permissions !== undefined
+          ? "Updated admin permissions"
+          : "Updated admin details",
     ),
     respond(
-      async (req) => ({
-        user: await staff.updateStaff(req.user._id, req.params.id, req.body),
-      }),
+      async (req) => {
+        const { user, changes } = await staff.updateStaff(req.user._id, req.params.id, req.body);
+        req.audit = { changes, accountType: "admin" };
+        return { user };
+      },
       "Admin updated",
     ),
   )
@@ -73,14 +92,17 @@ export const adminStaffRouter = Router()
       req.body.status === "active" ? "Activated admin" : "Deactivated admin",
     ),
     respond(
-      async (req) => ({
-        user: await staff.setAccountStatus(
+      async (req) => {
+        const { status, reason } = req.body;
+        const result = await staff.setAccountStatus(
           req.user._id,
           req.params.id,
-          req.body.status,
+          { status, reason },
           ADMIN_ROLES,
-        ),
-      }),
+        );
+        req.audit = staff.statusAudit(result, reason);
+        return { user: result.user };
+      },
       (req) =>
         req.body.status === "active" ? "Admin activated" : "Admin deactivated",
     ),

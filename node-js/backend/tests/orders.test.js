@@ -614,7 +614,7 @@ describe("order management and delivery", () => {
       const busy = await request(app)
         .patch(`/api/v1/admin/delivery-partners/${rider.user.id}/status`)
         .set(auth(admin.token))
-        .send({ status: "suspended" });
+        .send({ status: "suspended", reason: "Repeated late deliveries" });
       assert.equal(busy.status, 409);
 
       for (const status of ["picked_up", "on_the_way", "delivered"])
@@ -622,7 +622,7 @@ describe("order management and delivery", () => {
       const suspend = await request(app)
         .patch(`/api/v1/admin/delivery-partners/${rider.user.id}/status`)
         .set(auth(admin.token))
-        .send({ status: "suspended" });
+        .send({ status: "suspended", reason: "Repeated late deliveries" });
       assert.equal(suspend.status, 200);
       assert.equal(
         (await DeliveryPartner.findOne({ user: rider.user.id })).isOnline,

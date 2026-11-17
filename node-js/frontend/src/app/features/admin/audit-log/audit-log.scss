@@ -6,3 +6,23 @@
   font-family: ui-monospace, monospace;
   font-size: 0.75rem;
 }
+
+.sub {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--bb-ink-muted);
+}
+
+.reason {
+  color: var(--bb-ink);
+}
+
+.changes {
+  font-size: 0.85rem;
+  min-width: 220px;
+
+  span {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+}

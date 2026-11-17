@@ -76,6 +76,46 @@ const password = {
   description: "8+ chars (max 72 bytes), at least one letter and one number",
 };
 
+const adminUserParams = [
+  { in: "path", name: "id", required: true, schema: { type: "string" } },
+  { in: "path", name: "addressId", required: true, schema: { type: "string" } },
+];
+const adminAddressBody = {
+  required: true,
+  content: {
+    "application/json": {
+      schema: {
+        type: "object",
+        description: "The same fields and rules as the customer's own /addresses endpoints",
+        properties: {
+          label: { type: "string", enum: ["home", "work", "other"] },
+          recipientName: { type: "string" },
+          phone: { type: "string" },
+          line1: { type: "string" },
+          line2: { type: "string" },
+          area: { type: "string" },
+          landmark: { type: "string" },
+          city: { type: "string" },
+          state: { type: "string" },
+          postalCode: { type: "string" },
+          location: {
+            type: "object",
+            properties: {
+              latitude: { type: "number" },
+              longitude: { type: "number" },
+            },
+          },
+          isDefault: { type: "boolean" },
+        },
+      },
+    },
+  },
+};
+const adminAddressResponse = ok({
+  type: "object",
+  properties: { address: { $ref: "#/components/schemas/DeliveryAddress" } },
+});
+
 export const openApiDocument = {
   openapi: "3.1.0",
   info: {
@@ -115,7 +155,35 @@ export const openApiDocument = {
       ...pushSchemas,
       Role: {
         type: "string",
-        enum: ["customer", "admin", "restaurant", "delivery"],
+        enum: [
+          "customer",
+          "admin",
+          "restaurant",
+          "delivery",
+          "operations_admin",
+          "finance_admin",
+          "support_admin",
+          "operator",
+        ],
+      },
+      AccountStatus: {
+        type: "string",
+        enum: ["active", "inactive", "suspended", "blocked"],
+        description:
+          "Only active accounts sign in. inactive: switched off (e.g. closed on request); suspended: temporary sanction; blocked: permanent ban",
+      },
+      AccountStatusRequest: {
+        type: "object",
+        required: ["status"],
+        properties: {
+          status: { $ref: "#/components/schemas/AccountStatus" },
+          reason: {
+            type: "string",
+            minLength: 3,
+            maxLength: 500,
+            description: "Required (trimmed) for every status but active",
+          },
+        },
       },
       User: {
         type: "object",
@@ -125,7 +193,23 @@ export const openApiDocument = {
           email: { type: "string", format: "email" },
           phone: { type: "string" },
           role: { $ref: "#/components/schemas/Role" },
-          status: { type: "string", enum: ["active", "suspended"] },
+          status: { $ref: "#/components/schemas/AccountStatus" },
+          statusReason: { type: "string", maxLength: 500, description: "Why the status was last changed (omitted when active)" },
+          statusChangedAt: { type: "string", format: "date-time" },
+          gender: { type: "string", enum: ["female", "male", "other", "prefer_not_to_say"] },
+          avatarUrl: { type: "string" },
+          birthDate: { type: "string", format: "date-time" },
+          permissions: {
+            type: "array",
+            items: { type: "string" },
+            description:
+              "Admin-panel roles only: the effective permissions (super admin: all; else the custom list, or the role preset)",
+          },
+          customPermissions: {
+            type: ["array", "null"],
+            items: { type: "string" },
+            description: "Admin-panel roles only: the person's own list, or null for the role preset",
+          },
           lastLoginAt: { type: "string", format: "date-time" },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
@@ -211,6 +295,13 @@ export const openApiDocument = {
           phone: {
             type: "string",
             description: "Empty string removes the phone number",
+          },
+          avatarUrl: { type: "string", nullable: true, description: "An uploaded photo URL; null or empty removes it" },
+          gender: {
+            type: "string",
+            nullable: true,
+            enum: ["female", "male", "other", "prefer_not_to_say", null],
+            description: "null clears it",
           },
         },
       },
@@ -512,7 +603,8 @@ export const openApiDocument = {
     "/admin/users": {
       get: {
         tags: ["Admin - Users"],
-        summary: "List users (admin only)",
+        summary:
+          "List customers, partners and riders: only the kinds the caller may view (customers:view, restaurants:view, riders:view); a role filter for another kind is 403",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -523,7 +615,7 @@ export const openApiDocument = {
           {
             in: "query",
             name: "status",
-            schema: { type: "string", enum: ["active", "suspended"] },
+            schema: { $ref: "#/components/schemas/AccountStatus" },
           },
           {
             in: "query",
@@ -560,7 +652,8 @@ export const openApiDocument = {
     "/admin/users/{id}/status": {
       patch: {
         tags: ["Admin - Users"],
-        summary: "Suspend or reactivate a user account (admin only)",
+        summary:
+          "Change an account's status. active/inactive need <kind>:status, suspended/blocked accounts:suspend (plus <kind>:view); kind = customers, restaurants or riders. Any non-active status ends every session (riders go offline). The current status is a no-op. Audited with changes and reason",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -574,13 +667,7 @@ export const openApiDocument = {
           required: true,
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                required: ["status"],
-                properties: {
-                  status: { type: "string", enum: ["active", "suspended"] },
-                },
-              },
+              schema: { $ref: "#/components/schemas/AccountStatusRequest" },
             },
           },
         },
@@ -591,11 +678,171 @@ export const openApiDocument = {
               user: { $ref: "#/components/schemas/User" },
             },
           }),
-          400: err("Cannot suspend own account"),
+          400: err("Cannot suspend own account, or an admin account"),
+          401: err("Unauthenticated"),
+          403: err("No permission for this kind of account or status"),
+          404: err("User not found"),
+          409: err("Rider is carrying an order"),
+          422: err("Validation failed"),
+        },
+      },
+    },
+    "/admin/users/{id}": {
+      get: {
+        tags: ["Admin - Users"],
+        summary:
+          "One customer, partner or rider: account, saved addresses, order figures and owned restaurant (<kind>:view)",
+        security: [{ bearerAuth: [] }],
+        parameters: [adminUserParams[0]],
+        responses: {
+          200: ok({
+            type: "object",
+            properties: {
+              user: { $ref: "#/components/schemas/User" },
+              addresses: {
+                type: "array",
+                items: { $ref: "#/components/schemas/DeliveryAddress" },
+              },
+              stats: {
+                type: "object",
+                properties: {
+                  orders: { type: "integer" },
+                  delivered: { type: "integer" },
+                  cancelled: {
+                    type: "integer",
+                    description: "Cancelled or rejected",
+                  },
+                  spentPaise: {
+                    type: "integer",
+                    description: "Total of delivered orders",
+                  },
+                  lastOrderAt: {
+                    type: "string",
+                    format: "date-time",
+                    nullable: true,
+                  },
+                },
+              },
+              restaurant: {
+                type: "object",
+                nullable: true,
+                description: "The restaurant a partner owns; null for others",
+                properties: {
+                  id: { type: "string" },
+                  name: { type: "string" },
+                  slug: { type: "string" },
+                  status: { type: "string" },
+                },
+              },
+            },
+          }),
+          401: err("Unauthenticated"),
+          403: err("Not an admin"),
+          404: err("User not found (or an admin account)"),
+        },
+      },
+      patch: {
+        tags: ["Admin - Users"],
+        summary:
+          "Edit a customer, partner or rider's name, date of birth, gender or photo (<kind>:view and <kind>:edit). Email and phone are changed only by the person (dropped if sent). Audited with the changes",
+        security: [{ bearerAuth: [] }],
+        parameters: [adminUserParams[0]],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  name: { type: "string", minLength: 2, maxLength: 80 },
+                  birthDate: {
+                    type: "string",
+                    format: "date",
+                    nullable: true,
+                    description: "YYYY-MM-DD (age 13-120); null clears it",
+                  },
+                  gender: {
+                    type: "string",
+                    nullable: true,
+                    enum: ["female", "male", "other", "prefer_not_to_say", null],
+                    description: "null clears it",
+                  },
+                  avatarUrl: {
+                    type: "string",
+                    nullable: true,
+                    description: "An uploaded image URL (as on the own profile); null removes it",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: ok({
+            type: "object",
+            properties: { user: { $ref: "#/components/schemas/User" } },
+          }),
           401: err("Unauthenticated"),
           403: err("Not an admin"),
           404: err("User not found"),
+          409: err("Email or phone number already used by another account"),
           422: err("Validation failed"),
+        },
+      },
+    },
+    "/admin/users/{id}/addresses": {
+      post: {
+        tags: ["Admin - Users"],
+        summary: "Save an address for a customer, as POST /addresses (customers:edit)",
+        security: [{ bearerAuth: [] }],
+        parameters: [adminUserParams[0]],
+        requestBody: adminAddressBody,
+        responses: {
+          201: adminAddressResponse,
+          400: err("Only customers have saved addresses"),
+          404: err("User not found"),
+          409: err("Address limit reached"),
+          422: err("Validation failed"),
+        },
+      },
+    },
+    "/admin/users/{id}/addresses/{addressId}": {
+      patch: {
+        tags: ["Admin - Users"],
+        summary: "Update a customer's address, as PATCH /addresses/{id} (customers:edit)",
+        security: [{ bearerAuth: [] }],
+        parameters: adminUserParams,
+        requestBody: adminAddressBody,
+        responses: {
+          200: adminAddressResponse,
+          400: err("Only customers have saved addresses"),
+          404: err("User or address not found"),
+          422: err("Validation failed"),
+        },
+      },
+      delete: {
+        tags: ["Admin - Users"],
+        summary:
+          "Delete a customer's address; deleting the default promotes another (customers:edit)",
+        security: [{ bearerAuth: [] }],
+        parameters: adminUserParams,
+        responses: {
+          200: ok({ type: "object", nullable: true }),
+          400: err("Only customers have saved addresses"),
+          404: err("User or address not found"),
+        },
+      },
+    },
+    "/admin/users/{id}/addresses/{addressId}/default": {
+      patch: {
+        tags: ["Admin - Users"],
+        summary: "Make an address the customer's default (customers:edit)",
+        security: [{ bearerAuth: [] }],
+        parameters: adminUserParams,
+        responses: {
+          200: adminAddressResponse,
+          400: err("Only customers have saved addresses"),
+          404: err("User or address not found"),
         },
       },
     },

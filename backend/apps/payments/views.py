@@ -18,6 +18,7 @@ from apps.orders.models import PaymentMethod, PaymentStatus
 from apps.orders.notifications import rupees
 from apps.rbac.roles import Permission, Role
 from common.api import ApiError, ok
+from common.fields import UUIDRef
 from common.pagination import Page
 from common.permissions import PUBLIC, permission_required, role_required
 from common.schema import envelope, errors
@@ -185,6 +186,8 @@ class AdminPaymentQuery(PageQuery):
     provider = _choice(Provider.values, "Invalid value", required=False)
     # Where the order stands, so finance can find cancelled orders that still hold money.
     order_state = _choice(list(services.ORDER_STATES), "Invalid value", required=False)
+    # Payments of one customer's orders (the admin customer profile).
+    customer = UUIDRef(message="Invalid value", required=False)
     to = serializers.DateTimeField(required=False)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:

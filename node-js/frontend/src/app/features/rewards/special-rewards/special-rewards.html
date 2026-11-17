@@ -43,8 +43,8 @@
                 [formField]="birthdayForm.birthDate"
                 label="Date of birth"
                 dateFormat="dd M yy"
-                [maxDate]="latestBirthDate"
-                [minDate]="earliestBirthDate"
+                [maxDate]="born.latest"
+                [minDate]="born.earliest"
                 showIcon
               />
               <bb-field-error [field]="birthdayForm.birthDate" />

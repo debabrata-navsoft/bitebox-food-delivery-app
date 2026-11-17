@@ -32,6 +32,15 @@ const pointSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const emergencyContactSchema = new mongoose.Schema(
+  {
+    name: { type: String, trim: true, required: true, maxlength: 80 },
+    phone: { type: String, trim: true, required: true, maxlength: 16 },
+    relation: { type: String, trim: true, maxlength: 40, default: null },
+  },
+  { _id: false },
+);
+
 const deliveryPartnerSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -63,6 +72,9 @@ const deliveryPartnerSchema = new mongoose.Schema(
     verificationReason: { type: String, trim: true, maxlength: 500 },
     verifiedAt: { type: Date },
     verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    // Admin-kept details: who to call in an emergency, and the delivery zone (area name).
+    emergencyContact: { type: emergencyContactSchema, default: undefined },
+    zone: { type: String, trim: true, maxlength: 60 },
   },
   {
     timestamps: true,
@@ -80,6 +92,8 @@ const deliveryPartnerSchema = new mongoose.Schema(
         delete ret.verificationReason;
         delete ret.verifiedAt;
         delete ret.verifiedBy;
+        ret.emergencyContact = ret.emergencyContact ?? null;
+        ret.zone = ret.zone || null;
         return ret;
       },
     },

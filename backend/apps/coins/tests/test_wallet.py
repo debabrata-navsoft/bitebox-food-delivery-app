@@ -16,7 +16,7 @@ from apps.coins import config as reward_config
 from apps.coins import wallet
 from apps.coins.models import CoinBatch, CoinTransaction, CoinWallet, LedgerImmutable
 from apps.coins.quote import coins_to_paise, get_reward_config
-from apps.rbac.roles import Permission, Role, has_permission
+from apps.rbac.roles import Permission, Role, permissions_for
 from common.api import ApiError
 from common.pagination import Page
 from tests import factories
@@ -493,7 +493,13 @@ def test_converts_coins_to_paise_and_works_out_expiry_dates() -> None:
 
 
 def test_gives_reward_management_to_the_super_admin_only() -> None:
-    assert has_permission(Role.ADMIN, Permission.REWARDS_MANAGE)
-    assert has_permission(Role.ADMIN, Permission.REWARDS_VIEW)
-    for role in (Role.OPERATIONS_ADMIN, Role.FINANCE_ADMIN, Role.SUPPORT_ADMIN, Role.CUSTOMER):
-        assert not has_permission(role, Permission.REWARDS_MANAGE)
+    assert Permission.REWARDS_MANAGE in permissions_for(Role.ADMIN)
+    assert Permission.REWARDS_VIEW in permissions_for(Role.ADMIN)
+    for role in (
+        Role.OPERATIONS_ADMIN,
+        Role.FINANCE_ADMIN,
+        Role.SUPPORT_ADMIN,
+        Role.OPERATOR,
+        Role.CUSTOMER,
+    ):
+        assert Permission.REWARDS_MANAGE not in permissions_for(role)

@@ -33,10 +33,12 @@ SUMMARY = envelope("KycSummary")
 DOCUMENT = envelope("KycDocumentResponse")
 REMOVED = envelope("KycDocumentRemoved")
 UploadLimit = rate_limit("IMAGE_UPLOAD_RATE_LIMIT", "Too many uploads. Try again later.")
-# Which admin permission reviews which partner type.
-REVIEWER: dict[str, Permission] = {
-    Role.RESTAURANT: Permission.RESTAURANTS_MANAGE,
-    Role.DELIVERY: Permission.RIDERS_MANAGE,
+# Which admin permissions review which partner type: the dedicated KYC key, or the older
+# "manage" key that reviewed documents before it existed (either is enough). Neither lets an admin
+# edit the bank account.
+REVIEWER: dict[str, tuple[Permission, ...]] = {
+    Role.RESTAURANT: (Permission.RESTAURANTS_KYC, Permission.RESTAURANTS_MANAGE),
+    Role.DELIVERY: (Permission.RIDERS_KYC, Permission.RIDERS_MANAGE),
 }
 
 
@@ -154,13 +156,15 @@ class IsKycReviewer(BasePermission):
     """Reviews restaurants or riders; each request then checks the partner type it touches."""
 
     def has_permission(self, request: Request, view: Any) -> bool:
-        role = getattr(getattr(request, "user", None), "role", None)
-        return any(has_permission(role, p) for p in REVIEWER.values())
+        user = getattr(request, "user", None)
+        if not getattr(user, "is_authenticated", False):
+            return False
+        return any(has_permission(user, p) for keys in REVIEWER.values() for p in keys)
 
 
 def _reviewable(admin: User, partner: User) -> None:
-    permission = REVIEWER.get(partner.role)
-    if permission is None or not has_permission(admin.role, permission):
+    permissions = REVIEWER.get(partner.role, ())
+    if not any(has_permission(admin, p) for p in permissions):
         raise ApiError.not_found("Not found")
 
 

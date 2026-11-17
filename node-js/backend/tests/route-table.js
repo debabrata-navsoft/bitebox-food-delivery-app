@@ -1,6 +1,6 @@
 import express from "express";
 import mongoose from "mongoose";
-import { hasPermission } from "../config/permissions.js";
+import { roleHasPermission } from "../config/permissions.js";
 import { authenticate } from "../middleware/auth.middleware.js";
 
 // Express 5 no longer exposes where a router is mounted, so record it while the app is built.
@@ -65,4 +65,4 @@ export function routeTable(app) {
 export const allows = (r, role) =>
   (!r.auth || Boolean(role)) &&
   r.roles.every((list) => list.includes(role)) &&
-  r.permissions.every((list) => Boolean(role) && list.some((p) => hasPermission(role, p)));
+  r.permissions.every((list) => Boolean(role) && list.some((p) => roleHasPermission(role, p)));

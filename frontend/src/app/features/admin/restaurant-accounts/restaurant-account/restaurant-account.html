@@ -1,0 +1,190 @@
+<a class="bb-back-link" routerLink="/admin/restaurant-accounts"
+  ><np-icon name="arrow-left" class="mat-icon" matButtonIcon />All restaurant accounts</a
+>
+
+@if (loadError(); as message) {
+  <div class="bb-alert error" role="alert">
+    <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ message }}</span>
+  </div>
+} @else if (data(); as d) {
+  @let r = d.restaurant;
+  <header class="head">
+    <span class="logo">
+      @if (r.imageUrl) {
+        <img [src]="r.imageUrl" alt="" width="64" height="64" />
+      } @else {
+        <np-icon name="store" class="mat-icon" matButtonIcon />
+      }
+    </span>
+    <div class="who">
+      <h1>{{ r.name }} <span class="id">{{ shortId(r.id) }}</span></h1>
+      <span class="bb-badge {{ statusTone[r.status] }}">{{ statusLabel[r.status] }}</span>
+      <span class="bb-badge {{ kycMeta[d.kyc.status].tone }}">KYC: {{ kycMeta[d.kyc.status].label }}</span>
+      @if (r.status === 'approved') {
+        <span class="bb-badge" [class.tone-good]="r.isAcceptingOrders">{{ r.isAcceptingOrders ? 'Taking orders' : 'Closed for orders' }}</span>
+      }
+      @if (r.statusReason && r.status !== 'approved') {
+        <p class="bb-muted small reason">{{ r.statusReason }}</p>
+      }
+    </div>
+    <div class="actions">
+      @for (a of actions(); track a.status) {
+        <button type="button" class="bb-btn bb-btn--outlined" [class.bb-btn--danger]="a.danger" [disabled]="busy()" (click)="act(a)">
+          {{ a.label }}
+        </button>
+      }
+      @if (r.status === 'approved' && auth.can('restaurants:status')) {
+        <button type="button" class="bb-btn bb-btn--outlined" [disabled]="busy()" (click)="toggleOrders()">
+          <np-icon [name]="r.isAcceptingOrders ? 'circle-pause' : 'circle-play'" class="mat-icon" matButtonIcon />
+          {{ r.isAcceptingOrders ? 'Close for orders' : 'Reopen' }}
+        </button>
+      }
+      @if (auth.can('restaurants:edit')) {
+        <a class="bb-btn" [routerLink]="['edit']"><np-icon name="pencil" class="mat-icon" matButtonIcon />Edit</a>
+      }
+    </div>
+  </header>
+
+  <bb-tab-strip class="tabs" [tabs]="tabs()" [(activeTab)]="tab" />
+
+  @switch (tab()) {
+    @case ('overview') {
+      <section class="bb-grid cols-4 tiles" aria-label="Order totals">
+        <bb-stat-tile icon="receipt" label="Orders" [value]="d.stats.orders" [hint]="d.stats.lastOrderAt ? 'Last on ' + (d.stats.lastOrderAt | date: 'd MMM y') : 'No orders yet'" />
+        <bb-stat-tile icon="circle-check" label="Delivered" [value]="d.stats.delivered" />
+        <bb-stat-tile icon="circle-x" label="Cancelled or rejected" [value]="d.stats.cancelled" />
+        <bb-stat-tile icon="wallet" label="Delivered order value" [value]="(d.stats.grossPaise | inr) || '₹0'" />
+      </section>
+      <div class="grid">
+        <section class="bb-card">
+          <h2>Business</h2>
+          <dl>
+            <div><dt>Rating</dt><dd>{{ d.stats.rating.count ? '★ ' + d.stats.rating.average.toFixed(1) + ' (' + d.stats.rating.count + ')' : 'No ratings yet' }}</dd></div>
+            <div>
+              <dt>Commission</dt>
+              <dd>
+                {{ d.commission.percent }}%
+                <span class="bb-muted small">{{ d.commission.source === 'restaurant' ? 'set for this restaurant' : 'platform default' }}</span>
+              </dd>
+            </div>
+            <div><dt>Joined</dt><dd>{{ r.createdAt | date: 'd MMM y' }}</dd></div>
+            <div><dt>Reviewed</dt><dd>{{ r.reviewedAt ? (r.reviewedAt | date: 'd MMM y') : 'Not yet' }}</dd></div>
+          </dl>
+          @if (auth.can('payouts:manage')) {
+            <a class="bb-link-button more" routerLink="/admin/finance/commission">Change commission in Finance</a>
+          }
+        </section>
+        <section class="bb-card">
+          <h2>Verification</h2>
+          @if (d.kyc.status === 'verified') {
+            <p>Every required document is approved.</p>
+          } @else if (d.kyc.missing.length) {
+            <p>Missing: {{ missingDocs() }}</p>
+          } @else {
+            <p>{{ kycMeta[d.kyc.status].label }}.</p>
+          }
+          @if (canSeeKyc()) {
+            <button type="button" class="bb-link-button more" (click)="tab.set('kyc')">Open KYC & bank</button>
+          }
+        </section>
+      </div>
+    }
+    @case ('restaurant') {
+      <section class="bb-card">
+        <dl>
+          <div class="wide"><dt>Description</dt><dd>{{ r.description || '—' }}</dd></div>
+          <div><dt>Cuisines</dt><dd>{{ r.cuisines.join(', ') || '—' }}</dd></div>
+          <div><dt>Food</dt><dd>{{ r.isPureVeg ? 'Pure veg' : 'Veg and non-veg' }}</dd></div>
+          <div><dt>Minimum order</dt><dd>{{ (r.minOrderPaise | inr) || 'None' }}</dd></div>
+          <div><dt>Cost for two</dt><dd>{{ r.costForTwoPaise | inr }}</dd></div>
+          <div><dt>Preparation time</dt><dd>{{ r.avgPrepTimeMinutes }} min</dd></div>
+          <div><dt>Hours</dt><dd>{{ r.openingTime | clockTime }} – {{ r.closingTime | clockTime }}</dd></div>
+          @if (r.weeklyHours; as week) {
+            <div class="wide">
+              <dt>Weekly hours</dt>
+              <dd class="week">
+                @for (day of days; track day) {
+                  <span>
+                    <strong>{{ day | titlecase }}</strong>
+                    @for (slot of week[day]; track $index) {
+                      {{ slot.open | clockTime }}–{{ slot.close | clockTime }}
+                    } @empty {
+                      Closed
+                    }
+                  </span>
+                }
+              </dd>
+            </div>
+          }
+          <div class="wide">
+            <dt>Address</dt>
+            <dd>
+              {{ r.address.line1 }}{{ r.address.line2 ? ', ' + r.address.line2 : '' }}{{ r.address.area ? ', ' + r.address.area : '' }},
+              {{ r.address.city }}, {{ r.address.state }} {{ r.address.postalCode }}
+              <span class="bb-muted small">({{ r.location.coordinates[1].toFixed(5) }}, {{ r.location.coordinates[0].toFixed(5) }})</span>
+            </dd>
+          </div>
+          <div><dt>FSSAI licence</dt><dd>{{ r.fssaiNumber || '—' }}{{ r.fssaiValidUntil ? ' · valid until ' + (r.fssaiValidUntil | date: 'd MMM y') : '' }}</dd></div>
+          <div><dt>GST</dt><dd>{{ r.gstRegistered ? r.gstin || 'Registered' : 'Not registered' }}</dd></div>
+        </dl>
+      </section>
+    }
+    @case ('owner') {
+      <section class="bb-card">
+        <div class="section-head">
+          <h2>Owner</h2>
+          @if (d.owner && (auth.can('restaurants:status') || auth.can('accounts:suspend'))) {
+            <button type="button" class="bb-btn bb-btn--outlined bb-btn--small" (click)="changeOwnerStatus()">
+              <np-icon name="shield-alert" class="mat-icon" matButtonIcon />Account status
+            </button>
+          }
+        </div>
+        @if (d.owner; as o) {
+          <dl>
+            <div><dt>Name</dt><dd>{{ o.name }}</dd></div>
+            <div><dt>Name on documents</dt><dd>{{ r.ownerName || '—' }}</dd></div>
+            <div><dt>Email</dt><dd>{{ o.email }} <span class="verified" [class.no]="!o.emailVerified">{{ o.emailVerified ? 'Verified' : 'Not verified' }}</span></dd></div>
+            <div><dt>Mobile</dt><dd>{{ o.phone || '—' }} @if (o.phone) {<span class="verified" [class.no]="!o.phoneVerified">{{ o.phoneVerified ? 'Verified' : 'Not verified' }}</span>}</dd></div>
+            <div>
+              <dt>Account</dt>
+              <dd>
+                <span class="bb-badge {{ accountMeta[o.status].tone }}">{{ accountMeta[o.status].label }}</span>
+                @if (o.statusReason) {
+                  <span class="bb-muted small">{{ o.statusReason }}</span>
+                }
+              </dd>
+            </div>
+            <div><dt>Last sign-in</dt><dd>{{ o.lastLoginAt ? (o.lastLoginAt | date: 'd MMM y, h:mm a') : 'Never' }}</dd></div>
+          </dl>
+        } @else {
+          <p class="bb-muted">No owner account.</p>
+        }
+        <h2 class="contact">Restaurant contact</h2>
+        <dl>
+          <div><dt>Phone</dt><dd>{{ r.phone }}</dd></div>
+          <div><dt>Email</dt><dd>{{ r.email || '—' }}</dd></div>
+        </dl>
+      </section>
+    }
+    @case ('kyc') {
+      @if (d.owner; as o) {
+        <section class="bb-card">
+          <p class="bb-muted small">
+            Bank details and documents are changed by the owner and checked again here; admins can't edit them.
+          </p>
+          <bb-kyc-review [partnerId]="o.id" [canReview]="auth.can('restaurants:kyc') || auth.can('restaurants:manage')" (changed)="account.reload()" />
+        </section>
+      }
+    }
+  }
+
+  @for (t of records.open(); track t.id) {
+    <section class="bb-card" [attr.aria-label]="t.label">
+      <bb-record-table [tab]="t" [label]="t.label + ' of ' + r.name" />
+    </section>
+  }
+} @else {
+  @for (i of [1, 2, 3]; track i) {
+    <span class="bb-skeleton block"></span>
+  }
+}

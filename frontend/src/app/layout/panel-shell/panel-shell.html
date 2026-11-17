@@ -37,7 +37,7 @@
           </button>
           @if (open) {
             <div class="subnav" role="group" [attr.aria-label]="item.label">
-              @for (child of children; track child.link) {
+              @for (child of children; track child.label) {
                 <ng-container *ngTemplateOutlet="link; context: { $implicit: child }" />
               }
             </div>
@@ -52,9 +52,10 @@
       <a
         mat-list-item
         [routerLink]="item.link"
+        [queryParams]="item.query"
         routerLinkActive="active"
         #rla="routerLinkActive"
-        [routerLinkActiveOptions]="{ exact: !!item.exact }"
+        [routerLinkActiveOptions]="item.query ? withQuery : { exact: !!item.exact }"
         [activated]="rla.isActive"
         [attr.aria-current]="rla.isActive ? 'page' : null"
       >

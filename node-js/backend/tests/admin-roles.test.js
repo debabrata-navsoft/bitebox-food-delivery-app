@@ -39,6 +39,7 @@ describe("operations, finance and support admin roles", () => {
       "operations_admin",
       "finance_admin",
       "support_admin",
+      "operator",
       "customer",
     ])
       as[role] = await createAndLogin(app, role);
@@ -51,7 +52,8 @@ describe("operations, finance and support admin roles", () => {
     const MATRIX = [
       ["/admin/admins", ["admin"]],
       ["/admin/audit-logs", ["admin"]],
-      ["/admin/users", ["admin"]],
+      // Any of customers/restaurants/riders:view (ops: partners and riders; support: customers).
+      ["/admin/users", ["admin", "operations_admin", "support_admin"]],
       ["/admin/categories", ["admin"]],
       ["/admin/coupons", ["admin"]],
       ["/admin/orders", ["admin", "operations_admin", "support_admin"]],
@@ -67,7 +69,8 @@ describe("operations, finance and support admin roles", () => {
       ["/admin/support/tickets", ["admin", "support_admin"]],
       ["/admin/reviews/orders", ["admin", "support_admin"]],
     ];
-    const ROLES = ["admin", "operations_admin", "finance_admin", "support_admin", "customer"];
+    // An operator with no custom list has no permissions: 403 everywhere.
+    const ROLES = ["admin", "operations_admin", "finance_admin", "support_admin", "operator", "customer"];
 
     for (const [path, allowed] of MATRIX) {
       it(`${path} is open to ${allowed.join(", ")} only`, async () => {
@@ -88,7 +91,7 @@ describe("operations, finance and support admin roles", () => {
       const suspend = await request(app)
         .patch(`/api/v1/admin/users/${as.finance_admin.user.id}/status`)
         .set(auth(as.admin.token))
-        .send({ status: "suspended" });
+        .send({ status: "suspended", reason: "Testing the rule" });
       assert.equal(suspend.status, 400, "admins are managed in Admin management");
     });
 
@@ -173,7 +176,7 @@ describe("operations, finance and support admin roles", () => {
       const off = await request(app)
         .patch(`/api/v1/admin/admins/${created.id}/status`)
         .set(auth(as.admin.token))
-        .send({ status: "suspended" });
+        .send({ status: "suspended", reason: "Left the team" });
       assert.equal(off.status, 200);
       const login = await request(app)
         .post("/api/v1/auth/login")

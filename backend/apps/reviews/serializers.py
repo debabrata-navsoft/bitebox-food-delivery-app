@@ -150,6 +150,10 @@ class AdminReviewQuery(PageQuery):
     target = choice_query(ReviewTarget.values)
     status = choice_query(ReviewStatus.values)
     restaurant_id = UUIDRef(message="Invalid value", required=False)
+    # Reviews written by one customer (the admin customer profile).
+    customer = UUIDRef(message="Invalid value", required=False)
+    # Orders with a review of one rider (user id; the admin rider account page).
+    rider = UUIDRef(message="Invalid value", required=False)
     reported = QueryBoolean()
     rating = rating_query()
 

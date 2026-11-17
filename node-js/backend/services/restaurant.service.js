@@ -138,13 +138,21 @@ export async function createOwnRestaurant(ownerId, input) {
   return restaurant;
 }
 
-export async function updateOwnRestaurant(ownerId, input) {
-  const restaurant = await requireOwnRestaurant(ownerId);
+/**
+ * Applies the partner-editable fields (PATCH /my/restaurant, validated by
+ * updateRestaurantRules) to a loaded restaurant, without saving it. Admin edits use it too.
+ */
+export async function applyDetails(restaurant, input) {
+  const rename = input.name && input.name !== restaurant.name;
   Object.assign(restaurant, pick(input, OWNER_FIELDS));
   if (input.location) restaurant.location = toPoint(input.location);
-  if (input.name && input.name !== restaurant.name) {
-    restaurant.slug = await uniqueSlug(Restaurant, input.name, restaurant._id);
-  }
+  if (rename) restaurant.slug = await uniqueSlug(Restaurant, input.name, restaurant._id);
+  return restaurant;
+}
+
+export async function updateOwnRestaurant(ownerId, input) {
+  const restaurant = await requireOwnRestaurant(ownerId);
+  await applyDetails(restaurant, input);
   // Fixing a rejected application sends it back for review.
   const resubmitted = restaurant.status === RESTAURANT_STATUS.REJECTED;
   if (resubmitted) {

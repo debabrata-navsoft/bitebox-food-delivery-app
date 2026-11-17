@@ -6,7 +6,7 @@ import {
   ROLES,
   STAFF_ADMIN_ROLES,
 } from "../config/roles.js";
-import { permissionsFor } from "../config/permissions.js";
+import { effectivePermissions } from "../config/permissions.js";
 
 export { ADMIN_ROLES, ALL_ROLES, MEMBER_ROLES, ROLES, STAFF_ADMIN_ROLES };
 
@@ -16,10 +16,20 @@ export const SELF_REGISTER_ROLES = [
   ROLES.DELIVERY,
 ];
 
+/**
+ * Account status. Only `active` may sign in; every other status ends all sessions and keeps the
+ * person out of dispatch, notifications and the rest. inactive: switched off (e.g. closed on
+ * request); suspended: a temporary sanction; blocked: a permanent ban. (Restaurant approval and
+ * rider verification are separate.)
+ */
 export const USER_STATUS = Object.freeze({
   ACTIVE: "active",
+  INACTIVE: "inactive",
   SUSPENDED: "suspended",
+  BLOCKED: "blocked",
 });
+
+export const GENDERS = Object.freeze(["female", "male", "other", "prefer_not_to_say"]);
 
 const userSchema = new mongoose.Schema(
   {
@@ -54,6 +64,12 @@ const userSchema = new mongoose.Schema(
       enum: Object.values(USER_STATUS),
       default: USER_STATUS.ACTIVE,
     },
+    // Why an admin last changed the status (cleared on reactivation), and when.
+    statusReason: { type: String, trim: true, maxlength: 500, default: undefined },
+    statusChangedAt: { type: Date, default: undefined },
+    // Admin-panel roles only: their own permission keys, or unset to use the role preset
+    // (config/permissions.js#effectivePermissions). The JSON serves the effective list instead.
+    customPermissions: { type: [String], default: undefined },
 
     passwordHash: { type: String, required: true, select: false },
     tokenVersion: { type: Number, default: 0, select: false },
@@ -66,6 +82,7 @@ const userSchema = new mongoose.Schema(
     emailVerificationExpiresAt: { type: Date, select: false },
     phoneVerifiedAt: { type: Date, default: undefined },
     avatarUrl: { type: String, trim: true, maxlength: 500 },
+    gender: { type: String, enum: GENDERS, default: undefined },
 
     lastLoginAt: { type: Date },
 
@@ -114,8 +131,17 @@ const userSchema = new mongoose.Schema(
         delete ret.phoneVerifiedAt;
         delete ret.pushPreferences; // served by GET /push/preferences
         delete ret.channelPreferences; // served by GET /notifications/preferences
-        // Admin roles carry their permissions so the web app can shape its menu (the API still checks).
-        if (ADMIN_ROLES.includes(ret.role)) ret.permissions = permissionsFor(ret.role);
+        // Admin roles carry their effective permissions so the web app can shape its menu (the
+        // API still checks).
+        // `customPermissions` is the person's own list (null = the role's preset), for the super
+        // admin's permission editor.
+        if (ADMIN_ROLES.includes(ret.role)) {
+          ret.permissions = effectivePermissions({ role: ret.role, customPermissions: ret.customPermissions });
+          ret.customPermissions = ret.customPermissions ?? null;
+        } else delete ret.customPermissions;
+        if (ret.statusReason == null) delete ret.statusReason;
+        if (ret.statusChangedAt == null) delete ret.statusChangedAt;
+        if (ret.gender == null) delete ret.gender;
         return ret;
       },
     },

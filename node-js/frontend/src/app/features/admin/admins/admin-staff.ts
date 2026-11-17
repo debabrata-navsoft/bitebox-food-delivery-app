@@ -5,9 +5,8 @@ import { form } from '@angular/forms/signals';
 import { ButtonComponent, IconComponent, PaginationComponent, SelectOption } from 'nexprime';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AdminStaffService } from '../../../core/services/admin/admin-staff.service';
-import { errorMessage } from '../../../core/services/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
-import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
+import { openAccountStatus, statusChanged } from '../../../shared/components/account-status-dialog/account-status-dialog';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
@@ -17,11 +16,13 @@ import {
   AdminRole,
   ROLE_META,
   STAFF_ADMIN_ROLES,
+  USER_STATUS_META,
   User,
   UserStatus,
 } from '../../../shared/models/user.models';
 import { openStaffForm } from './staff-form-dialog/staff-form-dialog';
 import { openLoginHistory } from './login-history-dialog/login-history-dialog';
+import { openPermissionEditor } from './permission-editor-dialog/permission-editor-dialog';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 
 /** Super admin: create operations, finance and support admins and manage their access. */
@@ -50,7 +51,7 @@ export class AdminStaff {
   protected readonly roleLabel = (role: string) => ROLE_META[role as AdminRole]?.label ?? role;
   protected readonly isStaff = (u: User) =>
     (STAFF_ADMIN_ROLES as readonly string[]).includes(u.role);
-  protected readonly busy = signal<string | null>(null);
+  protected readonly statusMeta = USER_STATUS_META;
 
   protected readonly filterModel = signal({ search: '', role: '', status: '' });
   protected readonly filters = form(this.filterModel);
@@ -59,9 +60,8 @@ export class AdminStaff {
     ...ADMIN_ROLES.map((r) => ({ value: r, label: ROLE_META[r].label })),
   ];
   protected readonly statusOptions: SelectOption[] = [
-    { value: '', label: 'Active and inactive' },
-    { value: 'active', label: 'Active' },
-    { value: 'suspended', label: 'Inactive' },
+    { value: '', label: 'All statuses' },
+    ...(Object.keys(USER_STATUS_META) as UserStatus[]).map((s) => ({ value: s, label: USER_STATUS_META[s].label })),
   ];
 
   protected readonly list = pagedList(
@@ -83,6 +83,8 @@ export class AdminStaff {
       if (!user) return;
       this.notify.success(`${user.name} can now sign in as ${this.roleLabel(user.role)}`);
       this.list.load(1);
+      // An operator can do nothing until given permissions.
+      if (user.role === 'operator') this.editPermissions(user);
     });
   }
 
@@ -94,29 +96,28 @@ export class AdminStaff {
     });
   }
 
-  protected toggle(user: User): void {
-    const activate = user.status !== 'active';
-    confirmed(this.bbDialog, {
-      title: activate ? `Activate ${user.name}?` : `Deactivate ${user.name}?`,
-      message: activate
-        ? 'They can sign in again with their existing password.'
-        : 'They are signed out everywhere and cannot sign in until you activate them again.',
-      confirmLabel: activate ? 'Activate' : 'Deactivate',
-      danger: !activate,
-    }).subscribe(() => {
-      this.busy.set(user.id);
-      this.api.setStatus(user.id, activate ? 'active' : 'suspended').subscribe({
-        next: () => {
-          this.busy.set(null);
-          this.notify.success(activate ? 'Admin activated' : 'Admin deactivated');
-          this.list.reload();
-        },
-        error: (err: unknown) => {
-          this.busy.set(null);
-          this.notify.error(errorMessage(err));
-        },
-      });
+  protected changeStatus(user: User): void {
+    openAccountStatus(this.bbDialog, {
+      user,
+      kind: 'admins',
+      save: (status, reason) => this.api.setStatus(user.id, status, reason),
+    }).subscribe((updated) => {
+      this.notify.success(statusChanged(updated));
+      this.list.reload();
     });
+  }
+
+  protected editPermissions(user: User): void {
+    openPermissionEditor(this.bbDialog, user).subscribe((saved) => {
+      this.notify.success(`${saved.name}'s permissions saved`);
+      this.list.reload();
+    });
+  }
+
+  /** "Role preset" or "Own list of N". */
+  protected permissionSummary(u: User): string {
+    const n = u.permissions?.length ?? 0;
+    return u.customPermissions == null && u.role !== 'operator' ? `Role preset · ${n}` : `Own list · ${n}`;
   }
 
   protected showLogins(user: User): void {

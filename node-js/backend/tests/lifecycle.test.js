@@ -372,7 +372,10 @@ describe("order lifecycle: arrival, delivery code, prep time, assignment, timeli
     assert.equal((await boss.get(`/api/v1/admin/admins/${ops.user.id}/logins`)).status, 200);
     assert.equal((await boss.get(`/api/v1/admin/admins/${customer.user.id}/logins`)).status, 404);
     assert.equal((await boss.get(`/api/v1/admin/users/${ops.user.id}/logins`)).status, 404);
-    const support = await admin("support_admin"); // no users:manage
-    assert.equal((await support.get(`/api/v1/admin/users/${customer.user.id}/logins`)).status, 403);
+    // Per kind of account: support views customers (customers:view) but not staff-only kinds.
+    const support = await admin("support_admin");
+    assert.equal((await support.get(`/api/v1/admin/users/${customer.user.id}/logins`)).status, 200);
+    const finance = await admin("finance_admin"); // no <kind>:view at all
+    assert.equal((await finance.get(`/api/v1/admin/users/${customer.user.id}/logins`)).status, 403);
   });
 });

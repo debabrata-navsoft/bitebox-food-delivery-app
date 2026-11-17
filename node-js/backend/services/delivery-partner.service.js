@@ -19,8 +19,9 @@ import {
   dispatchSafely,
   findWaitingOrders,
 } from "./dispatch.service.js";
-import { endSessions } from "./auth.service.js";
+import { applyStatus } from "./auth.service.js";
 import { onPosition, trackedOrderId } from "./tracking.service.js";
+import { AVAILABILITY_SOURCES, setOnline } from "./rider-availability.service.js";
 import {
   pickupDistanceMeters,
   presentForRider,
@@ -120,16 +121,10 @@ export async function setAvailability(
       throw ApiError.badRequest("Add your vehicle details before going online");
     if (latitude === undefined || longitude === undefined)
       throw ApiError.badRequest("Share your location to go online");
-    await DeliveryPartner.updateOne(
-      { user: userId },
-      {
-        $set: {
-          isOnline: true,
-          location: toPoint({ latitude, longitude }),
-          locationUpdatedAt: new Date(),
-        },
-      },
-    );
+    await setOnline(userId, true, {
+      source: AVAILABILITY_SOURCES.RIDER,
+      set: { location: toPoint({ latitude, longitude }), locationUpdatedAt: new Date() },
+    });
     await offerWaitingOrders();
     return dashboard(userId);
   }
@@ -138,20 +133,21 @@ export async function setAvailability(
     userId,
     profile,
     "Finish your current delivery before going offline",
+    { source: AVAILABILITY_SOURCES.RIDER },
   );
   return dashboard(userId);
 }
 
-/** Offline rules shared by the rider and admins: never mid-delivery; a pending offer is passed on. */
-async function takeOffline(userId, profile, busyMessage) {
+/**
+ * Offline rules shared by the rider and admins: never mid-delivery; a pending offer is passed on.
+ * `log` ({ source, reason }) is what the availability history records when the rider was online.
+ */
+export async function takeOffline(userId, profile, busyMessage, log) {
   if (profile?.activeOrder)
     throw new ApiError(409, busyMessage, { code: "DELIVERY_IN_PROGRESS" });
   if (profile?.currentOffer)
     await declineOffer(userId, profile.currentOffer).catch(() => undefined);
-  await DeliveryPartner.updateOne(
-    { user: userId },
-    { $set: { isOnline: false } },
-  );
+  await setOnline(userId, false, log);
 }
 
 /** Position report from the rider's device (rate limited at the route). */
@@ -262,26 +258,43 @@ export async function adminList({ search, online, verification }, pagination) {
   return { items, pagination: paginationMeta(pagination, total) };
 }
 
-/** Suspend or reactivate a rider. Suspending takes them offline; not allowed mid-delivery. */
-async function findRider(userId) {
+// What the availability history says when the system takes a rider offline.
+const ACCOUNT_OFFLINE_REASON = {
+  [USER_STATUS.INACTIVE]: "Account deactivated",
+  [USER_STATUS.SUSPENDED]: "Account suspended",
+  [USER_STATUS.BLOCKED]: "Account blocked",
+};
+const VERIFICATION_OFFLINE_REASON = {
+  [V.REJECTED]: "Verification rejected",
+  [V.RESUBMISSION_REQUESTED]: "Documents requested again",
+};
+
+export async function findRider(userId) {
   const user = await User.findOne({ _id: userId, role: ROLES.DELIVERY });
   if (!user) throw ApiError.notFound("Delivery partner not found");
   return user;
 }
 
-export async function adminSetStatus(userId, status) {
+/**
+ * Any non-active status (inactive, suspended, blocked) takes the rider offline and passes on their
+ * pending offer; not allowed mid-delivery. Asking for the current status changes nothing.
+ * Returns { user, from, changed } for the audit log.
+ */
+export async function adminSetStatus(userId, status, reason) {
   const user = await findRider(userId);
-  if (status === USER_STATUS.SUSPENDED) {
+  const from = user.status;
+  if (from === status) return { user: user.toJSON(), from, changed: false };
+  if (status !== USER_STATUS.ACTIVE) {
     const profile = await DeliveryPartner.findOne({ user: userId });
     await takeOffline(
       userId,
       profile,
       "This rider is carrying an order. Unassign or finish it first.",
+      { source: AVAILABILITY_SOURCES.SYSTEM, reason: ACCOUNT_OFFLINE_REASON[status] },
     );
   }
-  user.status = status;
-  await endSessions(user, status === USER_STATUS.SUSPENDED ? "suspended" : "logout");
-  return user.toJSON();
+  await applyStatus(user, status, reason);
+  return { user: user.toJSON(), from, changed: true };
 }
 
 // Verification
@@ -360,7 +373,12 @@ export async function adminSetVerification(userId, status, reason, adminId) {
     { returnDocument: "after" },
   );
   if (!updated) throw ApiError.conflict("This rider was updated by someone else. Refresh and try again.");
-  if (status !== V.APPROVED) await takeOffline(user._id, updated, "").catch(() => undefined); // mid-delivery: they finish it
+  // Mid-delivery: they finish it.
+  if (status !== V.APPROVED)
+    await takeOffline(user._id, updated, "", {
+      source: AVAILABILITY_SOURCES.SYSTEM,
+      reason: VERIFICATION_OFFLINE_REASON[status],
+    }).catch(() => undefined);
   const [type, title, body] = VERIFICATION_NOTICE[status];
   await notify(user._id, {
     type,

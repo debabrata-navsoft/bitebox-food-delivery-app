@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import mongoose from "mongoose";
 import { DISPATCH } from "../config/dispatch.js";
 import { env } from "../config/env.js";
 import { DeliveryPartner } from "../models/delivery-partner.model.js";
@@ -417,8 +418,15 @@ export async function riderHistory(userId, pagination) {
 
 // Admin
 /** All orders, filterable by status (or "active") and searchable by order number. */
-export async function adminList({ status, search }, pagination) {
-  const filter = {};
+export async function adminList({ status, search, customer, restaurant, rider }, pagination) {
+  // The status counts follow the customer, restaurant and rider filters too (not the status or search).
+  const toId = (id) => new mongoose.Types.ObjectId(String(id));
+  const scope = {
+    ...(customer && { customer: toId(customer) }),
+    ...(restaurant && { restaurant: toId(restaurant) }),
+    ...(rider && { deliveryPartner: toId(rider) }),
+  };
+  const filter = { ...scope };
   if (status === "active") filter.status = { $in: ACTIVE_STATUSES };
   else if (status) filter.status = status;
   if (search)
@@ -433,7 +441,10 @@ export async function adminList({ status, search }, pagination) {
       .limit(pagination.limit)
       .select(listFields),
     Order.countDocuments(filter),
-    Order.aggregate([{ $group: { _id: "$status", n: { $sum: 1 } } }]),
+    Order.aggregate([
+      { $match: scope },
+      { $group: { _id: "$status", n: { $sum: 1 } } },
+    ]),
   ]);
   return {
     items,

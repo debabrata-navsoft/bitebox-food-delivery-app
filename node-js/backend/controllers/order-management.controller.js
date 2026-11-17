@@ -1,3 +1,4 @@
+import { statusAudit, statusMessage as accountStatusMessage } from "../services/admin-staff.service.js";
 import * as riders from "../services/delivery-partner.service.js";
 import * as dispatch from "../services/dispatch.service.js";
 import * as orders from "../services/order-management.service.js";
@@ -134,9 +135,10 @@ export const riderResubmit = respond(
 );
 
 export const adminRiderSetStatus = respond(
-  async (req) => ({
-    user: await riders.adminSetStatus(req.params.id, req.body.status),
-  }),
-  (_req, data) =>
-    data.user.status === "active" ? "Rider reactivated" : "Rider suspended",
+  async (req) => {
+    const result = await riders.adminSetStatus(req.params.id, req.body.status, req.body.reason);
+    req.audit = statusAudit(result, req.body.reason);
+    return { user: result.user };
+  },
+  (_req, data) => accountStatusMessage("Rider", data.user.status),
 );

@@ -49,12 +49,15 @@ export const authorize = (...roles) =>
     { roles },
   );
 
-/** Allows the request when the signed-in user's role has any of the given permissions. */
+/**
+ * Allows the request when the signed-in person's effective permissions (role preset, or their
+ * custom list; the super admin has all) include any of the given ones.
+ */
 export const can = (...permissions) =>
   Object.assign(
     (req, _res, next) => {
       if (!req.user) return next(ApiError.unauthorized());
-      if (!permissions.some((p) => hasPermission(req.user.role, p)))
+      if (!permissions.some((p) => hasPermission(req.user, p)))
         return next(ApiError.forbidden("You do not have access to this area"));
       next();
     },

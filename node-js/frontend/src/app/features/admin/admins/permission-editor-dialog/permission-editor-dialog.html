@@ -1,0 +1,67 @@
+<h2 bbDialogTitle>Permissions: {{ user.name }}</h2>
+<div class="bb-dialog__content">
+  <p class="bb-muted small intro">
+    {{ roleLabel }}.
+    @if (hasPreset) {
+      Starts from the role's own set; tick exactly what this person needs.
+    } @else {
+      Operators can do only what you tick here.
+    }
+    The API checks every permission, whatever the menus show.
+  </p>
+
+  @if (loadError(); as e) {
+    <div class="bb-alert error" role="alert"><np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ e }}</span></div>
+  } @else if (data(); as d) {
+    <div class="presets" role="group" aria-label="Ready-made sets">
+      <span class="label">Ready-made:</span>
+      @for (p of d.presets; track p.key) {
+        <button type="button" class="chip" (click)="applyPreset(p.permissions)">{{ p.label }}</button>
+      }
+      @if (hasPreset) {
+        <button type="button" class="chip" [class.on]="usePreset()" (click)="resetToRole()">{{ roleLabel }} preset</button>
+      }
+    </div>
+    @if (usePreset()) {
+      <p class="bb-alert info small" role="status">
+        <np-icon name="info" class="mat-icon" matButtonIcon /><span>Using the {{ roleLabel }} role's permissions. Tick a box to give this person their own list instead.</span>
+      </p>
+    }
+
+    <div class="groups">
+      @for (g of groups(); track g.name) {
+        <fieldset>
+          <legend>
+            <np-checkbox [checked]="allOn(g.items)" (checkedChange)="toggleGroup(g.items, $event)" [label]="g.name" />
+          </legend>
+          @for (p of g.items; track p.key) {
+            <np-checkbox [checked]="selected().has(p.key)" (checkedChange)="toggle(p.key, $event)" [label]="p.label" />
+          }
+        </fieldset>
+      }
+    </div>
+
+    @if (changed() && !usePreset()) {
+      <p class="bb-muted small">
+        {{ selected().size }} permissions
+        @if (added().length) {
+          · <span class="add">+{{ added().length }}</span>
+        }
+        @if (removed().length) {
+          · <span class="remove">−{{ removed().length }}</span>
+        }
+      </p>
+    }
+    @if (error(); as e) {
+      <div class="bb-alert error" role="alert"><np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ e }}</span></div>
+    }
+  } @else {
+    <span class="bb-skeleton block"></span>
+  }
+</div>
+<div class="bb-dialog__actions">
+  <np-button variant="soft" severity="secondary" label="Cancel" (clicked)="ref.close()" />
+  <button type="button" class="bb-btn" [disabled]="!changed() || saving() || !data()" (click)="save()">
+    {{ saving() ? 'Saving…' : 'Save permissions' }}
+  </button>
+</div>

@@ -522,8 +522,18 @@ def rider_history(user: User, page: Page) -> dict[str, Any]:
 # Admin
 # ---------------------------------------------------------------------------
 def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
-    """All orders, filterable by status (or "active") and searchable by order number."""
-    qs = Order.objects.all()
+    """
+    All orders, filterable by status (or "active"), customer and restaurant, and searchable by
+    order number. The status counts follow the customer and restaurant filters.
+    """
+    scope = Order.objects.all()
+    if customer := query.get("customer"):
+        scope = scope.filter(customer_id=customer)
+    if restaurant := query.get("restaurant"):
+        scope = scope.filter(restaurant_id=restaurant)
+    if rider := query.get("rider"):
+        scope = scope.filter(delivery_partner_id=rider)
+    qs = scope
     status = query.get("status")
     if status == "active":
         qs = qs.filter(status__in=ACTIVE_STATUSES)
@@ -532,7 +542,7 @@ def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
     if search := (query.get("search") or "").strip():
         qs = qs.filter(order_number__icontains=search.upper())
     rows, meta = paginate(qs.prefetch_related("items").order_by("-created_at"), page)
-    counts = Order.objects.values("status").annotate(n=Count("pk")).order_by()
+    counts = scope.values("status").annotate(n=Count("pk")).order_by()
     return {
         "items": [presenters.list_json(o) for o in rows],
         "pagination": meta,

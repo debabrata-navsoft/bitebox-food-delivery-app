@@ -119,12 +119,18 @@ def create_own(owner: User, data: dict[str, Any]) -> Restaurant:
     return restaurant
 
 
-def update_own(owner: User, data: dict[str, Any]) -> Restaurant:
-    restaurant = require_own_restaurant(owner)
+def apply_update(restaurant: Restaurant, data: dict[str, Any]) -> None:
+    """Sets the partner-editable fields (RestaurantInput, partial) without saving; a new name
+    gets a new slug. Shared by the partner's own edit and the admin's (restaurant accounts)."""
     old_name = restaurant.name
     _apply(restaurant, data)
     if data.get("name") and data["name"] != old_name:
         restaurant.slug = unique_slug(Restaurant, data["name"], restaurant.pk)
+
+
+def update_own(owner: User, data: dict[str, Any]) -> Restaurant:
+    restaurant = require_own_restaurant(owner)
+    apply_update(restaurant, data)
     resubmitted = restaurant.status == RestaurantStatus.REJECTED
     if resubmitted:  # editing a rejected application sends it back for review
         restaurant.status = RestaurantStatus.PENDING
@@ -139,9 +145,14 @@ def update_own(owner: User, data: dict[str, Any]) -> Restaurant:
 
 def set_accepting_orders(owner: User, accepting: bool) -> Restaurant:
     restaurant = require_own_restaurant(owner)
+    set_accepting(restaurant, accepting)
+    return restaurant
+
+
+def set_accepting(restaurant: Restaurant, accepting: bool) -> None:
+    """Open or pause new orders (the partner's toggle; admins may close it too)."""
     restaurant.is_accepting_orders = accepting
     restaurant.save(update_fields=["is_accepting_orders", "updated_at"])
-    return restaurant
 
 
 def owner_stats(restaurant: Restaurant) -> dict[str, int]:

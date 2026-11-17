@@ -1,0 +1,102 @@
+// The Account management profiles (customer, restaurant and delivery partner): the header,
+// section headings, detail lists and skeletons they share.
+@use 'breakpoints' as bp;
+
+:host {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr); // children never widen the page (tabs, tables)
+  gap: var(--bb-space-4);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--bb-space-3);
+
+  .who {
+    flex: 1;
+  }
+  h1 {
+    margin: 0 0 var(--bb-space-1);
+  }
+  .id {
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: var(--bb-ink-muted);
+  }
+  .reason {
+    margin: var(--bb-space-1) 0 0;
+  }
+}
+
+.tiles {
+  margin: 0;
+}
+
+h2 {
+  margin: 0 0 var(--bb-space-3);
+  font-size: 1.1rem;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--bb-space-2);
+  margin-bottom: var(--bb-space-3);
+
+  h2 {
+    margin: 0;
+  }
+}
+
+dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--bb-space-3);
+  margin: 0;
+
+  .wide {
+    grid-column: 1 / -1;
+  }
+  @include bp.phone-only {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--bb-ink-muted);
+}
+
+dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+// "Verified" / "Not verified" beside an email or mobile number.
+.verified {
+  display: inline-block;
+  margin-left: var(--bb-space-1);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--bb-success-bg);
+  color: var(--bb-success);
+
+  &.no {
+    background: var(--bb-warning-bg);
+    color: var(--bb-warning-ink);
+  }
+}
+
+.block {
+  display: block;
+  height: 160px;
+  border-radius: var(--bb-radius);
+}

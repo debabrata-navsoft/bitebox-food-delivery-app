@@ -13,7 +13,15 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import {
+  IsActiveMatchOptions,
+  NavigationEnd,
+  Params,
+  Router,
+  RouterLink,
+  RouterLinkActive,
+  RouterOutlet,
+} from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatListModule } from '@angular/material/list';
@@ -33,6 +41,8 @@ export interface NavItem {
   icon: string;
   /** Page link; a group (with `children`) has none of its own. */
   link?: string;
+  /** Query params of the link, e.g. `{ role: 'customer' }`; the link is active only with them. */
+  query?: Params;
   exact?: boolean;
   badge?: Signal<number>;
   /** Makes the item an expandable group of sub-links. */
@@ -80,6 +90,14 @@ export class PanelShell {
   protected readonly photo = computed(() => this.user()?.avatarUrl || null);
 
   private readonly url = currentUrl();
+
+  /** A link with query params (e.g. Users by role) is active on its page with those params. */
+  protected readonly withQuery: IsActiveMatchOptions = {
+    paths: 'exact',
+    queryParams: 'subset',
+    matrixParams: 'ignored',
+    fragment: 'ignored',
+  };
 
   /** Groups whose page is open; they start expanded (a manual toggle wins until the next navigation). */
   protected readonly openGroups = linkedSignal(() => {

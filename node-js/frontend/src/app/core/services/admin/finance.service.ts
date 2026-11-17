@@ -42,7 +42,16 @@ export class FinanceService {
 
   due = (type: PayoutType) =>
     this.get<{ items: PayoutDue[] }>('payouts/due', { type }).pipe(map((d) => d.items));
-  payouts = (query: { type?: PayoutType; status?: PayoutStatus; page?: number; limit?: number }) =>
+  payouts = (query: {
+    type?: PayoutType;
+    status?: PayoutStatus;
+    /** One restaurant's payouts. */
+    restaurant?: string;
+    /** One rider's payouts (user id). */
+    rider?: string;
+    page?: number;
+    limit?: number;
+  }) =>
     this.get<Paginated<Payout>>('payouts', query);
   createPayout = (type: PayoutType, payeeId: string, note?: string) =>
     this.post<{ payout: Payout }>('payouts', { type, payeeId, note }).pipe(map((d) => d.payout));

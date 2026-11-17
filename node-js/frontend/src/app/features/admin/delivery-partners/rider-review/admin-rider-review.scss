@@ -5,15 +5,6 @@
   gap: var(--bb-space-4);
 }
 
-.back {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--bb-space-2);
-  color: inherit;
-  font-weight: 600;
-  --bb-icon-size: 18px;
-}
-
 .head {
   display: flex;
   flex-wrap: wrap;

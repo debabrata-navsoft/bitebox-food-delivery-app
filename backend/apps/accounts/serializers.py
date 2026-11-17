@@ -8,9 +8,17 @@ from typing import Any
 
 from rest_framework import serializers
 
-from apps.rbac.roles import ADMIN_ROLES, ALL_ROLES, STAFF_ADMIN_ROLES, Role
+from apps.rbac.roles import (
+    ADMIN_ROLES,
+    ALL_ROLES,
+    PERMISSION_VALUES,
+    STAFF_ADMIN_ROLES,
+    SUPER_ADMIN_ONLY,
+    Role,
+)
+from common.validation import PageQuery
 
-from .models import User, UserStatus
+from .models import Gender, User, UserStatus
 
 SELF_REGISTER_ROLES = (Role.CUSTOMER, Role.RESTAURANT, Role.DELIVERY)
 SELF_REGISTER_ROLE_VALUES = [r.value for r in SELF_REGISTER_ROLES]
@@ -206,38 +214,144 @@ class ChangePasswordInput(serializers.Serializer):
     new_password = NewPasswordField()
 
 
+GENDER_MESSAGE = f"Gender must be one of: {', '.join(Gender.values)}"
+
+
+def _gender() -> serializers.ChoiceField:
+    """Optional; null clears it."""
+    return serializers.ChoiceField(
+        choices=Gender.values,
+        required=False,
+        allow_null=True,
+        error_messages=dict.fromkeys(("invalid_choice", "blank"), GENDER_MESSAGE),
+    )
+
+
+def _avatar_url() -> serializers.URLField:
+    """An uploaded photo's URL (checked by the service); null or "" removes it."""
+    return serializers.URLField(max_length=500, required=False, allow_null=True, allow_blank=True)
+
+
 class UpdateProfileInput(serializers.Serializer):
     name = NameField(required=False)
     phone = PhoneField()
-    avatar_url = serializers.URLField(
-        max_length=500, required=False, allow_null=True, allow_blank=True
-    )
+    avatar_url = _avatar_url()
+    gender = _gender()
 
 
 # ---------------------------------------------------------------------------
 # Admin
 # ---------------------------------------------------------------------------
+STAFF_ROLE_MESSAGE = "Choose an operations, finance, support or operator role"
+
+
+class PermissionsField(serializers.Field):
+    """
+    A person's own permission keys (null resets them to the role preset). Errors are reported on
+    the field itself: an unknown key, or a super-admin-only one (admins:manage).
+    """
+
+    default_error_messages = {
+        "not_a_list": "Permissions must be a list of permission keys",
+        "unknown": "Unknown permission: {name}",
+        "super_admin_only": "{name} can only belong to the super admin",
+    }
+
+    def __init__(self, **kwargs: Any) -> None:
+        kwargs.setdefault("required", False)
+        kwargs.setdefault("allow_null", True)
+        super().__init__(**kwargs)
+
+    def to_internal_value(self, data: Any) -> list[str]:
+        if not isinstance(data, list) or not all(isinstance(k, str) for k in data):
+            self.fail("not_a_list")
+        for key in data:
+            if key not in PERMISSION_VALUES:
+                self.fail("unknown", name=key)
+            if key in SUPER_ADMIN_ONLY:
+                self.fail("super_admin_only", name=key)
+        return sorted(set(data))
+
+    def to_representation(self, value: Any) -> Any:
+        return value
+
+
 class StaffCreateInput(serializers.Serializer):
     name = NameField()
     email = EmailField()
     phone = PhoneField()
     password = NewPasswordField()
-    role = _choice(STAFF_ADMIN_ROLES, "Choose an operations, finance or support role")
+    role = _choice(STAFF_ADMIN_ROLES, STAFF_ROLE_MESSAGE)
+    permissions = PermissionsField()
 
 
 class StaffUpdateInput(serializers.Serializer):
     name = NameField(required=False)
     phone = PhoneField()
-    role = _choice(
-        STAFF_ADMIN_ROLES, "Choose an operations, finance or support role", required=False
+    role = _choice(STAFF_ADMIN_ROLES, STAFF_ROLE_MESSAGE, required=False)
+    permissions = PermissionsField()
+
+
+class MemberUpdateInput(serializers.Serializer):
+    """
+    PATCH /admin/users/:id: support corrects a member's name or date of birth. Email and phone are
+    the person's sign-in details and only they can change them (any sent are ignored).
+    """
+
+    name = NameField(required=False)
+    # Null clears it; the age rule is checked by coins.special.birth_date_from.
+    birth_date = serializers.RegexField(
+        r"^\d{4}-\d{2}-\d{2}$",
+        required=False,
+        allow_null=True,
+        error_messages=dict.fromkeys(("invalid", "blank"), "Enter the date as YYYY-MM-DD"),
     )
+    gender = _gender()
+    avatar_url = _avatar_url()
+
+
+STATUS_MESSAGE = f"Status must be one of: {', '.join(UserStatus.values)}"
+REASON_MESSAGE = "Give a reason (3-500 characters)"
+
+
+def reason_field() -> serializers.CharField:
+    """Why an admin made a change; checked (and maybe required) by `clean_reason`."""
+    return serializers.CharField(
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        trim_whitespace=True,
+        error_messages=dict.fromkeys(("invalid",), REASON_MESSAGE),
+    )
+
+
+def clean_reason(attrs: dict[str, Any], required: bool) -> str | None:
+    """3-500 characters, trimmed; required for some changes, optional (but checked) otherwise."""
+    reason = (attrs.get("reason") or "").strip()
+    if len(reason) > 500 or (reason and len(reason) < 3) or (required and not reason):
+        raise serializers.ValidationError({"reason": REASON_MESSAGE})
+    return reason or None
+
+
+class ReasonInput(serializers.Serializer):
+    reason = reason_field()
 
 
 class StatusInput(serializers.Serializer):
+    """
+    An account status change. Any status but `active` needs a reason (3-500 characters, trimmed);
+    reactivating may give one.
+    """
+
     status = serializers.ChoiceField(
         choices=UserStatus.values,
-        error_messages={"invalid_choice": f"Status must be one of: {', '.join(UserStatus.values)}"},
+        error_messages={"invalid_choice": STATUS_MESSAGE},
     )
+    reason = reason_field()
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        attrs["reason"] = clean_reason(attrs, attrs["status"] != UserStatus.ACTIVE)
+        return attrs
 
 
 class UserListQuery(serializers.Serializer):
@@ -252,6 +366,45 @@ class UserListQuery(serializers.Serializer):
         role_field = self.fields["role"]
         if isinstance(role_field, serializers.ChoiceField):
             role_field.choices = [r.value for r in roles]
+
+
+INVALID: dict[str, Any] = dict.fromkeys(
+    ("invalid", "invalid_choice", "null", "blank"), "Invalid value"
+)
+CUSTOMER_SORT_VALUES = ["newest", "oldest", "name", "orders", "spent"]
+VERIFICATION_VALUES = ["email_verified", "email_unverified", "phone_verified", "phone_unverified"]
+
+
+def optional_choice(choices: list[str]) -> serializers.ChoiceField:
+    """An optional list filter; a value outside `choices` is "Invalid value"."""
+    return serializers.ChoiceField(choices=choices, required=False, error_messages=INVALID)
+
+
+def day_field() -> serializers.DateField:
+    return serializers.DateField(required=False, input_formats=["%Y-%m-%d"], error_messages=INVALID)
+
+
+class JoinedListQuery(PageQuery):
+    """
+    The admin account lists (customers, restaurants, riders): page, limit and search, plus
+    `joined_from` / `joined_to` (calendar days in the report time zone) declared by each list.
+    """
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        start, end = attrs.get("joined_from"), attrs.get("joined_to")
+        if start and end and start > end:
+            raise serializers.ValidationError({"joined_to": "Must be on or after joinedFrom"})
+        return attrs
+
+
+class CustomerListQuery(JoinedListQuery):
+    """GET /admin/customers."""
+
+    status = optional_choice(UserStatus.values)
+    verification = optional_choice(VERIFICATION_VALUES)
+    joined_from = day_field()
+    joined_to = day_field()
+    sort = optional_choice(CUSTOMER_SORT_VALUES)
 
 
 # ---------------------------------------------------------------------------
@@ -277,10 +430,15 @@ def user_json(user: User) -> dict[str, Any]:
         "referral_code": user.referral_code,
         "birth_date": user.birth_date,
         "avatar_url": user.avatar_url,
+        "gender": user.gender,
+        "status_reason": user.status_reason,
+        "status_changed_at": user.status_changed_at,
     }
     data.update({k: v for k, v in optional.items() if v})
     if user.role in ADMIN_ROLES:
         data["permissions"] = user.permissions
+        # The person's own list (None = the role's preset), for the super admin's permission editor.
+        data["custom_permissions"] = user.custom_permissions
     return data
 
 
@@ -297,8 +455,15 @@ class UserOut(serializers.Serializer):
     referral_code = serializers.CharField(required=False)
     birth_date = serializers.DateField(required=False)
     avatar_url = serializers.URLField(required=False)
+    gender = serializers.ChoiceField(choices=Gender.values, required=False)
+    custom_permissions = serializers.ListField(
+        child=serializers.CharField(), required=False, allow_null=True
+    )  # admin roles: their own list, null for the role's preset
+    status_reason = serializers.CharField(required=False)
+    status_changed_at = serializers.DateTimeField(required=False)
     email_verified = serializers.BooleanField()
     phone_verified = serializers.BooleanField()
+    # Admin-panel accounts: their effective permissions.
     permissions = serializers.ListField(child=serializers.CharField(), required=False)
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()

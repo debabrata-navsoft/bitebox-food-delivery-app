@@ -5,6 +5,7 @@ import { environment } from '../../../../environments/environment';
 import {
   AuditEntry,
   LoginEntry,
+  PermissionCatalogue,
   PlatformSummary,
   StaffAdminInput,
   StaffAdminUpdate,
@@ -38,6 +39,13 @@ export class AdminStaffService {
       .pipe(map((r) => r.data.user));
   }
 
+  /** What a super admin can grant, grouped, and the ready-made permission sets. */
+  permissionCatalogue(): Observable<PermissionCatalogue> {
+    return this.http
+      .get<ApiResponse<PermissionCatalogue>>(`${this.url}/permissions`)
+      .pipe(map((r) => r.data));
+  }
+
   /** Sign-ins of a staff admin, newest first (Django API only: the Node API answers 404). */
   logins(id: string, page = 1, limit = 20): Observable<Paginated<LoginEntry>> {
     return this.http
@@ -54,9 +62,10 @@ export class AdminStaffService {
       .pipe(map((r) => r.data));
   }
 
-  setStatus(id: string, status: UserStatus): Observable<User> {
+  /** A reason is required for anything but `active`. */
+  setStatus(id: string, status: UserStatus, reason?: string): Observable<User> {
     return this.http
-      .patch<ApiResponse<{ user: User }>>(`${this.url}/${id}/status`, { status })
+      .patch<ApiResponse<{ user: User }>>(`${this.url}/${id}/status`, { status, reason: reason || undefined })
       .pipe(map((r) => r.data.user));
   }
 
@@ -64,6 +73,12 @@ export class AdminStaffService {
     action?: string;
     role?: string;
     search?: string;
+    accountType?: string;
+    /** Entries about one account or record. */
+    resourceId?: string;
+    /** ISO timestamps: entries at or after / at or before. */
+    from?: string;
+    to?: string;
     page?: number;
     limit?: number;
   }): Observable<Paginated<AuditEntry>> {

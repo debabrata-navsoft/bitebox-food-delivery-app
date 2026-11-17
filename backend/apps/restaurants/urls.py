@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import views, views_accounts
 
 urlpatterns = [
     path("restaurants", views.PublicListView.as_view()),
@@ -14,4 +14,15 @@ urlpatterns = [
     path("admin/restaurants/counts", views.AdminCountsView.as_view()),
     path("admin/restaurants/<str:id>", views.AdminDetailView.as_view()),
     path("admin/restaurants/<str:id>/status", views.AdminStatusView.as_view()),
+    path("admin/restaurant-accounts", views_accounts.RestaurantAccountsView.as_view()),
+    path("admin/restaurant-accounts/cities", views_accounts.RestaurantAccountCitiesView.as_view()),
+    path("admin/restaurant-accounts/<str:id>", views_accounts.RestaurantAccountView.as_view()),
+    path(
+        "admin/restaurant-accounts/<str:id>/status",
+        views_accounts.RestaurantAccountStatusView.as_view(),
+    ),
+    path(
+        "admin/restaurant-accounts/<str:id>/accepting-orders",
+        views_accounts.RestaurantAccountAcceptingOrdersView.as_view(),
+    ),
 ]

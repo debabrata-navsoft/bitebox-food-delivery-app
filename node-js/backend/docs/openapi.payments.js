@@ -312,6 +312,12 @@ export const paymentsPaths = {
           },
           description: "Where the order stands; cancelled includes rejected",
         },
+        {
+          in: "query",
+          name: "customer",
+          schema: { type: "string" },
+          description: "Payments of this customer's orders (user id)",
+        },
         ...paging,
       ],
       responses: { 200: ok({ type: "object" }), 403: err("Not an admin") },

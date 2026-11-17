@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  InjectionToken,
   computed,
   inject,
   signal,
@@ -19,7 +20,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ButtonToggleComponent, CheckboxComponent, IconComponent } from 'nexprime';
-import { firstValueFrom } from 'rxjs';
+import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { errorMessage, fieldErrors } from '../../../core/services/api-error';
 import { AddressService } from '../../../core/services/checkout-api.service';
@@ -41,6 +42,18 @@ import { NP_FORM_FIELDS } from '../../forms/np-form-fields';
 import { PhoneInput } from '../phone-input/phone-input';
 
 type AutoField = 'line1' | 'line2' | 'area' | 'city' | 'state' | 'postalCode';
+
+/**
+ * Whose address the dialog edits: by default the signed-in customer's (AddressService, their name
+ * and phone). Admins provide this to edit a customer's addresses (admin user page).
+ */
+export interface AddressOwner {
+  name: string;
+  phone?: string;
+  create(input: AddressInput): Observable<DeliveryAddress>;
+  update(id: string, input: Partial<AddressInput>): Observable<DeliveryAddress>;
+}
+export const ADDRESS_OWNER = new InjectionToken<AddressOwner>('ADDRESS_OWNER');
 
 @Component({
   selector: 'bb-address-form-dialog',
@@ -65,7 +78,8 @@ type AutoField = 'line1' | 'line2' | 'area' | 'city' | 'state' | 'postalCode';
 export class AddressFormDialog {
   protected readonly data = inject<DeliveryAddress | null>(MAT_DIALOG_DATA);
   private readonly ref = inject(MatDialogRef<AddressFormDialog, DeliveryAddress>);
-  private readonly service = inject(AddressService);
+  private readonly owner = inject(ADDRESS_OWNER, { optional: true });
+  private readonly service = this.owner ?? inject(AddressService);
   protected readonly geo = inject(GeolocationService);
   private readonly places = inject(DeliveryLocationService);
   private readonly user = inject(AuthService).user;
@@ -89,8 +103,8 @@ export class AddressFormDialog {
 
   protected readonly model = signal({
     label: (this.data?.label ?? 'home') as AddressLabel,
-    recipientName: this.data?.recipientName ?? this.user()?.name ?? '',
-    phone: this.data?.phone ?? this.user()?.phone ?? '',
+    recipientName: this.data?.recipientName ?? (this.owner ?? this.user())?.name ?? '',
+    phone: this.data?.phone ?? (this.owner ?? this.user())?.phone ?? '',
     line1: this.data?.line1 ?? '',
     line2: this.data?.line2 ?? '',
     area: this.data?.area ?? '',

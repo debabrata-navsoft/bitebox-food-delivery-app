@@ -332,9 +332,27 @@ export const ordersPaths = {
           schema: { type: "string" },
           description: "Order number",
         },
+        {
+          in: "query",
+          name: "customer",
+          schema: { type: "string" },
+          description: "Only orders placed by this user id (the status counts follow it too)",
+        },
+        {
+          in: "query",
+          name: "restaurant",
+          schema: { type: "string" },
+          description: "Only orders placed with this restaurant id (the status counts follow it too)",
+        },
+        {
+          in: "query",
+          name: "rider",
+          schema: { type: "string" },
+          description: "Only orders assigned to this rider (user id; the status counts follow it too)",
+        },
         ...paging,
       ],
-      responses: { 200: ok({ type: "object" }), 403: err("Not an admin") },
+      responses: { 200: ok({ type: "object" }), 403: err("Not an admin"), 422: err("Invalid id") },
     },
   },
   "/admin/orders/{id}": {
@@ -430,7 +448,7 @@ export const ordersPaths = {
   "/admin/users/{id}/logins": {
     get: {
       tags: T.admin,
-      summary: "Sign-in history of a customer, partner or rider (users:manage)",
+      summary: "Sign-in history of a customer, partner or rider (<kind>:view)",
       security: bearer,
       parameters: [idParam, ...paging],
       responses: { 200: ok({ type: "object" }), 404: err("Not found") },
@@ -472,14 +490,21 @@ export const ordersPaths = {
   "/admin/delivery-partners/{id}/status": {
     patch: {
       tags: T.adminRiders,
-      summary: "Suspend or reactivate a rider (not while carrying an order)",
+      summary:
+        "Change a rider's status (riders:manage). Any non-active status takes them offline and passes on their offer (not while carrying an order); the current status is a no-op",
       security: bearer,
       parameters: [idParam],
       requestBody: body({
         type: "object",
         required: ["status"],
         properties: {
-          status: { type: "string", enum: ["active", "suspended"] },
+          status: { type: "string", enum: ["active", "inactive", "suspended", "blocked"] },
+          reason: {
+            type: "string",
+            minLength: 3,
+            maxLength: 500,
+            description: "Required (trimmed) for every status but active",
+          },
         },
       }),
       responses: {

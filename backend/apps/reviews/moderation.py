@@ -120,6 +120,10 @@ def _admin_filter(query: dict[str, Any]) -> QuerySet[Review]:
         qs = qs.filter(rating=query["rating"])
     if query.get("restaurant_id"):
         qs = qs.filter(restaurant_id=query["restaurant_id"])
+    if query.get("customer"):
+        qs = qs.filter(customer_id=query["customer"])
+    if query.get("rider"):
+        qs = qs.filter(target=ReviewTarget.RIDER, delivery_partner_id=query["rider"])
     if query.get("reported") is True:
         qs = qs.filter(open_reports__gt=0)
     search = (query.get("search") or "").strip()

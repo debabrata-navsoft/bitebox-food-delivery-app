@@ -373,6 +373,9 @@ async function list(base, query, pagination) {
     and.push({ source: query.owner === COUPON_SOURCES.PLATFORM ? { $in: [query.owner, null] } : query.owner });
   if (query.from) and.push({ validUntil: { $gte: new Date(query.from) } });
   if (query.to) and.push({ validFrom: { $lte: new Date(query.to) } });
+  if (query.restaurant) {
+    and.push({ $or: [{ restaurant: query.restaurant }, { restaurants: query.restaurant }] });
+  }
   const filter = { $and: and };
   const [items, total] = await Promise.all([
     populated(

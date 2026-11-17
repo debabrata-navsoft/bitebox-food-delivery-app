@@ -1,4 +1,4 @@
-import { PERMISSIONS, hasPermission } from "../config/permissions.js";
+import { PERMISSIONS, effectivePermissions } from "../config/permissions.js";
 import { Server } from "socket.io";
 import { logger } from "../config/logger.js";
 import { isAllowedOrigin } from "../middleware/security.middleware.js";
@@ -25,7 +25,7 @@ export function attachRealtime(httpServer) {
         return next(unauthorized("Authentication required"));
       const payload = verifyAccessToken(token);
       const user = await User.findById(payload.sub).select(
-        "+tokenVersion role status",
+        "+tokenVersion role status customPermissions",
       );
       if (
         !user ||
@@ -34,7 +34,12 @@ export function attachRealtime(httpServer) {
       ) {
         return next(unauthorized("Session is no longer valid"));
       }
-      socket.data.user = { id: String(user._id), role: user.role };
+      // Effective permissions as of the handshake (the socket closes when the access token expires).
+      socket.data.user = {
+        id: String(user._id),
+        role: user.role,
+        permissions: effectivePermissions(user),
+      };
       socket.data.expiresAt = payload.exp * 1000;
       next();
     } catch (error) {
@@ -49,11 +54,11 @@ export function attachRealtime(httpServer) {
   });
 
   io.on("connection", async (socket) => {
-    const { id, role } = socket.data.user;
+    const { id, role, permissions } = socket.data.user;
     registerTracking(io, socket);
     const joined = [rooms.user(id)];
-    // Live order events for every admin role that can see orders.
-    if (hasPermission(role, PERMISSIONS.ORDERS_VIEW)) joined.push(rooms.admins);
+    // Live order events for every admin who can see orders.
+    if (permissions.includes(PERMISSIONS.ORDERS_VIEW)) joined.push(rooms.admins);
     if (role === ROLES.RESTAURANT) {
       const restaurant = await Restaurant.findOne({ owner: id }).select("_id");
       if (restaurant) joined.push(rooms.restaurant(restaurant._id));

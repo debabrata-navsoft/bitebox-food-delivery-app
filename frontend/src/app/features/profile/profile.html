@@ -55,6 +55,34 @@
               [error]="shownError(profileForm.phone)"
             />
           </div>
+          <div class="bb-form-row">
+            <div class="bb-field">
+              <np-select [formField]="profileForm.gender" label="Gender" [options]="genderOptions" />
+            </div>
+            @if (isCustomer()) {
+              @if (savedBirthDate(); as day) {
+                <div class="bb-field locked">
+                  <span class="label">Date of birth</span>
+                  <span>{{ day | date: 'd MMM y' }}</span>
+                  <small class="bb-muted">Saved. Contact support to correct it.</small>
+                </div>
+              } @else {
+                <div class="bb-field">
+                  <np-calendar
+                    [formField]="profileForm.birthDate"
+                    label="Date of birth"
+                    dateFormat="dd M yy"
+                    [maxDate]="born.latest"
+                    [minDate]="born.earliest"
+                    placeholder="DD Mon YYYY"
+                    showIcon
+                  />
+                  <bb-field-error [field]="profileForm.birthDate" />
+                  <small class="bb-muted">For your birthday treat. You can set it once.</small>
+                </div>
+              }
+            }
+          </div>
           <div class="actions">
             <button
               mat-flat-button

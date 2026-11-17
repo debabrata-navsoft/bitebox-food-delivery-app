@@ -8,6 +8,7 @@ import { ApiError } from "../utils/api-error.js";
 import { ACTORS, transition } from "./order-workflow.service.js";
 import { startSweepLoop } from "../utils/sweep-loop.js";
 import { notifyOffer } from "./order-notifications.js";
+import { AVAILABILITY_SOURCES, setOnline } from "./rider-availability.service.js";
 
 const S = ORDER_STATUS;
 const DISTANCE_BUCKET_M = 500;
@@ -214,10 +215,13 @@ export async function sweep(now = new Date()) {
       { returnDocument: "after" },
     );
     if (!cleared) continue;
-    await DeliveryPartner.updateOne(
-      { user: rider, currentOffer: order._id },
-      { $set: { currentOffer: null, isOnline: false } },
-    );
+    // An unanswered offer takes the rider offline (recorded in their availability history).
+    await setOnline(rider, false, {
+      source: AVAILABILITY_SOURCES.SYSTEM,
+      reason: "Did not answer a delivery offer",
+      set: { currentOffer: null },
+      where: { currentOffer: order._id },
+    });
     summary.expiredOffers++;
     emitOrderUpdated(cleared, { alsoNotify: [rider] });
   }

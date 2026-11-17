@@ -44,6 +44,8 @@ export class ReportsService {
     orderState?: OrderState;
     /** Order number, or the customer's name, email or phone. */
     search?: string;
+    /** One customer's payments (user id). */
+    customer?: string;
     from?: string;
     to?: string;
     page?: number;

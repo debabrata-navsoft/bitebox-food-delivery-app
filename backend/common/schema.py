@@ -40,3 +40,11 @@ def envelope(name: str, data: Any = None) -> Any:
 
 def errors(*codes: int) -> dict[int, OpenApiResponse]:
     return {code: OpenApiResponse(ERROR) for code in codes}
+
+
+def pagination(name: str) -> Any:
+    """The `pagination` object of a paged list (common.pagination.paginate)."""
+    return inline_serializer(
+        name=name,
+        fields={k: serializers.IntegerField() for k in ("page", "limit", "total", "total_pages")},
+    )
