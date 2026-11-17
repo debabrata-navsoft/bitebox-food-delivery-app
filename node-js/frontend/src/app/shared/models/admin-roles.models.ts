@@ -1,7 +1,7 @@
 import { Paginated, Pagination } from './api.models';
 import { OrderStatus, PaymentStatus } from './checkout.models';
 import { PaymentInfo, PaymentMethod } from './payment.models';
-import { AdminRole, Permission, StaffAdminRole, User, UserStatus } from './user.models';
+import { AdminRole, Permission, StaffAdminRole, User } from './user.models';
 
 // ---------------------------------------------------------------------------
 // Admin management and audit log
@@ -22,13 +22,6 @@ export type StaffAdminUpdate = Partial<Pick<StaffAdminInput, 'name' | 'phone' | 
 export interface PermissionCatalogue {
   permissions: { key: Permission; label: string; group: string }[];
   presets: { key: string; label: string; permissions: Permission[] }[];
-}
-export interface StaffQuery {
-  role?: AdminRole;
-  status?: UserStatus;
-  search?: string;
-  page?: number;
-  limit?: number;
 }
 
 export interface AuditEntry {

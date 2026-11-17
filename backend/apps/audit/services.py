@@ -18,10 +18,12 @@ from datetime import datetime
 from typing import Any
 
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from apps.rbac.roles import ADMIN_ROLE_VALUES
+from common.filters import Facet, apply_facets, with_facets
 from common.pagination import Page, paginate
 
 from .models import AccountType, AuditLog
@@ -148,14 +150,17 @@ def audited(
     return decorator
 
 
-def list_entries(query: dict[str, Any], page: Page) -> dict[str, Any]:
-    qs = AuditLog.objects.select_related("admin").order_by("-created_at")
-    if query.get("action"):
-        qs = qs.filter(action=query["action"])
-    if query.get("role"):
-        qs = qs.filter(admin_role=query["role"])
-    if query.get("account_type"):
-        qs = qs.filter(account_type=query["account_type"])
+AUDIT_ACCOUNT_TYPES = [v for v in AccountType.values if v]
+AUDIT_FACETS = (
+    Facet("action"),  # the actions that occur, by count
+    Facet("role", values=ADMIN_ROLE_VALUES, field="admin_role"),
+    Facet("account_type", values=AUDIT_ACCOUNT_TYPES),
+)
+
+
+def _entries(query: dict[str, Any]) -> QuerySet[AuditLog]:
+    """The entries matching the filters; `action`, `role` and `account_type` take several values."""
+    qs = apply_facets(AuditLog.objects.all(), query, AUDIT_FACETS)
     if query.get("resource_id"):  # a list of up to 5 ids
         qs = qs.filter(resource_id__in=query["resource_id"])
     if search := (query.get("search") or "").strip():
@@ -166,8 +171,13 @@ def list_entries(query: dict[str, Any], page: Page) -> dict[str, Any]:
         qs = qs.filter(created_at__gte=start)
     if end:
         qs = qs.filter(created_at__lte=end)
+    return qs
+
+
+def list_entries(query: dict[str, Any], page: Page) -> dict[str, Any]:
+    qs = _entries(query).select_related("admin").order_by("-created_at")
     items, meta = paginate(qs, page)
-    return {
+    result = {
         "items": [
             {
                 "id": str(e.pk),
@@ -189,3 +199,4 @@ def list_entries(query: dict[str, Any], page: Page) -> dict[str, Any]:
         ],
         "pagination": meta,
     }
+    return with_facets(result, query, _entries, AUDIT_FACETS)

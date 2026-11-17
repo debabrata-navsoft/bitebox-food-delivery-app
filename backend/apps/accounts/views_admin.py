@@ -16,10 +16,18 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.audit.models import AccountType
-from apps.audit.services import account_type_of, audited, list_entries, note
+from apps.audit.services import (
+    AUDIT_ACCOUNT_TYPES,
+    AUDIT_FACETS,
+    account_type_of,
+    audited,
+    list_entries,
+    note,
+)
 from apps.customers import services as addresses
 from apps.customers.views import SavedAddressInput
 from apps.rbac.roles import (
+    ADMIN_ROLE_VALUES,
     ADMIN_ROLES,
     MEMBER_ROLES,
     ROLE_LABEL,
@@ -28,6 +36,16 @@ from apps.rbac.roles import (
     permission_catalogue,
 )
 from common.api import ok
+from common.filters import (
+    FACETS_PARAM,
+    FacetQuery,
+    MultiValueField,
+    day_params,
+    facets_page,
+    multi_choice,
+    multi_param,
+    page_params,
+)
 from common.pagination import Page
 from common.permissions import permission_required
 from common.schema import envelope, errors, pagination
@@ -42,6 +60,7 @@ from .serializers import (
     CustomerListQuery,
     MemberUpdateInput,
     StaffCreateInput,
+    StaffListQuery,
     StaffUpdateInput,
     StatusInput,
     UserListQuery,
@@ -55,6 +74,9 @@ USER_PAGE = envelope(
     inline_serializer(
         name="UserPageData", fields={"items": UserOut(many=True), "pagination": PAGINATION}
     ),
+)
+STAFF_PAGE = facets_page(
+    "StaffPage", admin.STAFF_FACETS, items=UserOut(many=True), paging=PAGINATION
 )
 USER = envelope(
     "AdminUserResponse", inline_serializer(name="AdminUserData", fields={"user": UserOut()})
@@ -276,12 +298,8 @@ class CustomerListItem(UserOut):
     stats = CustomerListStats()
 
 
-CUSTOMER_PAGE = envelope(
-    "CustomerPage",
-    inline_serializer(
-        name="CustomerPageData",
-        fields={"items": CustomerListItem(many=True), "pagination": PAGINATION},
-    ),
+CUSTOMER_PAGE = facets_page(
+    "CustomerPage", admin.CUSTOMER_FACETS, items=CustomerListItem(many=True), paging=PAGINATION
 )
 NO_DATA = envelope("CustomerHelpSent")
 
@@ -295,16 +313,12 @@ class CustomersView(APIView):
         tags=["Admin: customers"],
         operation_id="admin_customers_list",
         parameters=[
-            OpenApiParameter("page", int),
-            OpenApiParameter("limit", int),
-            OpenApiParameter(
-                "search", str, description="Name, email, phone, the id or its last 6+ characters"
-            ),
-            OpenApiParameter("status", str, enum=USER_STATUS_VALUES),
-            OpenApiParameter("verification", str, enum=VERIFICATION_VALUES),
-            OpenApiParameter("joinedFrom", str, description="YYYY-MM-DD (report time zone)"),
-            OpenApiParameter("joinedTo", str, description="YYYY-MM-DD, inclusive"),
+            *page_params("Name, email, phone, the id or its last 6+ characters"),
+            multi_param("status", USER_STATUS_VALUES),
+            multi_param("verification", VERIFICATION_VALUES),
+            *day_params("joined"),
             OpenApiParameter("sort", str, enum=CUSTOMER_SORT_VALUES),
+            FACETS_PARAM,
         ],
         responses={200: CUSTOMER_PAGE, **errors(401, 403, 422)},
     )
@@ -371,12 +385,17 @@ class StaffListView(APIView):
     @extend_schema(
         tags=["Admin: staff"],
         operation_id="admin_admins_list",
-        parameters=LIST_PARAMS,
-        responses={200: USER_PAGE, **errors(401, 403, 422)},
+        parameters=[
+            *page_params(),
+            multi_param("role", ADMIN_ROLE_VALUES),
+            multi_param("status", USER_STATUS_VALUES),
+            FACETS_PARAM,
+        ],
+        responses={200: STAFF_PAGE, **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
-        query, page = _list_query(request, ADMIN_ROLES)
-        return ok(admin.list_staff(query, page))
+        query = validated(StaffListQuery, request.query_params)
+        return ok(admin.list_staff(query, Page.from_query(query)))
 
     @extend_schema(
         tags=["Admin: staff"],
@@ -485,12 +504,10 @@ class StaffStatusView(APIView):
         )
 
 
-class AuditQuery(PageQuery):
-    action = serializers.CharField(required=False, max_length=60)
-    role = serializers.ChoiceField(choices=[r.value for r in ADMIN_ROLES], required=False)
-    account_type = serializers.ChoiceField(
-        choices=[v for v in AccountType.values if v], required=False
-    )
+class AuditQuery(FacetQuery, PageQuery):
+    action = MultiValueField(max_length=60)
+    role = multi_choice(ADMIN_ROLE_VALUES)
+    account_type = multi_choice(AUDIT_ACCOUNT_TYPES)
     # One id, or up to 5 separated by commas (a restaurant's entries and its owner's).
     resource_id = serializers.CharField(
         required=False,
@@ -545,21 +562,17 @@ class AuditLogView(APIView):
     @extend_schema(
         tags=["Admin: audit"],
         parameters=[
-            *LIST_PARAMS[:3],
-            OpenApiParameter("action", str),
-            OpenApiParameter("role", str),
-            OpenApiParameter("accountType", str, enum=[v for v in AccountType.values if v]),
+            *page_params(),
+            multi_param("action"),
+            multi_param("role", ADMIN_ROLE_VALUES),
+            multi_param("accountType", AUDIT_ACCOUNT_TYPES),
             OpenApiParameter("resourceId", str, description="One id, or up to 5 comma-separated"),
             OpenApiParameter("from", str),
             OpenApiParameter("to", str),
+            FACETS_PARAM,
         ],
         responses={
-            200: envelope(
-                "AuditPage",
-                inline_serializer(
-                    name="AuditPageData", fields={"items": AUDIT_ENTRY, "pagination": PAGINATION}
-                ),
-            ),
+            200: facets_page("AuditPage", AUDIT_FACETS, items=AUDIT_ENTRY, paging=PAGINATION),
             **errors(401, 403, 422),
         },
     )

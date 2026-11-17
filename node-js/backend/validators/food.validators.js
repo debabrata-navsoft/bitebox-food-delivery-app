@@ -1,12 +1,16 @@
 import { body, query } from "express-validator";
 import {
   booleanQuery,
+  facetsQuery,
   imageUrlBody,
+  multiId,
+  multiValue,
   mongoIdParam,
   paginationRules,
   paiseBody,
   searchQuery,
 } from "./common.validators.js";
+import { FOOD_AVAILABILITY, FOOD_TYPES } from "../services/food.service.js";
 
 function foodRules({ partial }) {
   const field = (name) => (partial ? body(name).optional() : body(name));
@@ -59,8 +63,16 @@ const listRules = [
 
 export const ownerListRules = listRules;
 export const adminListRules = [
-  ...listRules,
-  query("restaurant").optional().isMongoId(),
+  ...paginationRules,
+  searchQuery(),
+  booleanQuery("available"),
+  booleanQuery("veg"),
+  // One value or several, comma-separated (OR).
+  multiId("restaurant"),
+  multiId("category"),
+  multiValue("type", FOOD_TYPES),
+  multiValue("availability", FOOD_AVAILABILITY),
+  facetsQuery(),
 ];
 export const publicSearchRules = [
   ...paginationRules,

@@ -1359,6 +1359,12 @@ np-time-picker .time-picker-field {
   }
 }
 
+// "Clear filters" under a filtered list's empty state.
+.bb-list-clear {
+  margin: 0 0 var(--bb-space-5);
+  text-align: center;
+}
+
 // A card holding a list or table edge to edge, with a paginator at the bottom.
 .bb-list-card {
   padding: 0;

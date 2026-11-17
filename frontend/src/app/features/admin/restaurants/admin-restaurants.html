@@ -11,40 +11,44 @@
   (activeTabChange)="selectTabId($event)"
 />
 
-<np-text-input
-  class="search"
-  [formField]="filters.search"
-  ariaLabel="Search restaurants"
+<bb-list-toolbar
+  class="toolbar"
+  [list]="restaurants"
+  [sections]="filterSections"
+  searchLabel="Search restaurants"
   placeholder="Search by name, city or cuisine"
-  icon="search"
-  clearable
 />
 
-@if (error()) {
+@if (list.error(); as message) {
   <div class="bb-alert error" role="alert">
     <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
-    <span>{{ error() }} <button class="bb-link-button" (click)="load(1)">Retry</button></span>
+    <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
   </div>
 }
 
-<div class="bb-card list-card" [attr.aria-busy]="loading()">
-  @if (loading() && restaurants().length === 0) {
+<div class="bb-card list-card" [attr.aria-busy]="list.loading()">
+  @if (list.showSkeleton()) {
     @for (i of [1, 2, 3]; track i) {
       <span class="bb-skeleton row-skeleton"></span>
     }
-  } @else if (restaurants().length === 0) {
-    <bb-empty-state
-      icon="storefront"
-      [title]="'No ' + tabs[activeTab()].label.toLowerCase() + ' restaurants'"
-      [message]="
-        tabs[activeTab()].status === 'pending'
-          ? 'New applications will appear here for review.'
-          : undefined
-      "
-    />
+  } @else if (list.empty()) {
+    @if (restaurants.filtered()) {
+      <bb-empty-state icon="storefront" title="No restaurants match these filters" />
+      <p class="bb-list-clear"><button type="button" class="bb-link-button" (click)="restaurants.clear()">Clear filters</button></p>
+    } @else {
+      <bb-empty-state
+        icon="storefront"
+        [title]="'No ' + tabs[activeTab()].label.toLowerCase() + ' restaurants'"
+        [message]="
+          tabs[activeTab()].status === 'pending'
+            ? 'New applications will appear here for review.'
+            : undefined
+        "
+      />
+    }
   } @else {
-    <ul class="rows" [class.dim]="loading()">
-      @for (r of restaurants(); track r.id) {
+    <ul class="rows" [class.dim]="list.loading()">
+      @for (r of list.data()!.items; track r.id) {
         <li>
           <a [routerLink]="['/admin/restaurants', r.id]" class="row">
             @if (r.imageUrl | usableImage) {
@@ -66,13 +70,15 @@
       }
     </ul>
   }
-  <np-pagination
-    variant="compact"
-    [page]="pagination().page"
-    [rows]="pagination().limit"
-    [totalRecords]="pagination().total"
-    [rowsOptions]="[10, 25, 50]"
-    (pageChange)="goTo($event)"
-    (rowsChange)="goTo(1, $event)"
-  />
+  @if (list.data(); as page) {
+    <np-pagination
+      variant="compact"
+      [page]="page.pagination.page"
+      [rows]="page.pagination.limit"
+      [totalRecords]="page.pagination.total"
+      [rowsOptions]="[10, 25, 50]"
+      (pageChange)="list.goTo($event)"
+      (rowsChange)="list.goTo(1, $event)"
+    />
+  }
 </div>

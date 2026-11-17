@@ -1,3 +1,19 @@
+import { dayParams, facetsParam, multi } from "./openapi.filters.js";
+
+const ORDER_STATUSES = [
+  "pending",
+  "confirmed",
+  "rejected",
+  "preparing",
+  "ready_for_pickup",
+  "assigned",
+  "arrived_at_restaurant",
+  "picked_up",
+  "on_the_way",
+  "delivered",
+  "cancelled",
+];
+
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` });
 const ok = (data, description = "Success") => ({
   description,
@@ -317,15 +333,13 @@ export const ordersPaths = {
       tags: T.admin,
       summary: "All orders, with counts per status",
       security: bearer,
+      description:
+        "Items, pagination and counts (orders per status, following only the customer, restaurant and rider filters). Several values in one filter: any of them; filters combine with AND.",
       parameters: [
-        {
-          in: "query",
-          name: "status",
-          schema: {
-            type: "string",
-            description: "An order status, or 'active'",
-          },
-        },
+        multi("status", [...ORDER_STATUSES, "active"], "Order statuses; active = every in-progress status"),
+        multi("paymentMethod", ["cod", "online"]),
+        multi("paymentStatus", ["pending", "paid", "failed", "refunded", "partially_refunded", "cancelled"]),
+        ...dayParams("placedFrom", "placedTo", "day placed"),
         {
           in: "query",
           name: "search",
@@ -338,21 +352,17 @@ export const ordersPaths = {
           schema: { type: "string" },
           description: "Only orders placed by this user id (the status counts follow it too)",
         },
-        {
-          in: "query",
-          name: "restaurant",
-          schema: { type: "string" },
-          description: "Only orders placed with this restaurant id (the status counts follow it too)",
-        },
+        multi("restaurant", "id", "Only orders placed with these restaurant ids (the status counts follow it too)"),
         {
           in: "query",
           name: "rider",
           schema: { type: "string" },
           description: "Only orders assigned to this rider (user id; the status counts follow it too)",
         },
+        facetsParam(["status", "paymentMethod", "paymentStatus", "restaurant"], [], ["restaurant"]),
         ...paging,
       ],
-      responses: { 200: ok({ type: "object" }), 403: err("Not an admin"), 422: err("Invalid id") },
+      responses: { 200: ok({ type: "object" }), 403: err("Not an admin"), 422: err("Invalid filter value") },
     },
   },
   "/admin/orders/{id}": {
@@ -478,13 +488,24 @@ export const ordersPaths = {
     get: {
       tags: T.adminRiders,
       summary: "Delivery partners with availability and current delivery",
+      description:
+        "Several values in one filter: any of them; filters combine with AND. verification: pending = sent everything, waiting for review; not_submitted = pending with something still to send.",
       security: bearer,
       parameters: [
         { in: "query", name: "search", schema: { type: "string" } },
-        { in: "query", name: "online", schema: { type: "boolean" } },
+        { in: "query", name: "online", schema: { type: "boolean" }, description: "true: online riders only" },
+        multi("verification", ["pending", "approved", "rejected", "resubmission_requested", "not_submitted"]),
+        multi(
+          "availability",
+          ["online", "offline", "busy"],
+          "online: online and free; offline; busy: online carrying an order",
+        ),
+        multi("vehicleType", ["bicycle", "scooter", "motorbike", "car"]),
+        multi("zone", null, "Exact zone, any letter case"),
+        facetsParam(["verification", "availability", "vehicleType", "zone"], ["zone"]),
         ...paging,
       ],
-      responses: { 200: ok({ type: "object" }) },
+      responses: { 200: ok({ type: "object" }), 422: err("Invalid filter value") },
     },
   },
   "/admin/delivery-partners/{id}/status": {

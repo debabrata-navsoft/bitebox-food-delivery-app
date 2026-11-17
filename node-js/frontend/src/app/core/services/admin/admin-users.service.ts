@@ -5,6 +5,7 @@ import { environment } from '../../../../environments/environment';
 import { ApiResponse, Paginated } from '../../../shared/models/api.models';
 import { LoginEntry } from '../../../shared/models/admin-roles.models';
 import { toParams } from '../http-params';
+import { Faceted, ListQuery } from '../../../shared/list/filtered-list';
 import { AddressInput, DeliveryAddress } from '../../../shared/models/checkout.models';
 import { Gender, Role, User, UserStatus } from '../../../shared/models/user.models';
 
@@ -29,26 +30,6 @@ export interface AdminUserDetail {
   };
   /** Restaurant partners: the restaurant they own. */
   restaurant: { id: string; name: string; slug: string; status: string } | null;
-}
-
-export type CustomerVerification =
-  | 'email_verified'
-  | 'email_unverified'
-  | 'phone_verified'
-  | 'phone_unverified';
-export type CustomerSort = 'newest' | 'oldest' | 'name' | 'orders' | 'spent';
-
-/** GET /admin/customers filters. */
-export interface CustomerQuery {
-  search?: string;
-  status?: UserStatus;
-  verification?: CustomerVerification;
-  /** YYYY-MM-DD, inclusive. */
-  joinedFrom?: string;
-  joinedTo?: string;
-  sort?: CustomerSort;
-  page?: number;
-  limit?: number;
 }
 
 /** A customer in the Account management list. */
@@ -122,9 +103,10 @@ export class AdminUsersService {
   }
 
   /** Account management: customers with their order totals. */
-  customers(query: CustomerQuery): Observable<Paginated<CustomerRow>> {
+  /** Filters: search, status, verification (several values each), joinedFrom/To, sort; `facets: 1` adds counts. */
+  customers(query: ListQuery): Observable<Faceted<CustomerRow>> {
     return this.http
-      .get<ApiResponse<Paginated<CustomerRow>>>(this.customersUrl, { params: toParams(query) })
+      .get<ApiResponse<Faceted<CustomerRow>>>(this.customersUrl, { params: toParams(query) })
       .pipe(map((res) => res.data));
   }
 

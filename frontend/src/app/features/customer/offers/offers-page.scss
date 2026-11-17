@@ -3,12 +3,21 @@
 .page {
   padding-block: var(--bb-space-5);
 }
-// The kinds scroll sideways on phones instead of wrapping.
+// The kinds: a segmented bar, or on phones a dropdown (the bar doesn't fit).
 .kinds {
-  overflow-x: auto;
   margin-bottom: var(--bb-space-2);
-  padding-bottom: 2px;
-  scrollbar-width: none;
+
+  .menu {
+    display: none;
+  }
+  @include bp.phone-only {
+    .bar {
+      display: none;
+    }
+    .menu {
+      display: block;
+    }
+  }
 }
 .section {
   margin: var(--bb-space-4) 0 var(--bb-space-2);

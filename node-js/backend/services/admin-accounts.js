@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { env } from "../config/env.js";
 import { nextDay, zoneDayStart } from "../utils/dates.js";
+import { USER_STATUS } from "../models/user.model.js";
 import { escapeRegex, paginationMeta } from "../utils/pagination.js";
 import { phoneForms } from "./otp.service.js";
 
@@ -32,6 +33,13 @@ export function personSearch(search) {
   // "+91 98765 43210" finds "9876543210".
   if (/\d/.test(search)) or.push({ phone: { $in: phoneForms(search) } });
   return or;
+}
+
+/** `{ $or }` matching `search` (any letter case) in any of `fields`, or null without a search. */
+export function textSearch(search, fields) {
+  if (!search) return null;
+  const pattern = new RegExp(escapeRegex(search), "i");
+  return { $or: fields.map((field) => ({ [field]: pattern })) };
 }
 
 /** A `createdAt` condition for inclusive YYYY-MM-DD days in the report time zone, or null. */
@@ -112,3 +120,172 @@ export const ADDRESS_FIELDS = ["line1", "line2", "area", "city", "state", "posta
 export const ADDRESS_LINES = ADDRESS_FIELDS.map((f) => `address.${f}`);
 export const addressLines = (address) =>
   Object.fromEntries(ADDRESS_FIELDS.map((f) => [`address.${f}`, blank(address?.[f])]));
+
+/*
+ * Multi-value filters and facet counts, shared by the admin lists.
+ *
+ * A list adopts them in four steps:
+ *   1. validators: `multiValue(name, allowedValues | null)` per filter and `facetsQuery()`;
+ *   2. one filter builder `filterFor(query)` (async allowed) returning a filter, or the stages up
+ *      to the filtered rows; it reads each filter with `inList` / `anyMatch` (OR within a field)
+ *      and joins them with `allOf` (AND across fields);
+ *   3. a facet map, e.g. `{ status: USER_STATUS_FACET, city: openFacet("$address.city") }`
+ *      (ids: `idFacet("$restaurant", Restaurant)` adds each one's name as `label`);
+ *   4. `...(await facetsIf(query, Model, facets, filterFor))` in the result.
+ */
+
+/** A multi-value filter's values as a list: one value or several; nothing gives []. */
+export const listOf = (value) =>
+  value === undefined || value === null || value === "" ? [] : Array.isArray(value) ? value : [value];
+
+/** `{ [field]: { $in: values } }` for the selected values (each through `map`), or null when none is. */
+export function inList(field, value, map) {
+  const values = listOf(value);
+  return values.length ? { [field]: { $in: map ? values.map(map) : values } } : null;
+}
+
+/** `{ $or }` of `matches[value]` for the selected values, or null when none is. */
+export function anyMatch(value, matches) {
+  const values = listOf(value);
+  return values.length ? { $or: values.map((v) => matches[v]) } : null;
+}
+
+/** A filter matching every given clause (falsy ones are skipped); `{}` when none is given. */
+export function allOf(...clauses) {
+  const and = clauses.filter(Boolean);
+  return and.length ? { $and: and } : {};
+}
+
+/**
+ * The KYC filter's stages for a list whose `stages()` add each row's `kycStatus`: none without
+ * a selection (rows then get it on the page only), else the state for every row, then the match.
+ */
+export const kycFilterStages = (kyc, stages) =>
+  listOf(kyc).length ? [...stages(), { $match: inList("kycStatus", kyc) }] : [];
+
+/** Open-value facets list at most this many values. */
+export const FACET_LIMIT = 50;
+
+/**
+ * Every value of `values`, in that order (0 when no row has it). `by` is an aggregation
+ * expression giving a row's value; `stages` (array or function returning one) compute it first.
+ */
+export const fixedFacet = (values, by, stages = []) => ({ kind: "fixed", values, by, stages });
+/** An account's status (users' `status`). */
+export const USER_STATUS_FACET = fixedFacet(Object.values(USER_STATUS), "$status");
+/** Fixed values that may overlap: `conditions` maps each value to a boolean expression. */
+export const flagFacet = (conditions, stages = []) => ({ kind: "flags", conditions, stages });
+/**
+ * The values that occur (trimmed, the same name in any letter case once, capitals first), most
+ * rows first then A to Z, at most FACET_LIMIT. Empty values are left out.
+ */
+export const openFacet = (by, stages = []) => ({ kind: "open", by, stages });
+
+/**
+ * The ids that occur (`by` gives a row's id), each `{ value: id, label, count }` with `label` the
+ * `labelField` of that id's document in `Model` (null when it is gone): most rows first, then by
+ * label A to Z (ignoring case), at most FACET_LIMIT. Rows without an id are left out.
+ */
+export const idFacet = (by, Model, { labelField = "name", stages = [] } = {}) => ({
+  kind: "id",
+  by,
+  Model,
+  labelField,
+  stages,
+});
+
+/** An aggregation expression: `path` trimmed, "" when missing. */
+export const trimmed = (path) => ({ $trim: { input: { $ifNull: [path, ""] } } });
+
+/** The stages counting one facet, starting from the filtered rows. */
+function countStages(facet) {
+  const pre = typeof facet.stages === "function" ? facet.stages() : facet.stages;
+  if (facet.kind === "flags") {
+    const sums = Object.values(facet.conditions).map((cond, i) => [
+      `c${i}`,
+      { $sum: { $cond: [cond, 1, 0] } },
+    ]);
+    return [...pre, { $group: { _id: null, ...Object.fromEntries(sums) } }];
+  }
+  if (facet.kind === "fixed") return [...pre, { $group: { _id: facet.by, count: { $sum: 1 } } }];
+  if (facet.kind === "id")
+    return [
+      ...pre,
+      { $group: { _id: facet.by, count: { $sum: 1 } } },
+      { $match: { _id: { $ne: null } } },
+      {
+        $lookup: {
+          from: facet.Model.collection.name,
+          localField: "_id",
+          foreignField: "_id",
+          pipeline: [{ $project: { [facet.labelField]: 1 } }],
+          as: "doc",
+        },
+      },
+      { $project: { count: 1, label: { $ifNull: [{ $first: `$doc.${facet.labelField}` }, null] } } },
+      { $addFields: { key: { $toLower: { $ifNull: ["$label", ""] } } } },
+      { $sort: { count: -1, key: 1, _id: 1 } },
+      { $limit: FACET_LIMIT },
+    ];
+  return [
+    ...pre,
+    { $project: { v: trimmed(facet.by) } },
+    { $match: { v: { $ne: "" } } },
+    { $group: { _id: { $toLower: "$v" }, value: { $min: "$v" }, count: { $sum: 1 } } },
+    { $sort: { count: -1, _id: 1, value: 1 } },
+    { $limit: FACET_LIMIT },
+  ];
+}
+
+/** `[{ value, count }]` (id facets: `[{ value, label, count }]`) from countStages' result rows. */
+function shapeCounts(facet, rows) {
+  if (facet.kind === "flags")
+    return Object.keys(facet.conditions).map((value, i) => ({ value, count: rows[0]?.[`c${i}`] ?? 0 }));
+  if (facet.kind === "fixed") {
+    const counts = new Map(rows.map((r) => [r._id, r.count]));
+    return facet.values.map((value) => ({ value, count: counts.get(value) ?? 0 }));
+  }
+  if (facet.kind === "id")
+    return rows.map((r) => ({ value: String(r._id), label: r.label, count: r.count }));
+  return rows.map((r) => ({ value: r.value, count: r.count }));
+}
+
+/**
+ * `{ name: [{ value, count }] }` for every facet in `facets`, counted in the database. Each facet
+ * applies the search, date ranges and every other filter, but not its own selection: facets with
+ * no selection share one aggregation (`$facet`), each selected one runs its own.
+ * `filterFor(query)` builds the list's filter or filter stages (see the adoption steps above).
+ */
+export async function facetCounts(Model, facets, filterFor, query) {
+  const stagesFor = async (q) => {
+    const filter = await filterFor(q);
+    return Array.isArray(filter) ? filter : [{ $match: filter }];
+  };
+  const names = Object.keys(facets);
+  const selected = names.filter((n) => listOf(query[n]).length);
+  const shared = names.filter((n) => !selected.includes(n));
+  const result = {};
+  const jobs = selected.map(async (name) => {
+    const rows = await Model.aggregate([
+      ...(await stagesFor({ ...query, [name]: undefined })),
+      ...countStages(facets[name]),
+    ]);
+    result[name] = shapeCounts(facets[name], rows);
+  });
+  if (shared.length)
+    jobs.push(
+      (async () => {
+        const [row] = await Model.aggregate([
+          ...(await stagesFor(query)),
+          { $facet: Object.fromEntries(shared.map((n) => [n, countStages(facets[n])])) },
+        ]);
+        for (const name of shared) result[name] = shapeCounts(facets[name], row[name]);
+      })(),
+    );
+  await Promise.all(jobs);
+  return Object.fromEntries(names.map((n) => [n, result[n]]));
+}
+
+/** `{ facets }` (see facetCounts) when the query asks for them (`facets=1`), else `{}` (no queries). */
+export const facetsIf = async (query, Model, facets, filterFor) =>
+  query.facets ? { facets: await facetCounts(Model, facets, filterFor, query) } : {};

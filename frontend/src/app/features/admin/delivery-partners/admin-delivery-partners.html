@@ -3,18 +3,12 @@
   subtitle="Riders, their availability and current deliveries."
 />
 
-<div class="filters">
-  <np-text-input
-    class="search"
-    [formField]="filters.search"
-    ariaLabel="Search riders"
-    placeholder="Search name, email or phone"
-    icon="search"
-    clearable
-  />
-  <np-select [formField]="filters.verification" ariaLabel="Verification" [options]="verificationOptions" />
-  <np-toggle [formField]="filters.onlineOnly" label="Online only" />
-</div>
+<bb-list-toolbar
+  [list]="riders"
+  [sections]="filterSections"
+  searchLabel="Search riders"
+  placeholder="Search name, email or phone"
+/>
 
 @if (list.error(); as message) {
   <div class="bb-alert error" role="alert">
@@ -30,6 +24,9 @@
     }
   } @else if (list.empty()) {
     <bb-empty-state icon="two_wheeler" title="No delivery partners match these filters" />
+    @if (riders.filtered()) {
+      <p class="bb-list-clear"><button type="button" class="bb-link-button" (click)="riders.clear()">Clear filters</button></p>
+    }
   } @else {
     <ul class="rows" [class.dim]="list.loading()">
       @for (r of list.data()!.items; track r.id) {

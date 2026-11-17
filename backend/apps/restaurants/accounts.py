@@ -21,7 +21,7 @@ from django.db.models import (
     Value,
     When,
 )
-from django.db.models.functions import Coalesce, Trim
+from django.db.models.functions import Coalesce
 
 from apps.accounts.admin_services import (
     ACCOUNT_SORTS,
@@ -31,7 +31,7 @@ from apps.accounts.admin_services import (
     order_totals,
     person_search,
 )
-from apps.accounts.models import User
+from apps.accounts.models import User, UserStatus
 from apps.accounts.serializers import user_json
 from apps.audit.services import change
 from apps.finance.earnings import commissions_for
@@ -40,6 +40,7 @@ from apps.kyc.models import DocumentKind, KycDocument
 from apps.orders.models import Order
 from apps.rbac.roles import Permission, Role, has_permission
 from common.api import ApiError
+from common.filters import Facet, apply_facets, with_facets
 from common.pagination import Page, paginate
 from common.permissions import NO_ACCESS
 
@@ -90,16 +91,17 @@ def _search(search: str) -> Q:
     )
 
 
+FACETS = (
+    services.STATUS_FACET,
+    Facet("account_status", values=UserStatus.values, field="owner__status"),
+    kyc.KYC_FACET,
+    services.CITY_FACET,
+)
+
+
 def _restaurants(query: dict[str, Any]) -> QuerySet[Restaurant]:
-    qs = _with_kyc(Restaurant.objects.select_related("owner"))
-    if query.get("status"):
-        qs = qs.filter(status=query["status"])
-    if query.get("account_status"):
-        qs = qs.filter(owner__status=query["account_status"])
-    if query.get("kyc"):
-        qs = qs.filter(kyc_state=query["kyc"])  # type: ignore[misc]
-    if city := (query.get("city") or "").strip():
-        qs = qs.annotate(city_trimmed=Trim("city")).filter(city_trimmed__iexact=city)
+    """The restaurants matching the filters (FACETS, joined days, `search`)."""
+    qs = apply_facets(_with_kyc(Restaurant.objects.select_related("owner")), query, FACETS)
     qs = qs.filter(joined_between(query))
     if search := (query.get("search") or "").strip():
         qs = qs.filter(_search(search))
@@ -165,7 +167,7 @@ def list_accounts(query: dict[str, Any], page: Page) -> dict[str, Any]:
         }
         for r in rows
     ]
-    return {"items": items, "pagination": meta}
+    return with_facets({"items": items, "pagination": meta}, query, _restaurants, FACETS)
 
 
 def cities() -> list[str]:

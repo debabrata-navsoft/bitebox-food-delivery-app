@@ -5,17 +5,12 @@
   <np-button severity="primary" icon="user-round-plus" label="New admin or operator" (clicked)="create()" />
 </bb-page-header>
 
-<div class="bb-filters">
-  <np-text-input
-    [formField]="filters.search"
-    ariaLabel="Search admins"
-    placeholder="Search name, email or phone"
-    icon="search"
-    clearable
-  />
-  <np-select [formField]="filters.role" ariaLabel="Role" [options]="roleOptions" />
-  <np-select [formField]="filters.status" ariaLabel="Status" [options]="statusOptions" />
-</div>
+<bb-list-toolbar
+  [list]="admins"
+  [sections]="filterSections"
+  searchLabel="Search admins"
+  placeholder="Search name, email or phone"
+/>
 
 @if (list.error(); as message) {
   <div class="bb-alert error" role="alert">

@@ -3,30 +3,15 @@ import { Injectable, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { ApiResponse, Paginated } from '../../../shared/models/api.models';
+import { ApiResponse } from '../../../shared/models/api.models';
 import { Restaurant, RestaurantStatus, RestaurantUpdate } from '../../../shared/models/catalog.models';
-import { User, UserStatus } from '../../../shared/models/user.models';
+import { User } from '../../../shared/models/user.models';
 import { toParams } from '../http-params';
+import { Faceted, ListQuery } from '../../../shared/list/filtered-list';
 import { MyRestaurantService, MyRestaurantState } from '../my-restaurant.service';
 
 export type KycState = 'verified' | 'pending' | 'incomplete' | 'rejected';
-export type RestaurantAccountSort = 'newest' | 'oldest' | 'name' | 'orders' | 'rating';
 type Rating = { average: number; count: number };
-
-/** GET /admin/restaurant-accounts filters. */
-export interface RestaurantAccountQuery {
-  search?: string;
-  status?: RestaurantStatus;
-  /** The owner's account status. */
-  accountStatus?: UserStatus;
-  kyc?: KycState;
-  city?: string;
-  joinedFrom?: string;
-  joinedTo?: string;
-  sort?: RestaurantAccountSort;
-  page?: number;
-  limit?: number;
-}
 
 export interface RestaurantAccountRow {
   id: string;
@@ -66,12 +51,11 @@ export class AdminRestaurantAccountsService {
   private readonly http = inject(HttpClient);
   private readonly url = `${environment.baseUrl}/admin/restaurant-accounts`;
 
-  list = (query: RestaurantAccountQuery): Observable<Paginated<RestaurantAccountRow>> =>
+  /** Filters: search, status, accountStatus, kyc, city (several values each), joinedFrom/To, sort; `facets: 1` adds counts. */
+  list = (query: ListQuery): Observable<Faceted<RestaurantAccountRow>> =>
     this.http
-      .get<ApiResponse<Paginated<RestaurantAccountRow>>>(this.url, { params: toParams(query) })
+      .get<ApiResponse<Faceted<RestaurantAccountRow>>>(this.url, { params: toParams(query) })
       .pipe(map((r) => r.data));
-  cities = (): Observable<string[]> =>
-    this.http.get<ApiResponse<{ cities: string[] }>>(`${this.url}/cities`).pipe(map((r) => r.data.cities));
   get = (id: string): Observable<RestaurantAccount> =>
     this.http.get<ApiResponse<RestaurantAccount>>(`${this.url}/${id}`).pipe(map((r) => r.data));
   update = (id: string, input: RestaurantUpdate) => this.send('PATCH', id, '', input);

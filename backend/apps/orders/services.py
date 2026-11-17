@@ -12,9 +12,10 @@ from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.db import IntegrityError, transaction
-from django.db.models import Count, ExpressionWrapper, F, IntegerField, Q, Sum
+from django.db.models import Count, ExpressionWrapper, F, IntegerField, Q, QuerySet, Sum
 from django.utils import timezone
 
+from apps.accounts.admin_services import days_between
 from apps.accounts.models import User, UserStatus
 from apps.cart import services as cart_services
 from apps.cart.models import Cart
@@ -32,6 +33,7 @@ from apps.restaurants.models import Restaurant
 from apps.restaurants.presenters import geo_json
 from apps.reviews.models import Review, ReviewStatus, ReviewTarget
 from common.api import ApiError
+from common.filters import Facet, apply_facets, with_facets
 from common.geo import haversine_m
 from common.pagination import Page, paginate
 
@@ -521,33 +523,60 @@ def rider_history(user: User, page: Page) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Admin
 # ---------------------------------------------------------------------------
-def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
-    """
-    All orders, filterable by status (or "active"), customer and restaurant, and searchable by
-    order number. The status counts follow the customer and restaurant filters.
-    """
+def _statuses(values: list[str]) -> Q:
+    """The statuses asked for; "active" stands for every in-progress status."""
+    wanted = {s for s in values if s != "active"}
+    if "active" in values:
+        wanted.update(ACTIVE_STATUSES)
+    return Q(status__in=wanted)
+
+
+# The filters the status `counts` ignore (restaurant is in the scope, _admin_scope).
+ORDER_FACETS = (
+    Facet("status", values=S.values, match=_statuses),
+    Facet("payment_method", values=PaymentMethod.values),
+    Facet("payment_status", values=PaymentStatus.values),
+)
+# The restaurants that occur, by count.
+ADMIN_FACETS = (*ORDER_FACETS, Facet("restaurant", label="restaurant__name"))
+
+
+def _admin_scope(query: dict[str, Any]) -> QuerySet[Order]:
+    """The customer, restaurant and rider filters (the status `counts` follow these only)."""
     scope = Order.objects.all()
     if customer := query.get("customer"):
         scope = scope.filter(customer_id=customer)
-    if restaurant := query.get("restaurant"):
-        scope = scope.filter(restaurant_id=restaurant)
+    if query.get("restaurant"):
+        scope = scope.filter(restaurant_id__in=query["restaurant"])
     if rider := query.get("rider"):
         scope = scope.filter(delivery_partner_id=rider)
-    qs = scope
-    status = query.get("status")
-    if status == "active":
-        qs = qs.filter(status__in=ACTIVE_STATUSES)
-    elif status:
-        qs = qs.filter(status=status)
+    return scope
+
+
+def _admin_orders(query: dict[str, Any]) -> QuerySet[Order]:
+    """The orders matching every filter; each list-valued filter matches any of its values."""
+    qs = apply_facets(_admin_scope(query), query, ORDER_FACETS)
+    qs = qs.filter(days_between(query, "placed"))
     if search := (query.get("search") or "").strip():
         qs = qs.filter(order_number__icontains=search.upper())
+    return qs
+
+
+def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
+    """
+    All orders, filterable by status (or "active"), payment method and status, restaurant,
+    customer, rider and the day placed, and searchable by order number. The status counts follow
+    the customer, restaurant and rider filters only; `?facets=1` adds the filter panel's counts.
+    """
+    qs = _admin_orders(query)
     rows, meta = paginate(qs.prefetch_related("items").order_by("-created_at"), page)
-    counts = scope.values("status").annotate(n=Count("pk")).order_by()
-    return {
+    counts = _admin_scope(query).values("status").annotate(n=Count("pk")).order_by()
+    result = {
         "items": [presenters.list_json(o) for o in rows],
         "pagination": meta,
         "counts": {c["status"]: c["n"] for c in counts},
     }
+    return with_facets(result, query, _admin_orders, ADMIN_FACETS)
 
 
 def admin_get(order_id: uuid.UUID) -> dict[str, Any]:

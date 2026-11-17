@@ -3,7 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse, Paginated } from '../../shared/models/api.models';
-import { OrderStatus, VehicleType } from '../../shared/models/checkout.models';
+import { Faceted, ListQuery } from '../../shared/list/filtered-list';
+import { Order, VehicleType } from '../../shared/models/checkout.models';
 import {
   AdminOrder,
   AdminOrderList,
@@ -159,20 +160,14 @@ export class AdminOrdersService {
   private readonly http = inject(HttpClient);
   private readonly api = `${environment.baseUrl}/admin`;
 
-  list(query: {
-    status?: OrderStatus | 'active';
-    search?: string;
-    /** Only this customer's orders (user id). */
-    customer?: string;
-    /** Only this restaurant's orders. */
-    restaurant?: string;
-    /** Only orders assigned to this rider (user id). */
-    rider?: string;
-    page?: number;
-    limit?: number;
-  }): Observable<AdminOrderList> {
+  /**
+   * Filters: status (several, or `active` for every in-progress status), paymentMethod,
+   * paymentStatus, restaurant (several each), placedFrom/placedTo days, search, and one customer,
+   * restaurant or rider (user id for customer and rider); `facets: 1` adds the panel's counts.
+   */
+  list(query: ListQuery): Observable<AdminOrderList & Pick<Faceted<Order>, 'facets'>> {
     return this.http
-      .get<ApiResponse<AdminOrderList>>(`${this.api}/orders`, { params: toParams(query) })
+      .get<ApiResponse<AdminOrderList & Pick<Faceted<Order>, 'facets'>>>(`${this.api}/orders`, { params: toParams(query) })
       .pipe(map((r) => r.data));
   }
 
@@ -217,15 +212,13 @@ export class AdminOrdersService {
       .pipe(map((r) => r.data));
   }
 
-  riders(query: {
-    search?: string;
-    online?: boolean;
-    verification?: RiderReviewState;
-    page?: number;
-    limit?: number;
-  }): Observable<Paginated<AdminRider>> {
+  /**
+   * Filters: verification, availability, vehicleType, zone (several each), search; the boolean
+   * `online` (free or busy) still works; `facets: 1` adds the panel's counts.
+   */
+  riders(query: ListQuery | { online?: boolean; verification?: RiderReviewState; limit?: number }): Observable<Faceted<AdminRider>> {
     return this.http
-      .get<ApiResponse<Paginated<AdminRider>>>(`${this.api}/delivery-partners`, {
+      .get<ApiResponse<Faceted<AdminRider>>>(`${this.api}/delivery-partners`, {
         params: toParams(query),
       })
       .pipe(map((r) => r.data));

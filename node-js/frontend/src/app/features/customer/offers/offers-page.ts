@@ -2,7 +2,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { ButtonToggleComponent, IconComponent } from 'nexprime';
+import { ButtonToggleComponent, SelectComponent, IconComponent } from 'nexprime';
 import { CartService } from '../../../core/services/cart.service';
 import { OrderService } from '../../../core/services/checkout-api.service';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -22,7 +22,7 @@ type Action = { label: 'APPLY' | 'APPLIED' | 'COPY' | 'VIEW'; slug?: string } | 
  */
 @Component({
   selector: 'bb-offers-page',
-  imports: [RouterLink, ButtonToggleComponent, IconComponent, EmptyState, CouponTicket, PageHeader],
+  imports: [RouterLink, ButtonToggleComponent, SelectComponent, IconComponent, EmptyState, CouponTicket, PageHeader],
   templateUrl: './offers-page.html',
   styleUrl: './offers-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -59,7 +59,7 @@ const isDay = (value) =>
   new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
 
 /** Optional `from` and `to` days (YYYY-MM-DD); `to` before `from` fails on `to`. */
-export function dayRangeRules(from, to, { message, orderMessage = message } = {}) {
+export function dayRangeRules(from, to, { message = "Invalid value", orderMessage = message } = {}) {
   const day = (name) => query(name).optional().isString().custom(isDay).withMessage(message);
   return [
     day(from),
@@ -84,3 +84,42 @@ export const requiredReason = (when) =>
     .trim()
     .isLength({ min: 3, max: 500 })
     .withMessage("The reason must be 3-500 characters");
+
+/**
+ * A query value as a list: comma-separated (`status=active,suspended`) and/or repeated, each item
+ * trimmed, empty items dropped. Non-string items are kept so validation rejects them.
+ */
+export const splitList = (value) =>
+  (Array.isArray(value) ? value : [value])
+    .flatMap((v) => (typeof v === "string" ? v.split(",") : [v]))
+    .map((v) => (typeof v === "string" ? v.trim() : v))
+    .filter((v) => v !== "");
+
+/** A 24-character hex id (a MongoDB ObjectId as text). */
+const isObjectId = (value) => /^[0-9a-f]{24}$/i.test(value);
+
+/**
+ * A multi-value list filter: one value or several, comma-separated, sanitised to an array (empty
+ * when nothing usable was given, which services treat as "no filter"). `allowed` is the list of
+ * valid values, a test (`(value) => boolean`), or null for free text of 1-`maxLength`
+ * characters. Any invalid item fails the field.
+ */
+export function multiValue(name, allowed, { message = "Invalid value", maxLength = 60, maxItems = 50 } = {}) {
+  const valid =
+    typeof allowed === "function"
+      ? allowed
+      : allowed
+        ? (v) => allowed.includes(v)
+        : (v) => v.length <= maxLength;
+  return query(name)
+    .optional()
+    .customSanitizer(splitList)
+    .custom((values) => values.length <= maxItems && values.every((v) => typeof v === "string" && valid(v)))
+    .withMessage(message);
+}
+
+/** A multi-value filter of ids (restaurants, categories...): each item must be an id. */
+export const multiId = (name) => multiValue(name, isObjectId);
+
+/** `facets=1` (true/false/1/0): also return the list's facet counts (see admin-accounts#facetCounts). */
+export const facetsQuery = () => booleanQuery("facets");

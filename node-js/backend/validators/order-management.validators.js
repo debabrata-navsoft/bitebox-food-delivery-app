@@ -1,14 +1,19 @@
 import { body, query } from "express-validator";
 import { VEHICLE_TYPES, VERIFICATION_STATUS } from "../models/delivery-partner.model.js";
-import { ORDER_STATUS } from "../models/order.model.js";
+import { ORDER_STATUS, PAYMENT_METHODS, PAYMENT_STATUS } from "../models/order.model.js";
 import {
   booleanQuery,
+  dayRangeRules,
+  facetsQuery,
+  multiId,
+  multiValue,
   latitudeRule,
   longitudeRule,
   mongoIdParam,
   paginationRules,
   searchQuery,
 } from "./common.validators.js";
+import { RIDER_AVAILABILITY, RIDER_VERIFICATION_FILTERS } from "../services/admin-delivery-partners.service.js";
 
 const S = ORDER_STATUS;
 const reason = (required = false) => {
@@ -93,16 +98,19 @@ export const riderHistoryRules = paginationRules;
 
 // Admin
 export const adminOrderListRules = [
-  query("status")
-    .optional()
-    .isIn([...Object.values(S), "active"]),
+  // Several values allowed (OR); `active` = every in-progress status.
+  multiValue("status", [...Object.values(S), "active"]),
+  multiValue("paymentMethod", Object.values(PAYMENT_METHODS)),
+  multiValue("paymentStatus", Object.values(PAYMENT_STATUS)),
+  ...dayRangeRules("placedFrom", "placedTo"),
   searchQuery(),
   // Orders placed by one customer (the admin user view).
   query("customer").optional().isMongoId().withMessage("Invalid id"),
-  // Orders placed with one restaurant (the admin restaurant account view).
-  query("restaurant").optional().isMongoId().withMessage("Invalid id"),
+  // Orders placed with one or several restaurants (also the admin restaurant account view).
+  multiId("restaurant"),
   // Orders assigned to one rider (the admin delivery partner account view).
   query("rider").optional().isMongoId().withMessage("Invalid id"),
+  facetsQuery(),
   ...paginationRules,
 ];
 export const adminCancelRules = [mongoIdParam(), reason(true)];
@@ -119,7 +127,12 @@ export const adminAssignRules = [
 export const adminRiderListRules = [
   searchQuery(),
   booleanQuery("online"),
-  query("verification").optional().isIn([...Object.values(VERIFICATION_STATUS), "not_submitted"]),
+  // One value or several, comma-separated (OR).
+  multiValue("verification", RIDER_VERIFICATION_FILTERS),
+  multiValue("availability", RIDER_AVAILABILITY),
+  multiValue("vehicleType", VEHICLE_TYPES),
+  multiValue("zone", null),
+  facetsQuery(),
   ...paginationRules,
 ];
 export const adminRiderVerificationRules = [

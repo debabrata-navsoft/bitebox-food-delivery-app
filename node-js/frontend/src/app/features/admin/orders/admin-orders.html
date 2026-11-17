@@ -3,17 +3,12 @@
   subtitle="Every order on BiteBox. Open one to see its history or step in."
 />
 
-<div class="filters">
-  <np-text-input
-    class="search"
-    [formField]="filters.search"
-    ariaLabel="Search by order number"
-    placeholder="Search order number, e.g. BB-261102"
-    icon="search"
-    clearable
-  />
-  <np-select [formField]="filters.status" ariaLabel="Order status" [options]="statusOptions()" />
-</div>
+<bb-list-toolbar
+  [list]="orders"
+  [sections]="filterSections"
+  searchLabel="Search by order number"
+  placeholder="Search order number, e.g. BB-261102"
+/>
 
 @if (customer(); as id) {
   <div class="bb-alert info" role="status">
@@ -39,6 +34,9 @@
     }
   } @else if (list.empty()) {
     <bb-empty-state icon="receipt_long" title="No orders match these filters" />
+    @if (orders.filtered()) {
+      <p class="bb-list-clear"><button type="button" class="bb-link-button" (click)="orders.clear()">Clear filters</button></p>
+    }
   } @else {
     <ul class="rows" [class.dim]="list.loading()">
       @for (o of list.data()!.items; track o.id) {

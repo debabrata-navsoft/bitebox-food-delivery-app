@@ -3,25 +3,13 @@
   subtitle="Riders: their vehicle, zone, deliveries, verification, availability and account status."
 />
 
-<div class="bb-filters">
-  <np-text-input
-    class="search"
-    [formField]="filters.search"
-    ariaLabel="Search delivery partners"
-    placeholder="Name, email, mobile, vehicle number or ID"
-    icon="search"
-    clearable
-  />
-  <np-select [formField]="filters.verification" ariaLabel="Verification" [options]="verificationOptions" />
-  <np-select [formField]="filters.availability" ariaLabel="Availability" [options]="availabilityOptions" />
-  <np-select [formField]="filters.kyc" ariaLabel="KYC status" [options]="kycOptions" />
-  <np-select [formField]="filters.accountStatus" ariaLabel="Account status" [options]="accountOptions" />
-  <np-select [formField]="filters.zone" ariaLabel="Delivery zone" [options]="zoneOptions()" />
-  <np-select [formField]="filters.vehicleType" ariaLabel="Vehicle" [options]="vehicleOptions" />
-  <np-calendar [formField]="filters.joinedFrom" placeholder="Joined from" dateFormat="dd M yy" showIcon />
-  <np-calendar [formField]="filters.joinedTo" placeholder="Joined to" dateFormat="dd M yy" showIcon />
-  <np-select [formField]="filters.sort" ariaLabel="Sort" [options]="sortOptions" />
-</div>
+<bb-list-toolbar
+  [list]="accounts"
+  [sections]="filterSections"
+  searchLabel="Search delivery partners"
+  placeholder="Name, email, mobile, vehicle number or ID"
+  [sortOptions]="sortOptions"
+/>
 
 @if (list.error(); as message) {
   <div class="bb-alert error" role="alert">

@@ -1,3 +1,5 @@
+import { dayParams, described, facetsParam, multi, q } from "./openapi.filters.js";
+
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` });
 const ok = (description = "Success", data = { type: "object" }) => ({
   description,
@@ -27,7 +29,6 @@ const body = (properties, required = []) => ({
 const strings = (...names) => Object.fromEntries(names.map((n) => [n, { type: "string" }]));
 const bearer = [{ bearerAuth: [] }];
 const id = { in: "path", name: "id", required: true, schema: { type: "string" } };
-const q = (name, schema) => ({ in: "query", name, schema });
 const paging = [
   q("page", { type: "integer", minimum: 1 }),
   q("limit", { type: "integer", minimum: 1, maximum: 100 }),
@@ -110,16 +111,9 @@ export const adminRolesTags = [
 export const adminRolesSchemas = {};
 
 const VERIFICATION = ["email_verified", "email_unverified", "phone_verified", "phone_unverified"];
-const described = (param, description) => ({ ...param, description });
 const search = (description) => described(q("search", { type: "string", maxLength: 100 }), description);
 /** joinedFrom and joinedTo: inclusive days in the report time zone; `what`: e.g. "day created". */
-const joinedDays = (what) => [
-  described(q("joinedFrom", { type: "string", format: "date" }), `First ${what} (inclusive), in the report time zone`),
-  described(
-    q("joinedTo", { type: "string", format: "date" }),
-    `Last ${what} (inclusive), in the report time zone; before joinedFrom is 422`,
-  ),
-];
+const joinedDays = (what) => dayParams("joinedFrom", "joinedTo", what);
 const sortParam = (values, description) =>
   described(q("sort", { type: "string", enum: values, default: "newest" }), description);
 /** An operation of `tag` needing permission `who`; `extra.note` is added to the description. */
@@ -159,15 +153,16 @@ export const adminRolesPaths = {
           search(
             "Restaurant name or slug, owner name, email or phone (any stored form), or the restaurant id: the full id or its last 6+ characters (a leading # is ignored)",
           ),
-          q("status", { type: "string", enum: RESTAURANT_STATUS }),
-          { ...q("accountStatus", { type: "string", enum: ACCOUNT_STATUS }), description: "The owner's account status" },
-          {
-            ...q("kyc", { type: "string", enum: KYC_STATES }),
-            description:
-              "rejected: a required document was rejected; incomplete: a required document or the bank account is missing; pending: a document awaits review; verified: everything approved",
-          },
-          { ...q("city", { type: "string" }), description: "Exact city, any letter case" },
+          multi("status", RESTAURANT_STATUS),
+          multi("accountStatus", ACCOUNT_STATUS, "The owner's account status"),
+          multi(
+            "kyc",
+            KYC_STATES,
+            "rejected: a required document was rejected; incomplete: a required document or the bank account is missing; pending: a document awaits review; verified: everything approved",
+          ),
+          multi("city", null, "Exact city, any letter case"),
           ...joinedDays("day created"),
+          facetsParam(["status", "accountStatus", "kyc", "city"], ["city"]),
           sortParam(
             ["newest", "oldest", "name", "orders", "rating"],
             "orders: most first; rating: highest average, then most ratings. Ties: newest first",
@@ -239,20 +234,22 @@ export const adminRolesPaths = {
           search(
             "Name, email, phone (any stored form), vehicle number (any letter case, spaces ignored), or the rider id: the full id or its last 6+ characters (a leading # is ignored)",
           ),
-          { ...q("accountStatus", { type: "string", enum: ACCOUNT_STATUS }), description: "The rider's account status" },
-          q("verification", { type: "string", enum: RIDER_VERIFICATION }),
-          {
-            ...q("availability", { type: "string", enum: ["online", "offline", "busy"] }),
-            description: "online: online and free; busy: online and carrying an order; offline",
-          },
-          {
-            ...q("kyc", { type: "string", enum: KYC_STATES }),
-            description:
-              "The rider checklist (driving licence, vehicle RC, identity proof) and bank account: rejected, incomplete (a document or the bank account missing), pending, verified",
-          },
-          { ...q("zone", { type: "string" }), description: "Exact zone, any letter case" },
-          q("vehicleType", { type: "string", enum: VEHICLE_TYPES }),
+          multi("accountStatus", ACCOUNT_STATUS, "The rider's account status"),
+          multi("verification", RIDER_VERIFICATION),
+          multi(
+            "availability",
+            ["online", "offline", "busy"],
+            "online: online and free; busy: online and carrying an order; offline",
+          ),
+          multi(
+            "kyc",
+            KYC_STATES,
+            "The rider checklist (driving licence, vehicle RC, identity proof) and bank account: rejected, incomplete (a document or the bank account missing), pending, verified",
+          ),
+          multi("zone", null, "Exact zone, any letter case"),
+          multi("vehicleType", VEHICLE_TYPES),
           ...joinedDays("day joined"),
+          facetsParam(["verification", "availability", "kyc", "accountStatus", "zone", "vehicleType"], ["zone"]),
           sortParam(
             ["newest", "oldest", "name", "deliveries", "rating"],
             "deliveries: most completed first; rating: highest average, then most ratings. Ties: newest first",
@@ -357,9 +354,10 @@ export const adminRolesPaths = {
           search(
             "Name, email or phone (any stored form), or the customer id: the full id or its last 6+ characters (a leading # is ignored)",
           ),
-          q("status", { type: "string", enum: ACCOUNT_STATUS }),
-          q("verification", { type: "string", enum: VERIFICATION }),
+          multi("status", ACCOUNT_STATUS),
+          multi("verification", VERIFICATION, "Several values: customers matching any of them"),
           ...joinedDays("sign-up day"),
+          facetsParam(["status", "verification"]),
           sortParam(["newest", "oldest", "name", "orders", "spent"], "orders and spent: most first. Ties: newest first"),
         ],
       },
@@ -382,9 +380,10 @@ export const adminRolesPaths = {
       who: "admins:manage",
       params: [
         ...paging,
-        q("role", { type: "string", enum: ["admin", ...STAFF_ROLES] }),
-        q("status", { type: "string", enum: ACCOUNT_STATUS }),
+        multi("role", ["admin", ...STAFF_ROLES]),
+        multi("status", ACCOUNT_STATUS),
         q("search", { type: "string" }),
+        facetsParam(["role", "status"]),
       ],
     }),
     post: op(A, "Create an operations, finance or support admin, or an operator", {
@@ -461,9 +460,9 @@ export const adminRolesPaths = {
       who: "audit:view",
       params: [
         ...paging,
-        q("action", { type: "string" }),
-        q("role", { type: "string" }),
-        q("accountType", { type: "string", enum: ["customer", "restaurant", "delivery", "admin"] }),
+        multi("action", null, "Exact action, e.g. order.cancel"),
+        multi("role", ["admin", ...STAFF_ROLES], "The acting admin's role"),
+        multi("accountType", ["customer", "restaurant", "delivery", "admin"]),
         {
           ...q("resourceId", { type: "string" }),
           description: "One resource id, or up to 5 separated by commas (e.g. a restaurant and its owner)",
@@ -471,6 +470,7 @@ export const adminRolesPaths = {
         q("search", { type: "string" }),
         q("from", { type: "string", format: "date-time" }),
         q("to", { type: "string", format: "date-time" }),
+        facetsParam(["action", "role", "accountType"], ["action"]),
       ],
       },
     ),

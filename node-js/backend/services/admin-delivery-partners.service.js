@@ -1,5 +1,6 @@
 import {
   DeliveryPartner,
+  VEHICLE_TYPES,
   VERIFICATION_STATUS as V,
   verificationOf,
 } from "../models/delivery-partner.model.js";
@@ -12,17 +13,27 @@ import {
   ADDRESS_LINES,
   addressLines,
   aggregatePage,
+  allOf,
+  anyMatch,
   blank,
   distinctNames,
+  facetsIf,
+  fixedFacet,
   idSearch,
+  inList,
   joinedRange,
+  kycFilterStages,
   kycSummary,
+  listOf,
   listSorts,
   NEWEST,
+  openFacet,
   personSearch,
   ratingOf,
   sameName,
+  textSearch,
   toId,
+  USER_STATUS_FACET,
 } from "./admin-accounts.js";
 import { updateMember } from "./admin-users.service.js";
 import { diff } from "./audit.service.js";
@@ -31,9 +42,12 @@ import {
   adminSetVerification,
   findRider,
   getOrCreateProfile,
+  NOT_SUBMITTED,
+  submittedRiderIds,
+  submittedStages,
   takeOffline,
 } from "./delivery-partner.service.js";
-import { reverify, riderKycStages } from "./kyc.service.js";
+import { KYC_STATES, reverify, riderKycStages } from "./kyc.service.js";
 import { AVAILABILITY_SOURCES, history } from "./rider-availability.service.js";
 
 /**
@@ -60,7 +74,7 @@ function vehicleSearch(search) {
 /** Account-level conditions (on users). */
 async function userFilter({ search, accountStatus, joinedFrom, joinedTo }) {
   const filter = { role: ROLES.DELIVERY };
-  if (accountStatus) filter.status = accountStatus;
+  Object.assign(filter, inList("status", accountStatus));
   const joined = joinedRange(joinedFrom, joinedTo);
   if (joined) filter.createdAt = joined;
   if (search) {
@@ -104,17 +118,39 @@ const profileStages = [
   },
 ];
 
-/** Profile-level conditions (after profileStages). */
-function riderFilter({ verification, availability, zone, vehicleType }) {
-  const filter = {};
-  if (verification) filter.verificationStatus = verification;
-  if (availability === "online") Object.assign(filter, { isOnline: true, busy: false });
-  else if (availability === "offline") filter.isOnline = false;
-  else if (availability === "busy") filter.busy = true;
-  if (zone) filter["rider.zone"] = sameName(zone);
-  if (vehicleType) filter["rider.vehicleType"] = vehicleType;
-  return filter;
-}
+/** The `availability` values: online and free, offline, online carrying an order. */
+export const RIDER_AVAILABILITY = ["online", "offline", "busy"];
+const AVAILABILITY_MATCH = {
+  online: { isOnline: true, busy: false },
+  offline: { isOnline: false },
+  busy: { busy: true },
+};
+
+/** Profile-level conditions (after profileStages) shared by both rider lists; each takes several values (OR). */
+const profileFilters = ({ availability, zone, vehicleType }) => [
+  anyMatch(availability, AVAILABILITY_MATCH),
+  inList("rider.zone", zone, sameName),
+  inList("rider.vehicleType", vehicleType),
+];
+
+/** The list's filter stages: the KYC state is computed for every matching rider when filtering by it. */
+const riderPipeline = async (query) => [
+  { $match: await userFilter(query) },
+  ...profileStages,
+  { $match: allOf(inList("verificationStatus", query.verification), ...profileFilters(query)) },
+  ...kycFilterStages(query.kyc, riderKycStages),
+];
+
+const FACETS = {
+  verification: fixedFacet(Object.values(V), "$verificationStatus"),
+  availability: fixedFacet(RIDER_AVAILABILITY, {
+    $cond: ["$busy", "busy", { $cond: ["$isOnline", "online", "offline"] }],
+  }),
+  kyc: fixedFacet(KYC_STATES, "$kycStatus", riderKycStages),
+  accountStatus: USER_STATUS_FACET,
+  zone: openFacet("$rider.zone"),
+  vehicleType: fixedFacet(VEHICLE_TYPES, "$rider.vehicleType"),
+};
 
 const SORTS = listSorts({
   deliveries: { completedDeliveries: -1, ...NEWEST },
@@ -147,16 +183,97 @@ const listItem = (row) => ({
  */
 export async function listRiders(query, pagination) {
   const sort = query.sort ?? "newest";
-  const kycFirst = Boolean(query.kyc);
-  const pipeline = [{ $match: await userFilter(query) }, ...profileStages, { $match: riderFilter(query) }];
-  if (kycFirst) pipeline.push(...riderKycStages(), { $match: { kycStatus: query.kyc } });
-  const { rows, pagination: meta } = await aggregatePage(
-    User,
-    pipeline,
-    { sort, sorts: SORTS, rowStages: kycFirst ? [] : riderKycStages() },
-    pagination,
-  );
-  return { items: rows.map(listItem), pagination: meta };
+  const kycFirst = listOf(query.kyc).length > 0;
+  const [{ rows, pagination: meta }, facets] = await Promise.all([
+    aggregatePage(
+      User,
+      await riderPipeline(query),
+      { sort, sorts: SORTS, rowStages: kycFirst ? [] : riderKycStages() },
+      pagination,
+    ),
+    facetsIf(query, User, FACETS, riderPipeline),
+  ]);
+  return { items: rows.map(listItem), pagination: meta, ...facets };
+}
+
+/*
+ * GET /admin/delivery-partners: the rider management list (`riders:manage`). Its `verification`
+ * filter also takes `not_submitted` (pending with something still to send; `pending` is then only
+ * riders waiting for review), `online=true` keeps online riders (as before).
+ */
+
+/** The management list's `verification` values (facet order). */
+export const RIDER_VERIFICATION_FILTERS = [...Object.values(V), NOT_SUBMITTED];
+const needsSubmitted = (verification) =>
+  listOf(verification).some((v) => v === V.PENDING || v === NOT_SUBMITTED);
+
+function managementPipeline(query) {
+  const { search, online, verification } = query;
+  // Pending and not submitted need every rider's submitted state; the other statuses do not.
+  const bySubmitted = needsSubmitted(verification);
+  return [
+    { $match: { role: ROLES.DELIVERY, ...textSearch(search, ["name", "email", "phone"]) } },
+    ...profileStages,
+    ...(bySubmitted ? submittedStages() : []),
+    {
+      $match: allOf(
+        inList(bySubmitted ? "verificationState" : "verificationStatus", verification),
+        online === true && { isOnline: true },
+        ...profileFilters(query),
+      ),
+    },
+  ];
+}
+
+const MANAGEMENT_FACETS = {
+  verification: fixedFacet(RIDER_VERIFICATION_FILTERS, "$verificationState", submittedStages),
+  availability: FACETS.availability,
+  vehicleType: FACETS.vehicleType,
+  zone: FACETS.zone,
+};
+
+/** A list row without the fields the list's stages added: the user document. */
+const accountFields = (row) => {
+  // eslint-disable-next-line no-unused-vars
+  const { rider, verificationStatus, isOnline, busy, completedDeliveries, ratingAverage, ratingCount, submitted, verificationState, ...user } = row;
+  return user;
+};
+
+/** Each rider with their vehicle, availability, verification and active order (if any). */
+export async function listRiderManagement(query, pagination) {
+  const [{ rows, pagination: meta }, facets] = await Promise.all([
+    aggregatePage(
+      User,
+      managementPipeline(query),
+      { sort: "newest", sorts: SORTS },
+      pagination,
+    ),
+    facetsIf(query, User, MANAGEMENT_FACETS, managementPipeline),
+  ]);
+  const submitted = await submittedRiderIds(rows.map((r) => r._id));
+  const activeOrders = await Order.find({
+    _id: { $in: rows.map((r) => r.rider?.activeOrder).filter(Boolean) },
+  }).select("orderNumber status");
+  const orderById = new Map(activeOrders.map((o) => [String(o._id), o]));
+  const items = rows.map((row) => {
+    const p = row.rider;
+    const active = p?.activeOrder ? orderById.get(String(p.activeOrder)) : null;
+    return {
+      ...User.hydrate(accountFields(row)).toJSON(),
+      vehicleType: p?.vehicleType ?? null,
+      vehicleNumber: p?.vehicleNumber ?? null,
+      isOnline: p?.isOnline ?? false,
+      verificationStatus: p ? verificationOf(p) : V.PENDING,
+      submitted: submitted.has(String(row._id)),
+      locationUpdatedAt: p?.locationUpdatedAt ?? null,
+      completedDeliveries: p?.completedDeliveries ?? 0,
+      rating: p?.rating ?? null,
+      activeOrder: active
+        ? { id: String(active._id), orderNumber: active.orderNumber, status: active.status }
+        : null,
+    };
+  });
+  return { items, pagination: meta, ...facets };
 }
 
 /** GET /admin/delivery-partner-accounts/zones: distinct zones, A to Z, case-insensitively unique. */

@@ -4,6 +4,7 @@ import { FoodItem } from "../models/food-item.model.js";
 import { RESTAURANT_STATUS, Restaurant } from "../models/restaurant.model.js";
 import { ApiError } from "../utils/api-error.js";
 import { escapeRegex, paginationMeta } from "../utils/pagination.js";
+import { allOf, facetsIf, fixedFacet, idFacet, inList, toId } from "./admin-accounts.js";
 
 const EDITABLE = [
   "name",
@@ -113,12 +114,35 @@ export async function ownerDelete(restaurantId, itemId) {
 }
 
 // Admin
-export async function adminList(query, pagination) {
-  const filter = listFilter(
-    query.restaurant ? { restaurant: query.restaurant } : {},
-    query,
+/** `type` and `availability` values of the admin menu items list. */
+export const FOOD_TYPES = ["veg", "non_veg"];
+export const FOOD_AVAILABILITY = ["available", "unavailable"];
+
+/**
+ * The admin menu items list's conditions: the owner list's (search, the `available` and `veg`
+ * flags) plus restaurant(s), category(ies), type and availability, each taking several values (OR).
+ */
+function adminFilter(query) {
+  const { restaurant, category, type, availability } = query;
+  return allOf(
+    listFilter({}, { ...query, category: undefined }),
+    inList("restaurant", restaurant, toId),
+    inList("category", category, toId),
+    inList("isVeg", type, (t) => t === "veg"),
+    inList("isAvailable", availability, (a) => a === "available"),
   );
-  const [items, total] = await Promise.all([
+}
+
+const ADMIN_FACETS = {
+  restaurant: idFacet("$restaurant", Restaurant),
+  category: idFacet("$category", FoodCategory),
+  type: fixedFacet(FOOD_TYPES, { $cond: ["$isVeg", "veg", "non_veg"] }),
+  availability: fixedFacet(FOOD_AVAILABILITY, { $cond: ["$isAvailable", "available", "unavailable"] }),
+};
+
+export async function adminList(query, pagination) {
+  const filter = adminFilter(query);
+  const [items, total, facets] = await Promise.all([
     FoodItem.find(filter)
       .sort({ createdAt: -1 })
       .skip(pagination.skip)
@@ -126,8 +150,9 @@ export async function adminList(query, pagination) {
       .populate("category", "name slug icon")
       .populate("restaurant", "name slug status"),
     FoodItem.countDocuments(filter),
+    facetsIf(query, FoodItem, ADMIN_FACETS, adminFilter),
   ]);
-  return { items, pagination: paginationMeta(pagination, total) };
+  return { items, pagination: paginationMeta(pagination, total), ...facets };
 }
 
 export async function adminSetAvailability(itemId, isAvailable) {

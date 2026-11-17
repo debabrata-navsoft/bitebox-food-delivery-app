@@ -1,5 +1,4 @@
 import { timingSafeEqual } from "node:crypto";
-import mongoose from "mongoose";
 import { DISPATCH } from "../config/dispatch.js";
 import { env } from "../config/env.js";
 import { DeliveryPartner } from "../models/delivery-partner.model.js";
@@ -16,6 +15,7 @@ import { ROLES, USER_STATUS, User } from "../models/user.model.js";
 import { haversineMeters } from "../utils/geo.js";
 import { ApiError } from "../utils/api-error.js";
 import { escapeRegex, paginationMeta } from "../utils/pagination.js";
+import { facetsIf, fixedFacet, idFacet, inList, joinedRange, listOf, toId } from "./admin-accounts.js";
 import { dispatchSafely } from "./dispatch.service.js";
 import { settlementFor } from "./earnings.service.js";
 import { inCurrent } from "./reports.service.js";
@@ -418,23 +418,41 @@ export async function riderHistory(userId, pagination) {
 
 // Admin
 /** All orders, filterable by status (or "active") and searchable by order number. */
-export async function adminList({ status, search, customer, restaurant, rider }, pagination) {
-  // The status counts follow the customer, restaurant and rider filters too (not the status or search).
-  const toId = (id) => new mongoose.Types.ObjectId(String(id));
-  const scope = {
+/** Matches the admin orders list's filters (customer, restaurant(s), rider, statuses, payment, days, search). */
+function adminOrderFilter({ status, paymentMethod, paymentStatus, placedFrom, placedTo, search, ...scopeQuery }) {
+  const filter = adminOrderScope(scopeQuery);
+  // `active` stands for every in-progress status.
+  const statuses = listOf(status).flatMap((s) => (s === "active" ? ACTIVE_STATUSES : [s]));
+  if (statuses.length) filter.status = { $in: [...new Set(statuses)] };
+  Object.assign(filter, inList("paymentMethod", paymentMethod), inList("paymentStatus", paymentStatus));
+  const placed = joinedRange(placedFrom, placedTo);
+  if (placed) filter.createdAt = placed;
+  if (search)
+    filter.orderNumber = new RegExp(escapeRegex(search.trim().toUpperCase()), "i");
+  return filter;
+}
+
+/** The customer, restaurant(s) and rider the admin orders list is narrowed to (what `counts` follow). */
+function adminOrderScope({ customer, restaurant, rider }) {
+  return {
     ...(customer && { customer: toId(customer) }),
-    ...(restaurant && { restaurant: toId(restaurant) }),
+    ...inList("restaurant", restaurant, toId),
     ...(rider && { deliveryPartner: toId(rider) }),
   };
-  const filter = { ...scope };
-  if (status === "active") filter.status = { $in: ACTIVE_STATUSES };
-  else if (status) filter.status = status;
-  if (search)
-    filter.orderNumber = new RegExp(
-      escapeRegex(search.trim().toUpperCase()),
-      "i",
-    );
-  const [items, total, counts] = await Promise.all([
+}
+
+const ADMIN_ORDER_FACETS = {
+  status: fixedFacet(Object.values(S), "$status"),
+  paymentMethod: fixedFacet(Object.values(PAYMENT_METHODS), "$paymentMethod"),
+  paymentStatus: fixedFacet(Object.values(PAYMENT_STATUS), "$paymentStatus"),
+  restaurant: idFacet("$restaurant", Restaurant),
+};
+
+export async function adminList(query, pagination) {
+  const filter = adminOrderFilter(query);
+  // The status counts follow the customer, restaurant and rider filters only.
+  const scope = adminOrderScope(query);
+  const [items, total, counts, facets] = await Promise.all([
     Order.find(filter)
       .sort({ createdAt: -1 })
       .skip(pagination.skip)
@@ -445,11 +463,13 @@ export async function adminList({ status, search, customer, restaurant, rider },
       { $match: scope },
       { $group: { _id: "$status", n: { $sum: 1 } } },
     ]),
+    facetsIf(query, Order, ADMIN_ORDER_FACETS, adminOrderFilter),
   ]);
   return {
     items,
     pagination: paginationMeta(pagination, total),
     counts: Object.fromEntries(counts.map((c) => [c._id, c.n])),
+    ...facets,
   };
 }
 

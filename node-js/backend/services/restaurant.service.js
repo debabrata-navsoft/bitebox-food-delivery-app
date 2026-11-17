@@ -15,6 +15,18 @@ import { env } from "../config/env.js";
 import { User } from "../models/user.model.js";
 import * as kyc from "./kyc.service.js";
 import { bestOffers } from "./coupon.service.js";
+import {
+  allOf,
+  anyMatch,
+  facetsIf,
+  fixedFacet,
+  inList,
+  joinedRange,
+  openFacet,
+  sameName,
+  textSearch,
+  trimmed,
+} from "./admin-accounts.js";
 
 const OWNER_FIELDS = [
   "name",
@@ -204,22 +216,57 @@ export async function ownerStats(restaurantId) {
 }
 
 // Admin
-export async function adminList({ status, search }, pagination) {
-  const filter = {};
-  if (status) filter.status = status;
-  if (search) {
-    const re = new RegExp(escapeRegex(search), "i");
-    filter.$or = [{ name: re }, { "address.city": re }, { cuisines: re }];
-  }
-  const [items, total] = await Promise.all([
+/** `veg` and `accepting` values of the admin restaurants list, and what each matches. */
+export const RESTAURANT_VEG = ["pure_veg", "mixed"];
+export const RESTAURANT_ACCEPTING = ["open", "closed"];
+const VEG_MATCH = { pure_veg: { isPureVeg: true }, mixed: { isPureVeg: { $ne: true } } };
+const ACCEPTING_MATCH = { open: { isAcceptingOrders: { $ne: false } }, closed: { isAcceptingOrders: false } };
+
+/** The admin restaurants list's conditions: every filter takes several values (OR), AND across. */
+function adminFilter({ status, city, cuisine, veg, accepting, joinedFrom, joinedTo, search }) {
+  const joined = joinedRange(joinedFrom, joinedTo);
+  return allOf(
+    inList("status", status),
+    inList("address.city", city, sameName),
+    inList("cuisines", cuisine, sameName),
+    anyMatch(veg, VEG_MATCH),
+    anyMatch(accepting, ACCEPTING_MATCH),
+    joined && { createdAt: joined },
+    textSearch(search, ["name", "address.city", "cuisines"]),
+  );
+}
+
+const ADMIN_FACETS = {
+  status: fixedFacet(Object.values(RESTAURANT_STATUS), "$status"),
+  city: openFacet("$address.city"),
+  // Each cuisine of a restaurant once (whatever its letter case), so it counts once under each.
+  cuisine: openFacet("$cuisine", [
+    { $unwind: "$cuisines" },
+    {
+      $group: {
+        _id: { restaurant: "$_id", key: { $toLower: trimmed("$cuisines") } },
+        cuisine: { $min: trimmed("$cuisines") },
+      },
+    },
+  ]),
+  veg: fixedFacet(RESTAURANT_VEG, { $cond: [{ $eq: ["$isPureVeg", true] }, "pure_veg", "mixed"] }),
+  accepting: fixedFacet(RESTAURANT_ACCEPTING, {
+    $cond: [{ $eq: ["$isAcceptingOrders", false] }, "closed", "open"],
+  }),
+};
+
+export async function adminList(query, pagination) {
+  const filter = adminFilter(query);
+  const [items, total, facets] = await Promise.all([
     Restaurant.find(filter)
       .sort({ createdAt: -1 })
       .skip(pagination.skip)
       .limit(pagination.limit)
       .populate("owner", "name email phone"),
     Restaurant.countDocuments(filter),
+    facetsIf(query, Restaurant, ADMIN_FACETS, adminFilter),
   ]);
-  return { items, pagination: paginationMeta(pagination, total) };
+  return { items, pagination: paginationMeta(pagination, total), ...facets };
 }
 
 export async function adminGet(id) {

@@ -1,0 +1,27 @@
+// The search (up to ~420px) on the left, the Filters button and the sort on the right, the
+// chosen filters as chips on a row below (bb-filter-panel places its button and chips here).
+// Phones: the search takes the first row.
+:host {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--bb-space-3);
+  margin-bottom: var(--bb-space-4);
+}
+
+np-text-input {
+  flex: 0 1 420px;
+  min-width: 0;
+}
+np-select {
+  flex: 0 0 200px;
+}
+
+@media (max-width: 599.98px) {
+  np-text-input {
+    flex-basis: 100%;
+  }
+  np-select {
+    flex: 1 1 0;
+  }
+}

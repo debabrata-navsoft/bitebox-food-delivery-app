@@ -1,20 +1,12 @@
 <bb-page-header title="Customers" subtitle="Everyone who orders on BiteBox: their orders, spending and account status." />
 
-<div class="bb-filters">
-  <np-text-input
-    class="search"
-    [formField]="filters.search"
-    ariaLabel="Search customers"
-    placeholder="Name, email, mobile or customer ID"
-    icon="search"
-    clearable
-  />
-  <np-select [formField]="filters.status" ariaLabel="Account status" [options]="statusOptions" />
-  <np-select [formField]="filters.verification" ariaLabel="Verification" [options]="verificationOptions" />
-  <np-calendar [formField]="filters.joinedFrom" placeholder="Joined from" dateFormat="dd M yy" showIcon />
-  <np-calendar [formField]="filters.joinedTo" placeholder="Joined to" dateFormat="dd M yy" showIcon />
-  <np-select [formField]="filters.sort" ariaLabel="Sort" [options]="sortOptions" />
-</div>
+<bb-list-toolbar
+  [list]="accounts"
+  [sections]="filterSections"
+  searchLabel="Search customers"
+  placeholder="Name, email, mobile or customer ID"
+  [sortOptions]="sortOptions"
+/>
 
 @if (list.error(); as message) {
   <div class="bb-alert error" role="alert">

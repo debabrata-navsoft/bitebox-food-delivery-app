@@ -1,7 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject, input, linkedSignal, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { form } from '@angular/forms/signals';
-import { IconComponent, PaginationComponent, ToggleComponent } from 'nexprime';
+import { IconComponent, PaginationComponent } from 'nexprime';
 import { errorMessage } from '../../../core/services/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AdminOrdersService } from '../../../core/services/order-management.service';
@@ -9,8 +8,9 @@ import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dia
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { OrderStatusChip } from '../../../shared/components/order-status-chip/order-status-chip';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { pagedList } from '../../../shared/list/paged-list';
+import { filterOptions, filteredList } from '../../../shared/list/filtered-list';
+import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
+import { FilterSection } from '../../../shared/components/filter-panel/filter-panel.models';
 import { OrderStatus, VEHICLE_LABEL } from '../../../shared/models/checkout.models';
 import {
   AdminRider,
@@ -20,9 +20,9 @@ import {
   riderReviewState,
 } from '../../../shared/models/order-management.models';
 import { RouterLink } from '@angular/router';
-import { SelectOption } from 'nexprime';
 import { openAdminOrder } from '../orders/admin-order-dialog/admin-order-dialog';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
+import { RIDER_AVAILABILITY_SECTION, VEHICLE_SECTION, ZONE_SECTION } from '../filter-sections';
 
 const RIDER_EVENTS: OrderStatus[] = [
   'ready_for_pickup',
@@ -39,11 +39,10 @@ const RIDER_EVENTS: OrderStatus[] = [
   imports: [
     RouterLink,
     DatePipe,
-    NP_FORM_FIELDS,
     IconComponent,
     PaginationComponent,
-    ToggleComponent,
     EmptyState,
+    ListToolbar,
     OrderStatusChip,
     PageHeader,
   ],
@@ -51,55 +50,39 @@ const RIDER_EVENTS: OrderStatus[] = [
   styleUrl: './admin-delivery-partners.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminDeliveryPartners {
+export class AdminDeliveryPartners implements OnInit {
   private readonly api = inject(AdminOrdersService);
   private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
 
   /** ?verification=pending (the dashboards' "Review" shortcut) preselects that filter. */
   readonly verification = input<RiderReviewState>();
-  protected readonly filterModel = linkedSignal(() => {
-    const preset = this.verification();
-    return {
-      search: '',
-      onlineOnly: false,
-      verification: preset && preset in RIDER_VERIFICATION_LABEL ? preset : '',
-    };
-  });
   protected readonly verificationLabel = RIDER_VERIFICATION_LABEL;
   protected readonly verificationTone = RIDER_VERIFICATION_TONE;
   /** "Not submitted" for a pending rider who has not sent everything yet. */
   protected readonly stateOf = (r: AdminRider): RiderReviewState | null =>
     r.verificationStatus ? riderReviewState({ status: r.verificationStatus, submitted: r.submitted }) : null;
-  protected readonly verificationOptions: SelectOption[] = [
-    { value: '', label: 'Any verification' },
-    ...(Object.keys(RIDER_VERIFICATION_LABEL) as RiderReviewState[]).map((s) => ({
-      value: s,
-      label: RIDER_VERIFICATION_LABEL[s],
-    })),
-  ];
-  protected readonly filters = form(this.filterModel);
   protected readonly busyId = signal<string | null>(null);
   protected readonly vehicleLabel = VEHICLE_LABEL;
 
-  protected readonly list = pagedList(
-    (page, limit) => {
-      const { search, onlineOnly, verification } = this.filterModel();
-      return this.api.riders({
-        search: search.trim() || undefined,
-        online: onlineOnly || undefined,
-        verification: (verification || undefined) as RiderReviewState | undefined,
-        page,
-        limit,
-      });
-    },
-    {
-      filterKey: () => JSON.stringify(this.filterModel()),
-      pollMs: 60_000,
-      when: (e) => RIDER_EVENTS.includes(e.status),
-      errorText: 'Could not load delivery partners.',
-    },
-  );
+  protected readonly filterSections: FilterSection[] = [
+    { kind: 'options', key: 'verification', label: 'Verification', options: filterOptions(RIDER_VERIFICATION_LABEL) },
+    RIDER_AVAILABILITY_SECTION,
+    VEHICLE_SECTION,
+    ZONE_SECTION,
+  ];
+
+  protected readonly riders = filteredList((query) => this.api.riders(query), {
+    errorText: 'Could not load delivery partners.',
+    pollMs: 60_000,
+    when: (e) => RIDER_EVENTS.includes(e.status),
+  });
+  protected readonly list = this.riders.list;
+
+  ngOnInit(): void {
+    const preset = this.verification();
+    if (preset && preset in RIDER_VERIFICATION_LABEL) this.riders.panel.set({ verification: [preset] });
+  }
 
   protected openOrder(id: string): void {
     openAdminOrder(this.bbDialog, id).subscribe(() => this.list.reload());

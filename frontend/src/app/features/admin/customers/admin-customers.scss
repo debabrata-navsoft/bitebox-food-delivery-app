@@ -1,11 +1,4 @@
-@use 'breakpoints' as bp;
 @use '../account-list';
-
-.bb-filters {
-  @include bp.desktop-up {
-    grid-template-columns: minmax(240px, 2fr) repeat(5, minmax(140px, 1fr));
-  }
-}
 
 .checks {
   white-space: nowrap;

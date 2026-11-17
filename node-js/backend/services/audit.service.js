@@ -1,8 +1,9 @@
 import { logger } from "../config/logger.js";
 import { ADMIN_ROLES, MEMBER_ROLES } from "../config/roles.js";
-import { AuditLog } from "../models/audit-log.model.js";
+import { AUDIT_ACCOUNT_TYPES, AuditLog } from "../models/audit-log.model.js";
 import { User } from "../models/user.model.js";
 import { escapeRegex, paginationMeta } from "../utils/pagination.js";
+import { facetsIf, fixedFacet, inList, openFacet } from "./admin-accounts.js";
 
 const clip = (text, max) => String(text ?? "").slice(0, max);
 
@@ -89,14 +90,13 @@ export const audited =
 const pending = new Set();
 export const flushAudits = () => Promise.all([...pending]);
 
-export async function list(
-  { action, role, search, from, to, accountType, resourceId },
-  pagination,
-) {
-  const filter = {};
-  if (action) filter.action = action;
-  if (role) filter.adminRole = role;
-  if (accountType) filter.accountType = accountType;
+/** `action`, `role` and `accountType` take one value or several (OR). */
+function auditFilter({ action, role, search, from, to, accountType, resourceId }) {
+  const filter = {
+    ...inList("action", action),
+    ...inList("adminRole", role),
+    ...inList("accountType", accountType),
+  };
   if (resourceId?.length)
     filter.resourceId = Array.isArray(resourceId) ? { $in: resourceId } : resourceId;
   if (search) {
@@ -105,13 +105,25 @@ export async function list(
   }
   if (from || to)
     filter.createdAt = { ...(from && { $gte: from }), ...(to && { $lte: to }) };
-  const [items, total] = await Promise.all([
+  return filter;
+}
+
+const AUDIT_FACETS = {
+  action: openFacet("$action"),
+  role: fixedFacet(ADMIN_ROLES, "$adminRole"),
+  accountType: fixedFacet(AUDIT_ACCOUNT_TYPES.filter(Boolean), "$accountType"),
+};
+
+export async function list(query, pagination) {
+  const filter = auditFilter(query);
+  const [items, total, facets] = await Promise.all([
     AuditLog.find(filter)
       .sort({ createdAt: -1 })
       .skip(pagination.skip)
       .limit(pagination.limit)
       .populate("admin", "name email"),
     AuditLog.countDocuments(filter),
+    facetsIf(query, AuditLog, AUDIT_FACETS, auditFilter),
   ]);
   return {
     items: items.map((entry) => {
@@ -127,5 +139,6 @@ export async function list(
       };
     }),
     pagination: paginationMeta(pagination, total),
+    ...facets,
   };
 }

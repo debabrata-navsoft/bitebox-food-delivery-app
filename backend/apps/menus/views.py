@@ -10,6 +10,7 @@ from apps.audit.services import audited
 from apps.rbac.roles import Permission, Role
 from apps.restaurants.services import require_own_restaurant
 from common.api import ok
+from common.filters import FACETS_PARAM, facets_page, multi_param
 from common.http import PublicCacheMixin
 from common.pagination import Page
 from common.permissions import PUBLIC, permission_required, role_required
@@ -19,6 +20,8 @@ from common.validation import parse_id, validated
 from . import services
 from .presenters import category_json, food_json
 from .serializers import (
+    AVAILABILITY_VALUES,
+    FOOD_TYPE_VALUES,
     AdminFoodListQuery,
     AvailabilityInput,
     CategoryInput,
@@ -173,13 +176,23 @@ class AdminCategoryView(APIView):
         return ok(message="Category deleted")
 
 
+ADMIN_FOOD_PAGE = facets_page("AdminFoodPage", services.ADMIN_FACETS)
+
+
 class AdminFoodsView(APIView):
     permission_classes = RESTAURANTS
 
     @extend_schema(
         tags=["Admin: catalogue"],
-        parameters=[*LIST, OpenApiParameter("restaurant", str)],
-        responses={200: ANY, **errors(401, 403, 422)},
+        parameters=[
+            *(OpenApiParameter(n, str) for n in ("search", "available", "veg", "page", "limit")),
+            multi_param("restaurant", description="Restaurant ids"),
+            multi_param("category", description="Category ids"),
+            multi_param("type", FOOD_TYPE_VALUES),
+            multi_param("availability", AVAILABILITY_VALUES),
+            FACETS_PARAM,
+        ],
+        responses={200: ADMIN_FOOD_PAGE, **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
         query = validated(AdminFoodListQuery, request.query_params)

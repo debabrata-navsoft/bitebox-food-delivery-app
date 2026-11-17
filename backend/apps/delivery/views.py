@@ -5,7 +5,7 @@
 
 from typing import Any
 
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -26,6 +26,15 @@ from apps.restaurants.serializers import RestaurantAddressInput
 from apps.reviews import services as review_services
 from common.api import ok
 from common.fields import QueryBoolean
+from common.filters import (
+    FACETS_PARAM,
+    FacetQuery,
+    MultiValueField,
+    facets_page,
+    multi_choice,
+    multi_param,
+    page_params,
+)
 from common.pagination import Page
 from common.permissions import permission_required, role_required
 from common.schema import envelope, errors
@@ -256,11 +265,15 @@ class RiderStatsView(APIView):
 # ---------------------------------------------------------------------------
 # Admin
 # ---------------------------------------------------------------------------
-class AdminRiderQuery(PageQuery):
+class AdminRiderQuery(FacetQuery, PageQuery):
+    """GET /admin/delivery-partners: verification, availability, vehicleType and zone take
+    several values (the boolean `online` works as before)."""
+
     online = QueryBoolean()
-    verification = serializers.ChoiceField(
-        choices=[*VerificationStatus.values, services.NOT_SUBMITTED], required=False
-    )
+    verification = multi_choice(services.VERIFICATION_VALUES)
+    availability = multi_choice(services.AVAILABILITY_VALUES)
+    vehicle_type = multi_choice(VehicleType.values)
+    zone = MultiValueField(max_length=60)
 
 
 class AdminVerificationInput(serializers.Serializer):
@@ -291,6 +304,7 @@ class AdminRiderStatusInput(StatusInput):
 
 
 RIDERS_ADMIN = [permission_required(Permission.RIDERS_MANAGE)]
+ADMIN_RIDER_PAGE = facets_page("AdminRiderPage", services.ADMIN_FACETS)
 
 
 class AdminRidersView(APIView):
@@ -298,8 +312,24 @@ class AdminRidersView(APIView):
 
     @extend_schema(
         tags=["Admin: delivery partners"],
-        parameters=[AdminRiderQuery],
-        responses={200: RESULT, **errors(401, 403, 422)},
+        parameters=[
+            *page_params("Name, email or phone (part of it)"),
+            OpenApiParameter("online", bool, description="true: online riders only"),
+            multi_param(
+                "verification",
+                services.VERIFICATION_VALUES,
+                "pending: in review; not_submitted: pending, documents not all sent",
+            ),
+            multi_param(
+                "availability",
+                services.AVAILABILITY_VALUES,
+                "online: online and free; busy: online with an order; offline",
+            ),
+            multi_param("vehicleType", VehicleType.values),
+            multi_param("zone", description="Each exact, any letter case"),
+            FACETS_PARAM,
+        ],
+        responses={200: ADMIN_RIDER_PAGE, **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
         query = validated(AdminRiderQuery, request.query_params)

@@ -9,6 +9,7 @@ from typing import Any
 from rest_framework import serializers
 
 from apps.rbac.roles import (
+    ADMIN_ROLE_VALUES,
     ADMIN_ROLES,
     ALL_ROLES,
     PERMISSION_VALUES,
@@ -16,6 +17,7 @@ from apps.rbac.roles import (
     SUPER_ADMIN_ONLY,
     Role,
 )
+from common.filters import FacetQuery, multi_choice
 from common.validation import PageQuery
 
 from .models import Gender, User, UserStatus
@@ -368,6 +370,13 @@ class UserListQuery(serializers.Serializer):
             role_field.choices = [r.value for r in roles]
 
 
+class StaffListQuery(FacetQuery, PageQuery):
+    """GET /admin/admins: `role` and `status` take several comma-separated values."""
+
+    role = multi_choice(ADMIN_ROLE_VALUES)
+    status = multi_choice(UserStatus.values)
+
+
 INVALID: dict[str, Any] = dict.fromkeys(
     ("invalid", "invalid_choice", "null", "blank"), "Invalid value"
 )
@@ -386,22 +395,26 @@ def day_field() -> serializers.DateField:
 
 class JoinedListQuery(PageQuery):
     """
-    The admin account lists (customers, restaurants, riders): page, limit and search, plus
-    `joined_from` / `joined_to` (calendar days in the report time zone) declared by each list.
+    The admin lists (customers, restaurants, riders, orders): page, limit and search, plus
+    `<day_range>_from` / `<day_range>_to` (calendar days in the report time zone, day_field())
+    declared by each list.
     """
 
+    day_range = "joined"
+
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
-        start, end = attrs.get("joined_from"), attrs.get("joined_to")
+        name = self.day_range
+        start, end = attrs.get(f"{name}_from"), attrs.get(f"{name}_to")
         if start and end and start > end:
-            raise serializers.ValidationError({"joined_to": "Must be on or after joinedFrom"})
+            raise serializers.ValidationError({f"{name}_to": f"Must be on or after {name}From"})
         return attrs
 
 
-class CustomerListQuery(JoinedListQuery):
+class CustomerListQuery(FacetQuery, JoinedListQuery):
     """GET /admin/customers."""
 
-    status = optional_choice(UserStatus.values)
-    verification = optional_choice(VERIFICATION_VALUES)
+    status = multi_choice(UserStatus.values)
+    verification = multi_choice(VERIFICATION_VALUES)
     joined_from = day_field()
     joined_to = day_field()
     sort = optional_choice(CUSTOMER_SORT_VALUES)

@@ -1,16 +1,5 @@
 @use 'breakpoints' as bp;
 
-.filters {
-  display: grid;
-  gap: var(--bb-space-3);
-  align-items: center;
-  margin-bottom: var(--bb-space-4);
-
-  @include bp.tablet-up {
-    grid-template-columns: minmax(0, 1fr) 200px auto;
-  }
-}
-
 .list-card {
   padding: 0;
   overflow: hidden;

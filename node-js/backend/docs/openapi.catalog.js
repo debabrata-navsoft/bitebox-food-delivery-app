@@ -1,3 +1,5 @@
+import { dayParams, facetsParam, multi } from "./openapi.filters.js";
+
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` });
 const ok = (data, description = "Success") => ({
   description,
@@ -541,18 +543,23 @@ export const catalogPaths = {
     get: {
       tags: T.admin,
       summary: "List restaurants (any status)",
+      description: "Several values in one filter: any of them; filters combine with AND.",
       security: bearer,
       parameters: [
         ...paging,
         q("search", { type: "string" }),
-        q("status", {
-          type: "string",
-          enum: ["pending", "approved", "rejected", "suspended"],
-        }),
+        multi("status", ["pending", "approved", "rejected", "suspended", "resubmission_requested"]),
+        multi("city", null, "Exact city, any letter case"),
+        multi("cuisine", null, "Restaurants serving any of these cuisines (exact, any letter case)"),
+        multi("veg", ["pure_veg", "mixed"]),
+        multi("accepting", ["open", "closed"], "Taking orders (open) or paused (closed)"),
+        ...dayParams("joinedFrom", "joinedTo", "day created"),
+        facetsParam(["status", "city", "cuisine", "veg", "accepting"], ["city", "cuisine"]),
       ],
       responses: {
         200: ok(paged(ref("Restaurant"))),
         403: err("Not an admin"),
+        422: err("Invalid filter value"),
       },
     },
   },
@@ -655,16 +662,20 @@ export const catalogPaths = {
     get: {
       tags: T.admin,
       summary: "All menu items",
+      description: "Several values in one filter: any of them; filters combine with AND.",
       security: bearer,
       parameters: [
         ...paging,
         q("search", { type: "string" }),
-        q("restaurant", { type: "string" }),
-        q("category", { type: "string" }),
+        multi("restaurant", "id", "Restaurant ids"),
+        multi("category", "id", "Category ids"),
+        multi("type", ["veg", "non_veg"]),
+        multi("availability", ["available", "unavailable"]),
         q("available", { type: "boolean" }),
         q("veg", { type: "boolean" }),
+        facetsParam(["restaurant", "category", "type", "availability"], [], ["restaurant", "category"]),
       ],
-      responses: { 200: ok(paged(ref("FoodItem"))) },
+      responses: { 200: ok(paged(ref("FoodItem"))), 422: err("Invalid filter value") },
     },
   },
   "/admin/foods/{id}/availability": {

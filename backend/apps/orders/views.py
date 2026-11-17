@@ -13,11 +13,22 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.authentication import current_user
+from apps.accounts.serializers import JoinedListQuery, day_field
 from apps.audit.services import audited
 from apps.payments.services import start_payment
 from apps.rbac.roles import Permission, Role
 from common.api import ApiError, ok
 from common.fields import UUIDRef
+from common.filters import (
+    FACETS_PARAM,
+    FacetQuery,
+    MultiIdField,
+    day_params,
+    facets_page,
+    multi_choice,
+    multi_param,
+    page_params,
+)
 from common.pagination import Page
 from common.permissions import permission_required, role_required
 from common.schema import envelope, errors
@@ -25,7 +36,7 @@ from common.throttling import rate_limit
 from common.validation import PageQuery, parse_id, validated
 
 from . import services
-from .models import OrderStatus, PaymentChannel, PaymentMethod
+from .models import OrderStatus, PaymentChannel, PaymentMethod, PaymentStatus
 from .presenters import order_json
 
 S = OrderStatus
@@ -277,11 +288,29 @@ class MyOrderStatusView(APIView):
 # ---------------------------------------------------------------------------
 # Admin
 # ---------------------------------------------------------------------------
-class AdminOrderListQuery(PageQuery):
-    status = _choice([*S.values, "active"], "Invalid value", required=False)
+class AdminOrderListQuery(FacetQuery, JoinedListQuery):
+    """GET /admin/orders: status, paymentMethod, paymentStatus and restaurant take several
+    values."""
+
+    status = multi_choice([*S.values, "active"])  # active: every in-progress status
+    payment_method = multi_choice(PaymentMethod.values)
+    payment_status = multi_choice(PaymentStatus.values)
+    restaurant = MultiIdField()  # orders with these restaurants (one: its account page)
     customer = UUIDRef(required=False)  # orders placed by this user (the admin's user page)
-    restaurant = UUIDRef(required=False)  # orders with this restaurant (its account page)
     rider = UUIDRef(required=False)  # orders assigned to this rider (user id; their account page)
+    placed_from = day_field()
+    placed_to = day_field()
+    day_range = "placed"
+
+
+ADMIN_ORDER_PAGE = facets_page(
+    "AdminOrderPage",
+    services.ADMIN_FACETS,
+    counts=serializers.DictField(
+        child=serializers.IntegerField(),
+        help_text="Orders per status (customer, restaurant and rider filters only)",
+    ),
+)
 
 
 class AdminCancelInput(serializers.Serializer):
@@ -297,8 +326,18 @@ class AdminOrdersView(APIView):
 
     @extend_schema(
         tags=["Admin: orders"],
-        parameters=[AdminOrderListQuery],
-        responses={200: ORDER_LIST, **errors(401, 403, 422)},
+        parameters=[
+            *page_params("Order number (or part of it)"),
+            multi_param("status", [*S.values, "active"], "active: every in-progress status"),
+            multi_param("paymentMethod", PaymentMethod.values),
+            multi_param("paymentStatus", PaymentStatus.values),
+            multi_param("restaurant", description="Restaurant ids"),
+            OpenApiParameter("customer", str, description="The customer's user id"),
+            OpenApiParameter("rider", str, description="The rider's user id"),
+            *day_params("placed"),
+            FACETS_PARAM,
+        ],
+        responses={200: ADMIN_ORDER_PAGE, **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
         query = validated(AdminOrderListQuery, request.query_params)

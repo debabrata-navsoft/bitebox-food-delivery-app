@@ -17,6 +17,7 @@ from apps.accounts.serializers import (
 from apps.kyc.models import ACCOUNT_KYC_STATES
 from apps.restaurants.presenters import DAYS
 from common.fields import ImageUrlField, PaiseField, QueryBoolean, UUIDRef
+from common.filters import FacetQuery, MultiValueField, multi_choice
 from common.validation import PageQuery
 
 from .models import RestaurantStatus
@@ -236,8 +237,20 @@ class PublicListQuery(PageQuery):
         return attrs
 
 
-class AdminListQuery(PageQuery):
-    status = serializers.ChoiceField(choices=RestaurantStatus.values, required=False)
+VEG_VALUES = ["pure_veg", "mixed"]
+ACCEPTING_VALUES = ["open", "closed"]
+
+
+class AdminListQuery(FacetQuery, JoinedListQuery):
+    """GET /admin/restaurants: status, city, cuisine, veg and accepting take several values."""
+
+    status = multi_choice(RestaurantStatus.values)
+    city = MultiValueField(max_length=60)
+    cuisine = MultiValueField(max_length=40)
+    veg = multi_choice(VEG_VALUES)  # pure_veg / mixed (isPureVeg)
+    accepting = multi_choice(ACCEPTING_VALUES)  # open / closed (isAcceptingOrders)
+    joined_from = day_field()
+    joined_to = day_field()
 
 
 class AdminStatusInput(serializers.Serializer):
@@ -251,13 +264,13 @@ class AdminStatusInput(serializers.Serializer):
 ACCOUNT_SORT_VALUES = ["newest", "oldest", "name", "orders", "rating"]
 
 
-class AccountListQuery(JoinedListQuery):
-    """GET /admin/restaurant-accounts."""
+class AccountListQuery(FacetQuery, JoinedListQuery):
+    """GET /admin/restaurant-accounts: status, accountStatus, kyc and city take several values."""
 
-    status = optional_choice(RestaurantStatus.values)
-    account_status = optional_choice(UserStatus.values)
-    kyc = optional_choice(ACCOUNT_KYC_STATES)
-    city = serializers.CharField(required=False, allow_blank=True, max_length=60)
+    status = multi_choice(RestaurantStatus.values)
+    account_status = multi_choice(UserStatus.values)
+    kyc = multi_choice(ACCOUNT_KYC_STATES)
+    city = MultiValueField(max_length=60)
     joined_from = day_field()
     joined_to = day_field()
     sort = optional_choice(ACCOUNT_SORT_VALUES)

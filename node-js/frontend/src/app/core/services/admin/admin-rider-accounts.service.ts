@@ -7,31 +7,14 @@ import { VehicleType } from '../../../shared/models/checkout.models';
 import { RiderAddress, RiderProfile, RiderVerificationStatus } from '../../../shared/models/order-management.models';
 import { Gender, User, UserStatus } from '../../../shared/models/user.models';
 import { toParams } from '../http-params';
+import { Faceted, ListQuery } from '../../../shared/list/filtered-list';
 import { KycState } from './admin-restaurant-accounts.service';
 
-export type RiderAvailabilityFilter = 'online' | 'offline' | 'busy';
-export type RiderAccountSort = 'newest' | 'oldest' | 'name' | 'deliveries' | 'rating';
 
 export interface EmergencyContact {
   name: string;
   phone: string;
   relation?: string | null;
-}
-
-/** GET /admin/delivery-partner-accounts filters. */
-export interface RiderAccountQuery {
-  search?: string;
-  accountStatus?: UserStatus;
-  verification?: RiderVerificationStatus;
-  availability?: RiderAvailabilityFilter;
-  kyc?: KycState;
-  zone?: string;
-  vehicleType?: VehicleType;
-  joinedFrom?: string;
-  joinedTo?: string;
-  sort?: RiderAccountSort;
-  page?: number;
-  limit?: number;
 }
 
 export interface RiderAccountRow {
@@ -95,12 +78,11 @@ export class AdminRiderAccountsService {
   private readonly http = inject(HttpClient);
   private readonly url = `${environment.baseUrl}/admin/delivery-partner-accounts`;
 
-  list = (query: RiderAccountQuery): Observable<Paginated<RiderAccountRow>> =>
+  /** Filters: search, verification, availability, kyc, accountStatus, zone, vehicleType (several values each), joinedFrom/To, sort; `facets: 1` adds counts. */
+  list = (query: ListQuery): Observable<Faceted<RiderAccountRow>> =>
     this.http
-      .get<ApiResponse<Paginated<RiderAccountRow>>>(this.url, { params: toParams(query) })
+      .get<ApiResponse<Faceted<RiderAccountRow>>>(this.url, { params: toParams(query) })
       .pipe(map((r) => r.data));
-  zones = (): Observable<string[]> =>
-    this.http.get<ApiResponse<{ zones: string[] }>>(`${this.url}/zones`).pipe(map((r) => r.data.zones));
   get = (id: string): Observable<RiderAccount> =>
     this.http.get<ApiResponse<RiderAccount>>(`${this.url}/${id}`).pipe(map((r) => r.data));
   update = (id: string, patch: RiderAccountPatch) => this.send(id, '', patch);

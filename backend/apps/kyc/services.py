@@ -30,9 +30,10 @@ from apps.notifications.services import notify
 from apps.rbac.roles import Role
 from common import crypto
 from common.api import ApiError
+from common.filters import Facet
 
 from . import storage
-from .models import DocumentKind, DocumentStatus, KycDocument, PayoutAccount
+from .models import ACCOUNT_KYC_STATES, DocumentKind, DocumentStatus, KycDocument, PayoutAccount
 
 K = DocumentKind
 LABELS: dict[str, str] = {
@@ -167,6 +168,10 @@ def with_state(
             default=Value("verified"),
         ),
     )
+
+
+# The admin account lists' `kyc` filter and facet (over with_state's `kyc_state`).
+KYC_FACET = Facet("kyc", values=ACCOUNT_KYC_STATES, field="kyc_state")
 
 
 def state_json(state: str | None, user: User) -> dict[str, Any]:

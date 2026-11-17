@@ -23,6 +23,7 @@ from apps.orders.models import Order, OrderStatus
 from apps.rbac.roles import Permission, Role
 from apps.restaurants.presenters import geo_json, rating_json
 from common.api import ApiError
+from common.filters import Facet, apply_facets, with_facets
 from common.geo import GeoPoint, haversine_m
 from common.pagination import Page, paginate
 
@@ -32,6 +33,7 @@ from .models import (
     DeliveryPartner,
     RiderAvailabilityLog,
     RiderVehicle,
+    VehicleType,
     VerificationStatus,
 )
 
@@ -86,6 +88,19 @@ def vehicle_of(profile: DeliveryPartner) -> RiderVehicle | None:
 
 # List filter: riders still waiting on themselves (status pending, something not sent yet).
 NOT_SUBMITTED = "not_submitted"
+P = "delivery_partner__"  # from a user to their rider profile
+AVAILABILITY_VALUES = ("online", "offline", "busy")
+AVAILABILITY = {
+    "online": Q(**{f"{P}is_online": True, f"{P}active_order__isnull": True}),
+    "busy": Q(**{f"{P}is_online": True, f"{P}active_order__isnull": False}),
+    "offline": Q(**{f"{P}is_online": False}) | Q(delivery_partner__isnull=True),
+}
+# Facets (and filters) shared by both admin rider lists (this one and accounts.FACETS).
+AVAILABILITY_FACET = Facet("availability", values=AVAILABILITY_VALUES, cases=AVAILABILITY)
+VEHICLE_TYPE_FACET = Facet(
+    "vehicle_type", values=VehicleType.values, field=f"{P}vehicle__vehicle_type"
+)
+ZONE_FACET = Facet("zone", field=f"{P}zone", ignore_case=True)  # the zones that occur, by count
 
 
 def with_submitted(users: QuerySet[User]) -> QuerySet[User]:
@@ -326,22 +341,36 @@ def _offer_waiting_orders() -> None:
 # ---------------------------------------------------------------------------
 # Admin
 # ---------------------------------------------------------------------------
-def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
-    users = User.objects.filter(role=Role.DELIVERY)
+_PENDING = Q(**{f"{P}verification_status": V.PENDING}) | Q(delivery_partner__isnull=True)
+# not_submitted: pending without everything sent; pending: in review (sent, waiting for a decision)
+VERIFICATION = {
+    V.PENDING: _PENDING & Q(submitted=True),
+    **{v: Q(**{f"{P}verification_status": v}) for v in V.values if v != V.PENDING},
+    NOT_SUBMITTED: _PENDING & Q(submitted=False),
+}
+VERIFICATION_VALUES = [*V.values, NOT_SUBMITTED]
+ADMIN_FACETS = (
+    Facet("verification", values=VERIFICATION_VALUES, cases=VERIFICATION),
+    AVAILABILITY_FACET,
+    VEHICLE_TYPE_FACET,
+    ZONE_FACET,
+)
+
+
+def _admin_riders(query: dict[str, Any]) -> QuerySet[User]:
+    """The riders matching the filters (ADMIN_FACETS, `online`, `search`)."""
+    users = with_submitted(User.objects.filter(role=Role.DELIVERY))
     if search := (query.get("search") or "").strip():
         users = users.filter(
             Q(name__icontains=search) | Q(email__icontains=search) | Q(phone__icontains=search)
         )
     if query.get("online") is True:
         users = users.filter(delivery_partner__is_online=True)
-    users = with_submitted(users)
-    pending = Q(delivery_partner__verification_status=V.PENDING) | Q(delivery_partner__isnull=True)
-    if (verification := query.get("verification")) == NOT_SUBMITTED:
-        users = users.filter(pending, Q(submitted=False))
-    elif verification == V.PENDING:  # in review: sent everything, waiting for a decision
-        users = users.filter(pending, Q(submitted=True))
-    elif verification:
-        users = users.filter(delivery_partner__verification_status=verification)
+    return apply_facets(users, query, ADMIN_FACETS)
+
+
+def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
+    users = _admin_riders(query)
     rows, meta = paginate(users.order_by("-created_at"), page)
     profiles = {
         p.user_id: p
@@ -374,7 +403,7 @@ def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
                 else None,
             }
         )
-    return {"items": items, "pagination": meta}
+    return with_facets({"items": items, "pagination": meta}, query, _admin_riders, ADMIN_FACETS)
 
 
 def admin_set_status(

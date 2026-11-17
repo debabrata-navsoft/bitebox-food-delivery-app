@@ -6,16 +6,19 @@ from typing import Any
 from django.conf import settings
 from django.db import connection, transaction
 from django.db.models import Count, F, Q, QuerySet
+from django.db.models.expressions import RawSQL
 from django.db.models.fields import TextField
 from django.db.models.functions import Cast
 from django.utils import timezone
 
+from apps.accounts.admin_services import joined_between
 from apps.accounts.models import User
 from apps.kyc import services as kyc
 from apps.menus.models import FoodItem
 from apps.notifications.services import notify, notify_admins
 from apps.rbac.roles import Permission
 from common.api import ApiError
+from common.filters import Facet, apply_facets, with_facets
 from common.geo import GeoPoint
 from common.geo_sql import Distance, DWithin, point_sql
 from common.pagination import Page, paginate
@@ -166,6 +169,9 @@ def owner_stats(restaurant: Restaurant) -> dict[str, int]:
 # --- admin ----------------------------------------------------------------------------------------
 
 
+TABLE = connection.ops.quote_name(Restaurant._meta.db_table)
+
+
 def _text_search(qs: QuerySet[Restaurant], search: str, also: Q) -> QuerySet[Restaurant]:
     """Name or any cuisine contains `search`, or `also` matches."""
     return qs.annotate(_cuisines=Cast("cuisines", TextField())).filter(
@@ -173,14 +179,47 @@ def _text_search(qs: QuerySet[Restaurant], search: str, also: Q) -> QuerySet[Res
     )
 
 
-def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
-    qs = Restaurant.objects.select_related("owner").order_by("-created_at")
-    if query.get("status"):
-        qs = qs.filter(status=query["status"])
+VEG = {"pure_veg": Q(is_pure_veg=True), "mixed": Q(is_pure_veg=False)}
+ACCEPTING = {"open": Q(is_accepting_orders=True), "closed": Q(is_accepting_orders=False)}
+# Facets (and filters) shared with the restaurant accounts list (accounts.FACETS).
+STATUS_FACET = Facet("status", values=RestaurantStatus.values)
+CITY_FACET = Facet("city", ignore_case=True)  # the cities that occur, by count
+
+
+def _cuisine_any(values: list[str]) -> Q:
+    """Restaurants with any of the cuisines (each trimmed, any letter case)."""
+    matching = RawSQL(  # noqa: S611 (the values are a bound parameter)
+        f"SELECT r.id FROM {TABLE} r "  # noqa: S608 (table name)
+        "CROSS JOIN LATERAL jsonb_array_elements_text(r.cuisines) c(value) "
+        "WHERE lower(btrim(c.value)) = ANY(SELECT lower(btrim(v)) FROM unnest(%s::text[]) v)",
+        (values,),
+    )
+    return Q(pk__in=matching)
+
+
+ADMIN_FACETS = (
+    STATUS_FACET,
+    CITY_FACET,
+    # Each cuisine that occurs; a restaurant counts once under each of its cuisines.
+    Facet("cuisine", field="cuisines", elements=True, ignore_case=True, match=_cuisine_any),
+    Facet("veg", values=list(VEG), cases=VEG),
+    Facet("accepting", values=list(ACCEPTING), cases=ACCEPTING),
+)
+
+
+def _admin_restaurants(query: dict[str, Any]) -> QuerySet[Restaurant]:
+    """The restaurants matching the filters (ADMIN_FACETS, joined days, `search`)."""
+    qs = apply_facets(Restaurant.objects.select_related("owner"), query, ADMIN_FACETS)
+    qs = qs.filter(joined_between(query))
     if search := (query.get("search") or "").strip():
         qs = _text_search(qs, search, Q(city__icontains=search))
-    items, meta = paginate(qs, page)
-    return {"items": [restaurant_json(r, owner="admin") for r in items], "pagination": meta}
+    return qs
+
+
+def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
+    items, meta = paginate(_admin_restaurants(query).order_by("-created_at"), page)
+    result = {"items": [restaurant_json(r, owner="admin") for r in items], "pagination": meta}
+    return with_facets(result, query, _admin_restaurants, ADMIN_FACETS)
 
 
 def admin_get(restaurant_id: uuid.UUID) -> Restaurant:
@@ -262,7 +301,6 @@ def resubmit(owner: User) -> Restaurant:
 
 # --- public ---------------------------------------------------------------------------------------
 
-TABLE = connection.ops.quote_name(Restaurant._meta.db_table)
 CUISINE_MATCH_SQL = (
     f"EXISTS (SELECT 1 FROM jsonb_array_elements_text({TABLE}.cuisines) c "  # noqa: S608 (table name)
     "WHERE lower(c) = lower(%s))"

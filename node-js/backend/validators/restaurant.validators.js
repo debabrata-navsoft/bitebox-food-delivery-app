@@ -3,8 +3,10 @@ import { RESTAURANT_STATUS } from "../models/restaurant.model.js";
 import {
   booleanQuery,
   dayRangeRules,
+  facetsQuery,
   imageUrlBody,
   mongoIdParam,
+  multiValue,
   paginationRules,
   paiseBody,
   requiredReason,
@@ -12,6 +14,7 @@ import {
 } from "./common.validators.js";
 import { USER_STATUS } from "../models/user.model.js";
 import { KYC_STATES } from "../services/kyc.service.js";
+import { RESTAURANT_ACCEPTING, RESTAURANT_VEG } from "../services/restaurant.service.js";
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -176,7 +179,14 @@ export const publicListRules = [
 export const adminListRules = [
   ...paginationRules,
   searchQuery(),
-  query("status").optional().isIn(Object.values(RESTAURANT_STATUS)),
+  // Every filter takes one value or several, comma-separated (OR).
+  multiValue("status", Object.values(RESTAURANT_STATUS)),
+  multiValue("city", null),
+  multiValue("cuisine", null),
+  multiValue("veg", RESTAURANT_VEG),
+  multiValue("accepting", RESTAURANT_ACCEPTING),
+  ...dayRangeRules("joinedFrom", "joinedTo"),
+  facetsQuery(),
 ];
 
 export const adminStatusRules = [
@@ -192,12 +202,13 @@ export const RESTAURANT_ACCOUNT_SORTS = ["newest", "oldest", "name", "orders", "
 
 export const accountListRules = [
   searchQuery(),
-  query("status").optional().isIn(Object.values(RESTAURANT_STATUS)),
-  query("accountStatus").optional().isIn(Object.values(USER_STATUS)),
-  query("kyc").optional().isIn(KYC_STATES),
-  query("city").optional().isString().trim().isLength({ min: 1, max: 60 }),
-  ...dayRangeRules("joinedFrom", "joinedTo", { message: "Invalid value" }),
+  multiValue("status", Object.values(RESTAURANT_STATUS)),
+  multiValue("accountStatus", Object.values(USER_STATUS)),
+  multiValue("kyc", KYC_STATES),
+  multiValue("city", null),
+  ...dayRangeRules("joinedFrom", "joinedTo"),
   query("sort").optional().isIn(RESTAURANT_ACCOUNT_SORTS),
+  facetsQuery(),
   ...paginationRules,
 ];
 

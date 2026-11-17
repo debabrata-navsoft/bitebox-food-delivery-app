@@ -1,23 +1,21 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { IconComponent, PaginationComponent, SelectOption } from 'nexprime';
+import { IconComponent, PaginationComponent } from 'nexprime';
 import { AuthService } from '../../../core/auth/auth.service';
-import {
-  AdminUsersService,
-  CustomerRow,
-  CustomerSort,
-  CustomerVerification,
-} from '../../../core/services/admin/admin-users.service';
+import { AdminUsersService, CustomerRow } from '../../../core/services/admin/admin-users.service';
+import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
+import { FilterSection } from '../../../shared/components/filter-panel/filter-panel.models';
+import { filterOptions, filteredList } from '../../../shared/list/filtered-list';
 import { NotificationService } from '../../../core/services/notification.service';
 import { openAccountStatus, statusChanged } from '../../../shared/components/account-status-dialog/account-status-dialog';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { TableLabels } from '../../../shared/list/table-labels';
-import { USER_STATUS_META, UserStatus, initialsOf } from '../../../shared/models/user.models';
+import { USER_STATUS_META, initialsOf } from '../../../shared/models/user.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
-import { accountList, selectOptions, shortId } from '../account-list';
+import { shortId } from '../account-list';
+import { JOINED_SECTION, accountSorts, accountStatusSection } from '../filter-sections';
 
 /**
  * Account management → Customers: everyone who orders, with what they ordered and spent, their
@@ -28,12 +26,12 @@ import { accountList, selectOptions, shortId } from '../account-list';
   imports: [
     DatePipe,
     RouterLink,
-    NP_FORM_FIELDS,
     IconComponent,
     PaginationComponent,
     PageHeader,
     InrPipe,
     TableLabels,
+    ListToolbar,
   ],
   templateUrl: './admin-customers.html',
   styleUrl: './admin-customers.scss',
@@ -48,34 +46,27 @@ export class AdminCustomers {
   protected readonly shortId = shortId;
   protected readonly initials = initialsOf;
 
-  protected readonly statusOptions = selectOptions('All statuses', USER_STATUS_META);
-  protected readonly verificationOptions = selectOptions('Any verification', {
-    email_verified: 'Email verified',
-    email_unverified: 'Email not verified',
-    phone_verified: 'Phone verified',
-    phone_unverified: 'Phone not verified',
-  });
-  protected readonly sortOptions: SelectOption[] = [
-    { value: 'newest', label: 'Newest first' },
-    { value: 'oldest', label: 'Oldest first' },
-    { value: 'name', label: 'Name A–Z' },
-    { value: 'orders', label: 'Most orders' },
-    { value: 'spent', label: 'Highest spending' },
-  ];
-
-  protected readonly accounts = accountList(
+  protected readonly filterSections: FilterSection[] = [
+    accountStatusSection('status', 'Account status'),
     {
-      search: '',
-      status: '' as UserStatus | '',
-      verification: '' as CustomerVerification | '',
-      joinedFrom: null as Date | null,
-      joinedTo: null as Date | null,
-      sort: 'newest' as CustomerSort,
+      kind: 'options',
+      key: 'verification',
+      label: 'Verification',
+      options: filterOptions({
+        email_verified: 'Email verified',
+        email_unverified: 'Email not verified',
+        phone_verified: 'Phone verified',
+        phone_unverified: 'Phone not verified',
+      }),
     },
-    (query) => this.api.customers(query),
-    'Could not load customers.',
-  );
-  protected readonly filters = this.accounts.filters;
+    JOINED_SECTION,
+  ];
+  protected readonly sortOptions = accountSorts({ orders: 'Most orders', spent: 'Highest spending' });
+
+  protected readonly accounts = filteredList((query) => this.api.customers(query), {
+    errorText: 'Could not load customers.',
+    sort: 'newest',
+  });
   protected readonly list = this.accounts.list;
 
   protected changeStatus(c: CustomerRow): void {

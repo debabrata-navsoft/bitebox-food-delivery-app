@@ -31,6 +31,16 @@ from apps.audit.services import audited, note
 from apps.kyc.models import ACCOUNT_KYC_STATES
 from apps.rbac.roles import Permission
 from common.api import ok
+from common.filters import (
+    FACETS_PARAM,
+    FacetQuery,
+    MultiValueField,
+    day_params,
+    facets_page,
+    multi_choice,
+    multi_param,
+    page_params,
+)
 from common.pagination import Page
 from common.permissions import permission_required
 from common.schema import envelope, errors, pagination
@@ -47,15 +57,15 @@ SORT_VALUES = list(accounts.SORTS)
 
 
 # --- input ----------------------------------------------------------------------------------------
-class RiderAccountListQuery(JoinedListQuery):
+class RiderAccountListQuery(FacetQuery, JoinedListQuery):
     """GET /admin/delivery-partner-accounts."""
 
-    account_status = optional_choice(USER_STATUS_VALUES)
-    verification = optional_choice(V.values)
-    availability = optional_choice(list(accounts.AVAILABILITY_VALUES))
-    kyc = optional_choice(ACCOUNT_KYC_STATES)
-    zone = serializers.CharField(required=False, allow_blank=True, max_length=60)
-    vehicle_type = optional_choice(VehicleType.values)
+    account_status = multi_choice(USER_STATUS_VALUES)
+    verification = multi_choice(V.values)
+    availability = multi_choice(accounts.AVAILABILITY_VALUES)
+    kyc = multi_choice(ACCOUNT_KYC_STATES)
+    zone = MultiValueField(max_length=60)
+    vehicle_type = multi_choice(VehicleType.values)
     joined_from = day_field()
     joined_to = day_field()
     sort = optional_choice(SORT_VALUES)
@@ -161,12 +171,7 @@ LIST_ITEM = inline_serializer(
     },
     many=True,
 )
-ACCOUNT_PAGE = envelope(
-    "RiderAccountPage",
-    inline_serializer(
-        name="RiderAccountPageData", fields={"items": LIST_ITEM, "pagination": PAGINATION}
-    ),
-)
+ACCOUNT_PAGE = facets_page("RiderAccountPage", accounts.FACETS, items=LIST_ITEM, paging=PAGINATION)
 ZONES = envelope(
     "RiderAccountZones",
     inline_serializer(
@@ -234,27 +239,20 @@ class RiderAccountsView(APIView):
         tags=TAGS,
         operation_id="admin_rider_accounts_list",
         parameters=[
-            OpenApiParameter("page", int),
-            OpenApiParameter("limit", int),
-            OpenApiParameter(
-                "search",
-                str,
-                description="Name, email, phone, vehicle number, the rider id or its last 6+",
-            ),
-            OpenApiParameter("accountStatus", str, enum=USER_STATUS_VALUES),
-            OpenApiParameter("verification", str, enum=V.values),
-            OpenApiParameter(
+            *page_params("Name, email, phone, vehicle number, the rider id or its last 6+"),
+            multi_param("accountStatus", USER_STATUS_VALUES),
+            multi_param("verification", V.values),
+            multi_param(
                 "availability",
-                str,
-                enum=list(accounts.AVAILABILITY_VALUES),
-                description="online: online and free; busy: online with an order; offline",
+                accounts.AVAILABILITY_VALUES,
+                "online: online and free; busy: online with an order; offline",
             ),
-            OpenApiParameter("kyc", str, enum=ACCOUNT_KYC_STATES),
-            OpenApiParameter("zone", str, description="Exact, any letter case"),
-            OpenApiParameter("vehicleType", str, enum=VehicleType.values),
-            OpenApiParameter("joinedFrom", str, description="YYYY-MM-DD (report time zone)"),
-            OpenApiParameter("joinedTo", str, description="YYYY-MM-DD, inclusive"),
+            multi_param("kyc", ACCOUNT_KYC_STATES),
+            multi_param("zone", description="Each exact, any letter case"),
+            multi_param("vehicleType", VehicleType.values),
+            *day_params("joined"),
             OpenApiParameter("sort", str, enum=SORT_VALUES),
+            FACETS_PARAM,
         ],
         responses={200: ACCOUNT_PAGE, **errors(401, 403, 422)},
     )

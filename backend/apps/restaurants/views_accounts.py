@@ -20,6 +20,7 @@ from apps.audit.services import audited, note
 from apps.kyc.models import ACCOUNT_KYC_STATES
 from apps.rbac.roles import Permission
 from common.api import ok
+from common.filters import FACETS_PARAM, day_params, facets_page, multi_param, page_params
 from common.pagination import Page
 from common.permissions import permission_required
 from common.schema import envelope, errors, pagination
@@ -77,11 +78,8 @@ LIST_ITEM = inline_serializer(
     },
     many=True,
 )
-ACCOUNT_PAGE = envelope(
-    "RestaurantAccountPage",
-    inline_serializer(
-        name="RestaurantAccountPageData", fields={"items": LIST_ITEM, "pagination": PAGINATION}
-    ),
+ACCOUNT_PAGE = facets_page(
+    "RestaurantAccountPage", accounts.FACETS, items=LIST_ITEM, paging=PAGINATION
 )
 CITIES = envelope(
     "RestaurantAccountCities",
@@ -148,20 +146,14 @@ class RestaurantAccountsView(APIView):
         tags=TAGS,
         operation_id="admin_restaurant_accounts_list",
         parameters=[
-            OpenApiParameter("page", int),
-            OpenApiParameter("limit", int),
-            OpenApiParameter(
-                "search",
-                str,
-                description="Name or slug, owner name, email or phone, the id or its last 6+",
-            ),
-            OpenApiParameter("status", str, enum=RestaurantStatus.values),
-            OpenApiParameter("accountStatus", str, enum=USER_STATUS_VALUES),
-            OpenApiParameter("kyc", str, enum=ACCOUNT_KYC_STATES),
-            OpenApiParameter("city", str, description="Exact, any letter case"),
-            OpenApiParameter("joinedFrom", str, description="YYYY-MM-DD (report time zone)"),
-            OpenApiParameter("joinedTo", str, description="YYYY-MM-DD, inclusive"),
+            *page_params("Name or slug, owner name, email or phone, the id or its last 6+"),
+            multi_param("status", RestaurantStatus.values),
+            multi_param("accountStatus", USER_STATUS_VALUES),
+            multi_param("kyc", ACCOUNT_KYC_STATES),
+            multi_param("city", description="Each exact, any letter case"),
+            *day_params("joined"),
             OpenApiParameter("sort", str, enum=ACCOUNT_SORT_VALUES),
+            FACETS_PARAM,
         ],
         responses={200: ACCOUNT_PAGE, **errors(401, 403, 422)},
     )

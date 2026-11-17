@@ -3,23 +3,13 @@
   subtitle="Restaurant partners: their restaurant, owner, approval, KYC and account status."
 />
 
-<div class="bb-filters">
-  <np-text-input
-    class="search"
-    [formField]="filters.search"
-    ariaLabel="Search restaurants"
-    placeholder="Restaurant, owner, email, mobile or ID"
-    icon="search"
-    clearable
-  />
-  <np-select [formField]="filters.status" ariaLabel="Approval status" [options]="statusOptions" />
-  <np-select [formField]="filters.kyc" ariaLabel="KYC status" [options]="kycOptions" />
-  <np-select [formField]="filters.accountStatus" ariaLabel="Owner account status" [options]="accountOptions" />
-  <np-select [formField]="filters.city" ariaLabel="City" [options]="cityOptions()" />
-  <np-calendar [formField]="filters.joinedFrom" placeholder="Joined from" dateFormat="dd M yy" showIcon />
-  <np-calendar [formField]="filters.joinedTo" placeholder="Joined to" dateFormat="dd M yy" showIcon />
-  <np-select [formField]="filters.sort" ariaLabel="Sort" [options]="sortOptions" />
-</div>
+<bb-list-toolbar
+  [list]="accounts"
+  [sections]="filterSections"
+  searchLabel="Search restaurants"
+  placeholder="Restaurant, owner, email, mobile or ID"
+  [sortOptions]="sortOptions"
+/>
 
 @if (list.error(); as message) {
   <div class="bb-alert error" role="alert">

@@ -16,6 +16,7 @@ from apps.audit.services import audited
 from apps.menus import services as menus
 from apps.rbac.roles import Permission, Role
 from common.api import ok
+from common.filters import FACETS_PARAM, day_params, facets_page, multi_param, page_params
 from common.http import PublicCacheMixin
 from common.pagination import Page
 from common.permissions import PUBLIC, permission_required, role_required
@@ -23,9 +24,11 @@ from common.schema import envelope, errors
 from common.validation import field_error, parse_id, validated
 
 from . import services
-from .models import Restaurant
+from .models import Restaurant, RestaurantStatus
 from .presenters import restaurant_json
 from .serializers import (
+    ACCEPTING_VALUES,
+    VEG_VALUES,
     AcceptingOrdersInput,
     AdminListQuery,
     AdminStatusInput,
@@ -180,6 +183,7 @@ class AcceptingOrdersView(APIView):
 # --- admin ----------------------------------------------------------------------------------------
 
 RESTAURANTS_MANAGE = [permission_required(Permission.RESTAURANTS_MANAGE)]
+ADMIN_PAGE = facets_page("AdminRestaurantPage", services.ADMIN_FACETS)
 
 
 class AdminListView(APIView):
@@ -187,8 +191,17 @@ class AdminListView(APIView):
 
     @extend_schema(
         tags=["Admin: restaurants"],
-        parameters=[OpenApiParameter(n, str) for n in ("status", "search", "page", "limit")],
-        responses={200: ANY, **errors(401, 403, 422)},
+        parameters=[
+            *page_params("Name, cuisine or city (part of it)"),
+            multi_param("status", RestaurantStatus.values),
+            multi_param("city", description="Each exact, any letter case"),
+            multi_param("cuisine", description="Has any of them (any letter case)"),
+            multi_param("veg", VEG_VALUES, "pure_veg: isPureVeg; mixed: not"),
+            multi_param("accepting", ACCEPTING_VALUES, "open / closed: isAcceptingOrders"),
+            *day_params("joined"),
+            FACETS_PARAM,
+        ],
+        responses={200: ADMIN_PAGE, **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
         query = validated(AdminListQuery, request.query_params)

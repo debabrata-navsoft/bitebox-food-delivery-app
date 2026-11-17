@@ -1,11 +1,14 @@
 import { body, query } from "express-validator";
 import { VEHICLE_TYPES, VERIFICATION_STATUS } from "../models/delivery-partner.model.js";
 import { USER_STATUS } from "../models/user.model.js";
+import { RIDER_AVAILABILITY } from "../services/admin-delivery-partners.service.js";
 import { KYC_STATES } from "../services/kyc.service.js";
 import { updateMemberRules } from "./admin-staff.validators.js";
 import {
   dayRangeRules,
+  facetsQuery,
   mongoIdParam,
+  multiValue,
   paginationRules,
   requiredReason,
   searchQuery,
@@ -18,19 +21,19 @@ import {
 } from "./order-management.validators.js";
 
 export const RIDER_ACCOUNT_SORTS = ["newest", "oldest", "name", "deliveries", "rating"];
-export const RIDER_AVAILABILITY = ["online", "offline", "busy"];
 
 /** GET /admin/delivery-partner-accounts */
 export const riderAccountListRules = [
   searchQuery(),
-  query("accountStatus").optional().isIn(Object.values(USER_STATUS)),
-  query("verification").optional().isIn(Object.values(VERIFICATION_STATUS)),
-  query("availability").optional().isIn(RIDER_AVAILABILITY),
-  query("kyc").optional().isIn(KYC_STATES),
-  query("zone").optional().isString().trim().isLength({ min: 1, max: 60 }),
-  query("vehicleType").optional().isIn(VEHICLE_TYPES),
-  ...dayRangeRules("joinedFrom", "joinedTo", { message: "Invalid value" }),
+  multiValue("accountStatus", Object.values(USER_STATUS)),
+  multiValue("verification", Object.values(VERIFICATION_STATUS)),
+  multiValue("availability", RIDER_AVAILABILITY),
+  multiValue("kyc", KYC_STATES),
+  multiValue("zone", null),
+  multiValue("vehicleType", VEHICLE_TYPES),
+  ...dayRangeRules("joinedFrom", "joinedTo"),
   query("sort").optional().isIn(RIDER_ACCOUNT_SORTS),
+  facetsQuery(),
   ...paginationRules,
 ];
 

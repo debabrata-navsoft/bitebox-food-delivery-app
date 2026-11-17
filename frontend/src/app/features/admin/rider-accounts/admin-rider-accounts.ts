@@ -1,27 +1,27 @@
 import { DatePipe, LowerCasePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { IconComponent, PaginationComponent, SelectOption } from 'nexprime';
+import { IconComponent, PaginationComponent } from 'nexprime';
 import { AuthService } from '../../../core/auth/auth.service';
-import { KycState } from '../../../core/services/admin/admin-restaurant-accounts.service';
-import {
-  AdminRiderAccountsService,
-  RiderAccountSort,
-  RiderAvailabilityFilter,
-} from '../../../core/services/admin/admin-rider-accounts.service';
+import { AdminRiderAccountsService } from '../../../core/services/admin/admin-rider-accounts.service';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { loaded } from '../../../shared/coupons/coupon-list';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { TableLabels } from '../../../shared/list/table-labels';
-import { VEHICLE_LABEL, VehicleType } from '../../../shared/models/checkout.models';
+import { VEHICLE_LABEL } from '../../../shared/models/checkout.models';
+import { RIDER_VERIFICATION_LABEL, RIDER_VERIFICATION_TONE } from '../../../shared/models/order-management.models';
+import { USER_STATUS_META, initialsOf } from '../../../shared/models/user.models';
+import { shortId } from '../account-list';
 import {
-  RIDER_VERIFICATION_LABEL,
-  RIDER_VERIFICATION_TONE,
-  RiderVerificationStatus,
-} from '../../../shared/models/order-management.models';
-import { USER_STATUS_META, UserStatus, initialsOf } from '../../../shared/models/user.models';
-import { accountList, selectOptions, shortId } from '../account-list';
+  JOINED_SECTION,
+  KYC_SECTION,
+  RIDER_AVAILABILITY_SECTION,
+  VEHICLE_SECTION,
+  ZONE_SECTION,
+  accountSorts,
+  accountStatusSection,
+} from '../filter-sections';
+import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
+import { FilterSection } from '../../../shared/components/filter-panel/filter-panel.models';
+import { filterOptions, filteredList } from '../../../shared/list/filtered-list';
 import { KYC_META } from '../restaurant-accounts/restaurant-status';
 import { availabilityOf } from './rider-status';
 
@@ -35,11 +35,11 @@ import { availabilityOf } from './rider-status';
     DatePipe,
     LowerCasePipe,
     RouterLink,
-    NP_FORM_FIELDS,
     IconComponent,
     PaginationComponent,
     PageHeader,
     TableLabels,
+    ListToolbar,
   ],
   templateUrl: './admin-rider-accounts.html',
   styleUrl: './admin-rider-accounts.scss',
@@ -57,49 +57,25 @@ export class AdminRiderAccounts {
   protected readonly accountMeta = USER_STATUS_META;
   protected readonly vehicleLabel = VEHICLE_LABEL;
 
-  protected readonly verificationOptions = selectOptions('Any verification', RIDER_VERIFICATION_LABEL, [
-    'pending',
-    'approved',
-    'resubmission_requested',
-    'rejected',
-  ]);
-  protected readonly availabilityOptions = selectOptions('Online or offline', {
-    online: 'Online',
-    busy: 'On a delivery',
-    offline: 'Offline',
-  });
-  protected readonly kycOptions = selectOptions('Any KYC status', KYC_META);
-  protected readonly accountOptions = selectOptions('Any account status', USER_STATUS_META);
-  protected readonly vehicleOptions = selectOptions('Any vehicle', VEHICLE_LABEL);
-  protected readonly sortOptions: SelectOption[] = [
-    { value: 'newest', label: 'Newest first' },
-    { value: 'oldest', label: 'Oldest first' },
-    { value: 'name', label: 'Name A–Z' },
-    { value: 'deliveries', label: 'Most deliveries' },
-    { value: 'rating', label: 'Highest rated' },
-  ];
-  private readonly zoneList = rxResource({ stream: () => this.api.zones() });
-  protected readonly zoneOptions = computed<SelectOption[]>(() => [
-    { value: '', label: 'All zones' },
-    ...(loaded(this.zoneList) ?? []).map((z) => ({ value: z, label: z })),
-  ]);
-
-  protected readonly accounts = accountList(
+  protected readonly filterSections: FilterSection[] = [
     {
-      search: '',
-      verification: '' as RiderVerificationStatus | '',
-      availability: '' as RiderAvailabilityFilter | '',
-      kyc: '' as KycState | '',
-      accountStatus: '' as UserStatus | '',
-      zone: '',
-      vehicleType: '' as VehicleType | '',
-      joinedFrom: null as Date | null,
-      joinedTo: null as Date | null,
-      sort: 'newest' as RiderAccountSort,
+      kind: 'options',
+      key: 'verification',
+      label: 'Verification',
+      options: filterOptions(RIDER_VERIFICATION_LABEL, ['pending', 'approved', 'resubmission_requested', 'rejected']),
     },
-    (query) => this.api.list(query),
-    'Could not load delivery partners.',
-  );
-  protected readonly filters = this.accounts.filters;
+    RIDER_AVAILABILITY_SECTION,
+    KYC_SECTION,
+    accountStatusSection('accountStatus', 'Account status'),
+    ZONE_SECTION,
+    VEHICLE_SECTION,
+    JOINED_SECTION,
+  ];
+  protected readonly sortOptions = accountSorts({ deliveries: 'Most deliveries', rating: 'Highest rated' });
+
+  protected readonly accounts = filteredList((query) => this.api.list(query), {
+    errorText: 'Could not load delivery partners.',
+    sort: 'newest',
+  });
   protected readonly list = this.accounts.list;
 }

@@ -7,13 +7,14 @@ import {
 } from "../models/user.model.js";
 import { Session } from "../models/session.model.js";
 import { ApiError } from "../utils/api-error.js";
-import { escapeRegex, paginationMeta } from "../utils/pagination.js";
+import { paginationMeta } from "../utils/pagination.js";
 import {
   ASSIGNABLE_PERMISSIONS,
   PERMISSION_CATALOGUE,
   PERMISSION_PRESETS,
   effectivePermissions,
 } from "../config/permissions.js";
+import { facetsIf, fixedFacet, inList, listOf, textSearch, USER_STATUS_FACET } from "./admin-accounts.js";
 import { accountTypeOf, changeAudit, diff } from "./audit.service.js";
 import { applyStatus, endSessions, hashPassword } from "./auth.service.js";
 import { adminSetStatus as setRiderStatus } from "./delivery-partner.service.js";
@@ -58,29 +59,44 @@ export const statusMessage = (who, status) => `${who} ${STATUS_VERB[status] ?? "
 export const statusAudit = ({ user, from, changed }, reason) =>
   changeAudit(changed ? { status: { from, to: user.status } } : {}, accountTypeOf(user.role), reason);
 
-/** A page of accounts with one of `roles` (or just `role`), newest first. */
-export async function listUsers(roles, { role, status, search }, pagination) {
-  const filter = { role: role ?? { $in: roles } };
-  if (status) filter.status = status;
-  if (search) {
-    const pattern = new RegExp(escapeRegex(search), "i");
-    filter.$or = [{ name: pattern }, { email: pattern }, { phone: pattern }];
-  }
-  const [items, total] = await Promise.all([
+/** Accounts with one of `roles`; `role` and `status` take one value or several (OR). */
+function usersFilter(roles, { role, status, search }) {
+  const wanted = listOf(role);
+  return {
+    role: { $in: wanted.length ? roles.filter((r) => wanted.includes(r)) : roles },
+    ...inList("status", status),
+    ...textSearch(search, ["name", "email", "phone"]),
+  };
+}
+
+/**
+ * A page of accounts with one of `roles` (narrowed by `role`), newest first. With `facets`
+ * (a facet map, see admin-accounts#facetCounts) and `facets=1`, the counts come along too.
+ */
+export async function listUsers(roles, query, pagination, facets) {
+  const filter = usersFilter(roles, query);
+  const [items, total, extra] = await Promise.all([
     User.find(filter)
       .sort({ createdAt: -1 })
       .skip(pagination.skip)
       .limit(pagination.limit),
     User.countDocuments(filter),
+    facets ? facetsIf(query, User, facets, (q) => usersFilter(roles, q)) : {},
   ]);
   return {
     items: items.map((u) => u.toJSON()),
     pagination: paginationMeta(pagination, total),
+    ...extra,
   };
 }
 
+const STAFF_FACETS = {
+  role: fixedFacet(ADMIN_ROLES, "$role"),
+  status: USER_STATUS_FACET,
+};
+
 export const listStaff = (query, pagination) =>
-  listUsers(ADMIN_ROLES, query, pagination);
+  listUsers(ADMIN_ROLES, query, pagination, STAFF_FACETS);
 
 export async function getStaff(id) {
   const user = await User.findOne({ _id: id, role: { $in: ADMIN_ROLES } });

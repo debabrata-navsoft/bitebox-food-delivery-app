@@ -13,7 +13,6 @@ import { ORDER_STATUS, Order } from "../models/order.model.js";
 import { ROLES, User, USER_STATUS } from "../models/user.model.js";
 import { ApiError } from "../utils/api-error.js";
 import { toPoint } from "../utils/geo.js";
-import { escapeRegex, paginationMeta } from "../utils/pagination.js";
 import {
   declineOffer,
   dispatchSafely,
@@ -49,6 +48,62 @@ export async function submittedRiderIds(userIds) {
   ]);
   const [account, details] = [withAccount, withDetails].map((list) => new Set(list.map(String)));
   return new Set(withDocuments.filter((id) => account.has(id) && details.has(id)));
+}
+
+/**
+ * submittedRiderIds as aggregation stages over riders (users, the profile joined as `rider`):
+ * adds `submitted` and `verificationState` (the verification status, with a pending rider who
+ * has not sent everything yet as NOT_SUBMITTED).
+ */
+export function submittedStages() {
+  const kinds = kyc.KINDS_FOR[ROLES.DELIVERY];
+  return [
+    {
+      $lookup: {
+        from: KycDocument.collection.name,
+        localField: "_id",
+        foreignField: "user",
+        pipeline: [
+          { $match: { kind: { $in: kinds }, status: { $ne: DOCUMENT_STATUS.REJECTED } } },
+          { $group: { _id: "$kind" } },
+        ],
+        as: "sentKinds",
+      },
+    },
+    {
+      $lookup: {
+        from: PayoutAccount.collection.name,
+        localField: "_id",
+        foreignField: "user",
+        pipeline: [{ $limit: 1 }, { $project: { _id: 1 } }],
+        as: "sentAccount",
+      },
+    },
+    {
+      $addFields: {
+        submitted: {
+          $and: [
+            { $eq: [{ $size: "$sentKinds" }, kinds.length] },
+            { $gt: [{ $size: "$sentAccount" }, 0] },
+            { $ne: [{ $ifNull: ["$rider.vehicleType", null] }, null] },
+            { $ne: [{ $ifNull: ["$rider.address", null] }, null] },
+          ],
+        },
+      },
+    },
+    {
+      $addFields: {
+        verificationState: {
+          $cond: [
+            { $eq: ["$verificationStatus", V.PENDING] },
+            { $cond: ["$submitted", V.PENDING, NOT_SUBMITTED] },
+            "$verificationStatus",
+          ],
+        },
+      },
+    },
+    { $project: { sentKinds: 0, sentAccount: 0 } },
+  ];
 }
 
 /** A profile as JSON, with `verification.submitted`. */
@@ -177,85 +232,6 @@ async function offerWaitingOrders() {
   for (const order of await findWaitingOrders(5)) {
     if (await dispatchSafely(order._id)) break; // one offer per rider at a time
   }
-}
-
-// Admin
-export async function adminList({ search, online, verification }, pagination) {
-  const userFilter = { role: ROLES.DELIVERY };
-  if (search) {
-    const pattern = new RegExp(escapeRegex(search), "i");
-    userFilter.$or = [
-      { name: pattern },
-      { email: pattern },
-      { phone: pattern },
-    ];
-  }
-  if (online === true) {
-    const onlineIds = await DeliveryPartner.find({ isOnline: true }).distinct(
-      "user",
-    );
-    userFilter._id = { $in: onlineIds };
-  }
-  // Pending: sent everything and waiting for review. Not submitted: pending (or no profile yet)
-  // with something still to send. Only these filters need every rider's state.
-  let submitted = null;
-  if (verification === V.PENDING || verification === NOT_SUBMITTED) {
-    const [ids, decided] = await Promise.all([
-      submittedRiderIds(),
-      DeliveryPartner.find({ verificationStatus: { $ne: V.PENDING } }).distinct("user"),
-    ]);
-    submitted = ids;
-    // $and keeps the online filter on _id above.
-    userFilter.$and =
-      verification === V.PENDING
-        ? [{ _id: { $in: [...submitted] } }, { _id: { $nin: decided } }]
-        : [{ _id: { $nin: [...submitted, ...decided] } }];
-  } else if (verification) {
-    // No status (older profiles) counts as approved.
-    const statuses = verification === V.APPROVED ? [V.APPROVED, null] : [verification];
-    const ids = await DeliveryPartner.find({ verificationStatus: { $in: statuses } }).distinct("user");
-    userFilter.$and = [{ _id: { $in: ids } }];
-  }
-  const [users, total] = await Promise.all([
-    User.find(userFilter)
-      .sort({ createdAt: -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit),
-    User.countDocuments(userFilter),
-  ]);
-  const [profiles, submittedOnPage] = await Promise.all([
-    DeliveryPartner.find({ user: { $in: users.map((u) => u._id) } }),
-    submitted ?? submittedRiderIds(users.map((u) => u._id)),
-  ]);
-  const byUser = new Map(profiles.map((p) => [String(p.user), p]));
-  const activeOrders = await Order.find({
-    _id: { $in: profiles.map((p) => p.activeOrder).filter(Boolean) },
-  }).select("orderNumber status");
-  const orderById = new Map(activeOrders.map((o) => [String(o._id), o]));
-
-  const items = users.map((u) => {
-    const p = byUser.get(String(u._id));
-    const active = p?.activeOrder ? orderById.get(String(p.activeOrder)) : null;
-    return {
-      ...u.toJSON(),
-      vehicleType: p?.vehicleType ?? null,
-      vehicleNumber: p?.vehicleNumber ?? null,
-      isOnline: p?.isOnline ?? false,
-      verificationStatus: p ? verificationOf(p) : V.PENDING,
-      submitted: submittedOnPage.has(String(u._id)),
-      locationUpdatedAt: p?.locationUpdatedAt ?? null,
-      completedDeliveries: p?.completedDeliveries ?? 0,
-      rating: p?.rating ?? null,
-      activeOrder: active
-        ? {
-            id: String(active._id),
-            orderNumber: active.orderNumber,
-            status: active.status,
-          }
-        : null,
-    };
-  });
-  return { items, pagination: paginationMeta(pagination, total) };
 }
 
 // What the availability history says when the system takes a rider offline.

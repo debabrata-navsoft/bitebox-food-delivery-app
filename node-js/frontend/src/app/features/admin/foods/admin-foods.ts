@@ -1,17 +1,6 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  OnInit,
-  inject,
-  input,
-  signal,
-  computed,
-} from '@angular/core';
-import { form } from '@angular/forms/signals';
-import { Router, RouterLink } from '@angular/router';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, linkedSignal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ButtonComponent, IconComponent, PaginationComponent, ToggleComponent } from 'nexprime';
-import { Subscription, debounceTime, distinctUntilChanged, filter, skip } from 'rxjs';
 import {
   AdminCatalogService,
   AdminFoodItem,
@@ -20,10 +9,11 @@ import { errorMessage } from '../../../core/services/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
+import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
+import { FilterSection } from '../../../shared/components/filter-panel/filter-panel.models';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
-import { Pagination } from '../../../shared/models/api.models';
+import { filterOptions, filteredList } from '../../../shared/list/filtered-list';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 
@@ -31,11 +21,11 @@ import { BbDialog } from '../../../shared/dialog/bb-dialog';
   selector: 'bb-admin-foods',
   imports: [
     ToggleComponent,
-    NP_FORM_FIELDS,
     RouterLink,
     IconComponent,
     PaginationComponent,
     EmptyState,
+    ListToolbar,
     PageHeader,
     VegBadge,
     InrPipe,
@@ -49,64 +39,43 @@ export class AdminFoods implements OnInit {
   private readonly service = inject(AdminCatalogService);
   private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
-  private readonly router = inject(Router);
 
+  /** ?restaurant=<id> (the restaurant review's "Menu" link) preselects that restaurant. */
   readonly restaurant = input<string>();
 
-  protected readonly filters = form(signal({ search: '' }));
-  protected readonly items = signal<AdminFoodItem[]>([]);
-  protected readonly pagination = signal<Pagination>({
-    page: 1,
-    limit: 20,
-    total: 0,
-    totalPages: 0,
-  });
-  protected readonly loading = signal(true);
-  protected readonly error = signal<string | null>(null);
-  private inFlight?: Subscription;
+  /** Names of the restaurants on this page, for a preselected restaurant's chip. */
+  private readonly restaurantNames = computed(
+    () =>
+      new Map(
+        (this.list.data()?.items ?? []).map((i) => [i.restaurant._id ?? i.restaurant.id ?? '', i.restaurant.name]),
+      ),
+  );
 
-  constructor() {
-    toObservable(computed(() => this.filters.search().value().trim()))
-      .pipe(skip(1), debounceTime(350), distinctUntilChanged(), takeUntilDestroyed())
-      .subscribe(() => this.load(1));
-  }
+  protected readonly filterSections: FilterSection[] = [
+    // Restaurants and categories that have dishes (the API's counts, with their names).
+    { kind: 'options', key: 'restaurant', label: 'Restaurant', labelOf: (id) => this.restaurantNames().get(id) ?? id },
+    { kind: 'options', key: 'category', label: 'Category' },
+    { kind: 'options', key: 'type', label: 'Type', options: filterOptions({ veg: 'Veg', non_veg: 'Non-veg' }) },
+    {
+      kind: 'options',
+      key: 'availability',
+      label: 'Availability',
+      options: filterOptions({ available: 'Available', unavailable: 'Unavailable' }),
+    },
+  ];
+
+  protected readonly foods = filteredList((query) => this.service.foods(query), {
+    errorText: 'Could not load dishes.',
+    lazy: true,
+  });
+  protected readonly list = this.foods.list;
+  /** The page's rows; availability changes and deletions apply here at once. */
+  protected readonly items = linkedSignal<AdminFoodItem[]>(() => this.list.data()?.items ?? []);
 
   ngOnInit(): void {
-    this.load(1);
-  }
-
-  protected clearRestaurant(): void {
-    void this.router.navigate([], { queryParams: {} }).then(() => this.load(1));
-  }
-
-  /** np-pagination: `(pageChange)` → goTo(page); `(rowsChange)` → goTo(1, rows). */
-  protected goTo(page: number, rows?: number): void {
-    if (rows) this.pagination.update((p) => ({ ...p, limit: rows }));
-    this.load(page);
-  }
-
-  protected load(page: number): void {
-    this.inFlight?.unsubscribe();
-    this.loading.set(true);
-    this.error.set(null);
-    this.inFlight = this.service
-      .foods({
-        search: this.filters.search().value().trim() || undefined,
-        restaurant: this.restaurant() || undefined,
-        page,
-        limit: this.pagination().limit,
-      })
-      .subscribe({
-        next: (res) => {
-          this.items.set(res.items);
-          this.pagination.set(res.pagination);
-          this.loading.set(false);
-        },
-        error: (err: unknown) => {
-          this.error.set(errorMessage(err, 'Could not load dishes.'));
-          this.loading.set(false);
-        },
-      });
+    const id = this.restaurant();
+    if (id) this.foods.panel.set({ restaurant: [id] });
+    this.list.load(1);
   }
 
   protected toggle(item: AdminFoodItem, checked: boolean): void {

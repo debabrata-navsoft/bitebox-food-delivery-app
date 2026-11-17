@@ -2,7 +2,7 @@
 
 import re
 import uuid
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from datetime import date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -19,6 +19,7 @@ from apps.customers import services as addresses
 from apps.delivery.models import DeliveryPartner
 from apps.orders.models import Order, OrderStatus
 from apps.rbac.roles import (
+    ADMIN_ROLE_VALUES,
     ADMIN_ROLES,
     MEMBER_ROLES,
     STAFF_ADMIN_ROLES,
@@ -30,6 +31,7 @@ from apps.rbac.roles import (
 )
 from apps.uploads.storage import is_uploaded_image_url
 from common.api import ApiError
+from common.filters import Facet, apply_facets, with_facets
 from common.pagination import Page, paginate
 from common.permissions import NO_ACCESS
 
@@ -89,8 +91,24 @@ def list_members(actor: User, query: dict[str, Any], page: Page) -> dict[str, An
     return list_users(roles, query, page)
 
 
+USER_STATUS_FACET = Facet("status", values=UserStatus.values)
+STAFF_FACETS = (Facet("role", values=ADMIN_ROLE_VALUES), USER_STATUS_FACET)
+
+
+def _staff(query: dict[str, Any]) -> QuerySet[User]:
+    qs = apply_facets(User.objects.filter(role__in=ADMIN_ROLES), query, STAFF_FACETS)
+    if search := (query.get("search") or "").strip():
+        qs = qs.filter(
+            Q(name__icontains=search) | Q(email__icontains=search) | Q(phone__icontains=search)
+        )
+    return qs
+
+
 def list_staff(query: dict[str, Any], page: Page) -> dict[str, Any]:
-    return list_users(ADMIN_ROLES, query, page)
+    """Admins, newest first; `role` and `status` take several values (facets: STAFF_FACETS)."""
+    items, meta = paginate(_staff(query).order_by("-created_at"), page)
+    result = {"items": [user_json(u) for u in items], "pagination": meta}
+    return with_facets(result, query, _staff, STAFF_FACETS)
 
 
 def get_member(user_id: uuid.UUID) -> User:
@@ -395,14 +413,19 @@ def _day_start(day: date) -> datetime:
     return datetime.combine(day, time.min, tzinfo=ZoneInfo(settings.REPORT_TIMEZONE))
 
 
+def days_between(query: Mapping[str, Any], name: str, field: str = "created_at") -> Q:
+    """`<name>_from` / `<name>_to`: whole calendar days (inclusive) in the report time zone."""
+    match = Q()
+    if start := query.get(f"{name}_from"):
+        match &= Q(**{f"{field}__gte": _day_start(start)})
+    if end := query.get(f"{name}_to"):
+        match &= Q(**{f"{field}__lt": _day_start(end + timedelta(days=1))})
+    return match
+
+
 def joined_between(query: dict[str, Any]) -> Q:
     """`joined_from` / `joined_to`: whole calendar days (inclusive) in the report time zone."""
-    match = Q()
-    if query.get("joined_from"):
-        match &= Q(created_at__gte=_day_start(query["joined_from"]))
-    if query.get("joined_to"):
-        match &= Q(created_at__lt=_day_start(query["joined_to"] + timedelta(days=1)))
-    return match
+    return days_between(query, "joined")
 
 
 def distinct_names(values: Iterable[str | None]) -> list[str]:
@@ -441,12 +464,15 @@ def id_search(search: str) -> Q:
         return Q(id__endswith=hex_id) if _ID_SUFFIX.match(hex_id) else Q(pk__in=[])
 
 
+CUSTOMER_FACETS = (
+    USER_STATUS_FACET,
+    # The four values overlap (a customer is email_verified and phone_unverified...).
+    Facet("verification", values=list(VERIFICATION_FILTERS), cases=VERIFICATION_FILTERS),
+)
+
+
 def _customers(query: dict[str, Any]) -> QuerySet[User]:
-    qs = User.objects.filter(role=Role.CUSTOMER)
-    if query.get("status"):
-        qs = qs.filter(status=query["status"])
-    if query.get("verification"):
-        qs = qs.filter(VERIFICATION_FILTERS[query["verification"]])
+    qs = apply_facets(User.objects.filter(role=Role.CUSTOMER), query, CUSTOMER_FACETS)
     qs = qs.filter(joined_between(query))
     if search := (query.get("search") or "").strip():
         qs = qs.filter(person_search(search) | id_search(search))
@@ -477,7 +503,7 @@ def list_customers(query: dict[str, Any], page: Page) -> dict[str, Any]:
         }
         for u in rows
     ]
-    return {"items": items, "pagination": meta}
+    return with_facets({"items": items, "pagination": meta}, query, _customers, CUSTOMER_FACETS)
 
 
 def get_customer_account(user_id: uuid.UUID) -> User:

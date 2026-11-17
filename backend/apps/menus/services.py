@@ -3,12 +3,13 @@
 import uuid
 from typing import Any
 
-from django.db.models import Count, F, QuerySet
+from django.db.models import Count, F, Q, QuerySet
 from django.utils import timezone
 
 from apps.restaurants.models import Restaurant, RestaurantStatus
 from apps.restaurants.presenters import is_open_now, rating_json
 from common.api import ApiError
+from common.filters import Facet, apply_facets, with_facets
 from common.pagination import Page, paginate
 from common.slug import unique_slug
 from common.validation import field_error
@@ -206,15 +207,30 @@ def _admin_restaurant_ref(r: Restaurant) -> dict[str, Any]:
     return {"id": str(r.pk), "name": r.name, "slug": r.slug, "status": r.status}
 
 
+FOOD_TYPE = {"veg": Q(is_veg=True), "non_veg": Q(is_veg=False)}
+AVAILABILITY = {"available": Q(is_available=True), "unavailable": Q(is_available=False)}
+ADMIN_FACETS = (
+    Facet("restaurant", label="restaurant__name"),  # the restaurants that occur, by count
+    Facet("category", label="category__name"),
+    Facet("type", values=list(FOOD_TYPE), cases=FOOD_TYPE),
+    Facet("availability", values=list(AVAILABILITY), cases=AVAILABILITY),
+)
+
+
+def _admin_foods(query: dict[str, Any]) -> QuerySet[FoodItem]:
+    """The dishes matching the filters (ADMIN_FACETS, `search`, `available`, `veg`)."""
+    qs = _filtered(FoodItem.objects.all(), {**query, "category": None})
+    return apply_facets(qs, query, ADMIN_FACETS)
+
+
 def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
-    qs = FoodItem.objects.select_related("category", "restaurant")
-    if query.get("restaurant"):
-        qs = qs.filter(restaurant_id=query["restaurant"])
-    items, meta = paginate(_filtered(qs, query).order_by("-created_at"), page)
-    return {
+    qs = _admin_foods(query).select_related("category", "restaurant")
+    items, meta = paginate(qs.order_by("-created_at"), page)
+    result = {
         "items": [food_json(i, restaurant=_admin_restaurant_ref(i.restaurant)) for i in items],
         "pagination": meta,
     }
+    return with_facets(result, query, _admin_foods, ADMIN_FACETS)
 
 
 def admin_set_availability(item_id: uuid.UUID, available: bool) -> dict[str, Any]:

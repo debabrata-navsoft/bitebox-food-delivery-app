@@ -1,16 +1,17 @@
 import { TableLabels } from '../../../shared/list/table-labels';
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { form } from '@angular/forms/signals';
-import { IconComponent, PaginationComponent, SelectOption } from 'nexprime';
+import { IconComponent, PaginationComponent } from 'nexprime';
 import { AdminStaffService } from '../../../core/services/admin/admin-staff.service';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { pagedList } from '../../../shared/list/paged-list';
+import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
+import { FilterSection } from '../../../shared/components/filter-panel/filter-panel.models';
+import { filterOptions, filteredList } from '../../../shared/list/filtered-list';
+import { adminRoleSection } from '../filter-sections';
 import { AuditEntry } from '../../../shared/models/admin-roles.models';
-import { ADMIN_ROLES, AdminRole, ROLE_META } from '../../../shared/models/user.models';
+import { AdminRole, ROLE_META } from '../../../shared/models/user.models';
 
 /** Labels for the actions the API records (the `audited(...)` routes of both backends). */
 const ACTIONS: Record<string, string> = {
@@ -102,10 +103,10 @@ const accountLink = (e: AuditEntry): string[] | null => {
 @Component({
   selector: 'bb-audit-log',
   imports: [
+    ListToolbar,
     TableLabels,
     DatePipe,
     RouterLink,
-    NP_FORM_FIELDS,
     PaginationComponent,
     IconComponent,
     EmptyState,
@@ -123,47 +124,17 @@ export class AuditLogPage {
   protected readonly changeLines = changeLines;
   protected readonly accountLink = accountLink;
 
-  protected readonly filterModel = signal({
-    search: '',
-    action: '',
-    role: '',
-    accountType: '',
-    from: null as Date | null,
-    to: null as Date | null,
-  });
-  protected readonly filters = form(this.filterModel);
-  protected readonly actionOptions: SelectOption[] = [
-    { value: '', label: 'All actions' },
-    ...Object.entries(ACTIONS)
-      .sort(([, a], [, b]) => a.localeCompare(b))
-      .map(([value, label]) => ({ value, label })),
+  protected readonly filterSections: FilterSection[] = [
+    // The actions that were recorded (the API's counts), by their label.
+    { kind: 'options', key: 'action', label: 'Action', labelOf: (a) => ACTIONS[a] ?? a },
+    adminRoleSection('Admin role'),
+    { kind: 'options', key: 'accountType', label: 'Account type', options: filterOptions(ACCOUNT_TYPES) },
+    { kind: 'dates', key: 'when', label: 'Date', params: ['from', 'to'] },
   ];
-  protected readonly roleOptions: SelectOption[] = [
-    { value: '', label: 'All admin roles' },
-    ...ADMIN_ROLES.map((r) => ({ value: r, label: ROLE_META[r].label })),
-  ];
-  protected readonly accountOptions: SelectOption[] = [
-    { value: '', label: 'Any account type' },
-    ...Object.entries(ACCOUNT_TYPES).map(([value, label]) => ({ value, label })),
-  ];
-
-  private readonly query = computed(() => {
-    const f = this.filterModel();
-    const end = f.to && new Date(f.to.getFullYear(), f.to.getMonth(), f.to.getDate(), 23, 59, 59, 999);
-    return {
-      search: f.search.trim() || undefined,
-      action: f.action || undefined,
-      role: f.role || undefined,
-      accountType: f.accountType || undefined,
-      // Whole local days: from the start of the first to the end of the last.
-      from: f.from ? new Date(f.from.getFullYear(), f.from.getMonth(), f.from.getDate()).toISOString() : undefined,
-      to: end ? end.toISOString() : undefined,
-    };
-  });
-
-  protected readonly list = pagedList((page, limit) => this.api.auditLog({ ...this.query(), page, limit }), {
-    filterKey: () => JSON.stringify(this.query()),
-    limit: 50,
+  protected readonly log = filteredList((query) => this.api.auditLog(query), {
     errorText: 'Could not load the audit log.',
+    limit: 50,
+    instants: true,
   });
+  protected readonly list = this.log.list;
 }

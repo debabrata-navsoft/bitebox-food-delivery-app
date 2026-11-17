@@ -3,20 +3,12 @@
   subtitle="Every sensitive admin action: who did what, to which account, what changed and why. Entries can't be changed or removed."
 />
 
-<div class="bb-filters">
-  <np-text-input
-    [formField]="filters.search"
-    ariaLabel="Search the log"
-    placeholder="Search descriptions or a record id"
-    icon="search"
-    clearable
-  />
-  <np-select [formField]="filters.action" ariaLabel="Action" [options]="actionOptions" />
-  <np-select [formField]="filters.role" ariaLabel="Admin role" [options]="roleOptions" />
-  <np-select [formField]="filters.accountType" ariaLabel="Account type" [options]="accountOptions" />
-  <np-calendar [formField]="filters.from" placeholder="From" dateFormat="dd M yy" showIcon />
-  <np-calendar [formField]="filters.to" placeholder="To" dateFormat="dd M yy" showIcon />
-</div>
+<bb-list-toolbar
+  [list]="log"
+  [sections]="filterSections"
+  searchLabel="Search the log"
+  placeholder="Search descriptions or a record id"
+/>
 
 @if (list.error(); as message) {
   <div class="bb-alert error" role="alert">

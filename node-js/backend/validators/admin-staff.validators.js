@@ -7,7 +7,7 @@ import {
 import { AUDIT_ACCOUNT_TYPES } from "../models/audit-log.model.js";
 import { ASSIGNABLE_PERMISSIONS, PERMISSIONS } from "../config/permissions.js";
 import { email, gender, name, newPassword, phone } from "./auth.validators.js";
-import { mongoIdParam, paginationRules } from "./common.validators.js";
+import { facetsQuery, mongoIdParam, multiValue, paginationRules } from "./common.validators.js";
 
 const listQuery = [
   ...paginationRules,
@@ -37,8 +37,9 @@ const permissionList = () =>
 
 export const listStaffRules = [
   ...listQuery,
-  query("role").optional().isIn(ADMIN_ROLES),
-  query("status").optional().isIn(Object.values(USER_STATUS)),
+  multiValue("role", ADMIN_ROLES),
+  multiValue("status", Object.values(USER_STATUS)),
+  facetsQuery(),
 ];
 export const createStaffRules = [
   name(),
@@ -83,14 +84,14 @@ export const staffStatusRules = accountStatusRules;
 
 export const auditListRules = [
   ...listQuery,
-  query("action").optional().isString().trim().isLength({ max: 60 }),
-  query("role").optional().isIn(ADMIN_ROLES),
+  multiValue("action", null),
+  multiValue("role", ADMIN_ROLES),
   query("from").optional().isISO8601().toDate(),
   query("to").optional().isISO8601().toDate(),
-  query("accountType")
-    .optional()
-    .isIn(AUDIT_ACCOUNT_TYPES.filter(Boolean))
-    .withMessage("Account type must be customer, restaurant, delivery or admin"),
+  multiValue("accountType", AUDIT_ACCOUNT_TYPES.filter(Boolean), {
+    message: "Account type must be customer, restaurant, delivery or admin",
+  }),
+  facetsQuery(),
   // One id, or up to 5 separated by commas (a restaurant and its owner's account).
   query("resourceId")
     .optional()

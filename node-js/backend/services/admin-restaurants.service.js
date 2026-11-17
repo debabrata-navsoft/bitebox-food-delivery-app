@@ -2,28 +2,35 @@ import { PERMISSIONS, hasPermission } from "../config/permissions.js";
 import { DOCUMENT_KINDS } from "../models/kyc-document.model.js";
 import { Order } from "../models/order.model.js";
 import { RESTAURANT_STATUS, Restaurant } from "../models/restaurant.model.js";
-import { ROLES, User } from "../models/user.model.js";
+import { ROLES, USER_STATUS, User } from "../models/user.model.js";
 import { ApiError } from "../utils/api-error.js";
-import { escapeRegex } from "../utils/pagination.js";
 import {
   ADDRESS_LINES,
   addressLines,
   aggregatePage,
+  allOf,
   blank,
   distinctNames,
+  facetsIf,
+  fixedFacet,
   idSearch,
+  inList,
   joinedRange,
+  kycFilterStages,
   kycSummary,
+  listOf,
   listSorts,
   NEWEST,
+  openFacet,
   personSearch,
   ratingOf,
   sameName,
+  textSearch,
 } from "./admin-accounts.js";
 import { orderStats } from "./admin-users.service.js";
 import { diff } from "./audit.service.js";
 import { commissionsFor } from "./earnings.service.js";
-import { restaurantKycStages, reverify } from "./kyc.service.js";
+import { KYC_STATES, restaurantKycStages, reverify } from "./kyc.service.js";
 import { adminSetStatus, applyDetails } from "./restaurant.service.js";
 
 /**
@@ -61,26 +68,50 @@ const ownerCard = (u) =>
 /** Owners (restaurant partners) matching `filter`, as ids. */
 const ownerIds = (filter) => User.distinct("_id", { role: ROLES.RESTAURANT, ...filter });
 
+/** `status`, `accountStatus`, `city` (and `kyc`, see restaurantPipeline) take several values. */
 async function listFilter({ search, status, accountStatus, city, joinedFrom, joinedTo }) {
-  const and = [];
-  if (status) and.push({ status });
-  if (city) and.push({ "address.city": sameName(city) });
   const joined = joinedRange(joinedFrom, joinedTo);
-  if (joined) and.push({ createdAt: joined });
-  if (accountStatus) and.push({ owner: { $in: await ownerIds({ status: accountStatus }) } });
-  if (search) {
-    const pattern = new RegExp(escapeRegex(search), "i");
-    and.push({
+  const ownerStatus = inList("status", accountStatus);
+  return allOf(
+    inList("status", status),
+    inList("address.city", city, sameName),
+    joined && { createdAt: joined },
+    ownerStatus && { owner: { $in: await ownerIds(ownerStatus) } },
+    search && {
       $or: [
-        { name: pattern },
-        { slug: pattern },
+        ...textSearch(search, ["name", "slug"]).$or,
         { owner: { $in: await ownerIds({ $or: personSearch(search) }) } },
         idSearch(search),
       ].filter(Boolean),
-    });
-  }
-  return and.length ? { $and: and } : {};
+    },
+  );
 }
+
+/** The list's filter stages: the KYC state is computed for every matching restaurant when filtering by it. */
+const restaurantPipeline = async (query) => [
+  { $match: await listFilter(query) },
+  ...kycFilterStages(query.kyc, restaurantKycStages),
+];
+
+/** The owner's account status, as `ownerAccount: [{ status }]`. */
+const ownerStatusStages = [
+  {
+    $lookup: {
+      from: User.collection.name,
+      localField: "owner",
+      foreignField: "_id",
+      pipeline: [{ $project: { status: 1 } }],
+      as: "ownerAccount",
+    },
+  },
+];
+
+const FACETS = {
+  status: fixedFacet(Object.values(RESTAURANT_STATUS), "$status"),
+  accountStatus: fixedFacet(Object.values(USER_STATUS), { $first: "$ownerAccount.status" }, ownerStatusStages),
+  kyc: fixedFacet(KYC_STATES, "$kycStatus", restaurantKycStages),
+  city: openFacet("$address.city"),
+};
 
 /** Every order placed with the restaurant (`orderCount`). */
 const orderCountLookup = [
@@ -107,22 +138,19 @@ const SORTS = listSorts({
  */
 export async function listRestaurants(query, pagination) {
   const sort = query.sort ?? "newest";
-  const pipeline = [{ $match: await listFilter(query) }];
-  const kycFirst = Boolean(query.kyc);
+  const pipeline = await restaurantPipeline(query);
+  const kycFirst = listOf(query.kyc).length > 0;
   const ordersFirst = sort === "orders";
-  if (kycFirst) pipeline.push(...restaurantKycStages(), { $match: { kycStatus: query.kyc } });
   if (ordersFirst) pipeline.push(...orderCountLookup);
   const rowStages = [
     ...(kycFirst ? [] : restaurantKycStages()),
     ...(ordersFirst ? [] : orderCountLookup),
     { $project: { kycStatus: 1, orderCount: 1 } },
   ];
-  const { rows, pagination: meta } = await aggregatePage(
-    Restaurant,
-    pipeline,
-    { sort, sorts: SORTS, rowStages },
-    pagination,
-  );
+  const [{ rows, pagination: meta }, facets] = await Promise.all([
+    aggregatePage(Restaurant, pipeline, { sort, sorts: SORTS, rowStages }, pagination),
+    facetsIf(query, Restaurant, FACETS, restaurantPipeline),
+  ]);
 
   const ids = rows.map((r) => r._id);
   const [restaurants, commissions] = await Promise.all([
@@ -152,6 +180,7 @@ export async function listRestaurants(query, pagination) {
         };
       }),
     pagination: meta,
+    ...facets,
   };
 }
 

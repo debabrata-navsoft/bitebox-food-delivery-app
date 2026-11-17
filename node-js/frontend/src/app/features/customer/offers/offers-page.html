@@ -2,7 +2,13 @@
   <bb-page-header title="Offers for you" subtitle="Coupons and offers you can use right now." />
 
   <div class="kinds">
-    <np-button-toggle [options]="kinds" [value]="kind()" (valueChange)="pick($event)" ariaLabel="Kind of offer" />
+    <!-- A segmented bar on wider screens, a dropdown on phones. -->
+    <div class="bar">
+      <np-button-toggle [options]="kinds" [value]="kind()" (valueChange)="pick($event)" ariaLabel="Kind of offer" />
+    </div>
+    <div class="menu">
+      <np-select [options]="kinds" [value]="kind()" (valueChange)="pick($event)" ariaLabel="Kind of offer" />
+    </div>
   </div>
 
   @if (failed()) {

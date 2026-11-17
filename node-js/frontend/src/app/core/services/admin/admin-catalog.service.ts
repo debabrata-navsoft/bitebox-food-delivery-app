@@ -2,7 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { ApiResponse, Paginated } from '../../../shared/models/api.models';
+import { ApiResponse } from '../../../shared/models/api.models';
+import { Faceted, ListQuery } from '../../../shared/list/filtered-list';
 import {
   AdminRestaurant,
   FoodCategory,
@@ -23,14 +24,13 @@ export class AdminCatalogService {
   private readonly url = `${environment.baseUrl}/admin`;
 
   // Restaurants
-  restaurants(query: {
-    status?: RestaurantStatus;
-    search?: string;
-    page?: number;
-    limit?: number;
-  }): Observable<Paginated<AdminRestaurant>> {
+  /**
+   * Filters: status, city, cuisine, veg (pure_veg/mixed), accepting (open/closed), several values
+   * each; joinedFrom/joinedTo days; search. `facets: 1` adds the Filters panel's counts.
+   */
+  restaurants(query: ListQuery): Observable<Faceted<AdminRestaurant>> {
     return this.http
-      .get<ApiResponse<Paginated<AdminRestaurant>>>(`${this.url}/restaurants`, {
+      .get<ApiResponse<Faceted<AdminRestaurant>>>(`${this.url}/restaurants`, {
         params: toParams(query),
       })
       .pipe(map((res) => res.data));
@@ -91,15 +91,13 @@ export class AdminCatalogService {
   }
 
   // Food items
-  foods(query: {
-    search?: string;
-    restaurant?: string;
-    available?: boolean;
-    page?: number;
-    limit?: number;
-  }): Observable<Paginated<AdminFoodItem>> {
+  /**
+   * Filters: restaurant, category (ids), type (veg/non_veg), availability (available/unavailable),
+   * several values each; search. `facets: 1` adds the Filters panel's counts (with names for ids).
+   */
+  foods(query: ListQuery): Observable<Faceted<AdminFoodItem>> {
     return this.http
-      .get<ApiResponse<Paginated<AdminFoodItem>>>(`${this.url}/foods`, { params: toParams(query) })
+      .get<ApiResponse<Faceted<AdminFoodItem>>>(`${this.url}/foods`, { params: toParams(query) })
       .pipe(map((res) => res.data));
   }
 

@@ -6,6 +6,7 @@ from typing import Any
 from rest_framework import serializers
 
 from common.fields import ImageUrlField, PaiseField, QueryBoolean, UUIDRef
+from common.filters import FacetQuery, MultiIdField, multi_choice
 from common.validation import PageQuery
 
 ICON = re.compile(r"^[a-z0-9_]{1,40}$")
@@ -92,8 +93,18 @@ class FoodListQuery(PageQuery):
     veg = QueryBoolean()
 
 
-class AdminFoodListQuery(FoodListQuery):
-    restaurant = UUIDRef(required=False)
+FOOD_TYPE_VALUES = ["veg", "non_veg"]
+AVAILABILITY_VALUES = ["available", "unavailable"]
+
+
+class AdminFoodListQuery(FacetQuery, FoodListQuery):
+    """GET /admin/foods: restaurant, category, type and availability take several values (the
+    boolean `veg` and `available` work as before)."""
+
+    restaurant = MultiIdField()
+    category = MultiIdField()  # type: ignore[assignment]
+    type = multi_choice(FOOD_TYPE_VALUES)
+    availability = multi_choice(AVAILABILITY_VALUES)
 
 
 class PublicFoodQuery(PageQuery):

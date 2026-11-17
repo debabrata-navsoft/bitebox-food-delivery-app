@@ -1,7 +1,20 @@
 import { ORDER_STATUS, Order } from "../models/order.model.js";
 import { ROLES, USER_STATUS, User } from "../models/user.model.js";
 import { ApiError } from "../utils/api-error.js";
-import { aggregatePage, idSearch, joinedRange, listSorts, NEWEST, personSearch } from "./admin-accounts.js";
+import {
+  aggregatePage,
+  allOf,
+  anyMatch,
+  facetsIf,
+  flagFacet,
+  idSearch,
+  inList,
+  joinedRange,
+  listSorts,
+  NEWEST,
+  personSearch,
+  USER_STATUS_FACET,
+} from "./admin-accounts.js";
 import { sendEmailVerification, sendPasswordReset } from "./auth.service.js";
 
 /**
@@ -12,19 +25,37 @@ import { sendEmailVerification, sendPasswordReset } from "./auth.service.js";
 /** Admin-sent links: at most one of each kind per customer per minute. */
 export const HELP_LINK_GAP_MS = 60_000;
 
+/** The `verification` filter values: [field, verified?]. */
+const VERIFICATION = {
+  email_verified: ["emailVerifiedAt", true],
+  email_unverified: ["emailVerifiedAt", false],
+  phone_verified: ["phoneVerifiedAt", true],
+  phone_unverified: ["phoneVerifiedAt", false],
+};
+/** `{ value: condition(field, verified) }` for every verification value. */
+const byVerification = (condition) =>
+  Object.fromEntries(
+    Object.entries(VERIFICATION).map(([value, [field, verified]]) => [value, condition(field, verified)]),
+  );
+const VERIFICATION_MATCH = byVerification((field, verified) => ({ [field]: verified ? { $ne: null } : null }));
+
+/** `status` and `verification` take several values: OR within one, AND across filters. */
 function customerFilter({ search, status, verification, joinedFrom, joinedTo }) {
-  const filter = { role: ROLES.CUSTOMER };
-  if (status) filter.status = status;
-  if (verification) {
-    const [channel, state] = verification.split("_");
-    const field = channel === "email" ? "emailVerifiedAt" : "phoneVerifiedAt";
-    filter[field] = state === "verified" ? { $ne: null } : null;
-  }
   const joined = joinedRange(joinedFrom, joinedTo);
-  if (joined) filter.createdAt = joined;
-  if (search) filter.$or = [...personSearch(search), idSearch(search)].filter(Boolean);
-  return filter;
+  return allOf(
+    { role: ROLES.CUSTOMER },
+    inList("status", status),
+    anyMatch(verification, VERIFICATION_MATCH),
+    joined && { createdAt: joined },
+    search && { $or: [...personSearch(search), idSearch(search)].filter(Boolean) },
+  );
 }
+
+const isSet = (field) => ({ $ne: [{ $ifNull: [`$${field}`, null] }, null] });
+const FACETS = {
+  status: USER_STATUS_FACET,
+  verification: flagFacet(byVerification((field, verified) => (verified ? isSet(field) : { $not: [isSet(field)] }))),
+};
 
 /** The list's order figures: every order placed, delivered total, newest order. */
 const statsLookup = {
@@ -67,12 +98,15 @@ export async function listCustomers(query, pagination) {
       $addFields: { sortValue: { $ifNull: [{ $first: `$stats.${field}` }, 0] } },
     });
   }
-  const { rows, pagination: meta } = await aggregatePage(
-    User,
-    pipeline,
-    { sort, sorts: SORTS, rowStages: [...(byStats ? [] : [statsLookup]), { $project: { stats: 1 } }] },
-    pagination,
-  );
+  const [{ rows, pagination: meta }, facets] = await Promise.all([
+    aggregatePage(
+      User,
+      pipeline,
+      { sort, sorts: SORTS, rowStages: [...(byStats ? [] : [statsLookup]), { $project: { stats: 1 } }] },
+      pagination,
+    ),
+    facetsIf(query, User, FACETS, customerFilter),
+  ]);
 
   const users = new Map(
     (await User.find({ _id: { $in: rows.map((r) => r._id) } })).map((u) => [String(u._id), u]),
@@ -85,6 +119,7 @@ export async function listCustomers(query, pagination) {
         return { ...users.get(String(r._id)).toJSON(), stats: { orders, spentPaise, lastOrderAt } };
       }),
     pagination: meta,
+    ...facets,
   };
 }
 

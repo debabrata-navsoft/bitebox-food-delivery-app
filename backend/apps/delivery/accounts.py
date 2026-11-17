@@ -25,7 +25,7 @@ from django.db.models import (
     Sum,
     Value,
 )
-from django.db.models.functions import Coalesce, Replace, Trim, Upper
+from django.db.models.functions import Coalesce, Replace, Upper
 from django.utils import timezone
 
 from apps.accounts.admin_services import (
@@ -37,7 +37,7 @@ from apps.accounts.admin_services import (
     person_search,
     update_member,
 )
-from apps.accounts.models import User
+from apps.accounts.models import User, UserStatus
 from apps.accounts.serializers import user_json
 from apps.audit.services import change
 from apps.finance.models import OrderSettlement
@@ -46,6 +46,7 @@ from apps.kyc.models import DocumentKind, KycDocument
 from apps.orders.models import Order, OrderStatus
 from apps.rbac.roles import Role
 from apps.restaurants.accounts import ADDRESS_NAMES
+from common.filters import Facet, apply_facets, with_facets
 from common.pagination import Page, paginate
 from common.validation import field_error
 
@@ -62,7 +63,7 @@ from .models import (
 Changes = dict[str, Any]
 V = VerificationStatus
 
-AVAILABILITY_VALUES = ("online", "offline", "busy")
+AVAILABILITY_VALUES = services.AVAILABILITY_VALUES
 SORTS: dict[str, tuple[Any, ...]] = {
     **ACCOUNT_SORTS,
     "deliveries": ("-stat_deliveries", "-created_at", "-id"),
@@ -103,30 +104,27 @@ def _search(search: str) -> Q:
     return person_search(search) | _vehicle_search(search) | id_search(search)
 
 
-AVAILABILITY = {
-    "online": Q(**{f"{P}is_online": True, f"{P}active_order__isnull": True}),
-    "busy": Q(**{f"{P}is_online": True, f"{P}active_order__isnull": False}),
-    "offline": Q(**{f"{P}is_online": False}) | Q(delivery_partner__isnull=True),
-}
+def _verification(value: str) -> Q:
+    match = Q(**{f"{P}verification_status": value})
+    if value == V.PENDING:  # a rider who never opened the app has no profile yet
+        match |= Q(delivery_partner__isnull=True)
+    return match
+
+
+VERIFICATION = {v: _verification(v) for v in V.values}
+FACETS = (
+    Facet("verification", values=V.values, cases=VERIFICATION),
+    services.AVAILABILITY_FACET,
+    kyc.KYC_FACET,
+    Facet("account_status", values=UserStatus.values, field="status"),
+    services.ZONE_FACET,
+    services.VEHICLE_TYPE_FACET,
+)
 
 
 def _riders(query: dict[str, Any]) -> QuerySet[User]:
-    qs = _with_kyc(User.objects.filter(role=Role.DELIVERY))
-    if query.get("account_status"):
-        qs = qs.filter(status=query["account_status"])
-    if verification := query.get("verification"):
-        match = Q(**{f"{P}verification_status": verification})
-        if verification == V.PENDING:  # a rider who never opened the app has no profile yet
-            match |= Q(delivery_partner__isnull=True)
-        qs = qs.filter(match)
-    if query.get("availability"):
-        qs = qs.filter(AVAILABILITY[query["availability"]])
-    if query.get("kyc"):
-        qs = qs.filter(kyc_state=query["kyc"])  # type: ignore[misc]
-    if zone := (query.get("zone") or "").strip():
-        qs = qs.annotate(zone_trimmed=Trim(f"{P}zone")).filter(zone_trimmed__iexact=zone)
-    if query.get("vehicle_type"):
-        qs = qs.filter(**{f"{P}vehicle__vehicle_type": query["vehicle_type"]})
+    """The riders matching the filters (FACETS, joined days, `search`)."""
+    qs = apply_facets(_with_kyc(User.objects.filter(role=Role.DELIVERY)), query, FACETS)
     qs = qs.filter(joined_between(query))
     if search := (query.get("search") or "").strip():
         qs = qs.filter(_search(search))
@@ -187,7 +185,8 @@ def list_accounts(query: dict[str, Any], page: Page) -> dict[str, Any]:
         )
     )
     rows, meta = paginate(qs.order_by(*SORTS[query.get("sort") or "newest"]), page)
-    return {"items": [_item(u) for u in rows], "pagination": meta}
+    result = {"items": [_item(u) for u in rows], "pagination": meta}
+    return with_facets(result, query, _riders, FACETS)
 
 
 def zones() -> list[str]:

@@ -9,11 +9,11 @@ import {
   PlatformSummary,
   StaffAdminInput,
   StaffAdminUpdate,
-  StaffQuery,
 } from '../../../shared/models/admin-roles.models';
 import { ApiResponse, Paginated } from '../../../shared/models/api.models';
 import { User, UserStatus } from '../../../shared/models/user.models';
 import { toParams } from '../http-params';
+import { Faceted, ListQuery } from '../../../shared/list/filtered-list';
 
 /** Super admin: operations, finance and support admin accounts, and the audit log. */
 @Injectable({ providedIn: 'root' })
@@ -21,9 +21,10 @@ export class AdminStaffService {
   private readonly http = inject(HttpClient);
   private readonly url = `${environment.baseUrl}/admin/admins`;
 
-  list(query: StaffQuery): Observable<Paginated<User>> {
+  /** Filters: search, role, status (several values each); `facets: 1` adds counts. */
+  list(query: ListQuery): Observable<Faceted<User>> {
     return this.http
-      .get<ApiResponse<Paginated<User>>>(this.url, { params: toParams(query) })
+      .get<ApiResponse<Faceted<User>>>(this.url, { params: toParams(query) })
       .pipe(map((r) => r.data));
   }
 
@@ -69,21 +70,13 @@ export class AdminStaffService {
       .pipe(map((r) => r.data.user));
   }
 
-  auditLog(query: {
-    action?: string;
-    role?: string;
-    search?: string;
-    accountType?: string;
-    /** Entries about one account or record. */
-    resourceId?: string;
-    /** ISO timestamps: entries at or after / at or before. */
-    from?: string;
-    to?: string;
-    page?: number;
-    limit?: number;
-  }): Observable<Paginated<AuditEntry>> {
+  /**
+   * Filters: search, action, role, accountType (several values each), resourceId (up to 5,
+   * comma-separated), from/to (ISO timestamps); `facets: 1` adds counts.
+   */
+  auditLog(query: ListQuery): Observable<Faceted<AuditEntry>> {
     return this.http
-      .get<ApiResponse<Paginated<AuditEntry>>>(`${environment.baseUrl}/admin/audit-logs`, {
+      .get<ApiResponse<Faceted<AuditEntry>>>(`${environment.baseUrl}/admin/audit-logs`, {
         params: toParams(query),
       })
       .pipe(map((r) => r.data));
