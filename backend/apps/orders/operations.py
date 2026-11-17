@@ -50,8 +50,9 @@ LATE_AFTER_MINUTES: dict[str, int] = {
 }
 
 
-def _round1(n: float | None) -> float | None:
-    return None if n is None else round(n * 10) / 10
+def _minutes(span: timedelta | None) -> float | None:
+    """A duration in minutes, to one decimal (None stays None)."""
+    return None if span is None else round(span.total_seconds() / 60 * 10) / 10
 
 
 def _received() -> Any:
@@ -179,10 +180,6 @@ def _entered(status: str) -> Subquery:
     )
 
 
-def _minutes_of(span: timedelta | None) -> float | None:
-    return None if span is None else span.total_seconds() / 60
-
-
 def _span(end: Any, start: Any) -> ExpressionWrapper:
     return ExpressionWrapper(end - start, output_field=DurationField())
 
@@ -237,19 +234,17 @@ def delivery_performance(days: int = 30) -> dict[str, Any]:
         "days": days,
         "totals": {
             "delivered": delivered,
-            "avg_delivery_minutes": _round1(_minutes_of(stats["avg_total"])),
-            "avg_prep_minutes": _round1(_minutes_of(stats["avg_prep"])),
-            "avg_pickup_wait_minutes": _round1(_minutes_of(stats["avg_wait"])),
-            "avg_ride_minutes": _round1(_minutes_of(stats["avg_ride"])),
+            "avg_delivery_minutes": _minutes(stats["avg_total"]),
+            "avg_prep_minutes": _minutes(stats["avg_prep"]),
+            "avg_pickup_wait_minutes": _minutes(stats["avg_wait"]),
+            "avg_ride_minutes": _minutes(stats["avg_ride"]),
             "within45_percent": round(stats["within45"] / delivered * 100) if delivered else None,
         },
         "daily": [
             {
                 "date": key,
-                "delivered": by_day[key]["delivered"] if key in by_day else 0,
-                "avg_minutes": (_round1(_minutes_of(by_day[key]["avg_total"])) or 0)
-                if key in by_day
-                else 0,
+                "delivered": by_day.get(key, {}).get("delivered", 0),
+                "avg_minutes": _minutes(by_day.get(key, {}).get("avg_total")) or 0,
             }
             for key in day_keys(days, now)
         ],
@@ -258,7 +253,7 @@ def delivery_performance(days: int = 30) -> dict[str, Any]:
                 "id": str(r["order__delivery_partner_id"]),
                 "name": r["order__delivery_partner__name"] or "Unknown rider",
                 "deliveries": r["deliveries"],
-                "avg_ride_minutes": _round1(_minutes_of(r["avg_ride"])),
+                "avg_ride_minutes": _minutes(r["avg_ride"]),
                 "distance_meters": r["distance"] or 0,
             }
             for r in riders
@@ -309,12 +304,12 @@ def platform_summary(include_money: bool) -> dict[str, Any]:
             restaurants_due=Sum("restaurant_paise", filter=unpaid),
             riders_due=Sum("rider_paise", filter=rider_unpaid),
         )
+        restaurants_due, riders_due = money["restaurants_due"] or 0, money["riders_due"] or 0
         data["money"] = {
             "gmv_paise": money["gmv"] or 0,
             "platform_revenue_paise": money["platform"] or 0,
-            "pending_settlements_paise": (money["restaurants_due"] or 0)
-            + (money["riders_due"] or 0),
-            "pending_restaurant_paise": money["restaurants_due"] or 0,
-            "pending_rider_paise": money["riders_due"] or 0,
+            "pending_settlements_paise": restaurants_due + riders_due,
+            "pending_restaurant_paise": restaurants_due,
+            "pending_rider_paise": riders_due,
         }
     return data

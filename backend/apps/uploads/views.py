@@ -19,6 +19,9 @@ from common.throttling import rate_limit
 from .storage import CONTENT_TYPES, LOCAL_NAME, save_image
 
 UPLOADED = envelope("Uploaded")
+PhotoLimit = rate_limit(
+    "REVIEW_IMAGE_UPLOAD_RATE_LIMIT", "Too many photo uploads. Try again later."
+)
 
 
 def _image_from(request: Request) -> bytes:
@@ -62,9 +65,7 @@ class ImageUploadView(_ImageUpload):
 
 class ReviewImageUploadView(_ImageUpload):
     permission_classes = [role_required(Role.CUSTOMER)]
-    throttle_classes = [
-        rate_limit("REVIEW_IMAGE_UPLOAD_RATE_LIMIT", "Too many photo uploads. Try again later.")
-    ]
+    throttle_classes = [PhotoLimit]
     noun = "Photo"
 
 
@@ -89,7 +90,5 @@ class AvatarUploadView(_ImageUpload):
     """A profile photo, for anyone signed in (saved with PATCH /auth/me avatarUrl)."""
 
     permission_classes = [IsSignedIn]
-    throttle_classes = [
-        rate_limit("REVIEW_IMAGE_UPLOAD_RATE_LIMIT", "Too many photo uploads. Try again later.")
-    ]
+    throttle_classes = [PhotoLimit]
     noun = "Photo"

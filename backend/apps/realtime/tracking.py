@@ -23,7 +23,7 @@ from apps.rbac.roles import Permission, Role, has_permission
 from apps.restaurants.models import Restaurant
 from common.geo import GeoPoint, haversine_m
 
-from .events import ADMINS, order_group, restaurant_group, user_group
+from .events import ADMINS, iso, order_group, restaurant_group, user_group
 
 LIMITS = {
     "max_accuracy_m": 1000,  # fixes less precise than this are dropped
@@ -58,10 +58,6 @@ def _can_track(user: User, order: Order) -> bool:
     return False
 
 
-def _iso(value: datetime | None) -> str | None:
-    return value.isoformat().replace("+00:00", "Z") if value else None
-
-
 def location_payload(order_id: Any, profile: DeliveryPartner) -> dict[str, Any] | None:
     if profile.location is None:
         return None
@@ -70,7 +66,7 @@ def location_payload(order_id: Any, profile: DeliveryPartner) -> dict[str, Any] 
         "latitude": profile.location.lat,
         "longitude": profile.location.lng,
         "accuracy": profile.location_accuracy_m,
-        "at": _iso(profile.location_updated_at),
+        "at": iso(profile.location_updated_at),
     }
 
 

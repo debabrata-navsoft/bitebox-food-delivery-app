@@ -18,6 +18,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
+from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import F, Q, Sum
 from django.utils import timezone
@@ -108,10 +109,22 @@ def provider_for(method: str) -> str:
     return str(online.name)
 
 
-def _load_for_customer(user: User, order_id: uuid.UUID) -> tuple[Order, Payment]:
+def _customer_order(user: User, order_id: uuid.UUID) -> Order:
     order = Order.objects.filter(pk=order_id, customer=user).first()
     if order is None:
         raise ApiError.not_found("Order not found")
+    return order
+
+
+def _admin_payment(payment_id: uuid.UUID, *related: str) -> Payment:
+    payment = Payment.objects.select_related(*related).filter(pk=payment_id).first()
+    if payment is None:
+        raise ApiError.not_found("Payment not found")
+    return payment
+
+
+def _load_for_customer(user: User, order_id: uuid.UUID) -> tuple[Order, Payment]:
+    order = _customer_order(user, order_id)
     payment = Payment.objects.filter(order=order).first()
     if payment is None or payment.method != PaymentMethod.ONLINE:
         raise ApiError.bad_request("This order is paid in cash on delivery")
@@ -196,8 +209,6 @@ def confirm_payment(
 
 def complete_mock_payment(user: User, order_id: uuid.UUID, outcome: str) -> dict[str, Any]:
     """Development only: finishes a simulated payment with the outcome the tester chose."""
-    from django.conf import settings
-
     order, payment = _load_for_customer(user, order_id)
     if payment.provider != Provider.MOCK or not settings.PAYMENTS_MOCK_ENABLED:
         raise ApiError.bad_request("This is not a simulated payment")
@@ -217,9 +228,7 @@ def abandon_unpaid(user: User, order_id: uuid.UUID) -> dict[str, bool]:
     The customer closed the payment page: cancel the unpaid attempt and put the dishes back in
     the cart (only if the cart is empty, so nothing newer is overwritten).
     """
-    order = Order.objects.filter(pk=order_id, customer=user).first()
-    if order is None:
-        raise ApiError.not_found("Order not found")
+    order = _customer_order(user, order_id)
     if (
         order.payment_method != PaymentMethod.ONLINE
         or order.submitted_at is not None
@@ -424,10 +433,8 @@ def _refund_webhook(kind: str, entity: dict[str, Any], event_id: Any) -> dict[st
     with transaction.atomic():
         if not _record_event(kind, entity, event_id, refund.payment):
             return {"duplicate": True}
-        if kind == "refund.processed":
-            _finish_refund(refund, ok=True)
-        elif kind == "refund.failed":
-            _finish_refund(refund, ok=False)
+        if kind in ("refund.processed", "refund.failed"):
+            _finish_refund(refund, ok=kind == "refund.processed")
     return {"processed": True}
 
 
@@ -498,10 +505,8 @@ def process_refund(refund_id: uuid.UUID) -> None:
     Refund.objects.filter(pk=refund.pk).update(
         provider_refund_id=result["provider_refund_id"], updated_at=timezone.now()
     )
-    if result["status"] == "processed":
-        _finish_refund(refund, ok=True)
-    elif result["status"] == "failed":
-        _finish_refund(refund, ok=False)
+    if result["status"] in ("processed", "failed"):
+        _finish_refund(refund, ok=result["status"] == "processed")
     # else: the bank has not confirmed it yet; the webhook or reconciliation finishes it.
 
 
@@ -509,18 +514,17 @@ def _finish_refund(refund: Refund, *, ok: bool) -> None:
     """Exactly once per refund: done → the payment's status follows; failed → amount released."""
     now = timezone.now()
     open_states = [R.PENDING, R.PROCESSING, R.MANUAL_PENDING]
+    if ok:
+        done = R.MANUAL_DONE if refund.status == R.MANUAL_PENDING else R.PROCESSED
+        fields: dict[str, Any] = {"status": done, "processed_at": now, "failure_reason": ""}
+    else:
+        fields = {"status": R.FAILED, "failure_reason": REFUND_FAILED_NOTE}
     with transaction.atomic():
-        if ok:
-            done = R.MANUAL_DONE if refund.status == R.MANUAL_PENDING else R.PROCESSED
-            if not Refund.objects.filter(pk=refund.pk, status__in=open_states).update(
-                status=done, processed_at=now, failure_reason="", updated_at=now
-            ):
-                return
-        else:
-            if not Refund.objects.filter(pk=refund.pk, status__in=open_states).update(
-                status=R.FAILED, failure_reason=REFUND_FAILED_NOTE, updated_at=now
-            ):
-                return
+        if not Refund.objects.filter(pk=refund.pk, status__in=open_states).update(
+            **fields, updated_at=now
+        ):
+            return
+        if not ok:
             Payment.objects.filter(pk=refund.payment_id).update(
                 refunded_paise=F("refunded_paise") - refund.amount_paise,
                 failure_reason=REFUND_FAILED_NOTE,
@@ -564,9 +568,7 @@ def admin_refund(
     admin: User, payment_id: uuid.UUID, amount_paise: int, reason: str, key: str | None
 ) -> dict[str, Any]:
     """A full or partial refund chosen by finance (master prompt §3D), up to what is left."""
-    payment = Payment.objects.select_related("order").filter(pk=payment_id).first()
-    if payment is None:
-        raise ApiError.not_found("Payment not found")
+    payment = _admin_payment(payment_id, "order")
     if payment.status not in REFUNDABLE:
         raise _conflict("Only paid payments can be refunded", "NOT_REFUNDABLE")
     left = payment.amount_paise - payment.refunded_paise
@@ -597,9 +599,7 @@ def admin_refund(
 
 def admin_retry_refund(payment_id: uuid.UUID) -> dict[str, Any]:
     """Sends failed refunds again, or refunds a paid payment of a closed order (Node parity)."""
-    payment = Payment.objects.select_related("order").filter(pk=payment_id).first()
-    if payment is None:
-        raise ApiError.not_found("Payment not found")
+    payment = _admin_payment(payment_id, "order")
     failed = list(Refund.objects.filter(payment=payment, status=R.FAILED))
     closed = payment.order.status in CLOSED
     remaining = payment.amount_paise - payment.refunded_paise
@@ -712,17 +712,14 @@ def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
 
 def admin_get(payment_id: uuid.UUID) -> dict[str, Any]:
     """One payment with its refunds and the gateway events applied to it (the audit trail)."""
-    payment = Payment.objects.select_related("order", "user").filter(pk=payment_id).first()
-    if payment is None:
-        raise ApiError.not_found("Payment not found")
-    events = payment.events.order_by("created_at")
+    payment = _admin_payment(payment_id, "order", "user")
     return {
         "payment": {
             **_admin_row(payment),
             "refunds": [refund_json(r) for r in payment.refunds.order_by("created_at")],
             "events": [
                 {"type": e.event_type, "event_id": e.event_id, "created_at": e.created_at}
-                for e in events
+                for e in payment.events.order_by("created_at")
             ],
         }
     }

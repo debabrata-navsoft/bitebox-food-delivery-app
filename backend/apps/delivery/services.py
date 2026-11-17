@@ -57,6 +57,13 @@ def get_or_create_profile(user: User) -> DeliveryPartner:
         return DeliveryPartner.objects.get(user=user)
 
 
+def _rider_user(user_id: uuid.UUID) -> User:
+    user = User.objects.filter(pk=user_id, role=Role.DELIVERY).first()
+    if user is None:
+        raise ApiError.not_found("Delivery partner not found")
+    return user
+
+
 def _vehicle(profile: DeliveryPartner) -> RiderVehicle | None:
     try:
         return profile.vehicle
@@ -138,8 +145,7 @@ def dashboard(user: User) -> dict[str, Any]:
     """Profile + the offer waiting for them + the order they carry: the whole dashboard."""
     from apps.dispatch.models import AssignmentStatus
 
-    profile = get_or_create_profile(user)
-    profile.refresh_from_db()
+    profile = get_or_create_profile(user)  # read fresh, with the vehicle
     offer = (
         presenters.with_details(
             Order.objects.filter(
@@ -157,13 +163,12 @@ def dashboard(user: User) -> dict[str, Any]:
         if profile.active_order_id
         else None
     )
-    offer_json = presenters.present_for_rider(offer, user.pk) if offer else None
-    if offer is not None and offer_json is not None:
+    offer_json = None
+    if offer is not None:
+        offer_json = presenters.present_for_rider(offer, user.pk)
         offer_json["pickup_distance_meters"] = _pickup_distance(profile, offer)
     return {
-        "profile": profile_json(
-            DeliveryPartner.objects.select_related("vehicle").get(pk=profile.pk)
-        ),
+        "profile": profile_json(profile),
         "offer": offer_json,
         "active_order": presenters.present_for_rider(active, user.pk) if active else None,
     }
@@ -171,10 +176,10 @@ def dashboard(user: User) -> dict[str, Any]:
 
 def _pickup_distance(profile: DeliveryPartner, order: Order) -> int | None:
     """Straight-line metres from the rider's last GPS fix to the restaurant (None without a fix)."""
-    coordinates = ((order.restaurant_snapshot or {}).get("location") or {}).get("coordinates")
-    if profile.location is None or not coordinates:
+    restaurant = presenters.restaurant_point(order.restaurant_snapshot)
+    if profile.location is None or restaurant is None:
         return None
-    return haversine_m(profile.location, GeoPoint(lat=coordinates[1], lng=coordinates[0]))
+    return haversine_m(profile.location, restaurant)
 
 
 def update_vehicle(user: User, vehicle_type: str, vehicle_number: str | None) -> dict[str, Any]:
@@ -315,9 +320,7 @@ def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
 
 def admin_set_status(user_id: uuid.UUID, status: str) -> User:
     """Suspend or reactivate a rider. Suspending takes them offline; not allowed mid-delivery."""
-    user = User.objects.filter(pk=user_id, role=Role.DELIVERY).first()
-    if user is None:
-        raise ApiError.not_found("Delivery partner not found")
+    user = _rider_user(user_id)
     if status == UserStatus.SUSPENDED:
         take_offline(
             user,
@@ -368,18 +371,14 @@ def verification_gaps(user: User, profile: DeliveryPartner) -> list[str]:
 
 
 def admin_get(user_id: uuid.UUID) -> dict[str, Any]:
-    user = User.objects.filter(pk=user_id, role=Role.DELIVERY).first()
-    if user is None:
-        raise ApiError.not_found("Delivery partner not found")
+    user = _rider_user(user_id)
     return {"user": user_json(user), "profile": profile_json(get_or_create_profile(user))}
 
 
 def admin_set_verification(
     user_id: uuid.UUID, status: str, reason: str, admin: User
 ) -> dict[str, Any]:
-    user = User.objects.filter(pk=user_id, role=Role.DELIVERY).first()
-    if user is None:
-        raise ApiError.not_found("Delivery partner not found")
+    user = _rider_user(user_id)
     profile = get_or_create_profile(user)
     current = profile.verification_status
     if status not in VERIFICATION_TRANSITIONS.get(current, frozenset()):

@@ -50,6 +50,22 @@ def _finish(cart: Cart) -> None:
     cart.save()
 
 
+def _set_on_cart(user: User, **fields: Any) -> None:
+    """Sets these cart fields under the cart's lock."""
+    with transaction.atomic():
+        cart = _cart_for_update(user)
+        for name, value in fields.items():
+            setattr(cart, name, value)
+        _finish(cart)
+
+
+def _filled_quote(user: User) -> dict[str, Any]:
+    quote = build_quote(user)
+    if quote["cart"] is None:
+        raise ApiError.bad_request("Add dishes to your cart first")
+    return quote
+
+
 def _orderable_item(food_item_id: uuid.UUID) -> FoodItem:
     item = (
         FoodItem.objects.select_related("restaurant")
@@ -119,9 +135,7 @@ def clear(user: User) -> None:
 
 
 def apply_coupon(user: User, code: str) -> None:
-    quote = build_quote(user)
-    if quote["cart"] is None:
-        raise ApiError.bad_request("Add dishes to your cart first")
+    quote = _filled_quote(user)
     # The engine needs each orderable line's dish and category (for category and dish coupons).
     items = [i for i in quote["cart"]["items"] if i["is_available"]]
     category_of = {
@@ -140,38 +154,24 @@ def apply_coupon(user: User, code: str) -> None:
             for i in items
         ],
     )
-    with transaction.atomic():
-        cart = _cart_for_update(user)
-        cart.coupon_code = code.strip().upper()
-        _finish(cart)
+    _set_on_cart(user, coupon_code=code.strip().upper())
 
 
 def remove_coupon(user: User) -> None:
-    with transaction.atomic():
-        cart = _cart_for_update(user)
-        cart.coupon_code = ""
-        _finish(cart)
+    _set_on_cart(user, coupon_code="")
 
 
 def set_coins(user: User, amount: int) -> None:
     if amount == 0:
         remove_coins(user)
         return
-    quote = build_quote(user)
-    if quote["cart"] is None:
-        raise ApiError.bad_request("Add dishes to your cart first")
+    quote = _filled_quote(user)
     coins.assert_redeemable(quote["coins"], amount)
-    with transaction.atomic():
-        cart = _cart_for_update(user)
-        cart.coins_to_redeem = min(amount, quote["coins"]["max_redeemable"])
-        _finish(cart)
+    _set_on_cart(user, coins_to_redeem=min(amount, quote["coins"]["max_redeemable"]))
 
 
 def remove_coins(user: User) -> None:
-    with transaction.atomic():
-        cart = _cart_for_update(user)
-        cart.coins_to_redeem = 0
-        _finish(cart)
+    _set_on_cart(user, coins_to_redeem=0)
 
 
 def _best_coupon(

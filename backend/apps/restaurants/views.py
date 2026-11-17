@@ -4,6 +4,7 @@ and admin-catalog routes). Partner endpoints always act on the signed-in owner's
 """
 
 import re
+from typing import Any
 
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.request import Request
@@ -14,14 +15,15 @@ from apps.accounts.authentication import current_user
 from apps.audit.services import audited
 from apps.menus import services as menus
 from apps.rbac.roles import Permission, Role
-from common.api import ApiError, ok
+from common.api import ok
 from common.http import PublicCacheMixin
 from common.pagination import Page
 from common.permissions import PUBLIC, permission_required, role_required
 from common.schema import envelope, errors
-from common.validation import parse_id, validated
+from common.validation import field_error, parse_id, validated
 
 from . import services
+from .models import Restaurant
 from .presenters import restaurant_json
 from .serializers import (
     AcceptingOrdersInput,
@@ -37,13 +39,12 @@ ANY = envelope("RestaurantResponse")  # data shapes follow docs/DOCUMENTATION.md
 
 def _slug_or_id(value: str) -> str:
     if not SLUG_OR_ID.match(value):
-        raise ApiError(
-            422,
-            "Validation failed",
-            code="VALIDATION_ERROR",
-            details=[{"field": "slugOrId", "message": "Invalid value"}],
-        )
+        raise field_error("slugOrId", "Invalid value")
     return value
+
+
+def _restaurant(restaurant: Restaurant, message: str, owner: str = "id", **kw: Any) -> Response:
+    return ok({"restaurant": restaurant_json(restaurant, owner=owner)}, message=message, **kw)
 
 
 # --- public ---------------------------------------------------------------------------------------
@@ -133,11 +134,7 @@ class MyRestaurantView(APIView):
         restaurant = services.create_own(
             current_user(request), validated(RestaurantInput, request.data)
         )
-        return ok(
-            {"restaurant": restaurant_json(restaurant)},
-            message="Restaurant submitted for approval",
-            status=201,
-        )
+        return _restaurant(restaurant, "Restaurant submitted for approval", status=201)
 
     @extend_schema(
         tags=["Partner"],
@@ -147,7 +144,7 @@ class MyRestaurantView(APIView):
     def patch(self, request: Request) -> Response:
         data = validated(RestaurantInput, request.data, partial=True)
         restaurant = services.update_own(current_user(request), data)
-        return ok({"restaurant": restaurant_json(restaurant)}, message="Restaurant details saved")
+        return _restaurant(restaurant, "Restaurant details saved")
 
 
 class ResubmitView(APIView):
@@ -160,7 +157,7 @@ class ResubmitView(APIView):
     )
     def post(self, request: Request) -> Response:
         restaurant = services.resubmit(current_user(request))
-        return ok({"restaurant": restaurant_json(restaurant)}, message="Sent for review")
+        return _restaurant(restaurant, "Sent for review")
 
 
 class AcceptingOrdersView(APIView):
@@ -174,11 +171,9 @@ class AcceptingOrdersView(APIView):
     def patch(self, request: Request) -> Response:
         accepting = validated(AcceptingOrdersInput, request.data)["is_accepting_orders"]
         restaurant = services.set_accepting_orders(current_user(request), accepting)
-        return ok(
-            {"restaurant": restaurant_json(restaurant)},
-            message="You are accepting orders"
-            if restaurant.is_accepting_orders
-            else "Orders paused",
+        return _restaurant(
+            restaurant,
+            "You are accepting orders" if restaurant.is_accepting_orders else "Orders paused",
         )
 
 
@@ -248,7 +243,4 @@ class AdminStatusView(APIView):
         restaurant = services.admin_set_status(
             parse_id(id), data["status"], (data.get("reason") or "").strip(), current_user(request)
         )
-        return ok(
-            {"restaurant": restaurant_json(restaurant, owner="admin")},
-            message=f"Restaurant {restaurant.status}",
-        )
+        return _restaurant(restaurant, f"Restaurant {restaurant.status}", owner="admin")

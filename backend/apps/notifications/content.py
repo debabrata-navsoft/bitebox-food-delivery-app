@@ -63,11 +63,14 @@ def channels_for(type: str) -> set[str]:
     return channels
 
 
-def absolute_link(link: str) -> str:
+def site_path(link: str) -> str:
     """Only same-site paths are linked from a notification (Node: push.service#safeLink)."""
-    path = link if link.startswith("/") and not link.startswith("//") else "/"
+    return link if link.startswith("/") and not link.startswith("//") else "/"
+
+
+def absolute_link(link: str) -> str:
     base = settings.CLIENT_URLS[0].rstrip("/") if settings.CLIENT_URLS else ""
-    return f"{base}{path}"
+    return f"{base}{site_path(link)}"
 
 
 def render_email(notification: Notification, name: str) -> tuple[str, str, str]:

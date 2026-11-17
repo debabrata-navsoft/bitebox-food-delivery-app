@@ -109,22 +109,21 @@ def exception_handler(exc: Exception, context: dict[str, Any]) -> Response:
     return response
 
 
-def route_not_found(request: HttpRequest, *args: Any, **kwargs: Any) -> JsonResponse:
-    """Catch-all for unknown /api/ paths (works with DEBUG on, unlike handler404)."""
-    message = f"Route not found: {request.method} {request.get_full_path()}"
+def _plain_error(message: str, code: str, status: int) -> JsonResponse:
     response = JsonResponse(
-        error_body(message, "NOT_FOUND"), status=404, json_dumps_params={"separators": (",", ":")}
+        error_body(message, code), status=status, json_dumps_params={"separators": (",", ":")}
     )
     response["Cache-Control"] = "no-store"
     return response
+
+
+def route_not_found(request: HttpRequest, *args: Any, **kwargs: Any) -> JsonResponse:
+    """Catch-all for unknown /api/ paths (works with DEBUG on, unlike handler404)."""
+    return _plain_error(
+        f"Route not found: {request.method} {request.get_full_path()}", "NOT_FOUND", 404
+    )
 
 
 def server_error(request: HttpRequest, *args: Any, **kwargs: Any) -> JsonResponse:
     """handler500: errors outside DRF views (middleware, URL resolution) still get the envelope."""
-    response = JsonResponse(
-        error_body(GENERIC_MESSAGE, "INTERNAL_ERROR"),
-        status=500,
-        json_dumps_params={"separators": (",", ":")},
-    )
-    response["Cache-Control"] = "no-store"
-    return response
+    return _plain_error(GENERIC_MESSAGE, "INTERNAL_ERROR", 500)

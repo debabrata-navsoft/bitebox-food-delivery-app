@@ -34,6 +34,10 @@ class DaysQuery(serializers.Serializer):
     )
 
 
+def _days(request: Request) -> int:
+    return int(validated(DaysQuery, request.query_params).get("days", 30))
+
+
 class RestaurantEarningsView(APIView):
     permission_classes = [role_required(Role.RESTAURANT)]
 
@@ -43,8 +47,7 @@ class RestaurantEarningsView(APIView):
         responses={200: envelope("Earnings"), **errors(401, 403, 404, 422)},
     )
     def get(self, request: Request) -> Response:
-        days = validated(DaysQuery, request.query_params).get("days", 30)
-        return ok(reports.restaurant_earnings(current_user(request), days))
+        return ok(reports.restaurant_earnings(current_user(request), _days(request)))
 
 
 class AdminReportsView(APIView):
@@ -56,8 +59,7 @@ class AdminReportsView(APIView):
         responses={200: envelope("AdminReport"), **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
-        days = validated(DaysQuery, request.query_params).get("days", 30)
-        return ok(reports.admin_report(days))
+        return ok(reports.admin_report(_days(request)))
 
 
 # ---------------------------------------------------------------------------
@@ -79,8 +81,18 @@ def pdf_response(result: tuple[str, bytes]) -> HttpResponse:
     return response
 
 
-def _days(request: Request) -> int:
-    return int(validated(DaysQuery, request.query_params).get("days", 30))
+def _statement_pdf(**scope: Any) -> HttpResponse:
+    payout = Payout.objects.filter(**scope).first()
+    if payout is None:
+        raise ApiError.not_found("Payout not found")
+    return pdf_response(invoices.payout_statement(payout))
+
+
+def _invoice_pdf(**scope: Any) -> HttpResponse:
+    order = Order.objects.filter(**scope).prefetch_related("items").first()
+    if order is None:
+        raise ApiError.not_found("Order not found")
+    return pdf_response(invoices.order_invoice(order))
 
 
 class FinanceDashboardView(APIView):
@@ -190,13 +202,17 @@ class CommissionOverrideView(APIView):
         )
 
 
-class PayoutTypeQuery(serializers.Serializer):
-    type = serializers.ChoiceField(
+def _payout_type() -> serializers.ChoiceField:
+    return serializers.ChoiceField(
         choices=PayoutType.values,
         error_messages=dict.fromkeys(
             ("required", "invalid_choice"), "Type must be restaurant or rider"
         ),
     )
+
+
+class PayoutTypeQuery(serializers.Serializer):
+    type = _payout_type()
 
 
 class PayoutListQuery(PageQuery):
@@ -205,12 +221,7 @@ class PayoutListQuery(PageQuery):
 
 
 class CreatePayoutInput(serializers.Serializer):
-    type = serializers.ChoiceField(
-        choices=PayoutType.values,
-        error_messages=dict.fromkeys(
-            ("required", "invalid_choice"), "Type must be restaurant or rider"
-        ),
-    )
+    type = _payout_type()
     payee_id = serializers.UUIDField(
         error_messages=dict.fromkeys(("required", "invalid", "null"), "Choose who to pay")
     )
@@ -331,10 +342,7 @@ class AdminStatementView(APIView):
 
     @extend_schema(tags=["Admin: finance"], responses={200: PDF, **errors(404, 422)})
     def get(self, request: Request, id: str) -> HttpResponse:
-        payout = Payout.objects.filter(pk=parse_id(id)).first()
-        if payout is None:
-            raise ApiError.not_found("Payout not found")
-        return pdf_response(invoices.payout_statement(payout))
+        return _statement_pdf(pk=parse_id(id))
 
 
 class LedgerView(APIView):
@@ -381,10 +389,7 @@ class AdminOrderInvoiceView(APIView):
 
     @extend_schema(tags=["Admin: finance"], responses={200: PDF, **errors(404, 409, 422)})
     def get(self, request: Request, id: str) -> HttpResponse:
-        order = Order.objects.filter(pk=parse_id(id)).prefetch_related("items").first()
-        if order is None:
-            raise ApiError.not_found("Order not found")
-        return pdf_response(invoices.order_invoice(order))
+        return _invoice_pdf(pk=parse_id(id))
 
 
 # --- customers and partners -------------------------------------------------------------------
@@ -393,14 +398,7 @@ class OrderInvoiceView(APIView):
 
     @extend_schema(tags=["Orders"], responses={200: PDF, **errors(404, 409, 422)})
     def get(self, request: Request, id: str) -> HttpResponse:
-        order = (
-            Order.objects.filter(pk=parse_id(id), customer=current_user(request))
-            .prefetch_related("items")
-            .first()
-        )
-        if order is None:
-            raise ApiError.not_found("Order not found")
-        return pdf_response(invoices.order_invoice(order))
+        return _invoice_pdf(pk=parse_id(id), customer=current_user(request))
 
 
 def _partner_scope(request: Request) -> tuple[str, dict[str, Any], dict[str, Any]]:
@@ -451,7 +449,4 @@ class MyStatementView(APIView):
     @extend_schema(tags=["Partner finance"], responses={200: PDF, **errors(404, 422)})
     def get(self, request: Request, id: str) -> HttpResponse:
         _, scope, _ = _partner_scope(request)
-        payout = Payout.objects.filter(pk=parse_id(id), **scope).first()
-        if payout is None:
-            raise ApiError.not_found("Payout not found")
-        return pdf_response(invoices.payout_statement(payout))
+        return _statement_pdf(pk=parse_id(id), **scope)

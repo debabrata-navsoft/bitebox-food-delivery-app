@@ -4,16 +4,17 @@ import uuid
 from typing import Any
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Max, Min, Q
+from django.utils import timezone
 
 from apps.delivery.models import DeliveryPartner
 from apps.rbac.roles import ADMIN_ROLES, MEMBER_ROLES, STAFF_ADMIN_ROLES, Role
 from common.api import ApiError
 from common.pagination import Page, paginate
 
-from .models import RevokedReason, User, UserStatus
+from .models import RevokedReason, Session, User, UserStatus
 from .serializers import user_json
-from .services import end_sessions
+from .services import check_new_account, end_sessions
 
 
 def list_users(roles: tuple[Role, ...], query: dict[str, Any], page: Page) -> dict[str, Any]:
@@ -92,11 +93,8 @@ def get_staff(user_id: uuid.UUID) -> User:
 def create_staff(data: dict[str, Any]) -> User:
     if data["role"] not in STAFF_ADMIN_ROLES:
         raise ApiError.bad_request("Choose an operations, finance or support role")
-    if User.objects.filter(email=data["email"]).exists():
-        raise ApiError.conflict("An account with this email already exists")
     phone = data.get("phone") or None
-    if phone and User.objects.filter(phone=phone).exists():
-        raise ApiError.conflict("An account with this phone number already exists")
+    check_new_account(data["email"], phone)
     return User.objects.create_user(
         data["email"], data["password"], data["name"], phone=phone, role=data["role"]
     )
@@ -135,11 +133,6 @@ def login_history(user_id: uuid.UUID, roles: tuple[Role, ...], page: Page) -> di
     session family: refreshes rotate the token inside it, so its first row is the sign-in and its
     newest row says whether it is still active.
     """
-    from django.db.models import Max, Min
-    from django.utils import timezone
-
-    from .models import Session
-
     if not User.objects.filter(pk=user_id, role__in=roles).exists():
         raise ApiError.not_found("User not found")
     families = (

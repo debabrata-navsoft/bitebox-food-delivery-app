@@ -8,6 +8,8 @@ global one, else the default below. Rider pay is a base plus a rate per started 
 import math
 from typing import Any
 
+from django.db.models import Q
+
 from apps.cart.pricing import js_round
 
 EARNINGS = {
@@ -21,16 +23,12 @@ def commission_bp_for(restaurant_id: Any) -> int:
     """The commission rate in effect now for this restaurant."""
     from .models import CommissionRule
 
-    rules = {
-        r.restaurant_id: r.basis_points
-        for r in CommissionRule.objects.filter(effective_to__isnull=True).filter(
-            restaurant_id__in=[restaurant_id]
-        )
-        | CommissionRule.objects.filter(effective_to__isnull=True, restaurant__isnull=True)
-    }
-    if restaurant_id in rules:
-        return rules[restaurant_id]
-    return rules.get(None, EARNINGS["restaurant_commission_basis_points"])
+    rules: dict[Any, int] = dict(
+        CommissionRule.objects.filter(
+            Q(restaurant_id=restaurant_id) | Q(restaurant__isnull=True), effective_to__isnull=True
+        ).values_list("restaurant_id", "basis_points")
+    )
+    return rules.get(restaurant_id, rules.get(None, EARNINGS["restaurant_commission_basis_points"]))
 
 
 def settlement_for(order: Any, commission_bp: int | None = None) -> dict[str, int]:

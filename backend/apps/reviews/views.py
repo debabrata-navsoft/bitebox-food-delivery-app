@@ -17,22 +17,14 @@ from common.validation import PageQuery, parse_id, validated
 
 from . import services
 from .models import RESPONSE_MAX, ReviewTarget
+from .serializers import SORTS, choice_query
 
 PARTNER = [role_required(Role.RESTAURANT)]
 RESULT = envelope("RestaurantReviewsResult")
 
 
-def _invalid(choices: list[str]) -> serializers.ChoiceField:
-    keys = ("invalid_choice", "null", "blank")
-    return serializers.ChoiceField(
-        choices=choices,
-        required=False,
-        error_messages=dict.fromkeys(keys, "Invalid value"),
-    )
-
-
 class RestaurantReviewQuery(PageQuery):
-    target = _invalid([ReviewTarget.RESTAURANT, ReviewTarget.FOOD])
+    target = choice_query([ReviewTarget.RESTAURANT, ReviewTarget.FOOD])
     food_item_id = UUIDRef(message="Invalid value", required=False)
     rating = serializers.IntegerField(
         required=False,
@@ -41,7 +33,7 @@ class RestaurantReviewQuery(PageQuery):
         error_messages=dict.fromkeys(("invalid", "min_value", "max_value"), "Invalid value"),
     )
     responded = QueryBoolean()
-    sort = _invalid(["newest", "oldest", "highest", "lowest"])
+    sort = choice_query(SORTS)
 
 
 class ResponseInput(serializers.Serializer):
@@ -50,12 +42,11 @@ class ResponseInput(serializers.Serializer):
         max_length=RESPONSE_MAX,
         trim_whitespace=True,
         error_messages={
-            "required": "Write a reply",
-            "null": "Write a reply",
-            "invalid": "Write a reply",
-            "blank": f"The reply must be 2 to {RESPONSE_MAX} characters",
-            "min_length": f"The reply must be 2 to {RESPONSE_MAX} characters",
-            "max_length": f"The reply must be 2 to {RESPONSE_MAX} characters",
+            **dict.fromkeys(("required", "null", "invalid"), "Write a reply"),
+            **dict.fromkeys(
+                ("blank", "min_length", "max_length"),
+                f"The reply must be 2 to {RESPONSE_MAX} characters",
+            ),
         },
     )
 

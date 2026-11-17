@@ -236,13 +236,12 @@ class PushPreferencesView(APIView):
         return ok(prefs, message="Notification preferences saved")
 
 
-class DeviceInput(serializers.Serializer):
-    token = serializers.CharField(min_length=20, max_length=500)
-    platform = serializers.ChoiceField(choices=DevicePlatform.values)
-
-
 class DeviceRemoveInput(serializers.Serializer):
     token = serializers.CharField(min_length=20, max_length=500)
+
+
+class DeviceInput(DeviceRemoveInput):
+    platform = serializers.ChoiceField(choices=DevicePlatform.values)
 
 
 class DevicesView(APIView):

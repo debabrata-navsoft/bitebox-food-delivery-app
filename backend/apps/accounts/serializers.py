@@ -119,6 +119,20 @@ OTP_CODE: dict[str, Any] = {
 }
 
 
+def _otp_code(**kwargs: Any) -> serializers.RegexField:
+    return serializers.RegexField(r"^\d{6}$", error_messages=OTP_CODE, **kwargs)
+
+
+def _current_password(message: str) -> serializers.CharField:
+    """Any non-empty password (checked against the stored hash, not the password rules)."""
+    return serializers.CharField(
+        min_length=1,
+        max_length=128,
+        trim_whitespace=False,
+        error_messages={"required": message, "blank": message},
+    )
+
+
 class RegisterInput(serializers.Serializer):
     name = NameField()
     email = EmailField()
@@ -126,7 +140,7 @@ class RegisterInput(serializers.Serializer):
     password = NewPasswordField()
     role = _choice(SELF_REGISTER_ROLES, "Invalid role", required=False)
     # The emailed code from POST /auth/register/code (needed while signup_needs_code()).
-    code = serializers.RegexField(r"^\d{6}$", required=False, error_messages=OTP_CODE)
+    code = _otp_code(required=False)
     referral_code = serializers.RegexField(
         r"^[A-Za-z0-9-]{4,40}$",
         required=False,
@@ -137,12 +151,7 @@ class RegisterInput(serializers.Serializer):
 
 class LoginInput(serializers.Serializer):
     email = EmailField()
-    password = serializers.CharField(
-        min_length=1,
-        max_length=128,
-        trim_whitespace=False,
-        error_messages={"required": "Password is required", "blank": "Password is required"},
-    )
+    password = _current_password("Password is required")
     portal = _choice(ALL_ROLES, "Invalid portal", required=False)
 
 
@@ -167,12 +176,12 @@ class OtpRequestInput(serializers.Serializer):
 
 class OtpLoginInput(serializers.Serializer):
     phone = _required_phone()
-    code = serializers.RegexField(r"^\d{6}$", error_messages=OTP_CODE)
+    code = _otp_code()
     portal = _choice(ALL_ROLES, "Invalid portal", required=False)
 
 
 class OtpCodeInput(serializers.Serializer):
-    code = serializers.RegexField(r"^\d{6}$", error_messages=OTP_CODE)
+    code = _otp_code()
 
 
 class EmailVerifyInput(serializers.Serializer):
@@ -193,15 +202,7 @@ class ResetPasswordInput(serializers.Serializer):
 
 
 class ChangePasswordInput(serializers.Serializer):
-    current_password = serializers.CharField(
-        min_length=1,
-        max_length=128,
-        trim_whitespace=False,
-        error_messages={
-            "required": "Current password is required",
-            "blank": "Current password is required",
-        },
-    )
+    current_password = _current_password("Current password is required")
     new_password = NewPasswordField()
 
 

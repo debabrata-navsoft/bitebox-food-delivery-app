@@ -28,7 +28,6 @@ from apps.orders.notifications import notify_offer
 from apps.orders.workflow import Actor, transition
 from apps.realtime.events import emit_order_updated
 from common.api import ApiError
-from common.geo import GeoPoint
 from common.geo_sql import Distance, DWithin, point_sql
 
 from .config import DISPATCH, DISTANCE_BAND_M
@@ -65,14 +64,6 @@ def waiting_orders(limit: int) -> list[Order]:
     )
 
 
-def _pickup_point(order: Order) -> GeoPoint | None:
-    location = (order.restaurant_snapshot or {}).get("location") or {}
-    coordinates = location.get("coordinates")
-    if not coordinates:
-        return None
-    return GeoPoint(lat=coordinates[1], lng=coordinates[0])
-
-
 def dispatch(order_id: uuid.UUID, now: datetime | None = None) -> uuid.UUID | None:
     """Offers the order to the best free rider. Returns that rider's user id, or None."""
     now = now or timezone.now()
@@ -81,7 +72,7 @@ def dispatch(order_id: uuid.UUID, now: datetime | None = None) -> uuid.UUID | No
         .exclude(_has_open_offer())
         .first()
     )
-    point = _pickup_point(order) if order else None
+    point = presenters.restaurant_point(order.restaurant_snapshot) if order else None
     if order is None or point is None:
         return None
 

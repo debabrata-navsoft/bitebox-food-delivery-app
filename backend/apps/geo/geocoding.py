@@ -162,12 +162,6 @@ def search(query: str) -> list[dict[str, Any]]:
                     "/search", {"q": q, "limit": 6, "countrycodes": settings.GEOCODER_COUNTRY_CODES}
                 )
             ]
-            if places:
-                return places
-            try:
-                return _photon_search(q) or places
-            except Exception:
-                return places
         except Exception:
             logger.warning("Nominatim search failed, trying the fallback", extra={"query": q})
             try:
@@ -179,6 +173,12 @@ def search(query: str) -> list[dict[str, Any]]:
                     "Location search is unavailable right now. Please try again.",
                     code="GEOCODER_UNAVAILABLE",
                 ) from None
+        if places:
+            return places
+        try:  # nothing found: the fallback may know the place
+            return _photon_search(q)
+        except Exception:
+            return []
 
     return list(upstream.cached("geocoder", f"s:{q.lower()}", DAY, load))
 

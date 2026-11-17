@@ -81,6 +81,15 @@ def _envelope(name: str, data_fields: dict[str, Any]) -> Any:
     )
 
 
+def _probe_response(data: dict[str, Any], up: bool, message: str = "OK") -> Response:
+    """503 with `success: false` when the API can't serve; probes are never cached."""
+    response = ok(data, message=message, status=200 if up else 503)
+    if not up:
+        response.data["success"] = False
+    response["Cache-Control"] = "no-store"
+    return response
+
+
 HEALTH_FIELDS = {
     "status": serializers.ChoiceField(choices=HEALTH_STATES),
     "database": serializers.ChoiceField(choices=CONNECTION_STATES),
@@ -110,7 +119,7 @@ class HealthView(APIView):
         workers = check_workers() if redis_state == "connected" else 0
         serving = database == "connected" and redis_state == "connected"
         healthy = serving and workers > 0
-        response = ok(
+        return _probe_response(
             {
                 "status": "ok" if healthy else "degraded",
                 "database": database,
@@ -119,13 +128,9 @@ class HealthView(APIView):
                 "uptime_seconds": round(time.monotonic() - STARTED_AT),
                 "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             },
-            message="BiteBox API is healthy" if healthy else "BiteBox API is degraded",
-            status=200 if serving else 503,
+            serving,
+            "BiteBox API is healthy" if healthy else "BiteBox API is degraded",
         )
-        if not serving:
-            response.data["success"] = False
-        response["Cache-Control"] = "no-store"
-        return response
 
 
 class LiveView(APIView):
@@ -153,8 +158,4 @@ class ReadyView(APIView):
     )
     def get(self, request: Request) -> Response:
         ready = check_database() == "connected" and check_redis() == "connected"
-        response = ok({"status": "ready" if ready else "not_ready"}, status=200 if ready else 503)
-        if not ready:
-            response.data["success"] = False
-        response["Cache-Control"] = "no-store"
-        return response
+        return _probe_response({"status": "ready" if ready else "not_ready"}, ready)

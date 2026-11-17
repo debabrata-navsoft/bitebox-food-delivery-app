@@ -28,6 +28,7 @@ from .models import (
 )
 
 INVALID = "Invalid value"
+TEXT_ERRORS = ("required", "null", "blank", "invalid", "min_length", "max_length")
 
 
 def choice(choices: list[str], message: str = INVALID) -> serializers.ChoiceField:
@@ -94,10 +95,7 @@ class ReferralCodeInput(serializers.Serializer):
     code = Text(
         min_length=4,
         max_length=40,
-        error_messages=dict.fromkeys(
-            ("required", "null", "blank", "invalid", "min_length", "max_length"),
-            "Enter a referral code",
-        ),
+        error_messages=dict.fromkeys(TEXT_ERRORS, "Enter a referral code"),
     )
 
     def validate_code(self, value: str) -> str:
@@ -191,10 +189,7 @@ class CampaignInput(serializers.Serializer):
     name = Text(
         min_length=3,
         max_length=80,
-        error_messages=dict.fromkeys(
-            ("required", "null", "blank", "invalid", "min_length", "max_length"),
-            "Name: 3 to 80 characters",
-        ),
+        error_messages=dict.fromkeys(TEXT_ERRORS, "Name: 3 to 80 characters"),
     )
     description = Text(required=False, allow_blank=True, max_length=500)
     type = serializers.ChoiceField(
@@ -251,10 +246,7 @@ class ReverseInput(serializers.Serializer):
     reason = Text(
         min_length=3,
         max_length=300,
-        error_messages=dict.fromkeys(
-            ("required", "null", "blank", "invalid", "min_length", "max_length"),
-            "Give a reason (3-300 characters)",
-        ),
+        error_messages=dict.fromkeys(TEXT_ERRORS, "Give a reason (3-300 characters)"),
     )
 
 
@@ -282,10 +274,7 @@ class RejectInput(DecisionInput):
     note = Text(
         min_length=3,
         max_length=300,
-        error_messages=dict.fromkeys(
-            ("required", "null", "blank", "invalid", "max_length", "min_length"),
-            "Add a note (up to 300 characters)",
-        ),
+        error_messages=dict.fromkeys(TEXT_ERRORS, "Add a note (up to 300 characters)"),
     )
 
 

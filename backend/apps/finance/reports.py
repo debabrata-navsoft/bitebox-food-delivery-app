@@ -9,11 +9,14 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
-from django.db.models import Count, F, Sum
+from django.db.models import Count, F, Q, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 from apps.accounts.models import User
+from apps.delivery.models import DeliveryPartner
+from apps.orders.models import Order, OrderStatus, PaymentStatus
+from apps.rbac.roles import Role
 from apps.restaurants.models import Restaurant
 from common.api import ApiError
 
@@ -30,10 +33,20 @@ def day_keys(days: int, now: datetime | None = None) -> list[str]:
     ]
 
 
+def _daily(
+    by_day: dict[str, dict[str, Any]], fields: tuple[str, ...], days: int, now: datetime
+) -> list[dict[str, Any]]:
+    """One row per day of the window (quiet days as zeros) from rows keyed by ISO date."""
+    return [
+        {"date": key, **{f: by_day.get(key, {}).get(f) or 0 for f in fields}}
+        for key in day_keys(days, now)
+    ]
+
+
 def _earnings(share: str, days: int, **match: Any) -> dict[str, Any]:
     now = timezone.now()
     settled = OrderSettlement.objects.filter(
-        settled_at__gte=now - timedelta(days=days), order__status="delivered", **match
+        settled_at__gte=now - timedelta(days=days), order__status=OrderStatus.DELIVERED, **match
     )
     tz = ZoneInfo(settings.REPORT_TIMEZONE)
     daily_rows = (
@@ -47,15 +60,6 @@ def _earnings(share: str, days: int, **match: Any) -> dict[str, Any]:
         .order_by()
     )
     by_day = {row["day"].isoformat(): row for row in daily_rows}
-    daily = [
-        {
-            "date": key,
-            "orders": by_day.get(key, {}).get("orders", 0),
-            "earnings_paise": by_day.get(key, {}).get("earnings_paise", 0) or 0,
-            "distance_meters": by_day.get(key, {}).get("distance_meters", 0) or 0,
-        }
-        for key in day_keys(days, now)
-    ]
     recent = settled.select_related("order").annotate(earned=F(share)).order_by("-settled_at")[:20]
     return {
         "days": days,
@@ -63,7 +67,7 @@ def _earnings(share: str, days: int, **match: Any) -> dict[str, Any]:
             field: sum(row[field] for row in by_day.values()) or 0
             for field in ("orders", "earnings_paise", "distance_meters")
         },
-        "daily": daily,
+        "daily": _daily(by_day, ("orders", "earnings_paise", "distance_meters"), days, now),
         "recent": [
             {
                 "id": str(s.order_id),
@@ -97,13 +101,13 @@ def rider_stats(user: User) -> dict[str, Any]:
     The rider dashboard's figures: today and this week (Monday onwards), in REPORT_TIMEZONE,
     from the settlements of delivered orders; all-time totals; the rating.
     """
-    from apps.delivery.models import DeliveryPartner
-
     tz = ZoneInfo(settings.REPORT_TIMEZONE)
     local_now = timezone.now().astimezone(tz)
     start_of_today = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
     start_of_week = start_of_today - timedelta(days=start_of_today.weekday())
-    mine = OrderSettlement.objects.filter(order__delivery_partner=user, order__status="delivered")
+    mine = OrderSettlement.objects.filter(
+        order__delivery_partner=user, order__status=OrderStatus.DELIVERED
+    )
 
     def window(since: datetime | None) -> dict[str, int]:
         qs = mine.filter(settled_at__gte=since) if since else mine
@@ -128,12 +132,6 @@ def admin_report(days: int = 30) -> dict[str, Any]:
     per-day orders, deliveries and GMV; cancellations, platform revenue and refunds; payment mix
     and top restaurants among delivered orders; status counts; new customers.
     """
-    from django.db.models import Q
-
-    from apps.accounts.models import User
-    from apps.orders.models import Order, OrderStatus, PaymentStatus
-    from apps.rbac.roles import Role
-
     now = timezone.now()
     since = now - timedelta(days=days)
     tz = ZoneInfo(settings.REPORT_TIMEZONE)
@@ -151,19 +149,8 @@ def admin_report(days: int = 30) -> dict[str, Any]:
         .order_by()
     )
     by_day = {row["day"].isoformat(): row for row in daily_rows}
-    daily = [
-        {
-            "date": key,
-            "orders": by_day.get(key, {}).get("orders", 0),
-            "delivered": by_day.get(key, {}).get("delivered", 0),
-            "gmv_paise": by_day.get(key, {}).get("gmv_paise") or 0,
-        }
-        for key in day_keys(days, now)
-    ]
-    totals = {
-        field: sum((row[field] or 0) for row in by_day.values())
-        for field in ("orders", "delivered", "gmv_paise")
-    }
+    fields = ("orders", "delivered", "gmv_paise")
+    totals = {field: sum((row[field] or 0) for row in by_day.values()) for field in fields}
     money = placed.aggregate(
         cancelled=Count("pk", filter=Q(status__in=[OrderStatus.CANCELLED, OrderStatus.REJECTED])),
         platform_revenue_paise=Sum("settlement__platform_paise"),
@@ -197,7 +184,7 @@ def admin_report(days: int = 30) -> dict[str, Any]:
             else 0,
             "new_customers": User.objects.filter(role=Role.CUSTOMER, created_at__gte=since).count(),
         },
-        "daily": daily,
+        "daily": _daily(by_day, fields, days, now),
         "payment_mix": [
             {"method": p["payment_method"], "orders": p["orders"], "paise": p["paise"]}
             for p in payment_mix

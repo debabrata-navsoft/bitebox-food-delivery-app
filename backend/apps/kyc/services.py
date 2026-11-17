@@ -139,12 +139,8 @@ def upload(user: User, kind: str, data: bytes, number: str) -> KycDocument:
         doc.file_name, doc.content_type, doc.size = name, content_type, len(data)
         doc.number_encrypted = crypto.encrypt(number) if number else ""
         doc.number_last4 = crypto.last4(number) if number else ""
-        doc.status, doc.review_note, doc.reviewed_at, doc.reviewed_by = (
-            DocumentStatus.PENDING,
-            "",
-            None,
-            None,
-        )
+        doc.status, doc.review_note = DocumentStatus.PENDING, ""
+        doc.reviewed_at = doc.reviewed_by = None
         doc.save()
     if previous_file:
         transaction.on_commit(lambda: storage.delete(previous_file))
@@ -152,9 +148,7 @@ def upload(user: User, kind: str, data: bytes, number: str) -> KycDocument:
 
 
 def remove(user: User, doc_id: uuid.UUID) -> None:
-    doc = KycDocument.objects.filter(pk=doc_id, user=user).first()
-    if doc is None:
-        raise ApiError.not_found("Document not found")
+    doc = own_document(user, doc_id)
     if doc.status == DocumentStatus.APPROVED:
         raise ApiError.conflict(
             "Approved documents cannot be removed. Upload a new one to replace it."
@@ -200,9 +194,7 @@ def own_document(user: User, doc_id: uuid.UUID) -> KycDocument:
 def review(doc_id: uuid.UUID, status: str, note: str, admin: User) -> KycDocument:
     if status == DocumentStatus.REJECTED and not note:
         raise ApiError.bad_request("Say what is wrong, so the partner can fix it")
-    doc = KycDocument.objects.select_related("user").filter(pk=doc_id).first()
-    if doc is None:
-        raise ApiError.not_found("Document not found")
+    doc = document_for_admin(doc_id)
     doc.status, doc.review_note = status, note if status == DocumentStatus.REJECTED else ""
     doc.reviewed_at, doc.reviewed_by = timezone.now(), admin
     doc.save(update_fields=["status", "review_note", "reviewed_at", "reviewed_by", "updated_at"])

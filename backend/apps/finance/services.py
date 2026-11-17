@@ -14,7 +14,9 @@ import csv
 import io
 from datetime import datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, F, Max, Min, Q, Sum
 from django.db.models.functions import TruncDate
@@ -23,13 +25,14 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.orders.models import Order, OrderStatus, PaymentMethod, PaymentStatus
 from apps.orders.notifications import rupees
+from apps.orders.presenters import payment_view
 from apps.payments.models import Payment
 from apps.restaurants.models import Restaurant
 from common.api import ApiError
 from common.pagination import Page, paginate
 
 from . import ledger
-from .earnings import EARNINGS
+from .earnings import EARNINGS, commission_bp_for
 from .models import CommissionRule, OrderSettlement, Payout, PayoutStatus, PayoutType
 from .reports import day_keys
 
@@ -78,10 +81,6 @@ def dashboard(days: int) -> dict[str, Any]:
         refunds=Count("pk", filter=Q(refunded_paise__gt=0)),
         refunded=Sum("refunded_paise"),
     )
-    from zoneinfo import ZoneInfo
-
-    from django.conf import settings
-
     tz = ZoneInfo(settings.REPORT_TIMEZONE)
     by_day = {
         r["day"].isoformat(): r["paise"]
@@ -136,8 +135,6 @@ def _pricing(o: Order) -> dict[str, int]:
 
 def transaction_detail(payment_id: Any) -> dict[str, Any]:
     """One payment with its customer, order prices and settlement (transaction details)."""
-    from apps.orders.presenters import payment_view
-
     p = Payment.objects.select_related("user", "order").filter(pk=payment_id).first()
     if p is None:
         raise ApiError.not_found("Transaction not found")
@@ -196,9 +193,11 @@ def refunds(state: str | None, page: Page) -> dict[str, Any]:
     needed = Q(status=P.PAID, method=PaymentMethod.ONLINE, order__status__in=CLOSED)
     done = Q(status__in=[P.REFUNDED, P.PARTIALLY_REFUNDED])
     where = needed if state == "needed" else done if state == "refunded" else needed | done
-    qs = Payment.objects.filter(where).select_related("order", "user").order_by("-updated_at")
-    from apps.orders.presenters import payment_view
-
+    qs = (
+        Payment.objects.filter(where)
+        .select_related("order", "order__cancellation", "user")
+        .order_by("-updated_at")
+    )
     rows, meta = paginate(qs, page)
     return {
         "items": [
@@ -247,11 +246,10 @@ def commission_report(days: int) -> dict[str, Any]:
         }
         for r in rows
     ]
-    global_bp = active_rate(None)
     return {
         "days": days,
         "rates": {
-            "restaurant_commission_percent": global_bp / 100,
+            "restaurant_commission_percent": commission_bp_for(None) / 100,
             "rider_base_paise": EARNINGS["rider_base_paise"],
             "rider_per_km_paise": EARNINGS["rider_per_km_paise"],
         },
@@ -271,18 +269,6 @@ def commission_report(days: int) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Commission rules
 # ---------------------------------------------------------------------------
-def active_rate(restaurant_id: Any) -> int:
-    """The open rule of this scope (None = global); the global/default when there is none."""
-    from .earnings import commission_bp_for
-
-    if restaurant_id is None:
-        rule = CommissionRule.objects.filter(
-            restaurant__isnull=True, effective_to__isnull=True
-        ).first()
-        return rule.basis_points if rule else EARNINGS["restaurant_commission_basis_points"]
-    return commission_bp_for(restaurant_id)
-
-
 def _rule_json(r: CommissionRule) -> dict[str, Any]:
     return {
         "id": str(r.pk),
@@ -301,10 +287,11 @@ def _rule_json(r: CommissionRule) -> dict[str, Any]:
 def commission_rules() -> dict[str, Any]:
     """The global rate, every restaurant override in force, and the recent history."""
     rules = CommissionRule.objects.select_related("restaurant", "created_by")
+    global_bp = commission_bp_for(None)  # the open global rule, else the default
     return {
         "global": {
-            "basis_points": active_rate(None),
-            "percent": active_rate(None) / 100,
+            "basis_points": global_bp,
+            "percent": global_bp / 100,
             "default_basis_points": EARNINGS["restaurant_commission_basis_points"],
         },
         "overrides": [

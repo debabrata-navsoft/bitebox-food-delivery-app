@@ -63,13 +63,8 @@ class AddressesView(APIView):
 
     @extend_schema(tags=["Addresses"], responses={200: ANY, **errors(401, 403)})
     def get(self, request: Request) -> Response:
-        return ok(
-            {
-                "addresses": [
-                    services.address_json(a) for a in services.list_for(current_user(request))
-                ]
-            }
-        )
+        addresses = services.list_for(current_user(request))
+        return ok({"addresses": [services.address_json(a) for a in addresses]})
 
     @extend_schema(
         tags=["Addresses"],

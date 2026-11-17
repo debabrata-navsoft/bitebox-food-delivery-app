@@ -323,7 +323,9 @@ def credit_referral(referral_id: Any, *, now: datetime | None = None) -> Referra
     ledger keys per side; the referrer's monthly slot is remembered on the referral.
     """
     now = now or timezone.now()
-    referral = Referral.objects.filter(pk=referral_id).first()
+    referral = (
+        Referral.objects.select_related("referrer", "referred").filter(pk=referral_id).first()
+    )
     if referral is None or referral.status != R.ORDER_DELIVERED:
         return referral
     if referral.reward_status != RS.CREDITING:
@@ -331,8 +333,7 @@ def credit_referral(referral_id: Any, *, now: datetime | None = None) -> Referra
     config = get_reward_config()
     referrer_coins = config["referral"]["referrer_coins"]
     referred_coins = config["referral"]["referred_coins"]
-    friend = User.objects.filter(pk=referral.referred_id).first()
-    inviter = User.objects.filter(pk=referral.referrer_id).first()
+    friend, inviter = referral.referred, referral.referrer
 
     paid_referred = 0
     if referred_coins > 0:
@@ -347,8 +348,11 @@ def credit_referral(referral_id: Any, *, now: datetime | None = None) -> Referra
         )
         paid_referred = result.txn.coins if result.txn else 0
     paid_referrer = 0
-    active = inviter is not None and inviter.status == UserStatus.ACTIVE
-    if referrer_coins > 0 and active and _claim_referrer_slot(referral, config, now):
+    if (
+        referrer_coins > 0
+        and inviter.status == UserStatus.ACTIVE
+        and _claim_referrer_slot(referral, config, now)
+    ):
         result = wallet.credit(
             referral.referrer_id,
             coins=referrer_coins,

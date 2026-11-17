@@ -9,15 +9,11 @@ from pathlib import Path
 from django.conf import settings
 
 from apps.uploads.metadata import strip_metadata
+from apps.uploads.storage import CONTENT_TYPES as IMAGE_TYPES
 from apps.uploads.storage import detect_image_type
 from common.api import ApiError
 
-CONTENT_TYPES = {
-    "pdf": "application/pdf",
-    "jpg": "image/jpeg",
-    "png": "image/png",
-    "webp": "image/webp",
-}
+CONTENT_TYPES = {"pdf": "application/pdf", **IMAGE_TYPES}
 
 
 def _dir() -> Path:

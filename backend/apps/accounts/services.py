@@ -103,7 +103,7 @@ def _phone_taken(phone: str, exclude: uuid.UUID | None = None) -> bool:
     return (qs.exclude(pk=exclude) if exclude else qs).exists()
 
 
-def _check_new_account(email: str, phone: str | None) -> None:
+def check_new_account(email: str, phone: str | None) -> None:
     if User.objects.filter(email=email).exists():
         raise ApiError.conflict("An account with this email already exists")
     if phone and _phone_taken(phone):
@@ -118,7 +118,7 @@ def signup_needs_code() -> bool:
 def request_signup_code(email: str, phone: str, ip: str | None) -> dict[str, Any]:
     """Step 1 of sign-up: the email and number are free, so email a code to the address.
     While codes are off, says so and the client creates the account at once."""
-    _check_new_account(email, phone)
+    check_new_account(email, phone)
     if not signup_needs_code():
         return {"codeRequired": False}
     return {**otp.send_email_code(email, OtpPurpose.REGISTER_EMAIL, ip), "codeRequired": True}
@@ -129,7 +129,7 @@ def register(data: dict[str, Any], meta: RequestMeta) -> IssuedSession:
     email, phone = data["email"], data.get("phone") or None
     for check in registration_checks:
         check(data)
-    _check_new_account(email, phone)
+    check_new_account(email, phone)
     email_verified_at = None
     if signup_needs_code():
         # Step 2: the account is created only with the code emailed to its address.
@@ -235,20 +235,22 @@ def send_email_verification(user: User) -> None:
     )
 
 
-def request_email_code(user: User, ip: str | None) -> dict[str, Any]:
-    """Emails a signed-in person a code that confirms their address (the account page)."""
+def _refuse_verified_email(user: User) -> None:
     if user.email_verified_at:
         raise ApiError.conflict("Your email is already verified")
+
+
+def request_email_code(user: User, ip: str | None) -> dict[str, Any]:
+    """Emails a signed-in person a code that confirms their address (the account page)."""
+    _refuse_verified_email(user)
     return otp.send_email_code(user.email, OtpPurpose.VERIFY_EMAIL, ip, user.name)
 
 
 def verify_email_code(user: User, code: str) -> User:
-    if user.email_verified_at:
-        raise ApiError.conflict("Your email is already verified")
+    _refuse_verified_email(user)
     otp.check_email_code(user.email, OtpPurpose.VERIFY_EMAIL, code)
     user.email_verified_at = timezone.now()
-    user.email_verification_token_hash = None
-    user.email_verification_expires_at = None
+    user.email_verification_token_hash = user.email_verification_expires_at = None
     user.save(
         update_fields=[
             "email_verified_at",
@@ -261,8 +263,7 @@ def verify_email_code(user: User, code: str) -> User:
 
 
 def resend_email_verification(user: User) -> None:
-    if user.email_verified_at:
-        raise ApiError.conflict("Your email is already verified")
+    _refuse_verified_email(user)
     send_email_verification(user)
 
 
@@ -294,6 +295,10 @@ def login(data: dict[str, Any], meta: RequestMeta) -> IssuedSession:
     return _signed_in(user, data.get("portal"), meta)
 
 
+def _session_expired() -> ApiError:
+    return ApiError.unauthorized("Session expired, please sign in again")
+
+
 def refresh(raw_token: str | None, meta: RequestMeta) -> IssuedSession:
     if not raw_token:
         raise ApiError.unauthorized("No session")
@@ -311,7 +316,7 @@ def refresh(raw_token: str | None, meta: RequestMeta) -> IssuedSession:
             or session.revoked_reason != RevokedReason.ROTATED
             or session.revoked_at is None
         ):
-            raise ApiError.unauthorized("Session expired, please sign in again")
+            raise _session_expired()
         if now - session.revoked_at >= ROTATION_GRACE:
             # A rotated token came back: it was copied. Revoke the whole family.
             Session.objects.filter(family=session.family, revoked_at__isnull=True).update(
@@ -321,15 +326,13 @@ def refresh(raw_token: str | None, meta: RequestMeta) -> IssuedSession:
                 "Refresh token reuse detected; session family revoked",
                 extra={"user_id": str(session.user_id)},
             )
-            raise ApiError.unauthorized("Session expired, please sign in again")
+            raise _session_expired()
         # Otherwise two tabs refreshed at the same moment: reissue for the same family.
 
-    if session is None:  # unreachable: a rotated row exists
-        raise ApiError.unauthorized("Session expired, please sign in again")
-    user = session.user
-    if user.status != UserStatus.ACTIVE:
-        raise ApiError.unauthorized("Session expired, please sign in again")
-    return _issue(user, meta, session.family)
+    # (session is never None here: a rotated row exists)
+    if session is None or session.user.status != UserStatus.ACTIVE:
+        raise _session_expired()
+    return _issue(session.user, meta, session.family)
 
 
 def logout(raw_token: str | None) -> None:

@@ -33,6 +33,11 @@ def order_group(order_id: Any) -> str:
     return f"order.{order_id}"
 
 
+def iso(value: Any) -> str | None:
+    """A datetime as ISO 8601 with a `Z` for UTC (as Node's JSON dates), or None."""
+    return value.isoformat().replace("+00:00", "Z") if value else None
+
+
 def _send(groups: Iterable[str], message: dict[str, Any]) -> None:
     layer = get_channel_layer()
     if layer is None:
@@ -61,21 +66,13 @@ def emit_order_updated(order: Any, also_notify: Iterable[Any] = ()) -> None:
         "id": str(order.pk),
         "orderNumber": order.order_number,
         "status": order.status,
-        "updatedAt": (order.updated_at or timezone.now()).isoformat().replace("+00:00", "Z"),
+        "updatedAt": iso(order.updated_at or timezone.now()),
     }
     send_after_commit(groups, "order:updated", payload)
     if order.status in FINAL_STATUSES:
         # Tracking sockets leave the order's room: there is nothing left to track.
         group = order_group(order.pk)
         transaction.on_commit(lambda: _send([group], {"type": "order.closed", "group": group}))
-
-
-def emit_to_users(user_ids: Iterable[Any], event: str, data: dict[str, Any]) -> None:
-    send_after_commit([user_group(u) for u in user_ids if u], event, data)
-
-
-def _iso(value: Any) -> str | None:
-    return value.isoformat().replace("+00:00", "Z") if value else None
 
 
 def emit_notifications(rows: list[Any]) -> None:
@@ -89,8 +86,8 @@ def emit_notifications(rows: list[Any]) -> None:
             "body": n.body,
             "link": n.link,
             "order": str(n.order_id) if n.order_id else None,
-            "readAt": _iso(n.read_at),
-            "createdAt": _iso(n.created_at),
-            "updatedAt": _iso(n.created_at),  # notifications are append-only rows
+            "readAt": iso(n.read_at),
+            "createdAt": iso(n.created_at),
+            "updatedAt": iso(n.created_at),  # notifications are append-only rows
         }
         _send([user_group(n.user_id)], {"type": "relay", "event": "notification:new", "data": data})

@@ -59,7 +59,7 @@ def allowed_endpoint(endpoint: str) -> bool:
 
 def push_payload(type: str, title: str, body: str, link: str, order_id: Any) -> str:
     """The Angular service worker format: the browser shows it and opens `link` on click."""
-    path = link if link.startswith("/") and not link.startswith("//") else "/"
+    path = content.site_path(link)
     return json.dumps(
         {
             "notification": {

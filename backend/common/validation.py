@@ -6,7 +6,17 @@ from typing import Any
 from rest_framework import serializers
 
 from .api import ApiError
-from .pagination import MAX_LIMIT, Page
+from .pagination import MAX_LIMIT
+
+
+def field_error(field: str, message: str) -> ApiError:
+    """A 422 "Validation failed" for one field, like a failed serializer."""
+    return ApiError(
+        422,
+        "Validation failed",
+        code="VALIDATION_ERROR",
+        details=[{"field": field, "message": message}],
+    )
 
 
 def parse_id(value: str, field: str = "id") -> uuid.UUID:
@@ -14,12 +24,7 @@ def parse_id(value: str, field: str = "id") -> uuid.UUID:
     try:
         return uuid.UUID(str(value))
     except (TypeError, ValueError):
-        raise ApiError(
-            422,
-            "Validation failed",
-            code="VALIDATION_ERROR",
-            details=[{"field": field, "message": "Invalid id"}],
-        ) from None
+        raise field_error(field, "Invalid id") from None
 
 
 def validated(
@@ -39,6 +44,3 @@ class PageQuery(serializers.Serializer):
     search = serializers.CharField(
         required=False, allow_blank=True, max_length=100, trim_whitespace=True
     )
-
-    def page_obj(self) -> Page:
-        return Page.from_query(self.validated_data)

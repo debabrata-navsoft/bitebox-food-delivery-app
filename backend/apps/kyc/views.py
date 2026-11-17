@@ -34,7 +34,10 @@ DOCUMENT = envelope("KycDocumentResponse")
 REMOVED = envelope("KycDocumentRemoved")
 UploadLimit = rate_limit("IMAGE_UPLOAD_RATE_LIMIT", "Too many uploads. Try again later.")
 # Which admin permission reviews which partner type.
-REVIEWER = {Role.RESTAURANT: Permission.RESTAURANTS_MANAGE, Role.DELIVERY: Permission.RIDERS_MANAGE}
+REVIEWER: dict[str, Permission] = {
+    Role.RESTAURANT: Permission.RESTAURANTS_MANAGE,
+    Role.DELIVERY: Permission.RIDERS_MANAGE,
+}
 
 
 class DocumentInput(serializers.Serializer):
@@ -156,7 +159,7 @@ class IsKycReviewer(BasePermission):
 
 
 def _reviewable(admin: User, partner: User) -> None:
-    permission = REVIEWER.get(Role(partner.role)) if partner.role in REVIEWER else None
+    permission = REVIEWER.get(partner.role)
     if permission is None or not has_permission(admin.role, permission):
         raise ApiError.not_found("Not found")
 

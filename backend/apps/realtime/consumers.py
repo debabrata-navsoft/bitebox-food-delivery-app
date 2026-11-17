@@ -34,7 +34,7 @@ from apps.rbac.roles import Role
 
 from . import tracking
 from .auth import session_from_token
-from .events import order_group
+from .events import iso, order_group
 
 logger = logging.getLogger("bitebox.realtime")
 
@@ -48,8 +48,8 @@ rider_state = database_sync_to_async(tracking.rider_state)
 persist_location = database_sync_to_async(tracking.persist_location)
 
 
-def _now() -> str:
-    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+def _now() -> str | None:
+    return iso(datetime.now(UTC))
 
 
 class RealtimeConsumer(AsyncJsonWebsocketConsumer):
@@ -189,7 +189,7 @@ class RealtimeConsumer(AsyncJsonWebsocketConsumer):
                         "latitude": latitude,
                         "longitude": longitude,
                         "accuracy": accuracy,
-                        "at": at.isoformat().replace("+00:00", "Z"),
+                        "at": iso(at),
                     },
                 },
             )

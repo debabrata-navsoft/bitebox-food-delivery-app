@@ -125,6 +125,15 @@ def _message(
     )
 
 
+def _find(ticket_id: uuid.UUID, *, lock: bool = False, **scope: Any) -> SupportTicket:
+    """The ticket (`scope`, e.g. raised_by=user, limits whose), else 404."""
+    qs = SupportTicket.objects.select_for_update() if lock else SupportTicket.objects
+    ticket = qs.filter(pk=ticket_id, **scope).first()
+    if ticket is None:
+        raise ApiError.not_found("Ticket not found")
+    return ticket
+
+
 def _save_events(events: list[SupportTicketEvent]) -> None:
     # One at a time so each row gets its own (increasing) created_at.
     for event in events:
@@ -201,9 +210,13 @@ def _history_json(e: SupportTicketEvent) -> dict[str, Any]:
 
 
 def _staff_view(ticket_id: uuid.UUID) -> dict[str, Any]:
-    ticket = SupportTicket.objects.select_related("assignee", "raised_by", "order").get(
-        pk=ticket_id
+    ticket = (
+        SupportTicket.objects.select_related("assignee", "raised_by", "order")
+        .filter(pk=ticket_id)
+        .first()
     )
+    if ticket is None:
+        raise ApiError.not_found("Ticket not found")
     messages = list(ticket.messages.order_by("created_at", "id"))
     history = list(ticket.history.order_by("created_at", "id"))
     r = ticket.raised_by
@@ -297,22 +310,14 @@ def list_mine(user: User, query: dict[str, Any], page: Page) -> dict[str, Any]:
     }
 
 
-def _find_mine(user: User, ticket_id: uuid.UUID, *, lock: bool = False) -> SupportTicket:
-    qs = SupportTicket.objects.select_for_update() if lock else SupportTicket.objects
-    ticket = qs.filter(pk=ticket_id, raised_by=user).first()
-    if ticket is None:
-        raise ApiError.not_found("Ticket not found")
-    return ticket
-
-
 def get_mine(user: User, ticket_id: uuid.UUID) -> dict[str, Any]:
-    return _requester_view(_find_mine(user, ticket_id))
+    return _requester_view(_find(ticket_id, raised_by=user))
 
 
 def reply_mine(user: User, ticket_id: uuid.UUID, body: str) -> dict[str, Any]:
     """The requester replies. A resolved ticket reopens; a closed one needs a new ticket."""
     with transaction.atomic():
-        ticket = _find_mine(user, ticket_id, lock=True)
+        ticket = _find(ticket_id, lock=True, raised_by=user)
         if ticket.status == T.CLOSED:
             raise ApiError.bad_request("This ticket is closed. Please open a new one.")
         _message(ticket, user, body)
@@ -377,6 +382,15 @@ def _support_roles() -> list[str]:
     return [r.value for r in ADMIN_ROLES if has_permission(r, Permission.SUPPORT_MANAGE)]
 
 
+def _support_admin(user_id: uuid.UUID) -> User:
+    assignee = User.objects.filter(
+        pk=user_id, status=UserStatus.ACTIVE, role__in=list(ADMIN_ROLES)
+    ).first()
+    if assignee is None or not has_permission(assignee.role, Permission.SUPPORT_MANAGE):
+        raise ApiError.bad_request("Assign the ticket to an active support admin")
+    return assignee
+
+
 def staff_tickets(staff: User, query: dict[str, Any], page: Page) -> dict[str, Any]:
     qs: QuerySet[SupportTicket] = SupportTicket.objects.select_related("assignee")
     status = query.get("status")
@@ -407,16 +421,8 @@ def staff_tickets(staff: User, query: dict[str, Any], page: Page) -> dict[str, A
     }
 
 
-def _find(ticket_id: uuid.UUID, *, lock: bool = False) -> SupportTicket:
-    qs = SupportTicket.objects.select_for_update() if lock else SupportTicket.objects
-    ticket = qs.filter(pk=ticket_id).first()
-    if ticket is None:
-        raise ApiError.not_found("Ticket not found")
-    return ticket
-
-
 def get(ticket_id: uuid.UUID) -> dict[str, Any]:
-    return _staff_view(_find(ticket_id).pk)
+    return _staff_view(ticket_id)
 
 
 def update(staff: User, ticket_id: uuid.UUID, data: dict[str, Any]) -> dict[str, Any]:
@@ -449,29 +455,16 @@ def update(staff: User, ticket_id: uuid.UUID, data: dict[str, Any]) -> dict[str,
                 _event(ticket, staff, "priority", from_value=ticket.priority, to_value=priority)
             )
             ticket.priority = priority
-        if "assignee_id" in data:
-            wanted = data["assignee_id"]
-            if wanted != ticket.assignee_id:
-                assignee = None
-                if wanted:
-                    assignee = User.objects.filter(
-                        pk=wanted, status=UserStatus.ACTIVE, role__in=list(ADMIN_ROLES)
-                    ).first()
-                    if assignee is None or not has_permission(
-                        assignee.role, Permission.SUPPORT_MANAGE
-                    ):
-                        raise ApiError.bad_request("Assign the ticket to an active support admin")
-                events.append(
-                    _event(
-                        ticket,
-                        staff,
-                        "assigned",
-                        to_value=assignee.name if assignee else "Unassigned",
-                    )
+        if "assignee_id" in data and data["assignee_id"] != ticket.assignee_id:
+            assignee = _support_admin(data["assignee_id"]) if data["assignee_id"] else None
+            events.append(
+                _event(
+                    ticket, staff, "assigned", to_value=assignee.name if assignee else "Unassigned"
                 )
-                ticket.assignee = assignee
-                if assignee is not None and assignee.pk != staff.pk:
-                    assigned_to = assignee
+            )
+            ticket.assignee = assignee
+            if assignee is not None and assignee.pk != staff.pk:
+                assigned_to = assignee
         if not events:
             return _staff_view(ticket.pk)
         _save_events(events)

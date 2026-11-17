@@ -57,11 +57,11 @@ DEFAULT_REWARD_CONFIG: dict[str, Any] = {
 }
 
 
-def _merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+def merge_settings(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     out = copy.deepcopy(base)
     for key, value in (override or {}).items():
         out[key] = (
-            _merge(out[key], value)
+            merge_settings(out[key], value)
             if isinstance(value, dict) and isinstance(out.get(key), dict)
             else value
         )
@@ -71,7 +71,7 @@ def _merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
 def get_reward_config() -> dict[str, Any]:
     """Defaults merged with the saved settings row (if any)."""
     row = RewardConfiguration.objects.filter(key="global").first()
-    config = _merge(DEFAULT_REWARD_CONFIG, row.value if row else {})
+    config = merge_settings(DEFAULT_REWARD_CONFIG, row.value if row else {})
     config["timezone"] = settings.REPORT_TIMEZONE
     if row is not None:
         config["coins_enabled"] = row.coins_enabled

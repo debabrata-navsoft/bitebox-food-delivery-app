@@ -11,6 +11,7 @@ from apps.restaurants.presenters import is_open_now, rating_json
 from common.api import ApiError
 from common.pagination import Page, paginate
 from common.slug import unique_slug
+from common.validation import field_error
 
 from .models import FoodCategory, FoodItem
 from .presenters import category_json, category_ref, food_json
@@ -24,6 +25,12 @@ CATEGORY_ORDER = ("sort_order", "name")
 def _category_name_taken(name: str, exclude: uuid.UUID | None = None) -> bool:
     qs = FoodCategory.objects.filter(name__iexact=name.strip())
     return (qs.exclude(pk=exclude) if exclude else qs).exists()
+
+
+def _set_category_fields(category: FoodCategory, data: dict[str, Any]) -> None:
+    for field in CATEGORY_FIELDS:
+        if data.get(field) is not None:
+            setattr(category, field, data[field])
 
 
 def list_active_categories() -> list[dict[str, Any]]:
@@ -50,9 +57,7 @@ def create_category(data: dict[str, Any]) -> FoodCategory:
     if _category_name_taken(data["name"]):
         raise ApiError.conflict("A category with this name already exists")
     category = FoodCategory(slug=unique_slug(FoodCategory, data["name"]))
-    for field in CATEGORY_FIELDS:
-        if field in data and data[field] is not None:
-            setattr(category, field, data[field])
+    _set_category_fields(category, data)
     category.save()
     return category
 
@@ -65,9 +70,7 @@ def update_category(category_id: uuid.UUID, data: dict[str, Any]) -> FoodCategor
         if _category_name_taken(data["name"], exclude=category.pk):
             raise ApiError.conflict("A category with this name already exists")
         category.slug = unique_slug(FoodCategory, data["name"], category.pk)
-    for field in CATEGORY_FIELDS:
-        if field in data and data[field] is not None:
-            setattr(category, field, data[field])
+    _set_category_fields(category, data)
     category.save()
     return category
 
@@ -79,12 +82,9 @@ def delete_category(category_id: uuid.UUID) -> None:
     deleted, _ = (
         FoodCategory.objects.filter(pk=category_id).exclude(food_items__isnull=False).delete()
     )
-    if not deleted:
-        if FoodCategory.objects.filter(pk=category_id).exists():
-            FoodCategory.objects.filter(pk=category_id).update(
-                is_active=False, updated_at=timezone.now()
-            )
-            return
+    if not deleted and not FoodCategory.objects.filter(pk=category_id).update(
+        is_active=False, updated_at=timezone.now()
+    ):
         raise ApiError.not_found("Category not found")
 
 
@@ -105,12 +105,7 @@ FOOD_FIELDS = (
 
 def _require_active_category(category_id: uuid.UUID) -> None:
     if not FoodCategory.objects.filter(pk=category_id, is_active=True).exists():
-        raise ApiError(
-            422,
-            "Validation failed",
-            code="VALIDATION_ERROR",
-            details=[{"field": "category", "message": "Choose an active category"}],
-        )
+        raise field_error("category", "Choose an active category")
 
 
 def _require_unique_name(
@@ -184,20 +179,27 @@ def owner_update(restaurant: Restaurant, item_id: uuid.UUID, data: dict[str, Any
     return FoodItem.objects.select_related("category").get(pk=item.pk)
 
 
-def owner_set_availability(restaurant: Restaurant, item_id: uuid.UUID, available: bool) -> FoodItem:
-    item = _owner_item(restaurant, item_id)
+def _set_available(item: FoodItem, available: bool) -> FoodItem:
     item.is_available = available
     item.save(update_fields=["is_available", "updated_at"])
     return item
 
 
-def owner_delete(restaurant: Restaurant, item_id: uuid.UUID) -> None:
-    """Soft delete: old orders and reviews keep pointing at the dish."""
-    changed = FoodItem.objects.filter(
-        pk=item_id, restaurant=restaurant, deleted_at__isnull=True
-    ).update(deleted_at=timezone.now(), is_available=False, updated_at=timezone.now())
+def _soft_delete(**lookup: Any) -> None:
+    """Old orders and reviews keep pointing at the dish."""
+    changed = FoodItem.objects.filter(deleted_at__isnull=True, **lookup).update(
+        deleted_at=timezone.now(), is_available=False, updated_at=timezone.now()
+    )
     if not changed:
         raise ApiError.not_found("Menu item not found")
+
+
+def owner_set_availability(restaurant: Restaurant, item_id: uuid.UUID, available: bool) -> FoodItem:
+    return _set_available(_owner_item(restaurant, item_id), available)
+
+
+def owner_delete(restaurant: Restaurant, item_id: uuid.UUID) -> None:
+    _soft_delete(pk=item_id, restaurant=restaurant)
 
 
 def _admin_restaurant_ref(r: Restaurant) -> dict[str, Any]:
@@ -223,17 +225,12 @@ def admin_set_availability(item_id: uuid.UUID, available: bool) -> dict[str, Any
     )
     if item is None:
         raise ApiError.not_found("Menu item not found")
-    item.is_available = available
-    item.save(update_fields=["is_available", "updated_at"])
+    _set_available(item, available)
     return food_json(item, restaurant=_admin_restaurant_ref(item.restaurant))
 
 
 def admin_delete(item_id: uuid.UUID) -> None:
-    changed = FoodItem.objects.filter(pk=item_id, deleted_at__isnull=True).update(
-        deleted_at=timezone.now(), is_available=False, updated_at=timezone.now()
-    )
-    if not changed:
-        raise ApiError.not_found("Menu item not found")
+    _soft_delete(pk=item_id)
 
 
 def public_menu(restaurant: Restaurant) -> list[dict[str, Any]]:
@@ -260,15 +257,15 @@ def public_menu(restaurant: Restaurant) -> list[dict[str, Any]]:
     return [{"category": g["category"], "items": g["items"]} for g in ordered]
 
 
-def _restaurant_summary(r: Restaurant) -> dict[str, Any]:
+def _restaurant_ref(r: Restaurant, **extra: Any) -> dict[str, Any]:
+    """The restaurant embedded in a public dish: the basics plus `extra`."""
     data = {
         "id": str(r.pk),
         "name": r.name,
         "slug": r.slug,
         "cuisines": list(r.cuisines or []),
         "rating": rating_json(r),
-        "city": r.city,
-        "avg_prep_time_minutes": r.avg_prep_time_minutes,
+        **extra,
     }
     if r.image_url:
         data["image_url"] = r.image_url
@@ -278,18 +275,22 @@ def _restaurant_summary(r: Restaurant) -> dict[str, Any]:
 def public_search(query: dict[str, Any], page: Page) -> dict[str, Any]:
     """Available dishes from approved restaurants, best-rated restaurants first."""
     qs = FoodItem.objects.select_related("category", "restaurant").filter(
-        deleted_at__isnull=True, is_available=True, restaurant__status=RestaurantStatus.APPROVED
+        is_available=True, restaurant__status=RestaurantStatus.APPROVED
     )
-    if search := (query.get("search") or "").strip():
-        qs = qs.filter(name__icontains=search)
-    if query.get("category"):
-        qs = qs.filter(category_id=query["category"])
-    if query.get("veg"):
-        qs = qs.filter(is_veg=True)
-    qs = qs.order_by(F("restaurant__rating_average").desc(), "name", "id")
+    qs = _filtered(qs, query).order_by(F("restaurant__rating_average").desc(), "name", "id")
     items, meta = paginate(qs, page)
     return {
-        "items": [food_json(i, restaurant=_restaurant_summary(i.restaurant)) for i in items],
+        "items": [
+            food_json(
+                i,
+                restaurant=_restaurant_ref(
+                    i.restaurant,
+                    city=i.restaurant.city,
+                    avg_prep_time_minutes=i.restaurant.avg_prep_time_minutes,
+                ),
+            )
+            for i in items
+        ],
         "pagination": meta,
     }
 
@@ -303,18 +304,12 @@ def public_get(item_id: uuid.UUID) -> dict[str, Any]:
     if item is None:
         raise ApiError.not_found("Dish not found")
     r = item.restaurant
-    restaurant = {
-        "id": str(r.pk),
-        "name": r.name,
-        "slug": r.slug,
-        "cuisines": list(r.cuisines or []),
-        "rating": rating_json(r),
-        "is_accepting_orders": r.is_accepting_orders,
-        "opening_time": r.opening_time,
-        "closing_time": r.closing_time,
-        "timezone": r.timezone,
-        "is_open_now": is_open_now(r),
-    }
-    if r.image_url:
-        restaurant["image_url"] = r.image_url
+    restaurant = _restaurant_ref(
+        r,
+        is_accepting_orders=r.is_accepting_orders,
+        opening_time=r.opening_time,
+        closing_time=r.closing_time,
+        timezone=r.timezone,
+        is_open_now=is_open_now(r),
+    )
     return food_json(item, restaurant=restaurant)

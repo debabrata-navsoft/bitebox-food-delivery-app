@@ -18,7 +18,7 @@ from django.db import IntegrityError, transaction
 from common.api import ApiError
 
 from .models import EARN_SOURCES, MAX_COINS_PER_OPERATION, MAX_REWARD_COINS, RewardConfiguration
-from .quote import DEFAULT_REWARD_CONFIG, get_reward_config
+from .quote import DEFAULT_REWARD_CONFIG, get_reward_config, merge_settings
 
 logger = logging.getLogger("bitebox.coins")
 
@@ -143,17 +143,6 @@ def _clean(
     return out
 
 
-def _merge(base: dict[str, Any], patch: dict[str, Any]) -> dict[str, Any]:
-    out = dict(base)
-    for key, value in patch.items():
-        out[key] = (
-            _merge(out[key], value)
-            if isinstance(value, dict) and isinstance(out.get(key), dict)
-            else value
-        )
-    return out
-
-
 def _leaf(config: dict[str, Any], path: str) -> Any:
     value: Any = config
     for part in path.split("."):
@@ -167,22 +156,11 @@ def _check(config: dict[str, Any]) -> None:
     for path, (lo, hi) in RANGES.items():
         value = _leaf(config, path)
         name = camel_path(path)
-        if value < lo:
-            details.append(
-                {
-                    "field": name,
-                    "message": f"Path `{name}` ({value}) is less than minimum allowed value "
-                    f"({lo}).",
-                }
-            )
-        elif value > hi:
-            details.append(
-                {
-                    "field": name,
-                    "message": f"Path `{name}` ({value}) is more than maximum allowed value "
-                    f"({hi}).",
-                }
-            )
+        if not lo <= value <= hi:
+            limit = f"less than minimum allowed value ({lo})"
+            if value > hi:
+                limit = f"more than maximum allowed value ({hi})"
+            details.append({"field": name, "message": f"Path `{name}` ({value}) is {limit}."})
     for i, method in enumerate(config["redemption"]["payment_methods"]):
         if method not in PAYMENT_METHODS:
             name = f"redemption.paymentMethods.{i}"
@@ -261,7 +239,7 @@ def update(user: Any, patch: dict[str, Any], expected_version: int | None = None
             row = RewardConfiguration.objects.select_for_update().filter(key=KEY).first()
             if expected_version is not None and expected_version != (row.revision if row else 0):
                 raise ApiError.conflict(CHANGED, "CONFIG_CHANGED")
-            merged = _merge(get_reward_config(), patch)
+            merged = merge_settings(get_reward_config(), patch)
             _check(merged)
             if row is None:
                 row = RewardConfiguration(key=KEY)

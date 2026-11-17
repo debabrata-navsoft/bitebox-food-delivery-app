@@ -8,12 +8,14 @@ import secrets
 import uuid
 from datetime import timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.db import IntegrityError, transaction
-from django.db.models import Count, F, Q
+from django.db.models import Count, ExpressionWrapper, F, IntegerField, Q, Sum
 from django.utils import timezone
 
-from apps.accounts.models import User
+from apps.accounts.models import User, UserStatus
 from apps.cart import services as cart_services
 from apps.cart.models import Cart
 from apps.coins import events as reward_events
@@ -21,12 +23,16 @@ from apps.coins import orders as coin_hooks
 from apps.coupons.models import Coupon, CouponRedemption
 from apps.coupons.services import assert_eligible
 from apps.customers.services import get_own
+from apps.delivery.models import DeliveryPartner
+from apps.dispatch.models import AssignmentStatus, DeliveryAssignment
 from apps.menus.models import FoodItem
 from apps.payments.models import Payment
+from apps.rbac.roles import Role
 from apps.restaurants.models import Restaurant
 from apps.restaurants.presenters import geo_json
 from apps.reviews.models import Review, ReviewStatus, ReviewTarget
 from common.api import ApiError
+from common.geo import haversine_m
 from common.pagination import Page, paginate
 
 from . import presenters
@@ -41,8 +47,8 @@ from .models import (
     PaymentMethod,
     PaymentStatus,
 )
-from .notifications import notify_new_order
-from .workflow import Actor, release_rider, transition
+from .notifications import notify_new_delivery_otp, notify_new_order
+from .workflow import Actor, new_delivery_otp, release_rider, transition
 
 logger = logging.getLogger("bitebox.orders")
 
@@ -61,10 +67,24 @@ def order_number(now: Any = None) -> str:
     return f"BB-{now:%y%m%d}-{suffix}"
 
 
-def provider_for(method: str) -> str:
-    from apps.payments.services import provider_for as for_method
+def _by_idempotency_key(user: User, key: str | None) -> Order | None:
+    """The order an earlier request with this Idempotency-Key placed, ready to present."""
+    existing = Order.objects.filter(customer=user, idempotency_key=key).first() if key else None
+    return presenters.reload(existing) if existing else None
 
-    return for_method(method)
+
+def _load(order_id: uuid.UUID, **scope: Any) -> Order:
+    order = presenters.load(order_id, **scope)
+    if order is None:
+        raise ApiError.not_found("Order not found")
+    return order
+
+
+def _own_restaurant(owner: User) -> Restaurant:
+    restaurant = Restaurant.objects.filter(owner=owner).first()
+    if restaurant is None:
+        raise ApiError.not_found("Create your restaurant first")
+    return restaurant
 
 
 # ---------------------------------------------------------------------------
@@ -74,10 +94,10 @@ def place_order(
     user: User, data: dict[str, Any], idempotency_key: str | None
 ) -> tuple[Order, bool]:
     """Returns (order, created). The same Idempotency-Key returns the first order."""
-    if idempotency_key:
-        existing = Order.objects.filter(customer=user, idempotency_key=idempotency_key).first()
-        if existing:
-            return presenters.reload(existing), False
+    from apps.payments.services import provider_for
+
+    if existing := _by_idempotency_key(user, idempotency_key):
+        return existing, False
     method = data["payment_method"]
     provider = provider_for(method)
 
@@ -182,10 +202,8 @@ def place_order(
             )
     except IntegrityError:
         # A concurrent retry with the same Idempotency-Key won the race: return its order.
-        if idempotency_key:
-            existing = Order.objects.filter(customer=user, idempotency_key=idempotency_key).first()
-            if existing:
-                return presenters.reload(existing), False
+        if existing := _by_idempotency_key(user, idempotency_key):
+            return existing, False
         raise
 
     logger.info(
@@ -291,10 +309,7 @@ def list_mine(user: User, page: Page) -> dict[str, Any]:
 
 
 def customer_get(user: User, order_id: uuid.UUID) -> dict[str, Any]:
-    order = presenters.load(order_id, customer=user)
-    if order is None:
-        raise ApiError.not_found("Order not found")
-    return presenters.present_with_rider(order, for_customer=True)
+    return presenters.present_with_rider(_load(order_id, customer=user), for_customer=True)
 
 
 def customer_cancel(user: User, order_id: uuid.UUID, reason: str | None) -> dict[str, Any]:
@@ -313,19 +328,12 @@ def customer_cancel(user: User, order_id: uuid.UUID, reason: str | None) -> dict
 # ---------------------------------------------------------------------------
 # Restaurant
 # ---------------------------------------------------------------------------
-def _own_restaurant_id(owner: User) -> uuid.UUID:
-    restaurant_id = Restaurant.objects.filter(owner=owner).values_list("pk", flat=True).first()
-    if restaurant_id is None:
-        raise ApiError.not_found("Create your restaurant first")
-    return restaurant_id
-
-
 def restaurant_list(owner: User, query: dict[str, Any], page: Page) -> dict[str, Any]:
-    restaurant_id = _own_restaurant_id(owner)
+    restaurant = _own_restaurant(owner)
     view = query.get("view") or "active"
     statuses = FINAL_STATUSES if view == "history" else ACTIVE_STATUSES
     status = query.get("status")
-    base = Order.objects.filter(restaurant_id=restaurant_id, submitted_at__isnull=False)
+    base = Order.objects.filter(restaurant=restaurant, submitted_at__isnull=False)
     qs = presenters.with_details(
         base.filter(status=status) if status in statuses else base.filter(status__in=statuses)
     )
@@ -346,10 +354,8 @@ def restaurant_list(owner: User, query: dict[str, Any], page: Page) -> dict[str,
 
 
 def restaurant_get(owner: User, order_id: uuid.UUID) -> dict[str, Any]:
-    restaurant_id = _own_restaurant_id(owner)
-    order = presenters.load(order_id, restaurant_id=restaurant_id, submitted_at__isnull=False)
-    if order is None:
-        raise ApiError.not_found("Order not found")
+    restaurant = _own_restaurant(owner)
+    order = _load(order_id, restaurant_id=restaurant.pk, submitted_at__isnull=False)
     return presenters.present_for_restaurant(order)
 
 
@@ -366,9 +372,7 @@ def restaurant_set_status(
     """
     from apps.dispatch.services import dispatch_safely
 
-    restaurant = Restaurant.objects.filter(owner=owner).first()
-    if restaurant is None:
-        raise ApiError.not_found("Create your restaurant first")
+    restaurant = _own_restaurant(owner)
     if status == S.REJECTED and not reason:
         raise ApiError.bad_request("Tell the customer why the order is rejected")
     update: dict[str, Any] = {}
@@ -401,8 +405,6 @@ def _check_delivery_otp(user: User, order_id: uuid.UUID, otp: str | None) -> Non
     "Delivered" needs the code the customer got at pickup. Wrong tries are counted (in their own
     committed transaction, so they stick) and capped; then only support can complete the order.
     """
-    from django.conf import settings
-
     order = (
         Order.objects.filter(pk=order_id, delivery_partner=user)
         .values("status", "delivery_otp", "delivery_otp_attempts")
@@ -413,10 +415,8 @@ def _check_delivery_otp(user: User, order_id: uuid.UUID, otp: str | None) -> Non
     if order["status"] == S.DELIVERED or not order["delivery_otp"]:
         return  # a repeat (no-op), or picked up before codes existed
     if order["delivery_otp_attempts"] >= settings.DELIVERY_OTP_MAX_ATTEMPTS:
-        raise ApiError(
-            409,
-            "Too many wrong codes. Contact BiteBox support to complete this delivery.",
-            code="OTP_LOCKED",
+        raise _conflict(
+            "Too many wrong codes. Contact BiteBox support to complete this delivery.", "OTP_LOCKED"
         )
     if otp and secrets.compare_digest(otp, order["delivery_otp"]):
         return
@@ -466,17 +466,14 @@ def rider_set_status(
 
 def _distance_to_restaurant(user: User, order_id: uuid.UUID) -> int | None:
     """Straight-line metres from the rider's last fix to the restaurant (None if unknown)."""
-    from apps.delivery.models import DeliveryPartner
-    from common.geo import GeoPoint, haversine_m
-
     fix = DeliveryPartner.objects.filter(user=user).values_list("location", flat=True).first()
     snapshot = (
         Order.objects.filter(pk=order_id).values_list("restaurant_snapshot", flat=True).first()
     )
-    coordinates = ((snapshot or {}).get("location") or {}).get("coordinates")
-    if fix is None or not coordinates:
+    restaurant = presenters.restaurant_point(snapshot)
+    if fix is None or restaurant is None:
         return None
-    return haversine_m(fix, GeoPoint(lat=coordinates[1], lng=coordinates[0]))
+    return haversine_m(fix, restaurant)
 
 
 def rider_history(user: User, page: Page) -> dict[str, Any]:
@@ -510,9 +507,7 @@ def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
 
 
 def admin_get(order_id: uuid.UUID) -> dict[str, Any]:
-    order = presenters.load(order_id)
-    if order is None:
-        raise ApiError.not_found("Order not found")
+    order = _load(order_id)
     data = presenters.present_with_rider(order)
     offer = presenters.open_offer(order)
     data["offer"] = (
@@ -536,7 +531,6 @@ def admin_unassign(admin: User, order_id: uuid.UUID, reason: str | None) -> dict
     re-dispatches it. That rider's assignment is cancelled, so the order is not offered to them
     again.
     """
-    from apps.dispatch.models import AssignmentStatus, DeliveryAssignment
     from apps.dispatch.services import dispatch_safely
 
     def take_back(order: Order) -> None:
@@ -565,23 +559,15 @@ def restaurant_stats(owner: User) -> dict[str, Any]:
     orders appear once paid). Sales are the food value after the coupon on delivered orders;
     "today" is the current day in settings.REPORT_TIMEZONE.
     """
-    from zoneinfo import ZoneInfo
-
-    from django.conf import settings
-    from django.db.models import ExpressionWrapper, IntegerField, Sum
-
-    restaurant = Restaurant.objects.filter(owner=owner).first()
-    if restaurant is None:
-        raise ApiError.not_found("Create your restaurant first")
+    restaurant = _own_restaurant(owner)
     received = Order.objects.filter(restaurant=restaurant, submitted_at__isnull=False)
     tz = ZoneInfo(settings.REPORT_TIMEZONE)
     start_of_today = (
         timezone.now().astimezone(tz).replace(hour=0, minute=0, second=0, microsecond=0)
     )
     counts = dict(received.values("status").annotate(n=Count("pk")).values_list("status", "n"))
-    delivered = received.filter(status=S.DELIVERED)
     sales = (
-        delivered.aggregate(
+        received.filter(status=S.DELIVERED).aggregate(
             total=Sum(
                 ExpressionWrapper(
                     F("subtotal_paise") - F("discount_paise"), output_field=IntegerField()
@@ -608,11 +594,6 @@ def admin_assign(admin: User, order_id: uuid.UUID, rider_id: uuid.UUID) -> dict[
     Gives a ready order to a chosen rider directly (manual assignment; also how support reassigns
     after an unassign). The rider must be active, online and free; any open offer is withdrawn.
     """
-    from apps.accounts.models import UserStatus
-    from apps.delivery.models import DeliveryPartner
-    from apps.dispatch.models import AssignmentStatus, DeliveryAssignment
-    from apps.rbac.roles import Role
-
     rider = DeliveryPartner.objects.filter(
         user_id=rider_id, user__role=Role.DELIVERY, user__status=UserStatus.ACTIVE
     ).first()
@@ -626,15 +607,12 @@ def admin_assign(admin: User, order_id: uuid.UUID, rider_id: uuid.UUID) -> dict[
         if order.status != S.READY_FOR_PICKUP:
             raise _conflict("Only orders waiting for a rider can be assigned", "INVALID_TRANSITION")
         # Withdraw an open offer (and free that rider) before taking the order.
-        for offer in DeliveryAssignment.objects.filter(
-            order=order, status=AssignmentStatus.OFFERED
-        ):
-            DeliveryAssignment.objects.filter(pk=offer.pk).update(
-                status=AssignmentStatus.CANCELLED, responded_at=now
-            )
-            DeliveryPartner.objects.filter(user_id=offer.rider_id, current_offer=order).update(
-                current_offer=None
-            )
+        offers = DeliveryAssignment.objects.filter(order=order, status=AssignmentStatus.OFFERED)
+        offered_riders = list(offers.values_list("rider_id", flat=True))
+        offers.update(status=AssignmentStatus.CANCELLED, responded_at=now)
+        DeliveryPartner.objects.filter(user_id__in=offered_riders, current_offer=order).update(
+            current_offer=None
+        )
         locked = DeliveryPartner.objects.filter(
             pk=rider.pk, is_online=True, active_order__isnull=True, current_offer__isnull=True
         ).update(active_order=order, last_assigned_at=now, updated_at=now)
@@ -666,9 +644,6 @@ def admin_assign(admin: User, order_id: uuid.UUID, rider_id: uuid.UUID) -> dict[
 
 def admin_reset_delivery_otp(admin: User, order_id: uuid.UUID) -> dict[str, Any]:
     """A new delivery code for an order whose rider ran out of tries; the customer gets it."""
-    from .notifications import notify_new_delivery_otp
-    from .workflow import new_delivery_otp
-
     with transaction.atomic():
         order = Order.objects.select_for_update().filter(pk=order_id).first()
         if order is None:
@@ -721,14 +696,8 @@ def timeline(order: Order) -> dict[str, Any]:
 
 
 def customer_timeline(user: User, order_id: uuid.UUID) -> dict[str, Any]:
-    order = presenters.load(order_id, customer=user)
-    if order is None:
-        raise ApiError.not_found("Order not found")
-    return timeline(order)
+    return timeline(_load(order_id, customer=user))
 
 
 def admin_timeline(order_id: uuid.UUID) -> dict[str, Any]:
-    order = presenters.load(order_id)
-    if order is None:
-        raise ApiError.not_found("Order not found")
-    return timeline(order)
+    return timeline(_load(order_id))

@@ -19,6 +19,7 @@ from apps.dispatch.config import DISPATCH
 from apps.dispatch.models import AssignmentStatus, DeliveryAssignment
 from apps.finance.earnings import settlement_for
 from apps.payments.models import Payment
+from common.geo import GeoPoint
 
 from .models import Order, OrderCancellation, OrderStatus
 
@@ -76,6 +77,26 @@ def ready_at(order: Order) -> Any:
     return times[0] if times else None
 
 
+def restaurant_point(snapshot: dict[str, Any] | None) -> GeoPoint | None:
+    """The restaurant's position from an order's snapshot (None when it has none)."""
+    coordinates = ((snapshot or {}).get("location") or {}).get("coordinates")
+    return GeoPoint(lat=coordinates[1], lng=coordinates[0]) if coordinates else None
+
+
+def _items_json(order: Order) -> list[dict[str, Any]]:
+    return [
+        {
+            "food_item": str(i.food_item_id),
+            "name": i.name,
+            "is_veg": i.is_veg,
+            "unit_price_paise": i.unit_price_paise,
+            "quantity": i.quantity,
+            "line_total_paise": i.line_total_paise,
+        }
+        for i in sorted(order.items.all(), key=lambda i: i.created_at)
+    ]
+
+
 def order_json(order: Order) -> dict[str, Any]:
     payment = payment_of(order)
     cancellation = _cancellation(order)
@@ -85,17 +106,7 @@ def order_json(order: Order) -> dict[str, Any]:
         "customer": str(order.customer_id),
         "restaurant": str(order.restaurant_id),
         "restaurant_snapshot": order.restaurant_snapshot,
-        "items": [
-            {
-                "food_item": str(i.food_item_id),
-                "name": i.name,
-                "is_veg": i.is_veg,
-                "unit_price_paise": i.unit_price_paise,
-                "quantity": i.quantity,
-                "line_total_paise": i.line_total_paise,
-            }
-            for i in sorted(order.items.all(), key=lambda i: i.created_at)
-        ],
+        "items": _items_json(order),
         "delivery_address": order.delivery_address,
         "pricing": {
             "subtotal_paise": order.subtotal_paise,
@@ -158,17 +169,7 @@ def list_json(order: Order) -> dict[str, Any]:
             "name": order.restaurant_snapshot.get("name"),
             "slug": order.restaurant_snapshot.get("slug"),
         },
-        "items": [
-            {
-                "food_item": str(i.food_item_id),
-                "name": i.name,
-                "is_veg": i.is_veg,
-                "unit_price_paise": i.unit_price_paise,
-                "quantity": i.quantity,
-                "line_total_paise": i.line_total_paise,
-            }
-            for i in sorted(order.items.all(), key=lambda i: i.created_at)
-        ],
+        "items": _items_json(order),
         "pricing": {"total_paise": order.total_paise},
         "status": order.status,
         "payment_method": order.payment_method,
@@ -200,29 +201,23 @@ def rider_card(user_id: Any) -> dict[str, Any] | None:
     profile = (
         DeliveryPartner.objects.select_related("user", "vehicle").filter(user_id=user_id).first()
     )
-    if profile is None:
+    if profile is not None:
+        user, vehicle = profile.user, getattr(profile, "vehicle", None)
+    else:
         from apps.accounts.models import User
 
-        user = User.objects.filter(pk=user_id).first()
-        if user is None:
+        found = User.objects.filter(pk=user_id).first()
+        if found is None:
             return None
-        return {
-            "id": str(user.pk),
-            "name": user.name,
-            "phone": user.phone or None,
-            "vehicle_type": None,
-            "vehicle_number": None,
-            "rating": None,
-        }
-    vehicle = getattr(profile, "vehicle", None)
+        user, vehicle = found, None
     return {
-        "id": str(profile.user_id),
-        "name": profile.user.name,
-        "phone": profile.user.phone or None,
+        "id": str(user.pk),
+        "name": user.name,
+        "phone": user.phone or None,
         "vehicle_type": vehicle.vehicle_type if vehicle else None,
         "vehicle_number": vehicle.vehicle_number if vehicle else None,
         "rating": {"average": float(profile.rating_average), "count": profile.rating_count}
-        if profile.rating_count
+        if profile and profile.rating_count
         else None,
     }
 
@@ -285,7 +280,8 @@ def present_for_restaurant(order: Order) -> dict[str, Any]:
 
 def present_for_rider(order: Order, user_id: Any) -> dict[str, Any]:
     data = order_json(order)
-    if str(order.delivery_partner_id) != str(user_id):
+    carrying = str(order.delivery_partner_id) == str(user_id)
+    if not carrying:
         a = order.delivery_address
         data["delivery_address"] = {
             "area": a.get("area"),
@@ -299,7 +295,6 @@ def present_for_rider(order: Order, user_id: Any) -> dict[str, Any]:
     data["estimated_earnings_paise"] = settlement_for(order, commission_bp=0)["rider_paise"]
     # The rider's next allowed moves, in order (the app shows the first as its main button), and
     # whether "delivered" needs the customer's code. Never the code itself.
-    carrying = str(order.delivery_partner_id) == str(user_id)
     data["next_statuses"] = RIDER_NEXT.get(order.status, []) if carrying else []
     data["delivery_otp_required"] = carrying and bool(order.delivery_otp)
     data.pop("cancellation", None)

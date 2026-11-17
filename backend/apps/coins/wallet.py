@@ -179,34 +179,34 @@ def _execute(
         return Result(_write(wallet, key, planned, now), True)
 
 
+def _deltas(
+    type_: str, reversal_of: str | None, coins: int, shortfall: int | None
+) -> dict[str, int]:
+    """How one ledger row moves the wallet counters."""
+    c = coins
+    if type_ == T.CREDIT:
+        return {"available": c, "total_earned": c}
+    if type_ == T.RESERVE:
+        return {"available": -c, "reserved": c}
+    if type_ == T.DEBIT:
+        return {"reserved": -c, "total_redeemed": c}
+    if type_ == T.RELEASE:
+        return {"reserved": -c, "available": c}
+    if type_ == T.EXPIRE:
+        return {"available": -c, "total_expired": c}
+    if type_ == T.REVERSAL and reversal_of == ReversalOf.CREDIT:
+        return {"available": -c, "total_reversed": c, "uncollected_reversal": shortfall or 0}
+    if type_ == T.REVERSAL:
+        return {"available": c, "total_redeemed": -c}
+    raise RuntimeError(f"Unknown ledger row type {type_}")
+
+
 def _write(wallet: CoinWallet, key: str, plan: Plan, now: datetime) -> CoinTransaction:
     c = plan.coins
     before_available, before_reserved = wallet.available, wallet.reserved
-    reversal_of = plan.fields.get("reversal_of")
-    if plan.type == T.CREDIT:
-        wallet.available += c
-        wallet.total_earned += c
-    elif plan.type == T.RESERVE:
-        wallet.available -= c
-        wallet.reserved += c
-    elif plan.type == T.DEBIT:
-        wallet.reserved -= c
-        wallet.total_redeemed += c
-    elif plan.type == T.RELEASE:
-        wallet.reserved -= c
-        wallet.available += c
-    elif plan.type == T.EXPIRE:
-        wallet.available -= c
-        wallet.total_expired += c
-    elif plan.type == T.REVERSAL and reversal_of == ReversalOf.CREDIT:
-        wallet.available -= c
-        wallet.total_reversed += c
-        wallet.uncollected_reversal += plan.fields.get("shortfall") or 0
-    elif plan.type == T.REVERSAL:
-        wallet.available += c
-        wallet.total_redeemed -= c
-    else:
-        raise RuntimeError(f"Unknown ledger row type {plan.type}")
+    deltas = _deltas(plan.type, plan.fields.get("reversal_of"), c, plan.fields.get("shortfall"))
+    for f, d in deltas.items():
+        setattr(wallet, f, getattr(wallet, f) + d)
     moved = sum(n for _, n in plan.take) + sum(n for _, n, _ in plan.give)
     if plan.type in (T.RESERVE, T.RELEASE, T.EXPIRE, T.REVERSAL) and moved != c:
         raise RuntimeError(f"Ledger row {key}: allocations ({moved}) do not match {c} coins")
@@ -231,9 +231,8 @@ def _write(wallet: CoinWallet, key: str, plan: Plan, now: datetime) -> CoinTrans
         posted_at=now,
         **plan.fields,
     )
-    for batch, n in plan.take:
-        batch.remaining -= n
-        batch.save(update_fields=["remaining", "updated_at"])
+
+    def allocate(batch: CoinBatch, n: int) -> None:
         CoinAllocation.objects.create(
             transaction=txn,
             batch=batch,
@@ -242,18 +241,16 @@ def _write(wallet: CoinWallet, key: str, plan: Plan, now: datetime) -> CoinTrans
             expires_at=batch.expires_at,
             coins=n,
         )
+
+    for batch, n in plan.take:
+        batch.remaining -= n
+        batch.save(update_fields=["remaining", "updated_at"])
+        allocate(batch, n)
     for batch, n, expires_at in plan.give:
         batch.remaining += n
         batch.expires_at = expires_at
         batch.save(update_fields=["remaining", "expires_at", "updated_at"])
-        CoinAllocation.objects.create(
-            transaction=txn,
-            batch=batch,
-            source=batch.source,
-            earned_at=batch.earned_at,
-            expires_at=expires_at,
-            coins=n,
-        )
+        allocate(batch, n)
     if plan.type == T.CREDIT:
         CoinBatch.objects.create(
             wallet=wallet,
@@ -370,7 +367,7 @@ def _given_back(
 ) -> list[tuple[CoinBatch, int, datetime | None]]:
     """The reservation's coins, back to the batches they came from, with the grace period."""
     out: list[tuple[CoinBatch, int, datetime | None]] = []
-    for a in reservation.allocations.select_related("batch").order_by("pk"):
+    for a in reservation.allocations.order_by("pk"):
         batch = CoinBatch.objects.get(pk=a.batch_id)  # fresh: earlier rows may have moved it
         latest = max(filter(None, [a.expires_at, batch.expires_at]), default=None)
         expires = restored_expiry(latest, config, now) if config["expiry"]["enabled"] else latest
@@ -586,33 +583,31 @@ def wallet_summary(user_id: Any, *, now: datetime | None = None) -> dict[str, An
     wallet = CoinWallet.objects.filter(user_id=user_id).first()
     batches = _live_batches(wallet) if wallet else []
     expiry_on = config["expiry"]["enabled"]
-    available = _spendable(batches, now, expiry_on)
     live = [b for b in batches if not expiry_on or not _overdue(b, now)]
+    available = sum(b.remaining for b in live)
     soon = now + timedelta(days=config["expiry"]["expiring_soon_days"])
     dated = sorted((b for b in live if b.expires_at), key=_fifo_key) if expiry_on else []
     tz = ZoneInfo(config["timezone"])
+
+    def day(moment: datetime) -> str:
+        return moment.astimezone(tz).strftime("%Y-%m-%d")
+
     by_day: dict[str, int] = {}
     for b in dated:
-        day = b.expires_at.astimezone(tz).strftime("%Y-%m-%d") if b.expires_at else ""
-        by_day[day] = by_day.get(day, 0) + b.remaining
+        key = day(b.expires_at) if b.expires_at else ""
+        by_day[key] = by_day.get(key, 0) + b.remaining
     first = dated[0] if dated else None
+    totals = ("reserved", "total_earned", "total_redeemed", "total_expired", "total_reversed")
     return {
         "available": available,
-        "reserved": wallet.reserved if wallet else 0,
-        "total_earned": wallet.total_earned if wallet else 0,
-        "total_redeemed": wallet.total_redeemed if wallet else 0,
-        "total_expired": wallet.total_expired if wallet else 0,
-        "total_reversed": wallet.total_reversed if wallet else 0,
+        **{f: getattr(wallet, f) if wallet else 0 for f in totals},
         "value_paise": coins_to_paise(available, config),
         "expiring": {
             "enabled": expiry_on,
             "within_days": config["expiry"]["expiring_soon_days"],
             "coins": sum(b.remaining for b in dated if b.expires_at and b.expires_at <= soon),
             "next": (
-                {
-                    "expires_at": first.expires_at,
-                    "coins": by_day[first.expires_at.astimezone(tz).strftime("%Y-%m-%d")],
-                }
+                {"expires_at": first.expires_at, "coins": by_day[day(first.expires_at)]}
                 if first and first.expires_at
                 else None
             ),
@@ -673,29 +668,8 @@ def reconcile(user_id: Any) -> dict[str, Any]:
             issues.append(f"Row {row.pk} is {row.status}")
         if row.available_before != replay["available"] or row.reserved_before != replay["reserved"]:
             issues.append(f"Row {row.pk} does not follow the previous balance")
-        c = row.coins
-        if row.type == T.CREDIT:
-            replay["available"] += c
-            replay["total_earned"] += c
-        elif row.type == T.RESERVE:
-            replay["available"] -= c
-            replay["reserved"] += c
-        elif row.type == T.DEBIT:
-            replay["reserved"] -= c
-            replay["total_redeemed"] += c
-        elif row.type == T.RELEASE:
-            replay["reserved"] -= c
-            replay["available"] += c
-        elif row.type == T.EXPIRE:
-            replay["available"] -= c
-            replay["total_expired"] += c
-        elif row.reversal_of == ReversalOf.CREDIT:
-            replay["available"] -= c
-            replay["total_reversed"] += c
-            replay["uncollected_reversal"] += row.shortfall or 0
-        else:
-            replay["available"] += c
-            replay["total_redeemed"] -= c
+        for f, d in _deltas(row.type, row.reversal_of, row.coins, row.shortfall).items():
+            replay[f] += d
         if row.available_after != replay["available"] or row.reserved_after != replay["reserved"]:
             issues.append(f"Row {row.pk} balances do not match the replay")
     for f in COUNTERS:
@@ -704,14 +678,18 @@ def reconcile(user_id: Any) -> dict[str, Any]:
     if wallet.seq != len(rows):
         issues.append(f"seq: wallet {wallet.seq}, ledger {len(rows)}")
     batches = list(CoinBatch.objects.filter(wallet=wallet))
-    giving = Q(transaction__type=T.RELEASE) | Q(
-        transaction__type=T.REVERSAL, transaction__reversal_of=ReversalOf.REDEMPTION
+    # Coins each batch got back (released holds, refunded redemptions) and gave out.
+    moved: dict[Any, int] = {}
+    allocations = CoinAllocation.objects.filter(batch__wallet=wallet).values_list(
+        "batch_id", "coins", "transaction__type", "transaction__reversal_of"
     )
+    for batch_id, coins, type_, reversal_of in allocations:
+        giving = type_ == T.RELEASE or (
+            type_ == T.REVERSAL and reversal_of == ReversalOf.REDEMPTION
+        )
+        moved[batch_id] = moved.get(batch_id, 0) + (coins if giving else -coins)
     for batch in batches:
-        allocations = CoinAllocation.objects.filter(batch=batch)
-        given = sum(allocations.filter(giving).values_list("coins", flat=True))
-        taken = sum(allocations.exclude(giving).values_list("coins", flat=True))
-        if batch.remaining != batch.original - taken + given:
+        if batch.remaining != batch.original + moved.get(batch.pk, 0):
             issues.append(f"Batch {batch.pk} differs from the ledger")
     net = wallet.total_earned - wallet.total_redeemed - wallet.total_expired - wallet.total_reversed
     if net != wallet.available + wallet.reserved:

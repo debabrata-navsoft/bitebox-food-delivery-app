@@ -12,18 +12,8 @@ from common.geo import GeoPoint
 
 from .models import MAX_ADDRESSES_PER_USER, Address
 
-FIELDS = (
-    "label",
-    "recipient_name",
-    "phone",
-    "line1",
-    "line2",
-    "area",
-    "landmark",
-    "city",
-    "state",
-    "postal_code",
-)
+OPTIONAL = ("line2", "area", "landmark")  # stored as "", left out of the JSON when empty
+FIELDS = ("label", "recipient_name", "phone", "line1", *OPTIONAL, "city", "state", "postal_code")
 
 
 def address_json(a: Address) -> dict[str, Any]:
@@ -42,7 +32,7 @@ def address_json(a: Address) -> dict[str, Any]:
         "created_at": a.created_at,
         "updated_at": a.updated_at,
     }
-    for optional in ("line2", "area", "landmark"):
+    for optional in OPTIONAL:
         if value := getattr(a, optional):
             data[optional] = value
     return data
@@ -51,8 +41,7 @@ def address_json(a: Address) -> dict[str, Any]:
 def _apply(address: Address, data: dict[str, Any]) -> None:
     for field in FIELDS:
         if field in data:
-            optional = field in ("line2", "area", "landmark")
-            setattr(address, field, (data[field] or "") if optional else data[field])
+            setattr(address, field, (data[field] or "") if field in OPTIONAL else data[field])
     if location := data.get("location"):
         address.location = GeoPoint(lat=location["latitude"], lng=location["longitude"])
 
