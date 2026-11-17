@@ -51,7 +51,13 @@
             "stylePreprocessorOptions": {
               "includePaths": ["src/styles"]
             },
-            "allowedCommonJsDependencies": ["leaflet", "lottie-web", "quill-delta"]
+            "allowedCommonJsDependencies": [
+              "dijkstrajs",
+              "leaflet",
+              "lottie-web",
+              "qrcode",
+              "quill-delta"
+            ]
           },
           "configurations": {
             "production": {

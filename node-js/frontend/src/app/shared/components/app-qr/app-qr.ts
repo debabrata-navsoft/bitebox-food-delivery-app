@@ -21,15 +21,20 @@ export class AppQr {
   constructor() {
     const document = inject(DOCUMENT);
     afterNextRender(async () => {
-      const { toDataURL } = await import('qrcode');
-      this.src.set(
-        await toDataURL(`${document.location.origin}/#app-download`, {
-          margin: 0,
-          width: CODE_PX * 2,
-          errorCorrectionLevel: 'M',
-          color: { dark: '#2e1a3d', light: '#ffffff' }, // brand plum on white (scanners need contrast)
-        }),
-      );
+      try {
+        const mod = await import('qrcode');
+        const qrcode = (mod as { default?: typeof import('qrcode') }).default ?? mod;
+        this.src.set(
+          await qrcode.toDataURL(`${document.location.origin}/#app-download`, {
+            margin: 0,
+            width: CODE_PX * 2,
+            errorCorrectionLevel: 'M',
+            color: { dark: '#2e1a3d', light: '#ffffff' }, // brand plum on white (scanners need contrast)
+          }),
+        );
+      } catch (err) {
+        console.error('Failed to generate app QR code:', err);
+      }
     });
   }
 }
