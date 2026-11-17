@@ -1,3 +1,4 @@
+import type { CardOffer } from './checkout.models';
 import { RatingSummary } from './review.models';
 /** `resubmission_requested`: BiteBox asked for documents or details again. */
 export type RestaurantStatus =
@@ -64,6 +65,8 @@ export interface Restaurant extends RestaurantLegal {
   rating: RatingSummary;
   /** Straight-line distance, present only for nearby searches. */
   distanceMeters?: number;
+  /** Lists only: the restaurant's best live offer, for the card's badge. */
+  offer?: CardOffer | null;
   createdAt: string;
   updatedAt: string;
 }

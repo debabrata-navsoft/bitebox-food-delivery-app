@@ -1,0 +1,46 @@
+<section class="bb-container page">
+  <bb-page-header title="Offers for you" subtitle="Coupons you can use right now. Apply a code at checkout." />
+
+  <div class="kinds">
+    <np-button-toggle [options]="kinds" [value]="kind()" (valueChange)="pick($event)" ariaLabel="Kind of offer" />
+  </div>
+
+  @if (failed()) {
+    <div class="bb-alert error" role="alert">
+      <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
+      <span>Could not load offers. <button class="bb-link-button" (click)="offers.reload()">Retry</button></span>
+    </div>
+  } @else if (!list()) {
+    <div class="grid" aria-busy="true">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <span class="bb-skeleton card"></span>
+      }
+    </div>
+  } @else if (list()!.length === 0) {
+    <bb-empty-state icon="ticket-percent" title="No offers here right now" message="Check back soon, or try another kind of offer." />
+  } @else {
+    <ul class="grid" [class.bb-dim]="loading()">
+      @for (o of list()!; track o.code) {
+        @let place = placeOf(o);
+        <li>
+          <bb-offer-card [offer]="o">
+            <span offerNote class="where">
+              <np-icon name="store" class="mat-icon" matButtonIcon />
+              @if (place.slug) {
+                <a [routerLink]="['/restaurants', place.slug]">{{ place.name }}</a>
+              } @else {
+                {{ place.name }}
+              }
+            </span>
+          </bb-offer-card>
+          @if (o.terms) {
+            <details>
+              <summary>Terms and conditions</summary>
+              <p>{{ o.terms }}</p>
+            </details>
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

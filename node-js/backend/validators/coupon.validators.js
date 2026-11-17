@@ -4,6 +4,7 @@ import { OFFER_KINDS, SORTS, STATUS_FILTERS } from "../services/coupon.service.j
 import { booleanQuery, mongoIdParam, paginationRules, searchQuery } from "./common.validators.js";
 
 /** Coupons and restaurant offers (Django: apps/coupons/views.py serializers). */
+const isId = (v) => /^[a-f0-9]{24}$/i.test(String(v));
 const nullableInt = (field, min) =>
   body(field)
     .optional()
@@ -16,7 +17,7 @@ const idList = (field, message) =>
     .optional()
     .isArray({ max: 200 })
     .withMessage(message)
-    .custom((list) => list.every((id) => /^[a-f0-9]{24}$/i.test(String(id))))
+    .custom((list) => list.every(isId))
     .withMessage(message);
 
 function couponRules({ partial, partner }) {
@@ -68,7 +69,7 @@ function couponRules({ partial, partner }) {
       : [
           body("restaurant")
             .optional()
-            .custom((v) => v === null || /^[a-f0-9]{24}$/i.test(String(v)))
+            .custom((v) => v === null || isId(v))
             .withMessage("Invalid restaurant"),
           idList("restaurants", "Invalid restaurant"),
         ]),

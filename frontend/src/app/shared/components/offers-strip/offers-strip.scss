@@ -1,0 +1,35 @@
+:host {
+  display: block;
+}
+h2 {
+  margin: 0 0 var(--bb-space-2);
+  font-size: 1.1rem;
+}
+// One row that scrolls sideways, each offer snapping into place.
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 var(--bb-space-2);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(260px, 300px);
+  gap: var(--bb-space-3);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+}
+li {
+  scroll-snap-align: start;
+  display: grid;
+}
+.terms {
+  font-size: 0.75rem;
+  color: var(--bb-ink-muted);
+  text-decoration: underline dotted;
+  cursor: help;
+}
+.hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--bb-ink-muted);
+}

@@ -26,32 +26,25 @@
     <ul class="offers">
       @for (o of offers; track o.code) {
         @let left = minOrderLeft(o);
-        <li [class.locked]="left > 0">
-          <!-- The discount on a coloured side panel. -->
-          <span class="side" aria-hidden="true">
-            <strong>{{ amount(o) }}</strong>
-            <small>OFF</small>
-          </span>
-          <div>
-            <strong>{{ o.description || amount(o) + ' off' }}</strong>
-            @if (o.minOrderPaise) {
-              <span class="min-order">Min order {{ o.minOrderPaise | inr }}</span>
+        <li>
+          <bb-offer-card [offer]="o" [locked]="left > 0">
+            @if (o.code === best()?.code) {
+              <span offerNote class="best">Best for this cart · saves {{ best()!.savingPaise | inr }}</span>
             }
             @if (left > 0) {
-              <span class="short">Add {{ left | inr }} more to use this offer</span>
+              <span offerNote class="short">Add {{ left | inr }} more to use this offer</span>
             }
-            <span class="code">{{ o.code }}</span>
-          </div>
-          <button
-            mat-flat-button
-            class="bb-btn-accent"
-            type="button"
-            (click)="apply(o.code)"
-            [disabled]="applying() || left > 0"
-            [attr.aria-label]="'Apply coupon ' + o.code + ', ' + amount(o) + ' off'"
-          >
-            Apply
-          </button>
+            <button
+              mat-flat-button
+              class="bb-btn-accent"
+              type="button"
+              (click)="apply(o.code)"
+              [disabled]="applying() || left > 0"
+              [attr.aria-label]="'Apply coupon ' + o.code"
+            >
+              Apply
+            </button>
+          </bb-offer-card>
         </li>
       }
     </ul>

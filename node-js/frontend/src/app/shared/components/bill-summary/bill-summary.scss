@@ -29,6 +29,10 @@ dd {
   color: var(--bb-ink-muted);
   font-weight: 400;
 }
+// The waived fee, struck through, then FREE.
+s + .free {
+  margin-left: 6px;
+}
 .total {
   border-top: 1px solid var(--bb-border);
   padding-top: var(--bb-space-3);
@@ -39,4 +43,15 @@ dd {
     font-weight: 800;
     font-size: 1.1rem;
   }
+}
+// Everything the coupon and coins took off, under the total.
+.saved {
+  margin: var(--bb-space-2) 0 0;
+  padding: var(--bb-space-1) var(--bb-space-2);
+  border-radius: var(--bb-radius-sm);
+  background: var(--bb-success-bg);
+  color: var(--bb-success);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
 }

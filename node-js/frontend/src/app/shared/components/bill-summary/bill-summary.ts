@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { Pricing } from '../../models/checkout.models';
 import { DistancePipe, InrPipe } from '../../pipes/money.pipes';
 
@@ -15,4 +15,10 @@ export class BillSummary {
   readonly distanceMeters = input<number | null | undefined>();
   /** Coins used for the coin discount line. */
   readonly coinsRedeemed = input<number | null | undefined>();
+
+  /** Coupon discount, waived delivery fee and coins together. */
+  protected readonly saved = computed(() => {
+    const p = this.pricing();
+    return p.discountPaise + (p.deliveryDiscountPaise ?? 0) + (p.coinDiscountPaise ?? 0);
+  });
 }

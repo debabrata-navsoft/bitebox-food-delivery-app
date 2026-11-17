@@ -125,6 +125,18 @@
         <!-- Coupon: a row that opens every coupon in a dialog -->
         <section class="bb-card" aria-labelledby="coupon-title">
           <h2 id="coupon-title">Offers &amp; benefits</h2>
+          @if (suggestion(); as s) {
+            <div class="best">
+              <np-icon name="sparkles" class="mat-icon" matButtonIcon />
+              <span>
+                <strong>Save {{ s.extra | inr }}{{ s.switching ? ' more' : '' }} with {{ s.code }}</strong>
+                <small class="bb-muted">Best offer for this cart</small>
+              </span>
+              <button mat-flat-button class="bb-btn-accent" type="button" [disabled]="cart.busy()" (click)="applyBest(s.code)">
+                {{ s.switching ? 'Switch' : 'Apply' }}
+              </button>
+            </div>
+          }
           @if (q.coupon; as applied) {
             <div class="applied">
               <np-icon name="tag" class="mat-icon" matButtonIcon />
@@ -176,7 +188,7 @@
             [distanceMeters]="q.delivery?.distanceMeters ?? null"
             [coinsRedeemed]="q.coins?.applied"
           />
-          @if (q.delivery && !q.delivery.freeDelivery && q.pricing.subtotalPaise - q.pricing.discountPaise < q.delivery.freeDeliveryThresholdPaise) {
+          @if (q.delivery && !q.delivery.freeDelivery && !q.pricing.deliveryDiscountPaise && q.pricing.subtotalPaise - q.pricing.discountPaise < q.delivery.freeDeliveryThresholdPaise) {
             <p class="hint small">
               Add {{ q.delivery.freeDeliveryThresholdPaise - (q.pricing.subtotalPaise - q.pricing.discountPaise) | inr }} more for free delivery
             </p>

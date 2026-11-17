@@ -232,4 +232,17 @@ describe("coupons and restaurant offers", () => {
     assert.equal(order.pricing.deliveryDiscountPaise, waived);
     assert.equal((await CouponRedemption.findOne({ order: order.id })).discountPaise, waived);
   });
+
+  it("suggests the coupon that saves most on the cart", async () => {
+    await adminCoupon({ code: "TENOFF" });
+    await adminCoupon({ code: "FLAT60", discountType: "flat", discountValue: 6000 });
+    await adminCoupon({ code: "NODELIVERY", discountType: "free_delivery" });
+    await adminCoupon({ code: "BIGHALF", discountValue: 50, minOrderPaise: 50000 }); // cart is below ₹500
+    assert.equal((await as(customer).get("/api/v1/cart")).body.data.bestCoupon, null); // empty cart
+    await add("Masala Dosa", "Gulab Jamun (2 pcs)");
+    const best = (await as(customer).get("/api/v1/cart")).body.data.bestCoupon;
+    assert.deepEqual([best.code, best.savingPaise], ["FLAT60", 6000]);
+    const quote = (await apply("FLAT60")).body.data;
+    assert.equal(quote.coupon.discountPaise, best.savingPaise); // the suggestion is exact
+  });
 });

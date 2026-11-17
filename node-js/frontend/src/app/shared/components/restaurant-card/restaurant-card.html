@@ -9,6 +9,14 @@
         <span>{{ r.name.charAt(0) }}</span>
       </div>
     }
+    @if (r.offer; as offer) {
+      <span class="offer">
+        <np-icon name="ticket-percent" class="mat-icon" matButtonIcon />{{ badge() }}
+        @if (offer.count > 1) {
+          <small>+{{ offer.count - 1 }} more</small>
+        }
+      </span>
+    }
     @if (!r.isOpenNow) {
       <span class="closed">
         <!-- <np-icon name="door-closed" class="mat-icon" matButtonIcon /> -->

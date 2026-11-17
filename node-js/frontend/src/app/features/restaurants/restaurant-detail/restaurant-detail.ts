@@ -26,6 +26,7 @@ import { QtyStepper } from '../../../shared/components/qty-stepper/qty-stepper';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
 import { PublicReviews } from '../../../shared/components/public-reviews/public-reviews';
 import { Stars } from '../../../shared/components/stars/stars';
+import { OffersStrip } from '../../../shared/components/offers-strip/offers-strip';
 import { FoodItem, MenuSection, Restaurant } from '../../../shared/models/catalog.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { ClockTimePipe } from '../../../shared/pipes/clock-time.pipe';
@@ -55,6 +56,7 @@ import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-im
     DecimalPipe,
     PublicReviews,
     Stars,
+    OffersStrip,
   ],
   templateUrl: './restaurant-detail.html',
   styleUrl: './restaurant-detail.scss',

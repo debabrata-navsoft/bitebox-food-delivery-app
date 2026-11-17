@@ -247,3 +247,16 @@ def test_free_delivery_waives_the_fee_and_the_order_keeps_it(w: dict[str, Any]) 
     order = placed.json()["data"]["order"]
     assert order["pricing"]["deliveryDiscountPaise"] == waived
     assert CouponRedemption.objects.get(order_id=order["id"]).discount_paise == waived
+
+
+def test_the_quote_suggests_the_coupon_that_saves_most(w: dict[str, Any]) -> None:
+    admin_coupon(w, code="TENOFF")  # 10%: ₹24.80 on ₹248
+    admin_coupon(w, code="FLAT60", discountType="flat", discountValue=6000)
+    admin_coupon(w, code="NODELIVERY", discountType="free_delivery")
+    admin_coupon(w, code="BIGHALF", discountValue=50, minOrderPaise=50000)  # cart is below ₹500
+    assert w["client"].get("/api/v1/cart").json()["data"]["bestCoupon"] is None  # empty cart
+    add(w, "Masala Dosa", "Gulab Jamun (2 pcs)")
+    best = w["client"].get("/api/v1/cart").json()["data"]["bestCoupon"]
+    assert (best["code"], best["savingPaise"]) == ("FLAT60", 6000)
+    quote = apply(w, "FLAT60").json()["data"]
+    assert quote["coupon"]["discountPaise"] == best["savingPaise"]  # the suggestion is exact

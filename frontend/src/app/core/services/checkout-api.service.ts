@@ -8,14 +8,14 @@ import {
   AddressInput,
   AdminCoupon,
   AdminCouponInput,
-  CouponAnalytics,
-  CouponQuery,
+  OfferKind,
   CouponOffer,
   DeliveryAddress,
   Order,
 } from '../../shared/models/checkout.models';
 import { CheckoutSession, PaymentMethod } from '../../shared/models/payment.models';
 import { toParams } from './http-params';
+import { CouponApi, One } from './coupon-api';
 
 @Injectable({ providedIn: 'root' })
 export class AddressService {
@@ -116,50 +116,24 @@ export class OrderService {
       })
       .pipe(map((r) => r.data.coupons));
   }
+  /** The Offers page: every offer this customer can use, best first, optionally of one kind. */
+  offers(kind?: OfferKind): Observable<CouponOffer[]> {
+    return this.http
+      .get<ApiResponse<{ offers: CouponOffer[] }>>(`${this.api}/coupons/offers`, {
+        params: toParams({ type: kind }),
+      })
+      .pipe(map((r) => r.data.offers));
+  }
+
 }
 
 @Injectable({ providedIn: 'root' })
-export class AdminCouponService {
-  private readonly http = inject(HttpClient);
-  private readonly url = `${environment.baseUrl}/admin/coupons`;
+export class AdminCouponService extends CouponApi<AdminCouponInput> {
+  protected readonly url = `${environment.baseUrl}/admin/coupons`;
   private readonly offers = `${environment.baseUrl}/admin/restaurant-offers`;
 
-  private one(request: Observable<ApiResponse<{ coupon: AdminCoupon }>>): Observable<AdminCoupon> {
-    return request.pipe(map((r) => r.data.coupon));
-  }
-
-  list(query: CouponQuery): Observable<Paginated<AdminCoupon>> {
-    return this.http
-      .get<ApiResponse<Paginated<AdminCoupon>>>(this.url, { params: toParams(query) })
-      .pipe(map((r) => r.data));
-  }
-
-  analytics(): Observable<CouponAnalytics> {
-    return this.http
-      .get<ApiResponse<CouponAnalytics>>(`${this.url}/analytics`)
-      .pipe(map((r) => r.data));
-  }
-
-  create(input: AdminCouponInput): Observable<AdminCoupon> {
-    return this.one(this.http.post<ApiResponse<{ coupon: AdminCoupon }>>(this.url, input));
-  }
-
-  update(id: string, input: AdminCouponInput): Observable<AdminCoupon> {
-    return this.one(this.http.patch<ApiResponse<{ coupon: AdminCoupon }>>(`${this.url}/${id}`, input));
-  }
-
-  setActive(id: string, isActive: boolean): Observable<AdminCoupon> {
-    return this.one(
-      this.http.patch<ApiResponse<{ coupon: AdminCoupon }>>(`${this.url}/${id}/status`, { isActive }),
-    );
-  }
-
   duplicate(id: string): Observable<AdminCoupon> {
-    return this.one(this.http.post<ApiResponse<{ coupon: AdminCoupon }>>(`${this.url}/${id}/duplicate`, {}));
-  }
-
-  remove(id: string): Observable<void> {
-    return this.http.delete<ApiResponse<null>>(`${this.url}/${id}`).pipe(map(() => undefined));
+    return this.one(this.http.post<One>(`${this.url}/${id}/duplicate`, {}));
   }
 
   /** Restaurant offers waiting for review. */
@@ -170,12 +144,10 @@ export class AdminCouponService {
   }
 
   approve(id: string): Observable<AdminCoupon> {
-    return this.one(this.http.post<ApiResponse<{ coupon: AdminCoupon }>>(`${this.offers}/${id}/approve`, {}));
+    return this.one(this.http.post<One>(`${this.offers}/${id}/approve`, {}));
   }
 
   reject(id: string, reason: string): Observable<AdminCoupon> {
-    return this.one(
-      this.http.post<ApiResponse<{ coupon: AdminCoupon }>>(`${this.offers}/${id}/reject`, { reason }),
-    );
+    return this.one(this.http.post<One>(`${this.offers}/${id}/reject`, { reason }));
   }
 }

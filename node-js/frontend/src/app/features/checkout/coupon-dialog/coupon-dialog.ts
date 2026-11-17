@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormRoot, form, pattern } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { ButtonComponent } from 'nexprime';
@@ -15,6 +15,7 @@ import { shownError } from '../../../shared/forms/form-errors';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { CartQuote, CouponOffer } from '../../../shared/models/checkout.models';
 import { InrPipe, formatPaise } from '../../../shared/pipes/money.pipes';
+import { OfferCard } from '../../../shared/components/offer-card/offer-card';
 
 /**
  * Every coupon for this cart: a code box and the available offers. An offer below its minimum order
@@ -22,7 +23,7 @@ import { InrPipe, formatPaise } from '../../../shared/pipes/money.pipes';
  */
 @Component({
   selector: 'bb-coupon-dialog',
-  imports: [FormRoot, NP_FORM_FIELDS, MatButtonModule, ButtonComponent, InrPipe, BbDialogTitle],
+  imports: [FormRoot, NP_FORM_FIELDS, MatButtonModule, ButtonComponent, InrPipe, BbDialogTitle, OfferCard],
   templateUrl: './coupon-dialog.html',
   styleUrl: './coupon-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,6 +37,8 @@ export class CouponDialog {
   protected readonly shownError = shownError;
   protected readonly error = signal<string | null>(null);
   protected readonly applying = signal(false);
+  /** The server's pick: the coupon that saves most on this cart. */
+  protected readonly best = computed(() => this.cart.quote()?.bestCoupon ?? null);
   private readonly codeModel = signal({ code: '' });
   protected readonly codeForm = form(
     this.codeModel,
@@ -51,12 +54,6 @@ export class CouponDialog {
     return Math.max(0, o.minOrderPaise - (this.cart.quote()?.pricing.subtotalPaise ?? 0));
   }
 
-  /** The discount on the side panel: "40%", "₹50" or "Free delivery". */
-  protected amount(o: CouponOffer): string {
-    if (o.discountType === 'free_delivery') return 'Free delivery';
-    return o.discountType === 'percent' ? `${o.discountValue}%` : formatPaise(o.discountValue);
-  }
-
   protected apply(code: string): void {
     const value = code.trim();
     if (!value) return;
@@ -64,7 +61,7 @@ export class CouponDialog {
     this.error.set(null);
     this.cart.applyCoupon(value).subscribe({
       next: (quote) => {
-        this.notify.success(`${quote.coupon?.code} applied — you save ${formatPaise(quote.pricing.discountPaise)}`);
+        this.notify.success(appliedMessage(quote));
         this.ref.close(quote);
       },
       error: (err: unknown) => {
@@ -76,5 +73,9 @@ export class CouponDialog {
 }
 
 /** Opens the coupons dialog; emits the quote once a coupon is applied (nothing when closed). */
+/** "FLAT60 applied — you save ₹60" (the saving includes any delivery fee it waived). */
+export const appliedMessage = (quote: CartQuote): string =>
+  `${quote.coupon?.code} applied — you save ${formatPaise(quote.coupon?.discountPaise ?? 0)}`;
+
 export const openCoupons = (dialog: BbDialog, offers: CouponOffer[]) =>
   dialog.result<CouponDialog, CouponOffer[], CartQuote>(CouponDialog, { data: offers, width: '480px' });

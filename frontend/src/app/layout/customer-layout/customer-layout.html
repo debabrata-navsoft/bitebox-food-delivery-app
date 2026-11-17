@@ -35,6 +35,7 @@
         >Home</a
       >
       <a routerLink="/restaurants" routerLinkActive="active">Restaurants</a>
+      <a routerLink="/offers" routerLinkActive="active">Offers</a>
       <!-- Partner sign-up is shown to visitors only (the home page hides it once signed in). -->
       <!-- header nav -->
       @if (ready() && !shown()) {
@@ -229,6 +230,10 @@
   <a routerLink="/restaurants" routerLinkActive="active">
     <np-icon name="store" class="mat-icon" matButtonIcon />
     <span>Restaurants</span>
+  </a>
+  <a routerLink="/offers" routerLinkActive="active">
+    <np-icon name="ticket-percent" class="mat-icon" matButtonIcon />
+    <span>Offers</span>
   </a>
   @if (showCart()) {
     <a routerLink="/checkout" routerLinkActive="active">

@@ -168,8 +168,24 @@ LIST_PARAMS = [
 ]
 
 
+SUBMITTED = {"draft": "Offer saved as a draft", "pending": "Offer sent for approval"}
+
+
 def _coupon(coupon: Any) -> dict[str, Any]:
-    return {"coupon": services.coupon_json(coupon, restaurant="populated")}
+    return {"coupon": services.coupon_json(coupon)}
+
+
+class AdminView(APIView):
+    permission_classes = ADMIN
+
+
+class PartnerView(APIView):
+    """Restaurant partners: every request is scoped to the signed-in partner's restaurant."""
+
+    permission_classes = PARTNER
+
+    def restaurant(self, request: Request) -> Any:
+        return require_own_restaurant(current_user(request))
 
 
 # ---------------------------------------------------------------------------
@@ -215,9 +231,7 @@ class RestaurantOffersView(PublicCacheMixin, APIView):
 # ---------------------------------------------------------------------------
 # Admins
 # ---------------------------------------------------------------------------
-class AdminCouponsView(APIView):
-    permission_classes = ADMIN
-
+class AdminCouponsView(AdminView):
     @extend_schema(
         tags=["Admin: coupons"],
         parameters=LIST_PARAMS,
@@ -241,17 +255,13 @@ class AdminCouponsView(APIView):
         return ok(_coupon(coupon), message="Coupon created", status=201)
 
 
-class AdminAnalyticsView(APIView):
-    permission_classes = ADMIN
-
+class AdminAnalyticsView(AdminView):
     @extend_schema(tags=["Admin: coupons"], responses={200: ANY, **errors(401, 403)})
     def get(self, request: Request) -> Response:
         return ok(services.admin_analytics())
 
 
-class AdminCouponView(APIView):
-    permission_classes = ADMIN
-
+class AdminCouponView(AdminView):
     @extend_schema(tags=["Admin: coupons"], responses={200: ANY, **errors(401, 403, 404, 422)})
     def get(self, request: Request, id: str) -> Response:
         return ok(_coupon(services.admin_get(parse_id(id))))
@@ -274,9 +284,7 @@ class AdminCouponView(APIView):
         return ok(None, message="Coupon deleted")
 
 
-class AdminCouponStatusView(APIView):
-    permission_classes = ADMIN
-
+class AdminCouponStatusView(AdminView):
     @extend_schema(
         tags=["Admin: coupons"],
         request=ActiveInput,
@@ -289,9 +297,7 @@ class AdminCouponStatusView(APIView):
         return ok(_coupon(coupon), message="Coupon activated" if active else "Coupon deactivated")
 
 
-class AdminCouponDuplicateView(APIView):
-    permission_classes = ADMIN
-
+class AdminCouponDuplicateView(AdminView):
     @extend_schema(
         tags=["Admin: coupons"], request=None, responses={201: ANY, **errors(401, 403, 404)}
     )
@@ -301,9 +307,7 @@ class AdminCouponDuplicateView(APIView):
         return ok(_coupon(coupon), message="Coupon duplicated (switched off)", status=201)
 
 
-class AdminPendingOffersView(APIView):
-    permission_classes = ADMIN
-
+class AdminPendingOffersView(AdminView):
     @extend_schema(
         tags=["Admin: coupons"],
         parameters=[OpenApiParameter(n, str) for n in ("page", "limit")],
@@ -314,9 +318,7 @@ class AdminPendingOffersView(APIView):
         return ok(services.pending(Page.from_query(query)))
 
 
-class AdminApproveOfferView(APIView):
-    permission_classes = ADMIN
-
+class AdminApproveOfferView(AdminView):
     @extend_schema(
         tags=["Admin: coupons"], request=None, responses={200: ANY, **errors(401, 403, 404, 409)}
     )
@@ -326,9 +328,7 @@ class AdminApproveOfferView(APIView):
         return ok(_coupon(coupon), message="Offer approved")
 
 
-class AdminRejectOfferView(APIView):
-    permission_classes = ADMIN
-
+class AdminRejectOfferView(AdminView):
     @extend_schema(
         tags=["Admin: coupons"],
         request=ReasonInput,
@@ -348,16 +348,14 @@ class AdminRejectOfferView(APIView):
 # ---------------------------------------------------------------------------
 # Restaurant partners: their own offers
 # ---------------------------------------------------------------------------
-class OwnOffersView(APIView):
-    permission_classes = PARTNER
-
+class OwnOffersView(PartnerView):
     @extend_schema(
         tags=["Restaurant offers"],
         parameters=LIST_PARAMS,
         responses={200: ANY, **errors(401, 403, 404, 422)},
     )
     def get(self, request: Request) -> Response:
-        restaurant = require_own_restaurant(current_user(request))
+        restaurant = self.restaurant(request)
         query = validated(ListQuery, request.query_params)
         return ok(services.own_list(restaurant, query, Page.from_query(query)))
 
@@ -368,36 +366,23 @@ class OwnOffersView(APIView):
     )
     def post(self, request: Request) -> Response:
         user = current_user(request)
-        restaurant = require_own_restaurant(user)
-        coupon = services.own_create(restaurant, validated(OfferInput, request.data), user)
-        message = (
-            "Offer saved as a draft"
-            if coupon.approval_status == "draft"
-            else (
-                "Offer sent for approval"
-                if coupon.approval_status == "pending"
-                else "Offer is live"
-            )
+        coupon = services.own_create(
+            require_own_restaurant(user), validated(OfferInput, request.data), user
         )
+        message = SUBMITTED.get(coupon.approval_status, "Offer is live")
         return ok(_coupon(coupon), message=message, status=201)
 
 
-class OwnOfferAnalyticsView(APIView):
-    permission_classes = PARTNER
-
+class OwnOfferAnalyticsView(PartnerView):
     @extend_schema(tags=["Restaurant offers"], responses={200: ANY, **errors(401, 403, 404)})
     def get(self, request: Request) -> Response:
-        restaurant = require_own_restaurant(current_user(request))
-        return ok(services.own_analytics(restaurant))
+        return ok(services.own_analytics(self.restaurant(request)))
 
 
-class OwnOfferView(APIView):
-    permission_classes = PARTNER
-
+class OwnOfferView(PartnerView):
     @extend_schema(tags=["Restaurant offers"], responses={200: ANY, **errors(401, 403, 404, 422)})
     def get(self, request: Request, id: str) -> Response:
-        restaurant = require_own_restaurant(current_user(request))
-        return ok(_coupon(services.own_get(restaurant, parse_id(id))))
+        return ok(_coupon(services.own_get(self.restaurant(request), parse_id(id))))
 
     @extend_schema(
         tags=["Restaurant offers"],
@@ -405,7 +390,7 @@ class OwnOfferView(APIView):
         responses={200: ANY, **errors(401, 403, 404, 409, 422)},
     )
     def patch(self, request: Request, id: str) -> Response:
-        restaurant = require_own_restaurant(current_user(request))
+        restaurant = self.restaurant(request)
         data = validated(OfferInput, request.data, partial=True)
         coupon = services.own_update(restaurant, parse_id(id), data)
         return ok(_coupon(coupon), message="Offer saved")
@@ -414,21 +399,18 @@ class OwnOfferView(APIView):
         tags=["Restaurant offers"], responses={200: ANY, **errors(401, 403, 404, 409, 422)}
     )
     def delete(self, request: Request, id: str) -> Response:
-        restaurant = require_own_restaurant(current_user(request))
-        services.own_remove(restaurant, parse_id(id))
+        services.own_remove(self.restaurant(request), parse_id(id))
         return ok(None, message="Offer deleted")
 
 
-class OwnOfferStatusView(APIView):
-    permission_classes = PARTNER
-
+class OwnOfferStatusView(PartnerView):
     @extend_schema(
         tags=["Restaurant offers"],
         request=ActiveInput,
         responses={200: ANY, **errors(401, 403, 404, 422)},
     )
     def patch(self, request: Request, id: str) -> Response:
-        restaurant = require_own_restaurant(current_user(request))
+        restaurant = self.restaurant(request)
         active = validated(ActiveInput, request.data)["is_active"]
         coupon = services.own_set_active(restaurant, parse_id(id), active)
         return ok(_coupon(coupon), message="Offer resumed" if active else "Offer paused")

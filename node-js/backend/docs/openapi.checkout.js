@@ -180,6 +180,17 @@ export const checkoutSchemas = {
         type: ["object", "null"],
         properties: { code: { type: "string" }, message: { type: "string" } },
       },
+      bestCoupon: {
+        type: ["object", "null"],
+        description: "The coupon that saves most on this cart, priced by the server (null when none applies).",
+        properties: {
+          code: { type: "string" },
+          name: { type: ["string", "null"] },
+          description: { type: ["string", "null"] },
+          discountType: { enum: ["percent", "flat", "free_delivery"] },
+          savingPaise: { type: "integer" },
+        },
+      },
       address: { oneOf: [ref("DeliveryAddress"), { type: "null" }] },
       delivery: {
         type: ["object", "null"],

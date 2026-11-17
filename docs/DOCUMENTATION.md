@@ -952,6 +952,10 @@ One collection/table holds platform coupons (`source: platform`, created by admi
 
 The public restaurant list (`GET /restaurants`) includes each restaurant's best live offer as `offer` (for card badges).
 
+The cart quote (`GET /cart`) includes `bestCoupon` (`code`, `name`, `description`, `discountType`, `savingPaise`): the coupon that saves this customer most on the current cart, found by running every usable coupon through the engine and the cart pricing on the server, or `null` when none applies. Checkout suggests it with one-tap Apply (or "Switch" when it beats the applied coupon). `savingPaise` and `coupon.discountPaise` include any delivery fee a free-delivery coupon waives.
+
+Customer screens: `/offers` (signed-in customers, filter by kind), the offer ribbon on restaurant cards, "Offers & deals" on each restaurant page, and the coupon dialog and best-offer row at checkout. The bill shows a waived delivery fee struck through and a "You saved" line (coupon, waived fee and coins).
+
 ### Restaurant and rider operations
 
 | Method | Path | Access | Purpose |

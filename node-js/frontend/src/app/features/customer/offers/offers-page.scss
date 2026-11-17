@@ -1,0 +1,56 @@
+@use 'breakpoints' as bp;
+
+.page {
+  padding-block: var(--bb-space-5);
+}
+// The kinds scroll sideways on phones instead of wrapping.
+.kinds {
+  overflow-x: auto;
+  margin-bottom: var(--bb-space-4);
+  padding-bottom: 2px;
+}
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--bb-space-3);
+  @include bp.tablet-up {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  @include bp.desktop-up {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+li {
+  display: grid;
+  gap: var(--bb-space-1);
+  align-content: start;
+}
+.card {
+  height: 120px;
+}
+.where {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--bb-ink);
+  --bb-icon-size: 14px;
+  a {
+    color: var(--bb-plum);
+    font-weight: 600;
+  }
+}
+details {
+  font-size: 0.8rem;
+  color: var(--bb-ink-muted);
+  summary {
+    cursor: pointer;
+    width: fit-content;
+  }
+  p {
+    margin: var(--bb-space-1) 0 0;
+    white-space: pre-line;
+  }
+}

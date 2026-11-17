@@ -111,6 +111,33 @@
   }
 }
 
+// The best offer, as an amber ribbon in the photo's top-left corner.
+.offer {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  max-width: calc(100% - 16px);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 0 999px 999px 0;
+  background: var(--bb-amber);
+  color: var(--bb-on-accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
+  np-icon {
+    --bb-icon-size: 14px;
+  }
+  small {
+    font-weight: 600;
+    opacity: 0.85;
+  }
+}
+
 .body {
   padding: var(--bb-space-3) var(--bb-space-4) var(--bb-space-4);
   display: flex;

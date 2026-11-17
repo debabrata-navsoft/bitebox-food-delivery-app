@@ -10,6 +10,7 @@ import {
   Restaurant,
   RestaurantQuery,
 } from '../../shared/models/catalog.models';
+import { CouponOffer } from '../../shared/models/checkout.models';
 import { toParams } from './http-params';
 import { publicRequest } from '../interceptors/auth.interceptor';
 
@@ -53,6 +54,16 @@ export class CatalogService {
         { context: publicRequest() },
       )
       .pipe(map((res) => res.data.sections));
+  }
+
+  /** A restaurant page's "Offers & deals": its own offers first, then platform-wide ones. */
+  restaurantOffers(slug: string): Observable<CouponOffer[]> {
+    return this.http
+      .get<ApiResponse<{ offers: CouponOffer[] }>>(
+        `${this.api}/restaurants/${encodeURIComponent(slug)}/offers`,
+        { context: publicRequest() },
+      )
+      .pipe(map((res) => res.data.offers));
   }
 
   categories(): Observable<FoodCategory[]> {

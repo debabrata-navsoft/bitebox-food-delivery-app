@@ -29,7 +29,7 @@ import { VegBadge } from '../../shared/components/veg-badge/veg-badge';
 import { CouponOffer, DeliveryAddress } from '../../shared/models/checkout.models';
 import { InrPipe, formatPaise } from '../../shared/pipes/money.pipes';
 import { BbDialog } from '../../shared/dialog/bb-dialog';
-import { openCoupons } from './coupon-dialog/coupon-dialog';
+import { appliedMessage, openCoupons } from './coupon-dialog/coupon-dialog';
 
 
 import { NP_FORM_FIELDS } from '../../shared/forms/np-form-fields';
@@ -116,6 +116,23 @@ export class Checkout {
     this.orders
       .availableCoupons(restaurantId)
       .subscribe({ next: (list) => this.offers.set(list), error: () => this.offers.set([]) });
+  }
+
+  /** The server's best coupon for this cart, when it saves more than the applied one. */
+  protected readonly suggestion = computed(() => {
+    const q = this.cart.quote();
+    const best = q?.bestCoupon;
+    const extra = (best?.savingPaise ?? 0) - (q?.coupon?.discountPaise ?? 0);
+    if (!best || best.code === q?.coupon?.code || extra <= 0) return null;
+    return { code: best.code, extra, switching: !!q?.coupon };
+  });
+
+  /** One tap on the suggested coupon (the server's pick for this cart). */
+  protected applyBest(code: string): void {
+    this.cart.applyCoupon(code).subscribe({
+      next: (quote) => this.notify.success(appliedMessage(quote)),
+      error: (err: unknown) => this.notify.error(errorMessage(err)),
+    });
   }
 
   /** "Apply coupon": every coupon for this cart; the quote refreshes once one is applied. */

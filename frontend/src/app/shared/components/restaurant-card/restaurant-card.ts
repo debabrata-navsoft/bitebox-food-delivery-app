@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { Restaurant } from '../../models/catalog.models';
 import { DistancePipe, InrPipe } from '../../pipes/money.pipes';
 import { ImageFallback, UsableImagePipe } from '../../images/broken-images';
+import { badgeLabel } from '../../coupons/coupon-labels';
 
 @Component({
   selector: 'bb-restaurant-card',
@@ -18,6 +19,11 @@ export class RestaurantCard {
   protected readonly rating = computed(() => {
     const { average, count } = this.restaurant().rating;
     return count > 0 ? average.toFixed(1) : null;
+  });
+  /** The best offer's badge: "20% OFF UPTO ₹100". */
+  protected readonly badge = computed(() => {
+    const offer = this.restaurant().offer;
+    return offer ? badgeLabel(offer) : null;
   });
   protected readonly locality = computed(() => {
     const { area, city } = this.restaurant().address;

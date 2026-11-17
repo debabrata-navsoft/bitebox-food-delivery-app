@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { discountLabel, itemsLabel } from '../../coupons/coupon-labels';
+import { discountLabel, discountParts, itemsLabel } from '../../coupons/coupon-labels';
 import { CouponOffer } from '../../models/checkout.models';
-import { InrPipe, formatPaise } from '../../pipes/money.pipes';
+import { InrPipe } from '../../pipes/money.pipes';
 
 /**
  * One offer as customers see it: the discount on an amber side panel, the title, the
@@ -21,12 +21,7 @@ export class OfferCard {
   readonly locked = input(false);
 
   /** The side panel: "20%" / "OFF", "₹50" / "OFF" or "FREE" / "DELIVERY". */
-  protected readonly side = computed(() => {
-    const o = this.offer();
-    if (o.discountType === 'free_delivery') return { big: 'FREE', small: 'DELIVERY' };
-    const big = o.discountType === 'percent' ? `${o.discountValue}%` : formatPaise(o.discountValue);
-    return { big, small: 'OFF' };
-  });
+  protected readonly side = computed(() => discountParts(this.offer()));
   protected readonly discount = computed(() => discountLabel(this.offer()));
   protected readonly title = computed(() => this.offer().name || this.offer().description || this.discount());
   protected readonly items = computed(() => itemsLabel(this.offer()));

@@ -1,7 +1,6 @@
 import { PRICING } from "../config/pricing.js";
 import { DISCOUNT_TYPES } from "../models/coupon.model.js";
 
-/** Coupon discount for a subtotal, never more than the subtotal itself. */
 /**
  * The food discount. `basePaise` is what the coupon applies to (the lines in its categories or
  * dishes; the whole subtotal by default). Never more than that base; percentages are capped by

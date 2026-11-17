@@ -12,7 +12,14 @@ from apps.accounts.models import User
 from apps.coins import quote as coins
 from apps.coupons.models import Coupon
 from apps.coupons.services import Line as CouponLine
-from apps.coupons.services import assert_eligible, coupon_base
+from apps.coupons.services import (
+    assert_eligible,
+    coupon_base,
+    is_new_customer,
+    problem,
+    redemption_counts,
+    usable_at,
+)
 from apps.customers.models import Address
 from apps.customers.services import address_json
 from apps.menus.models import FoodItem
@@ -167,6 +174,44 @@ def remove_coins(user: User) -> None:
         _finish(cart)
 
 
+def _best_coupon(
+    user: User, restaurant_id: Any, subtotal: int, lines: list[CouponLine], distance_m: int | None
+) -> dict[str, Any] | None:
+    """The coupon that saves this customer most on this cart, priced here (never on the client)."""
+    if not restaurant_id or subtotal <= 0:
+        return None
+    coupons = list(usable_at(restaurant_id))
+    # Looked up once for every coupon, rather than once per coupon inside problem().
+    new = is_new_customer(user.pk)
+    used = redemption_counts(user.pk, coupons)
+    best: tuple[Coupon, int] | None = None
+    for c in coupons:
+        if problem(
+            c,
+            user_id=user.pk,
+            restaurant_id=restaurant_id,
+            subtotal_paise=subtotal,
+            lines=lines,
+            new_customer=new,
+            used=used.get(c.pk, 0),
+        ):
+            continue
+        p = compute_pricing(subtotal, c, distance_m, 0, coupon_base(c, lines))
+        saving = p.discount_paise + p.delivery_discount_paise
+        if saving > 0 and (best is None or saving > best[1]):
+            best = (c, saving)
+    if best is None:
+        return None
+    c, saving = best
+    return {
+        "code": c.code,
+        "name": c.name or None,
+        "description": c.description or None,
+        "discount_type": c.discount_type,
+        "saving_paise": saving,
+    }
+
+
 def _restaurant_summary(r: Restaurant) -> dict[str, Any]:
     data = {
         "id": str(r.pk),
@@ -190,6 +235,7 @@ def build_quote(user: User, address_id: uuid.UUID | None = None) -> dict[str, An
             "cart": None,
             "coupon": None,
             "coupon_error": None,
+            "best_coupon": None,
             "coins": None,
             "address": None,
             "delivery": None,
@@ -334,6 +380,8 @@ def build_quote(user: User, address_id: uuid.UUID | None = None) -> dict[str, An
         if coupon
         else None,
         "coupon_error": coupon_error,
+        # The best coupon for this cart, so checkout can suggest it (null when none applies).
+        "best_coupon": _best_coupon(user, cart.restaurant_id, subtotal, engine_lines, distance_m),
         "coins": coin_quote,
         "address": address_json(address) if address else None,
         "delivery": None

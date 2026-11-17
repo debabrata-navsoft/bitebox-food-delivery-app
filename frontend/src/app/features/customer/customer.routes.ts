@@ -20,6 +20,12 @@ export const CUSTOMER_ROUTES: Routes = [
     loadComponent: () => import('../food/food-search/food-search').then((m) => m.FoodSearch),
   },
   {
+    path: 'offers',
+    title: 'Offers | BiteBox',
+    canActivate: [roleGuard('customer')],
+    loadComponent: () => import('./offers/offers-page').then((m) => m.OffersPage),
+  },
+  {
     path: 'account',
     title: 'My account | BiteBox',
     canActivate: [roleGuard('customer')],

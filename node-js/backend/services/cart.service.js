@@ -191,6 +191,7 @@ export async function buildQuote(userId, { addressId, cart: saved } = {}) {
     cart: null,
     coupon: null,
     couponError: null,
+    bestCoupon: null,
     coins: null,
     address: null,
     delivery: null,
@@ -346,6 +347,8 @@ export async function buildQuote(userId, { addressId, cart: saved } = {}) {
         }
       : null,
     couponError,
+    // The best coupon for this cart, so checkout can suggest it (null when none applies).
+    bestCoupon: await bestCoupon({ userId, restaurantId: cart.restaurant, subtotalPaise, lines: engineLines, distanceMeters }),
     coins,
     address: address?.toJSON() ?? null,
     delivery:
@@ -364,4 +367,33 @@ export async function buildQuote(userId, { addressId, cart: saved } = {}) {
   // For applyCoupon only; non-enumerable, so it is never sent to clients.
   Object.defineProperty(quote, "engineLines", { value: engineLines, enumerable: false });
   return quote;
+}
+
+/** The coupon that saves this customer most on this cart, priced here (never on the client). */
+async function bestCoupon({ userId, restaurantId, subtotalPaise, lines, distanceMeters }) {
+  if (!restaurantId || subtotalPaise <= 0) return null;
+  const [newCustomer, coupons] = await Promise.all([
+    couponService.isNewCustomer(userId),
+    couponService.usableAt(restaurantId),
+  ]);
+  // The customer's redemptions in one query, rather than one per coupon inside problem().
+  const used = await couponService.redemptionCounts(userId, coupons.map((c) => c._id));
+  const ctx = { userId, restaurantId, subtotalPaise, lines, newCustomer };
+  let best = null;
+  for (const c of coupons) {
+    if (await couponService.problem(c, { ...ctx, used: used.get(String(c._id)) ?? 0 })) continue;
+    const couponBasePaise = couponService.couponBase(c, lines);
+    const p = computePricing({ subtotalPaise, coupon: c, distanceMeters, couponBasePaise });
+    const saving = p.discountPaise + p.deliveryDiscountPaise;
+    if (saving > 0 && saving > (best?.savingPaise ?? 0)) {
+      best = {
+        code: c.code,
+        name: c.name || null,
+        description: c.description || null,
+        discountType: c.discountType,
+        savingPaise: saving,
+      };
+    }
+  }
+  return best;
 }

@@ -9,6 +9,8 @@ export interface Pricing {
   taxPaise: number;
   /** Paid with BiteBox coins (comes off the payable total). */
   coinDiscountPaise?: number;
+  /** Delivery fee waived by a free-delivery coupon (already out of `deliveryFeePaise`). */
+  deliveryDiscountPaise?: number;
   totalPaise: number;
 }
 
@@ -48,6 +50,8 @@ export interface CartQuote {
   } | null;
   coupon: { code: string; description?: string; discountPaise: number } | null;
   couponError: { code: string; message: string } | null;
+  /** The coupon that saves most on this cart, priced by the server (null when none applies). */
+  bestCoupon?: BestCoupon | null;
   /** Coins the customer can use on this cart (null for an empty cart). */
   coins: CoinQuote | null;
   address: DeliveryAddress | null;
@@ -86,6 +90,23 @@ export interface DeliveryAddress extends Omit<AddressInput, 'location'> {
 }
 
 export type DiscountType = 'percent' | 'flat' | 'free_delivery';
+
+export interface BestCoupon {
+  code: string;
+  name: string | null;
+  description: string | null;
+  discountType: DiscountType;
+  savingPaise: number;
+}
+
+/** A restaurant card's badge: its best own offer and how many it runs. */
+export type CardOffer = Pick<
+  CouponOffer,
+  'code' | 'name' | 'discountType' | 'discountValue' | 'maxDiscountPaise' | 'minOrderPaise' | 'audience'
+> & { count: number };
+
+/** The customer Offers page filters (the API's `type`). */
+export type OfferKind = 'percent' | 'flat' | 'free_delivery' | 'first_order' | 'restaurant' | 'category';
 export type CouponAudience = 'all' | 'new';
 export type CouponSource = 'platform' | 'restaurant';
 export type ApprovalStatus = 'draft' | 'pending' | 'approved' | 'rejected';

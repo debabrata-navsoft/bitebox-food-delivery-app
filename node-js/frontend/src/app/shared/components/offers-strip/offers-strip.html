@@ -1,0 +1,17 @@
+@if (list().length) {
+  <section aria-labelledby="offers-title">
+    <h2 id="offers-title">Offers &amp; deals</h2>
+    <ul>
+      @for (o of list(); track o.code) {
+        <li>
+          <bb-offer-card [offer]="o">
+            @if (o.terms) {
+              <small offerNote class="terms" [title]="o.terms">T&amp;C apply</small>
+            }
+          </bb-offer-card>
+        </li>
+      }
+    </ul>
+    <p class="hint">Apply a code at checkout.</p>
+  </section>
+}
