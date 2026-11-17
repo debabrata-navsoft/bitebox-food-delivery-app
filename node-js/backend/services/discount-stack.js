@@ -121,6 +121,8 @@ export const summary = (c) => ({
   description: c.description || null,
   discountType: c.discountType,
   discountValue: c.discountValue,
+  maxDiscountPaise: c.maxDiscountPaise ?? null,
+  minOrderPaise: c.minOrderPaise ?? 0,
 });
 
 /** Each discount on the bill, in the order it applied, with who pays for it. */

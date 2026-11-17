@@ -28,13 +28,13 @@
             <bb-coupon-ticket [offer]="o" [highlight]="highlight(o)" [locked]="minOrderLeft(o) > 0 && a?.label !== 'APPLIED'">
               <!-- One block per projected element (nested blocks are not projected by selector). -->
               @if (a?.label === 'VIEW') {
-                <a ticketAction class="action" [routerLink]="['/restaurants', a!.slug]">VIEW</a>
+                <a ticketAction class="bb-ticket-action" [routerLink]="['/restaurants', a!.slug]">VIEW</a>
               }
               @if (a && a.label !== 'VIEW') {
                 <button
                   ticketAction
                   type="button"
-                  class="action"
+                  class="bb-ticket-action"
                   [class.done]="a.label === 'APPLIED'"
                   [disabled]="a.label === 'APPLIED' || busy() !== null || (a.label === 'APPLY' && minOrderLeft(o) > 0)"
                   [attr.aria-label]="a.label + ' ' + o.code"

@@ -40,34 +40,30 @@
     </ul>
   }
 
-  @if (offers.length) {
-    <h3>Available coupons</h3>
-    <ul class="offers">
-      @for (o of offers; track o.code) {
+  @for (s of sections(); track s.title) {
+    <h3>{{ s.title }}</h3>
+    <ul class="tickets">
+      @for (o of s.items; track o.code) {
         @let left = minOrderLeft(o);
+        @let applied = o.code === appliedCode();
         <li>
-          <bb-offer-card [offer]="o" [locked]="left > 0">
-            @if (o.code === best()?.code) {
-              <span offerNote class="best">Best for this cart · saves {{ best()!.savingPaise | inr }}</span>
-            }
-            @if (left > 0) {
-              <span offerNote class="short">Add {{ left | inr }} more to use this offer</span>
-            }
+          <bb-coupon-ticket flat [offer]="o" [highlight]="highlight(o)" [locked]="left > 0">
             <button
-              mat-flat-button
-              class="bb-btn-accent"
+              ticketAction
               type="button"
-              (click)="apply(o.code)"
-              [disabled]="applying() || left > 0"
+              class="bb-ticket-action"
+              [class.done]="applied"
+              [disabled]="applying() || left > 0 || applied"
               [attr.aria-label]="'Apply coupon ' + o.code"
+              (click)="apply(o.code)"
             >
-              Apply
+              {{ applied ? 'APPLIED' : 'APPLY' }}
             </button>
-          </bb-offer-card>
+          </bb-coupon-ticket>
         </li>
       }
     </ul>
-  } @else {
+  } @empty {
     <p class="bb-muted">No coupons for this cart right now.</p>
   }
 </div>

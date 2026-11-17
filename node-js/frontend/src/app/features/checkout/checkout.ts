@@ -31,6 +31,7 @@ import { InrPipe, formatPaise } from '../../shared/pipes/money.pipes';
 import { BbDialog } from '../../shared/dialog/bb-dialog';
 import { openCoupons } from './coupon-dialog/coupon-dialog';
 import { codeApplier } from '../../shared/coupons/cart-offers';
+import { CouponTicket } from '../../shared/components/coupon-ticket/coupon-ticket';
 
 
 import { NP_FORM_FIELDS } from '../../shared/forms/np-form-fields';
@@ -47,6 +48,7 @@ import { NP_FORM_FIELDS } from '../../shared/forms/np-form-fields';
     MatRadioModule,
     BillSummary,
     CheckoutCoins,
+    CouponTicket,
     EmptyState,
     QtyStepper,
     VegBadge,
@@ -150,12 +152,15 @@ export class Checkout {
     const best = q?.bestCoupon;
     const extra = (best?.savingPaise ?? 0) - (q?.coupon?.discountPaise ?? 0);
     if (!best || best.code === q?.coupon?.code || extra <= 0) return null;
-    return { code: best.code, extra, switching: !!q?.coupon };
+    const switching = !!q?.coupon;
+    const offer: CouponOffer = { kind: 'coupon', minOrderPaise: 0, validUntil: '', ...best };
+    return { offer, switching, line: `Save ${formatPaise(extra)}${switching ? ' more' : ''} on this order!` };
   });
 
   /** One tap on the suggested coupon (the server's pick for this cart). */
   private readonly applier = codeApplier();
   protected readonly applyBest = this.applier.apply;
+  protected readonly applying = this.applier.busy;
 
   /** "Apply coupon": every coupon for this cart; the quote refreshes once one is applied. */
   protected showCoupons(): void {

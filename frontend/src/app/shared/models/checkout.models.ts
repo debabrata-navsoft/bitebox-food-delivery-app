@@ -158,6 +158,9 @@ export interface BestCoupon {
   name: string | null;
   description: string | null;
   discountType: DiscountType;
+  discountValue: number;
+  maxDiscountPaise?: number | null;
+  minOrderPaise?: number;
   savingPaise: number;
 }
 

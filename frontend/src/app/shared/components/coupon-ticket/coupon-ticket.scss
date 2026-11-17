@@ -17,6 +17,11 @@
   --ticket: var(--bb-success-solid);
   --ticket-ink: #fff;
 }
+:host(.flat) {
+  border: 1px solid var(--bb-border);
+  box-shadow: none;
+  --ticket-cut: var(--bb-surface);
+}
 :host(.locked) {
   --ticket: var(--bb-border);
   --ticket-ink: var(--bb-ink-muted);
@@ -40,7 +45,7 @@
     white-space: nowrap;
   }
 
-  // The notches: page-coloured half circles along the strip's left edge.
+  // The notches: half circles in the colour behind the ticket (--ticket-cut, the page by default).
   &::before {
     content: '';
     position: absolute;
@@ -48,7 +53,7 @@
     top: 14px;
     bottom: 14px;
     width: 12px;
-    background: radial-gradient(circle, var(--bb-bg) 5px, transparent 5.5px) 0 0 / 12px 18px repeat-y;
+    background: radial-gradient(circle, var(--ticket-cut, var(--bb-bg)) 5px, transparent 5.5px) 0 0 / 12px 18px repeat-y;
   }
 }
 
@@ -112,4 +117,31 @@ hr {
 
 :host(.locked) .title {
   color: var(--bb-ink-muted);
+}
+
+// Compact: tighter, and the offer sentence on one line (in full on hover).
+:host(.compact) {
+  .side {
+    flex-basis: 36px;
+    span {
+      font-size: 0.85rem;
+    }
+  }
+  .body {
+    padding: var(--bb-space-2) var(--bb-space-3);
+  }
+  .title {
+    font-size: 0.95rem;
+  }
+  .highlight {
+    margin-top: 2px;
+    font-size: 0.85rem;
+  }
+  .desc {
+    margin-top: 2px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }

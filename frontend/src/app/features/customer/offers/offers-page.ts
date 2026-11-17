@@ -9,11 +9,10 @@ import { NotificationService } from '../../../core/services/notification.service
 import { CouponTicket } from '../../../shared/components/coupon-ticket/coupon-ticket';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { codeApplier, minOrderLeft } from '../../../shared/coupons/cart-offers';
-import { discountLabel, placeOf } from '../../../shared/coupons/coupon-labels';
+import { codeApplier, forQuote, savingOnCart } from '../../../shared/coupons/cart-offers';
+import { placeOf } from '../../../shared/coupons/coupon-labels';
 import { loaded } from '../../../shared/coupons/coupon-list';
 import { CouponOffer, OfferKind } from '../../../shared/models/checkout.models';
-import { formatPaise } from '../../../shared/pipes/money.pipes';
 
 type Action = { label: 'APPLY' | 'APPLIED' | 'COPY' | 'VIEW'; slug?: string } | null;
 
@@ -72,33 +71,11 @@ export class OffersPage {
     this.kind.set(typeof value === 'string' ? value : '');
   }
 
-  private saving(o: CouponOffer): { paise: number; applied: boolean } | null {
-    const q = this.quote();
-    if (!q) return null;
-    const line = q.discounts?.find((d) => d.code === o.code);
-    if (line) return { paise: line.savingPaise, applied: true };
-    const option = q.restaurantOffers?.find((r) => r.code === o.code);
-    if (option) return { paise: option.savingPaise, applied: false };
-    if (q.bestCoupon?.code === o.code) return { paise: q.bestCoupon.savingPaise, applied: false };
-    return null;
-  }
-
-  protected minOrderLeft(o: CouponOffer): number {
-    return minOrderLeft(o, this.quote());
-  }
-
-  /** The green line: what it saves on this cart, or what it gives. */
-  protected highlight(o: CouponOffer): string {
-    const s = this.saving(o);
-    if (s?.applied) return `Applied: you save ${formatPaise(s.paise)} on this order`;
-    if (s) return `Save ${formatPaise(s.paise)} on this order!`;
-    if (this.minOrderLeft(o) > 0) return `Add ${formatPaise(this.minOrderLeft(o))} more to unlock`;
-    if ((o.kind ?? 'coupon') !== 'coupon') return 'No code needed';
-    return `Get ${discountLabel(o)}`;
-  }
+  protected readonly minOrderLeft = forQuote(this.quote).minOrderLeft;
+  protected readonly highlight = forQuote(this.quote).highlight;
 
   protected action(o: CouponOffer): Action {
-    const s = this.saving(o);
+    const s = savingOnCart(o, this.quote());
     if (s?.applied) return { label: 'APPLIED' };
     const kind = o.kind ?? 'coupon';
     if (kind === 'coupon') return this.quote() ? { label: 'APPLY' } : { label: 'COPY' };

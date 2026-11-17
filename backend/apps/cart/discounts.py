@@ -127,6 +127,8 @@ def summary(c: Coupon) -> dict[str, Any]:
         "description": c.description or None,
         "discount_type": c.discount_type,
         "discount_value": c.discount_value,
+        "max_discount_paise": c.max_discount_paise,
+        "min_order_paise": c.min_order_paise,
     }
 
 

@@ -32,26 +32,3 @@ li {
   height: 150px;
   border-radius: 16px;
 }
-// APPLY / COPY / VIEW: bold text in the ticket's corner.
-.action {
-  flex-shrink: 0;
-  padding: 2px 0;
-  border: 0;
-  background: none;
-  color: var(--bb-amber-600);
-  font: inherit;
-  font-size: 0.9rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-decoration: none;
-  cursor: pointer;
-  &:disabled {
-    color: var(--bb-ink-muted);
-    cursor: default;
-    opacity: 0.6;
-  }
-  &.done:disabled {
-    color: var(--bb-success);
-    opacity: 1;
-  }
-}

@@ -4,20 +4,18 @@ import { RouterLink } from '@angular/router';
 import { IconComponent } from 'nexprime';
 import { CartService } from '../../../core/services/cart.service';
 import { CatalogService } from '../../../core/services/catalog.service';
-import { codeApplier, minOrderLeft } from '../../coupons/cart-offers';
+import { codeApplier, forQuote } from '../../coupons/cart-offers';
 import { loaded } from '../../coupons/coupon-list';
-import { CouponOffer } from '../../models/checkout.models';
-import { InrPipe } from '../../pipes/money.pipes';
-import { OfferCard } from '../offer-card/offer-card';
+import { CouponTicket } from '../coupon-ticket/coupon-ticket';
 
 /**
- * A restaurant page's "Offers & deals": its own offers in a row, and a link to every offer.
+ * A restaurant page's "Offers & deals": its own offers as tickets in a row, and a link to every offer.
  * Only one restaurant offer applies to an order. With this restaurant's dishes in the cart, the
  * applied one says so and the others can be applied instead (the server checks each).
  */
 @Component({
   selector: 'bb-offers-strip',
-  imports: [OfferCard, RouterLink, IconComponent, InrPipe],
+  imports: [CouponTicket, RouterLink, IconComponent],
   templateUrl: './offers-strip.html',
   styleUrl: './offers-strip.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,7 +26,7 @@ export class OffersStrip {
   readonly slug = input.required<string>();
   private readonly applier = codeApplier();
   protected readonly applying = this.applier.busy;
-  protected readonly apply = (o: CouponOffer) => this.applier.apply(o.code);
+  protected readonly apply = this.applier.apply;
 
   private readonly offers = rxResource({
     params: () => this.slug(),
@@ -45,20 +43,12 @@ export class OffersStrip {
     return q?.cart?.restaurant?.slug === this.slug() ? q : null;
   });
   protected readonly inCart = computed(() => !!this.quote());
-  private readonly options = computed(
+  /** The offers usable on this cart, by code (the server's list; one is `applied`). */
+  protected readonly options = computed(
     () => new Map((this.quote()?.restaurantOffers ?? []).map((o) => [o.code, o])),
   );
 
-  protected applied(o: CouponOffer): boolean {
-    return !!this.options().get(o.code)?.applied;
-  }
-
-  /** Usable on this cart (the server's list), so it can replace the applied one. */
-  protected canApply(o: CouponOffer): boolean {
-    return this.options().has(o.code) && !this.applied(o);
-  }
-
-  protected minOrderLeft(o: CouponOffer): number {
-    return minOrderLeft(o, this.quote());
-  }
+  protected readonly minOrderLeft = forQuote(this.quote).minOrderLeft;
+  /** "You save ₹60", "Save ₹60 on this order!", "Add ₹80 more to unlock" or "No code needed". */
+  protected readonly highlight = forQuote(this.quote).highlight;
 }

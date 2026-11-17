@@ -9,9 +9,11 @@
     <p class="highlight">{{ line }}</p>
   }
   <ng-content select="[ticketNote]" />
-  <hr />
-  <p class="desc">{{ sentence() }}</p>
-  @if (o.terms) {
+  @if (!compact()) {
+    <hr />
+  }
+  <p class="desc" [attr.title]="compact() ? sentence() : null">{{ sentence() }}</p>
+  @if (o.terms && !compact()) {
     <button type="button" class="more" [attr.aria-expanded]="more()" (click)="more.set(!more())">
       {{ more() ? '− LESS' : '+ MORE' }}
     </button>

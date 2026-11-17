@@ -8,29 +8,24 @@
     </div>
     <ul>
       @for (o of list(); track o.code) {
+        @let option = options().get(o.code);
+        @let done = !!option?.applied;
         <li>
-          <bb-offer-card [offer]="o" [autoTag]="!inCart()">
-            @if (o.terms) {
-              <small offerNote class="terms" [title]="o.terms">T&amp;C apply</small>
-            }
-            @if (inCart() && applied(o)) {
-              <span offerNote class="state applied"><np-icon name="circle-check" class="mat-icon" matButtonIcon />Applied</span>
-            }
-            @if (inCart() && !applied(o) && minOrderLeft(o) > 0) {
-              <span offerNote class="state short">Add {{ minOrderLeft(o) | inr }} more</span>
-            }
-            @if (canApply(o)) {
+          <bb-coupon-ticket compact [offer]="o" [highlight]="highlight(o)" [locked]="minOrderLeft(o) > 0">
+            @if (option) {
               <button
-                class="bb-btn bb-btn--small apply"
+                ticketAction
                 type="button"
-                [disabled]="applying() !== null || cart.busy()"
-                [attr.aria-label]="'Apply ' + (o.name || 'this offer') + ' instead'"
-                (click)="apply(o)"
+                class="bb-ticket-action"
+                [class.done]="done"
+                [disabled]="done || applying() !== null || cart.busy()"
+                [attr.aria-label]="done ? (o.name || 'Offer') + ' applied' : 'Apply ' + (o.name || 'this offer') + ' instead'"
+                (click)="apply(o.code)"
               >
-                Apply
+                {{ done ? 'APPLIED' : 'APPLY' }}
               </button>
             }
-          </bb-offer-card>
+          </bb-coupon-ticket>
         </li>
       }
     </ul>

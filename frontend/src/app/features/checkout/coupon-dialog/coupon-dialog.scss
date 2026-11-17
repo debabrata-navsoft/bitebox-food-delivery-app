@@ -28,32 +28,17 @@ h3 {
   color: var(--bb-ink-muted);
 }
 
-// Each coupon is a shared offer card with its Apply button; locked below the minimum order.
-.offers {
+// The coupons as tickets (shared/components/coupon-ticket), one under another.
+.tickets {
   list-style: none;
-  margin: var(--bb-space-3) 0 0;
+  margin: var(--bb-space-2) 0 0;
   padding: 0;
   display: grid;
-  gap: var(--bb-space-2);
+  gap: var(--bb-space-3);
 
-  button {
-    flex-shrink: 0;
-    height: 36px;
+  li {
+    display: grid;
   }
-}
-
-.short,
-.best {
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.short {
-  color: var(--bb-danger);
-}
-
-.best {
-  color: var(--bb-success);
 }
 
 // The restaurant's offers: one applied (highlighted), the others with Apply.

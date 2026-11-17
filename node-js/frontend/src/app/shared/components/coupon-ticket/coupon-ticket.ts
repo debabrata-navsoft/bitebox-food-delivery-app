@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { booleanAttribute, ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { describe, discountParts } from '../../coupons/coupon-labels';
 import { CouponOffer } from '../../models/checkout.models';
 
@@ -12,7 +12,12 @@ import { CouponOffer } from '../../models/checkout.models';
   templateUrl: './coupon-ticket.html',
   styleUrl: './coupon-ticket.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class]': '"kind-" + (offer().kind ?? "coupon")', '[class.locked]': 'locked()' },
+  host: {
+    '[class]': '"kind-" + (offer().kind ?? "coupon")',
+    '[class.locked]': 'locked()',
+    '[class.compact]': 'compact()',
+    '[class.flat]': 'flat()',
+  },
 })
 export class CouponTicket {
   readonly offer = input.required<CouponOffer>();
@@ -20,6 +25,10 @@ export class CouponTicket {
   readonly highlight = input<string | null>(null);
   /** Greyed out (e.g. below the minimum order). */
   readonly locked = input(false);
+  /** Short, for tight spots (restaurant page, checkout): the offer on one line, no terms. */
+  readonly compact = input(false, { transform: booleanAttribute });
+  /** On a white card or dialog: a border instead of a shadow, notches in the card's colour. */
+  readonly flat = input(false, { transform: booleanAttribute });
 
   protected readonly side = computed(() => {
     const { big, small } = discountParts(this.offer());

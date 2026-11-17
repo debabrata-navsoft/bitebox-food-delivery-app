@@ -56,6 +56,8 @@ const discountSummary = {
   description: { type: ["string", "null"] },
   discountType: { enum: ["percent", "flat", "free_delivery"] },
   discountValue: { type: "integer", description: "Percent (1-100), paise for flat, 0 for free delivery" },
+  maxDiscountPaise: { type: ["integer", "null"], description: "Cap on a percent discount" },
+  minOrderPaise: { type: "integer" },
 };
 const discountLine = {
   type: "object",

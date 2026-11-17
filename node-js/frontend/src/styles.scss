@@ -1158,6 +1158,46 @@ np-time-picker .time-picker-field {
   color: var(--bb-ink-muted);
 }
 
+// A coupon ticket's APPLY / COPY / VIEW: bold text in its corner (shared/components/coupon-ticket).
+.bb-ticket-action {
+  flex-shrink: 0;
+  // Padded for the hover pill, pulled back so the text stays where it was.
+  margin: -4px -10px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+  color: var(--bb-amber-600);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  cursor: pointer;
+  &:not(:disabled):hover {
+    background: color-mix(in srgb, var(--bb-amber-600) 14%, transparent);
+  }
+  &:not(:disabled):active {
+    background: color-mix(in srgb, var(--bb-amber-600) 22%, transparent);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--bb-amber-600);
+    outline-offset: 1px;
+  }
+  &:disabled {
+    color: var(--bb-ink-muted);
+    cursor: default;
+    opacity: 0.6;
+  }
+  &.done:disabled {
+    color: var(--bb-success);
+    opacity: 1;
+  }
+}
+
 // Small links under a form step, e.g. "Resend code" and "Change details".
 .bb-form-links {
   display: flex;

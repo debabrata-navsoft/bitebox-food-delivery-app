@@ -15,9 +15,9 @@ import { shownError } from '../../../shared/forms/form-errors';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { CartQuote, CouponOffer } from '../../../shared/models/checkout.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
-import { OfferCard } from '../../../shared/components/offer-card/offer-card';
+import { CouponTicket } from '../../../shared/components/coupon-ticket/coupon-ticket';
 import { appliedMessage } from '../../../shared/coupons/coupon-labels';
-import { minOrderLeft } from '../../../shared/coupons/cart-offers';
+import { forQuote } from '../../../shared/coupons/cart-offers';
 
 /**
  * Every coupon for this cart: a code box and the available offers. An offer below its minimum order
@@ -25,7 +25,7 @@ import { minOrderLeft } from '../../../shared/coupons/cart-offers';
  */
 @Component({
   selector: 'bb-coupon-dialog',
-  imports: [FormRoot, NP_FORM_FIELDS, MatButtonModule, ButtonComponent, IconComponent, InrPipe, BbDialogTitle, OfferCard],
+  imports: [FormRoot, NP_FORM_FIELDS, MatButtonModule, ButtonComponent, IconComponent, InrPipe, BbDialogTitle, CouponTicket],
   templateUrl: './coupon-dialog.html',
   styleUrl: './coupon-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,8 +39,18 @@ export class CouponDialog {
   protected readonly shownError = shownError;
   protected readonly error = signal<string | null>(null);
   protected readonly applying = signal(false);
-  /** The server's pick: the coupon that saves most on this cart. */
-  protected readonly best = computed(() => this.cart.quote()?.bestCoupon ?? null);
+  /** The best coupon (the server's pick for this cart, else the first usable one), then the rest. */
+  protected readonly sections = computed(() => {
+    const quote = this.cart.quote();
+    const best =
+      this.offers.find((o) => o.code === quote?.bestCoupon?.code) ??
+      this.offers.find((o) => this.minOrderLeft(o) === 0);
+    return [
+      { title: 'Best coupon', items: best ? [best] : [] },
+      { title: best ? 'More coupons' : 'Available coupons', items: this.offers.filter((o) => o !== best) },
+    ].filter((s) => s.items.length);
+  });
+  protected readonly appliedCode = computed(() => this.cart.quote()?.coupon?.code ?? null);
   /** The restaurant's offers for this cart: one is applied, the others can replace it. */
   protected readonly restaurantOffers = computed(() => this.cart.quote()?.restaurantOffers ?? []);
   private readonly codeModel = signal({ code: '' });
@@ -53,10 +63,8 @@ export class CouponDialog {
     { submission: { action: async () => this.apply(this.codeModel().code) } },
   );
 
-  /** How much more the cart needs before this offer applies (0: it can be used now). */
-  protected minOrderLeft(o: CouponOffer): number {
-    return minOrderLeft(o, this.cart.quote());
-  }
+  protected readonly minOrderLeft = forQuote(this.cart.quote).minOrderLeft;
+  protected readonly highlight = forQuote(this.cart.quote).highlight;
 
   protected apply(code: string): void {
     const value = code.trim();

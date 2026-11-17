@@ -143,16 +143,19 @@
             </div>
           }
           @if (suggestion(); as s) {
-            <div class="best">
-              <np-icon name="sparkles" class="mat-icon" matButtonIcon />
-              <span>
-                <strong>Save {{ s.extra | inr }}{{ s.switching ? ' more' : '' }} with {{ s.code }}</strong>
-                <small class="bb-muted">Best offer for this cart</small>
-              </span>
-              <button mat-flat-button class="bb-btn-accent" type="button" [disabled]="cart.busy()" (click)="applyBest(s.code)">
-                {{ s.switching ? 'Switch' : 'Apply' }}
+            <p class="best-label">Best coupon for this cart</p>
+            <bb-coupon-ticket class="best" compact flat [offer]="s.offer" [highlight]="s.line">
+              <button
+                ticketAction
+                type="button"
+                class="bb-ticket-action"
+                [disabled]="cart.busy() || applying() !== null"
+                [attr.aria-label]="(s.switching ? 'Switch to ' : 'Apply ') + s.offer.code"
+                (click)="applyBest(s.offer.code)"
+              >
+                {{ s.switching ? 'SWITCH' : 'APPLY' }}
               </button>
-            </div>
+            </bb-coupon-ticket>
           }
           @if (q.coupon; as applied) {
             <div class="applied">
