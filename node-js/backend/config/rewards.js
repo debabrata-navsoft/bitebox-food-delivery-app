@@ -67,6 +67,8 @@ export const COIN_LIMITS = Object.freeze({
 /** The rewards background sweep (services/rewards-jobs.service.js). */
 export const REWARDS_JOBS = Object.freeze({
   sweepIntervalMs: 2 * 60_000,
+  // Birthdays also run on each quarter hour, so they arrive at 12:00 AM in any time zone.
+  birthdayClockMs: 15 * 60_000,
   // Upper bound of records each step handles per run, so one run never runs long.
   batchSize: 200,
 });

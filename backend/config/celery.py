@@ -7,6 +7,7 @@ by the phases that own them (docs/django-migration/06 §6.3).
 import os
 
 from celery import Celery
+from celery.schedules import crontab
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.development")
 
@@ -43,5 +44,11 @@ app.conf.beat_schedule = {
         "task": "coins.rewards_sweep",
         "schedule": 120.0,
         "options": {"expires": 110},
+    },
+    # Birthday bonuses at 12:00 AM in the rewards zone (any zone's midnight is on a quarter hour).
+    "coins-birthdays": {
+        "task": "coins.birthday_sweep",
+        "schedule": crontab(minute="0,15,30,45"),
+        "options": {"expires": 600},
     },
 }

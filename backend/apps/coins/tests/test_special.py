@@ -135,6 +135,20 @@ def test_celebrates_29_february_on_28_february_in_other_years(w: RewardsWorld) -
     assert special.birthday_sweep(now=datetime(2028, 2, 29, 10, tzinfo=UTC))["issued"] == 1
 
 
+def test_birthday_bonus_arrives_at_local_midnight(w: RewardsWorld) -> None:
+    from config.celery import app
+
+    a = sign_up(w)
+    a["c"].put("/api/v1/rewards/birthday", {"birthDate": "1995-11-05"}, format="json")
+    # 12:00 AM on 5 Nov in India is 18:30 UTC on 4 Nov: Beat runs the birthday task then.
+    midnight = datetime(2026, 11, 4, 18, 30, tzinfo=UTC)
+    schedule = app.conf.beat_schedule["coins-birthdays"]
+    assert schedule["task"] == "coins.birthday_sweep"
+    assert midnight.minute in schedule["schedule"].minute
+    assert special.birthday_sweep(now=midnight - timedelta(seconds=1))["issued"] == 0
+    assert special.birthday_sweep(now=midnight)["issued"] == 1
+
+
 def test_pays_nothing_while_birthday_rewards_are_off(w: RewardsWorld) -> None:
     a = sign_up(w)
     a["c"].put("/api/v1/rewards/birthday", {"birthDate": "1995-11-05"}, format="json")

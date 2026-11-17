@@ -38,5 +38,13 @@ const hasWork = (value) =>
     ? value > 0
     : value && typeof value === "object" && Object.values(value).some(hasWork);
 
-export const startRewardsLoop = (intervalMs = REWARDS_JOBS.sweepIntervalMs) =>
-  startSweepLoop("Rewards", () => rewardsSweep(), intervalMs, hasWork);
+export function startRewardsLoop(intervalMs = REWARDS_JOBS.sweepIntervalMs) {
+  const stops = [
+    startSweepLoop("Rewards", () => rewardsSweep(), intervalMs, hasWork),
+    // Birthday bonuses at 12:00 AM in the rewards zone: every zone's midnight is on a quarter hour.
+    startSweepLoop("Birthday", () => birthdaySweep(), REWARDS_JOBS.birthdayClockMs, hasWork, {
+      onTheClock: true,
+    }),
+  ];
+  return () => stops.forEach((stop) => stop());
+}

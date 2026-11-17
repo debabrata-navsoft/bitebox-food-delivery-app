@@ -40,6 +40,12 @@ def rewards_sweep(now: datetime | None = None, *, limit: int = BATCH_SIZE) -> di
     return summary
 
 
+@shared_task(name="coins.birthday_sweep", ignore_result=True)
+def birthday_sweep_task() -> None:
+    """Celery Beat, each quarter hour, so birthday bonuses arrive at 12:00 AM in any zone."""
+    special.birthday_sweep()
+
+
 @shared_task(name="coins.rewards_sweep", ignore_result=True)
 def rewards_sweep_task() -> None:
     """Celery Beat (every 2 minutes)."""
