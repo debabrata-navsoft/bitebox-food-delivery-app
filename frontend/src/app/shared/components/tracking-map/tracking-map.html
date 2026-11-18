@@ -1,4 +1,7 @@
-<div #map class="map" role="region" [attr.aria-label]="label()"></div>
+<bb-map-frame [title]="label()">
+  <div #map class="map" role="region" [attr.aria-label]="label()"></div>
+  <ng-content select="[mapActions]" ngProjectAs="[mapActions]" />
+</bb-map-frame>
 @if (loadError(); as message) {
   <p class="map-error" role="status">{{ message }}</p>
 }

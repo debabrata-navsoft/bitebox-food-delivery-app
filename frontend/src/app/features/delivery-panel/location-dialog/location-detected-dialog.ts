@@ -36,13 +36,16 @@ export interface LocationDetectedData {
 export class LocationDetectedDialog {
   protected readonly data = inject<LocationDetectedData>(BB_DIALOG_DATA);
   protected readonly ref = inject<BbDialogRef<void>>(BbDialogRef);
-  protected readonly titleId = inject(BB_DIALOG_TITLE_ID, { optional: true }) ?? 'location-dialog-title';
+  protected readonly titleId =
+    inject(BB_DIALOG_TITLE_ID, { optional: true }) ?? 'location-dialog-title';
   private readonly locationService = inject(DeliveryLocationService);
 
   protected readonly Math = Math;
   protected readonly placeLoading = signal(!this.data.area && !this.data.displayName);
   protected readonly placeName = signal(
-    this.data.area || this.data.city || (this.data.displayName ? this.data.displayName.split(',')[0] : ''),
+    this.data.area ||
+      this.data.city ||
+      (this.data.displayName ? this.data.displayName.split(',')[0] : ''),
   );
   protected readonly placeSub = signal(
     this.data.displayName ? this.data.displayName.split(',').slice(1, 3).join(',').trim() : '',
@@ -54,12 +57,19 @@ export class LocationDetectedDialog {
         .then((p) => {
           this.placeName.set(p.area || p.city || p.label || 'Location Locked');
           this.placeSub.set(
-            [p.city, p.state].filter(Boolean).filter((s) => s !== this.placeName()).join(', ') || p.displayName || '',
+            [p.city, p.state]
+              .filter(Boolean)
+              .filter((s) => s !== this.placeName())
+              .join(', ') ||
+              p.displayName ||
+              '',
           );
         })
         .catch(() => {
           this.placeName.set('Location Locked');
-          this.placeSub.set(`${this.data.latitude.toFixed(4)}°, ${this.data.longitude.toFixed(4)}°`);
+          this.placeSub.set(
+            `${this.data.latitude.toFixed(4)}°, ${this.data.longitude.toFixed(4)}°`,
+          );
         })
         .finally(() => this.placeLoading.set(false));
     }

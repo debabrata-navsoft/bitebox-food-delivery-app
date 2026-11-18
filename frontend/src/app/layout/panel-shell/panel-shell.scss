@@ -176,6 +176,11 @@
   padding: var(--bb-space-5) var(--bb-page-gutter) calc(var(--bb-space-7) + env(safe-area-inset-bottom));
   padding-inline: max(var(--bb-page-gutter), env(safe-area-inset-left))
     max(var(--bb-page-gutter), env(safe-area-inset-right));
+
+  // Phones: the page title sits closer to the header bar.
+  @include bp.phone-only {
+    padding-top: var(--bb-space-3);
+  }
 }
 
 // Long labels ("Delivery partner complaints") wrap onto a second line instead of being cut off.

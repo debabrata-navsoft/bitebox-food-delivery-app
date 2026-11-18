@@ -70,6 +70,7 @@
         }
         @if (switching()) {
           <np-progress-bar
+            class="bb-label-hidden"
             [indeterminate]="true"
             [showLabel]="false"
             size="small"
@@ -167,109 +168,26 @@
 
     <div class="col col-main">
       @if (active(); as o) {
-        <!-- Delivery in progress -->
-        <section class="bb-card work" aria-labelledby="active-title">
+        <!-- Delivery in progress: the full details are on their own page -->
+        <section class="bb-card work current" aria-labelledby="active-title">
           <header class="work-head">
             <h2 id="active-title">Current delivery</h2>
             <bb-order-status-chip [status]="o.status" />
           </header>
           <p class="order-no">{{ o.orderNumber }} · {{ o | itemCount }}</p>
-
-          <ol class="stops">
-            <li [class.done]="o.status !== 'assigned'">
-              <np-icon name="store" class="mat-icon" matButtonIcon />
-              <div>
-                <span class="stop-label">Pickup</span>
-                <strong>{{ o.restaurantSnapshot.name }}</strong>
-                <span>{{ o.restaurantSnapshot.address }}</span>
-                @if (o.restaurantSnapshot.phone; as phone) {
-                  <a class="call" [href]="'tel:' + phone"
-                    ><np-icon name="phone" class="mat-icon" matButtonIcon />Call restaurant</a
-                  >
-                }
-              </div>
-            </li>
-            <li>
-              <np-icon name="map-pin-house" class="mat-icon" matButtonIcon />
-              <div>
-                <span class="stop-label">Drop</span>
-                <strong>{{ o.deliveryAddress.recipientName }}</strong>
-                <span>
-                  {{ o.deliveryAddress.line1
-                  }}{{ o.deliveryAddress.line2 ? ', ' + o.deliveryAddress.line2 : '' }},
-                  {{ o.deliveryAddress.area ? o.deliveryAddress.area + ', ' : ''
-                  }}{{ o.deliveryAddress.city }}
-                </span>
-                @if (o.deliveryAddress.landmark) {
-                  <span class="bb-muted">Landmark: {{ o.deliveryAddress.landmark }}</span>
-                }
-                @if (o.deliveryAddress.phone; as phone) {
-                  <a class="call" [href]="'tel:' + phone"
-                    ><np-icon name="phone" class="mat-icon" matButtonIcon />Call customer</a
-                  >
-                }
-              </div>
-            </li>
-          </ol>
-
-          @if (o.note) {
-            <p class="note">
-              <np-icon name="sticky-note" class="mat-icon" matButtonIcon />{{ o.note }}
-            </p>
-          }
-
-          @if (stops(); as s) {
-            <bb-tracking-map
-              [restaurant]="s.restaurant"
-              [destination]="s.destination"
-              [rider]="myPosition()"
-              [route]="routeToStop()?.path ?? null"
-              [lineFrom]="myPosition() ?? s.restaurant"
-              [label]="'Map: route to ' + (s.toRestaurant ? 'the restaurant' : 'the customer')"
-            />
-            <p class="route-line">
-              @if (routeToStop(); as r) {
-                <np-icon name="route" class="mat-icon" matButtonIcon />
-                {{ r.distanceMeters / 1000 | number: '1.1-1' }} km · about
-                {{ minutes(r.durationSeconds) }} min by road to
-                {{ s.toRestaurant ? 'the restaurant' : 'the customer' }}
-                <span class="bb-muted">(estimate, no live traffic)</span>
-              } @else if (!myPosition()) {
-                <np-icon name="locate" class="mat-icon" matButtonIcon />
-                Waiting for your GPS position…
-              }
-            </p>
-          }
-
-          @let isCod = o.paymentMethod === 'cod' && o.paymentStatus !== 'paid';
-          <div [class]="isCod ? 'cash' : 'paid-online'">
-            <np-icon [name]="isCod ? 'banknote' : 'circle-check'" class="mat-icon" matButtonIcon />
-            <span>{{ isCod ? 'Collect in cash' : 'Paid online · Do not collect cash' }}</span>
-            <strong>{{ o.pricing.totalPaise | inr }}</strong>
-          </div>
-
-          @if (nextStep(); as step) {
-            <p class="hint">{{ step.hint }}</p>
-            <div class="work-actions">
-              @if (directionsUrl(); as url) {
-                <a class="bb-btn bb-btn--outlined" [href]="url" target="_blank" rel="noopener"
-                  ><np-icon name="navigation" />Directions</a
-                >
-              }
-              <np-button
-                class="go"
-                severity="success"
-                [icon]="step.icon | npIcon"
-                [label]="step.label"
-                [loading]="acting()"
-                (clicked)="advance(o)"
-              />
-            </div>
-          }
+          <p class="offer-from">
+            <np-icon name="store" class="mat-icon" matButtonIcon />
+            <strong>{{ o.restaurantSnapshot.name }}</strong>
+            <np-icon name="arrow-right" class="arrow" aria-label="to" />
+            <span>{{ o.deliveryAddress.recipientName || o.deliveryAddress.area }}</span>
+          </p>
+          <a class="bb-btn bb-btn--accent" routerLink="/delivery/current"
+            ><np-icon name="navigation" />Open current delivery</a
+          >
         </section>
       } @else if (offer(); as o) {
-        <!-- Request on offer -->
-        <section class="bb-card work offer" aria-labelledby="offer-title" role="alert">
+        <!-- Request on offer: the details and Accept/Decline are in the popup -->
+        <section class="bb-card work offer" aria-labelledby="offer-title">
           <header class="work-head">
             <h2 id="offer-title">New delivery request</h2>
             <span class="countdown" [class.soon]="offerSecondsLeft() <= 15"
@@ -277,82 +195,27 @@
             >
           </header>
           <np-progress-bar
+            class="bb-label-hidden"
             [value]="offerProgress()"
             [showLabel]="false"
             size="small"
             label="Time left to accept"
           />
-
-          <ol class="stops">
-            <li>
-              <np-icon name="store" class="mat-icon" matButtonIcon />
-              <div>
-                <span class="stop-label">Pickup</span>
-                <strong>{{ o.restaurantSnapshot.name }}</strong>
-                <span>{{ o.restaurantSnapshot.address }}</span>
-              </div>
-            </li>
-            <li>
-              <np-icon name="map-pin-house" class="mat-icon" matButtonIcon />
-              <div>
-                <span class="stop-label">Drop</span>
-                <strong>{{ o.deliveryAddress.area || o.deliveryAddress.city }}</strong>
-                <span class="bb-muted">Full address after you accept</span>
-              </div>
-            </li>
-          </ol>
-
-          <dl class="trip">
-            @if (o.estimatedEarningsPaise !== undefined) {
-              <div class="earn">
-                <dt>You earn</dt>
-                <dd>{{ o.estimatedEarningsPaise | inr }}</dd>
-              </div>
-            }
-            @if (o.pickupDistanceMeters != null) {
-              <div>
-                <dt>To pickup</dt>
-                <dd>~{{ o.pickupDistanceMeters / 1000 | number: '1.1-1' }} km</dd>
-              </div>
-            }
-            <div>
-              <dt>Trip</dt>
-              <dd>~{{ o.distanceMeters / 1000 | number: '1.1-1' }} km</dd>
-            </div>
-            <div>
-              <dt>Items</dt>
-              <dd>{{ o | itemCount }}</dd>
-            </div>
-            <div>
-              @let offerCod = o.paymentMethod === 'cod' && o.paymentStatus !== 'paid';
-              <dt>{{ offerCod ? 'Cash to collect' : 'Payment' }}</dt>
-              <dd [class.paid-tag]="!offerCod">
-                {{ offerCod ? (o.pricing.totalPaise | inr) : 'Paid online' }}
-              </dd>
-            </div>
-          </dl>
-          <p class="bb-muted small">
-            Distances are straight lines (you to the restaurant, restaurant to customer); road
-            routes are longer.
+          <p class="offer-from">
+            <np-icon name="store" class="mat-icon" matButtonIcon />
+            <strong>{{ o.restaurantSnapshot.name }}</strong>
+            <np-icon name="arrow-right" class="arrow" aria-label="to" />
+            <span>{{ o.deliveryAddress.area || o.deliveryAddress.city }}</span>
           </p>
-
-          <div class="work-actions">
-            <np-button
-              variant="outlined"
-              severity="secondary"
-              label="Decline"
-              [disabled]="acting() || offerSecondsLeft() === 0"
-              (clicked)="decline(o)"
-            />
-            <np-button
-              class="go"
-              severity="success"
-              icon="check"
-              label="Accept"
-              [disabled]="acting() || offerSecondsLeft() === 0"
-              (clicked)="accept(o)"
-            />
-          </div>
+          <button
+            type="button"
+            class="bb-btn bb-btn--accent"
+            [disabled]="acting() || offerSecondsLeft() === 0"
+            (click)="openOffer()"
+          >
+            <np-icon name="eye" class="mat-icon" matButtonIcon />
+            View request
+          </button>
         </section>
       } @else {
         <section

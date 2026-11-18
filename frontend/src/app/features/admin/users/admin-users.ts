@@ -1,4 +1,3 @@
-import { BreakpointObserver } from '@angular/cdk/layout';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -8,15 +7,16 @@ import {
   input,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { form } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { IconComponent, PaginationComponent, SelectOption } from 'nexprime';
-import { debounceTime, distinctUntilChanged, map, skip } from 'rxjs';
+import { debounceTime, distinctUntilChanged, skip } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AdminUsersService } from '../../../core/services/admin/admin-users.service';
 import { errorMessage } from '../../../core/services/api-error';
+import { mediaQuery } from '../../../core/services/media-query';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
@@ -91,12 +91,7 @@ export class AdminUsers implements OnInit {
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
 
-  protected readonly isDesktop = toSignal(
-    inject(BreakpointObserver)
-      .observe('(min-width: 768px)')
-      .pipe(map((s) => s.matches)),
-    { initialValue: true },
-  );
+  protected readonly isDesktop = mediaQuery('(min-width: 768px)', true);
 
   constructor() {
     toObservable(this.role)

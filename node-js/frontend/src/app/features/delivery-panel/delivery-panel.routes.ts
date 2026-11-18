@@ -8,6 +8,12 @@ export const DELIVERY_ROUTES: Routes = [
     loadComponent: () => import('./dashboard/delivery-dashboard').then((m) => m.DeliveryDashboard),
   },
   {
+    path: 'current',
+    title: 'Current delivery | BiteBox Delivery',
+    loadComponent: () =>
+      import('./current-delivery/current-delivery').then((m) => m.CurrentDelivery),
+  },
+  {
     path: 'history',
     title: 'Delivery history | BiteBox Delivery',
     loadComponent: () => import('./history/delivery-history').then((m) => m.DeliveryHistory),
@@ -26,7 +32,8 @@ export const DELIVERY_ROUTES: Routes = [
   {
     path: 'notifications',
     title: 'Notifications | BiteBox Delivery',
-    loadComponent: () => import('../notifications/notifications-page').then((m) => m.NotificationsPage),
+    loadComponent: () =>
+      import('../notifications/notifications-page').then((m) => m.NotificationsPage),
   },
   {
     path: 'verification',

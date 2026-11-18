@@ -1,7 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { NpIconPipe } from '../../shared/icons/np-icon-name';
 import { IconComponent } from 'nexprime';
-import { BreakpointObserver } from '@angular/cdk/layout';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -12,7 +11,7 @@ import {
   linkedSignal,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   IsActiveMatchOptions,
   NavigationEnd,
@@ -28,13 +27,14 @@ import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { filter, map } from 'rxjs';
+import { filter } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { currentUrl } from '../../core/services/current-url';
 import { NotificationBell } from '../../shared/components/notification-bell/notification-bell';
 import { BrandLogo } from '../../shared/components/brand-logo/brand-logo';
 import { InstallPromptService } from '../../core/services/install-prompt.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { DESKTOP_UP, mediaQuery } from '../../core/services/media-query';
 
 export interface NavItem {
   label: string;
@@ -122,12 +122,7 @@ export class PanelShell {
     });
   }
 
-  protected readonly isDesktop = toSignal(
-    inject(BreakpointObserver)
-      .observe('(min-width: 1024px)')
-      .pipe(map((state) => state.matches)),
-    { initialValue: true },
-  );
+  protected readonly isDesktop = mediaQuery(DESKTOP_UP, true);
 
   constructor() {
     this.router.events

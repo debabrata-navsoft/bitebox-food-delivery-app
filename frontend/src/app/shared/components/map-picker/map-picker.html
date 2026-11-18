@@ -1,4 +1,11 @@
-<div #map class="map" role="application" aria-label="Map. Drag the pin or tap to set the delivery location."></div>
+<bb-map-frame title="Drag the pin or tap to set the location">
+  <div
+    #map
+    class="map"
+    role="application"
+    aria-label="Map. Drag the pin or tap to set the delivery location."
+  ></div>
+</bb-map-frame>
 @if (loadError()) {
   <p class="map-error" role="alert">{{ loadError() }}</p>
 } @else {

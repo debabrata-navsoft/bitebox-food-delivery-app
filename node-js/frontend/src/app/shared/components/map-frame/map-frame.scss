@@ -1,0 +1,64 @@
+:host {
+  display: block;
+}
+
+// The map's frame; the map element inside sets its own height (`--bb-map-height`).
+.body {
+  position: relative;
+  border-radius: var(--bb-radius);
+  overflow: hidden;
+  border: 1px solid var(--bb-border);
+  background: var(--bb-surface-alt);
+}
+
+.frame {
+  display: contents;
+}
+
+:host(.full) {
+  --bb-map-height: 100%;
+  position: fixed;
+  inset: 0;
+  // Above the header, tab bar and dialogs (a map inside a dialog covers the dialog too).
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  background: var(--bb-surface);
+  color: var(--bb-ink);
+  padding-bottom: env(safe-area-inset-bottom);
+
+  .body {
+    flex: 1 1 auto;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-space-2);
+  padding: max(var(--bb-space-2), env(safe-area-inset-top)) var(--bb-space-3) var(--bb-space-2)
+    var(--bb-space-4);
+  border-bottom: 1px solid var(--bb-border);
+
+  h2 {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: 1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+// Over the map's top-right corner (Leaflet's zoom buttons are top-left).
+.expand {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1; // above the map, which keeps Leaflet at z-index 0
+  box-shadow: var(--bb-shadow-sm);
+}

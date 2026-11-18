@@ -1,0 +1,104 @@
+@use 'breakpoints' as bp;
+@use 'delivery-card';
+
+.layout {
+  display: grid;
+  gap: var(--bb-space-4);
+
+  // Desktop: details on the left, a taller map card on the right.
+  @include bp.desktop-up {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: start;
+  }
+}
+
+.details {
+  @include bp.below-desktop {
+    max-width: 760px;
+  }
+}
+
+.map-card {
+  --bb-map-height: 460px;
+}
+
+.call {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-weight: 600;
+
+  np-icon {
+    --bb-icon-size: 18px;
+  }
+}
+
+.note {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: var(--bb-space-2);
+  border-radius: var(--bb-radius-sm);
+  background: var(--bb-amber-100);
+  font-size: 0.9rem;
+}
+
+.cash,
+.paid-online {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-space-2);
+  padding: var(--bb-space-3);
+  border-radius: var(--bb-radius-sm);
+
+  span {
+    flex: 1;
+    font-weight: 600;
+  }
+
+  strong {
+    font-size: 1.15rem;
+  }
+}
+
+.cash {
+  background: var(--bb-amber-100);
+  color: var(--bb-warning-ink);
+  np-icon {
+    color: var(--bb-warning-ink);
+  }
+}
+
+.paid-online {
+  background: var(--bb-success-bg);
+  color: var(--bb-success);
+  np-icon {
+    color: var(--bb-success);
+  }
+}
+
+.hint {
+  margin: 0;
+  font-weight: 600;
+}
+
+.route-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.9rem;
+
+  np-icon {
+    --bb-icon-size: 18px;
+    color: var(--bb-plum-500);
+  }
+}
+
+.back {
+  display: flex;
+  justify-content: center;
+  margin: var(--bb-space-3) 0 0;
+}

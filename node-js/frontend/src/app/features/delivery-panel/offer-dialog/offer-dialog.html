@@ -1,0 +1,87 @@
+@let o = order;
+<div class="offer" role="alert">
+  <header class="offer-head">
+    <h2 bbDialogTitle>New delivery request</h2>
+    <span class="countdown" [class.soon]="secondsLeft() <= 15">{{ secondsLeft() }}s</span>
+    <np-button
+      variant="text"
+      severity="secondary"
+      icon="x"
+      label=""
+      ariaLabel="Close"
+      (clicked)="ref.close()"
+    />
+  </header>
+  <np-progress-bar
+    class="bb-label-hidden"
+    [value]="progress()"
+    [showLabel]="false"
+    size="small"
+    label="Time left to accept"
+  />
+
+  <div class="bb-dialog__content body">
+    <ol class="stops">
+      <li>
+        <np-icon name="store" class="mat-icon" matButtonIcon />
+        <div>
+          <span class="stop-label">Pickup</span>
+          <strong>{{ o.restaurantSnapshot.name }}</strong>
+          <span>{{ o.restaurantSnapshot.address }}</span>
+        </div>
+      </li>
+      <li>
+        <np-icon name="map-pin-house" class="mat-icon" matButtonIcon />
+        <div>
+          <span class="stop-label">Drop</span>
+          <strong>{{ o.deliveryAddress.area || o.deliveryAddress.city }}</strong>
+          <span class="bb-muted">Full address after you accept</span>
+        </div>
+      </li>
+    </ol>
+
+    <dl class="trip">
+      @if (o.estimatedEarningsPaise !== undefined) {
+        <div class="earn">
+          <dt>You earn</dt>
+          <dd>{{ o.estimatedEarningsPaise | inr }}</dd>
+        </div>
+      }
+      @if (o.pickupDistanceMeters != null) {
+        <div>
+          <dt>To pickup</dt>
+          <dd>~{{ o.pickupDistanceMeters / 1000 | number: '1.1-1' }} km</dd>
+        </div>
+      }
+      <div>
+        <dt>Trip</dt>
+        <dd>~{{ o.distanceMeters / 1000 | number: '1.1-1' }} km</dd>
+      </div>
+      <div>
+        <dt>Items</dt>
+        <dd>{{ o | itemCount }}</dd>
+      </div>
+      <div>
+        @let cod = o.paymentMethod === 'cod' && o.paymentStatus !== 'paid';
+        <dt>{{ cod ? 'Cash to collect' : 'Payment' }}</dt>
+        <dd [class.paid-tag]="!cod">
+          {{ cod ? (o.pricing.totalPaise | inr) : 'Paid online' }}
+        </dd>
+      </div>
+    </dl>
+    <p class="bb-muted small">
+      Distances are straight lines (you to the restaurant, restaurant to customer); road routes are
+      longer.
+    </p>
+  </div>
+
+  <div class="bb-dialog__actions work-actions">
+    <np-button
+      variant="outlined"
+      severity="secondary"
+      label="Decline"
+      (clicked)="ref.close('decline')"
+    />
+    <np-button severity="success" icon="check" label="Accept" (clicked)="ref.close('accept')" />
+  </div>
+</div>

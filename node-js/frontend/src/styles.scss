@@ -1013,6 +1013,10 @@ np-toggle.bb-toggle-stable:has(input:checked) .toggle-label {
 np-toggle.bb-label-hidden .toggle-label {
   @include visually-hidden;
 }
+// np-progress-bar's `label` is also a visible caption; keep it as the accessible name only.
+np-progress-bar.bb-label-hidden .caption {
+  @include visually-hidden;
+}
 np-toggle.bb-label-hidden-phone .toggle-label {
   @include bp.phone-only {
     @include visually-hidden;
@@ -1751,4 +1755,9 @@ $text-button: '.mat-mdc-button-base:not(.mat-mdc-icon-button)';
       }
     }
   }
+}
+
+// A map is full screen (shared/components/map-frame): the page behind it stays put.
+body.bb-map-full-open {
+  overflow: hidden;
 }

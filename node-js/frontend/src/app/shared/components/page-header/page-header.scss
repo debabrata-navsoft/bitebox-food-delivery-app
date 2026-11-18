@@ -7,9 +7,19 @@
   justify-content: space-between;
   gap: var(--bb-space-3);
   margin-bottom: var(--bb-space-5);
+
+  // Phones: less space between the title and the first card.
+  @include bp.phone-only {
+    gap: var(--bb-space-2);
+    margin-bottom: var(--bb-space-3);
+  }
 }
 h1 {
   margin-bottom: var(--bb-space-1);
+
+  @include bp.phone-only {
+    margin-bottom: 2px;
+  }
 }
 p {
   margin: 0;

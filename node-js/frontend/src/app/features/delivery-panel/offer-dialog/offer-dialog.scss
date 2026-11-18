@@ -1,0 +1,62 @@
+@use 'delivery-card';
+
+.offer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bb-space-2);
+  border-top: 4px solid var(--bb-amber);
+}
+
+.offer-head {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-space-2);
+  padding: var(--bb-space-4) var(--bb-space-4) 0 var(--bb-space-5);
+
+  h2 {
+    flex: 1;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+np-progress-bar {
+  padding-inline: var(--bb-space-5);
+}
+
+.body {
+  color: var(--bb-ink);
+  display: flex;
+  flex-direction: column;
+  gap: var(--bb-space-3);
+}
+
+.trip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: var(--bb-space-3);
+  margin: 0;
+
+  dt {
+    font-size: 0.78rem;
+    color: var(--bb-ink-muted);
+  }
+
+  dd {
+    margin: 2px 0 0;
+    font-weight: 700;
+  }
+
+  .earn dd {
+    color: var(--bb-success);
+  }
+}
+
+.paid-tag {
+  color: var(--bb-success);
+}
+
+.small {
+  margin: 0;
+  font-size: 0.78rem;
+}

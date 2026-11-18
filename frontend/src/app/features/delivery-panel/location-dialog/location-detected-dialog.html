@@ -18,10 +18,20 @@
       <div class="radar-core">
         <div class="pin-group">
           <svg class="pin-svg" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="url(#pinGrad)" />
+            <path
+              d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
+              fill="url(#pinGrad)"
+            />
             <circle cx="12" cy="9" r="3.2" fill="#fff" />
             <defs>
-              <linearGradient id="pinGrad" x1="5" y1="2" x2="19" y2="22" gradientUnits="userSpaceOnUse">
+              <linearGradient
+                id="pinGrad"
+                x1="5"
+                y1="2"
+                x2="19"
+                y2="22"
+                gradientUnits="userSpaceOnUse"
+              >
                 <stop stop-color="#10b981" />
                 <stop offset="1" stop-color="#059669" />
               </linearGradient>
@@ -56,13 +66,18 @@
       <div class="meta-row">
         <div class="meta-col">
           <span class="meta-caption">Coordinates</span>
-          <span class="meta-value">{{ data.latitude | number: '1.4-4' }}°, {{ data.longitude | number: '1.4-4' }}°</span>
+          <span class="meta-value"
+            >{{ data.latitude | number: '1.4-4' }}°, {{ data.longitude | number: '1.4-4' }}°</span
+          >
         </div>
         @if (data.accuracy != null) {
           <div class="meta-col">
             <span class="meta-caption">Accuracy</span>
             <span class="meta-value accuracy-tag">
-              <span class="signal-bars" aria-hidden="true"><span class="bar bar-1"></span><span class="bar bar-2"></span><span class="bar bar-3"></span></span>
+              <span class="signal-bars" aria-hidden="true"
+                ><span class="bar bar-1"></span><span class="bar bar-2"></span
+                ><span class="bar bar-3"></span
+              ></span>
               ±{{ Math.round(data.accuracy) }}m
             </span>
           </div>

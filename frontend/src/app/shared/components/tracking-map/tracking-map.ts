@@ -14,6 +14,7 @@ import {
 import type * as Leaflet from 'leaflet';
 import { environment } from '../../../../environments/environment';
 import { Point, isValidPoint } from '../../../core/services/routing.service';
+import { MapFrame } from '../map-frame/map-frame';
 
 type MarkerKind = 'restaurant' | 'home' | 'rider';
 const ICON: Record<MarkerKind, string> = {
@@ -37,6 +38,7 @@ const LINE: Record<'road' | 'straight' | 'trail', Leaflet.PolylineOptions> = {
 
 @Component({
   selector: 'bb-tracking-map',
+  imports: [MapFrame],
   templateUrl: './tracking-map.html',
   styleUrl: './tracking-map.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

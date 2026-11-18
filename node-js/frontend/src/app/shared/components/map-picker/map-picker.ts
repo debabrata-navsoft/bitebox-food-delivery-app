@@ -14,6 +14,7 @@ import {
 import type * as Leaflet from 'leaflet';
 import { environment } from '../../../../environments/environment';
 import { UNRELIABLE_ACCURACY_M } from '../../../core/services/geolocation.service';
+import { MapFrame } from '../map-frame/map-frame';
 
 export interface LatLng {
   latitude: number;
@@ -24,6 +25,7 @@ const FALLBACK: LatLng = { latitude: 22.35, longitude: 78.67 };
 
 @Component({
   selector: 'bb-map-picker',
+  imports: [MapFrame],
   templateUrl: './map-picker.html',
   styleUrl: './map-picker.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

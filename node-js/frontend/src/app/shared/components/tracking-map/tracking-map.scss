@@ -3,14 +3,10 @@
 }
 
 .map {
-  height: 280px;
-  border-radius: var(--bb-radius);
-  overflow: hidden;
-  border: 1px solid var(--bb-border);
-  background: var(--bb-surface-alt);
-  // Keep Leaflet's controls under dialogs, menus and the sticky header.
-  z-index: 0;
+  height: var(--bb-map-height, 280px);
+  // Keep Leaflet's panes under dialogs, menus and the sticky header.
   position: relative;
+  z-index: 0;
 }
 
 .map-error {
