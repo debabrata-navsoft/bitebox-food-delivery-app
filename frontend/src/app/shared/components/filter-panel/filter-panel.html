@@ -45,7 +45,7 @@
 
     <div class="sections">
       @for (s of sections(); track s.key) {
-        @let isOpen = expanded().has(s.key);
+        @let isOpen = expanded() === s.key;
         <section>
           <button type="button" class="section-head" [attr.aria-expanded]="isOpen" (click)="toggleSection(s.key)">
             <span>

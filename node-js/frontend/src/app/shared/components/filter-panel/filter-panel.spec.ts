@@ -55,6 +55,21 @@ describe('FilterPanel', () => {
     cmp.applyDraft();
     expect(applied).toEqual([{ status: ['blocked'], city: ['Pune'] }]);
   });
+
+  it('keeps one section open at a time', async () => {
+    const { fixture, el } = await create();
+    el.querySelector<HTMLButtonElement>('.trigger')!.click();
+    await fixture.whenStable();
+    const heads = () => [...el.querySelectorAll<HTMLButtonElement>('.section-head')];
+    const openOnes = () => heads().filter((h) => h.getAttribute('aria-expanded') === 'true').map((h) => h.textContent!.trim());
+    expect(openOnes()).toEqual(['Status']); // the first starts open
+    heads()[2].click(); // Joined
+    await fixture.whenStable();
+    expect(openOnes()).toEqual(['Joined']);
+    heads()[2].click(); // the open one again: all closed
+    await fixture.whenStable();
+    expect(openOnes()).toEqual([]);
+  });
 });
 
 describe('filtersToQuery', () => {

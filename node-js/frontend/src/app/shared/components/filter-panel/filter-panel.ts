@@ -40,7 +40,8 @@ export class FilterPanel {
 
   protected readonly open = signal(false);
   protected readonly draft = signal<FilterValue>({});
-  protected readonly expanded = signal<Set<string>>(new Set());
+  /** The one open section (opening another closes it); null when all are closed. */
+  protected readonly expanded = signal<string | null>(null);
   protected readonly searches = signal<Record<string, string>>({});
   protected readonly active = computed(() => countSelected(this.value()));
   protected readonly dateKeys = dateKeys;
@@ -78,8 +79,7 @@ export class FilterPanel {
       if (!this.open()) return;
       untracked(() => {
         this.draft.set(structuredClone(this.value()));
-        const first = this.sections()[0];
-        this.expanded.set(new Set(first ? [first.key] : []));
+        this.expanded.set(this.sections()[0]?.key ?? null);
         this.searches.set({});
       });
     });
@@ -126,11 +126,7 @@ export class FilterPanel {
 
 
   protected toggleSection(key: string): void {
-    this.expanded.update((set) => {
-      const next = new Set(set);
-      if (!next.delete(key)) next.add(key);
-      return next;
-    });
+    this.expanded.update((open) => (open === key ? null : key));
   }
 
   protected search(key: string, text: string): void {
