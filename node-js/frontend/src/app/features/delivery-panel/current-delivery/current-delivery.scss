@@ -1,25 +1,38 @@
 @use 'breakpoints' as bp;
 @use 'delivery-card';
 
-.layout {
-  display: grid;
-  gap: var(--bb-space-4);
-
-  // Desktop: details on the left, a taller map card on the right.
-  @include bp.desktop-up {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-    align-items: start;
-  }
-}
-
+// One card: details, map, payment in a column; on desktop the map takes the right column
+// beside the details and payment (CSS only, so the map is never re-created).
 .details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bb-space-3);
+
   @include bp.below-desktop {
     max-width: 760px;
   }
-}
 
-.map-card {
-  --bb-map-height: 460px;
+  @include bp.desktop-up {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'top map'
+      'bottom map';
+    gap: var(--bb-space-3) var(--bb-space-5);
+    align-items: start;
+
+    .top {
+      grid-area: top;
+    }
+    .bottom {
+      grid-area: bottom;
+    }
+    .map-part {
+      grid-area: map;
+      --bb-map-height: 460px;
+    }
+  }
 }
 
 .call {

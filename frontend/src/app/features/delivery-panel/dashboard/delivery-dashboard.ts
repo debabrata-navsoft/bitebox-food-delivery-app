@@ -8,12 +8,11 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { IconComponent, ProgressBarComponent, ToggleComponent } from 'nexprime';
-import { EMPTY, firstValueFrom, interval, switchMap } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { errorMessage } from '../../../core/services/api-error';
 import {
   GeolocationService,
@@ -30,18 +29,11 @@ import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { OrderStatusChip } from '../../../shared/components/order-status-chip/order-status-chip';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
-import { BbDialog, BbDialogRef } from '../../../shared/dialog/bb-dialog';
+import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { openLocationDetectedDialog } from '../location-dialog/location-detected-dialog';
-import {
-  OfferDecision,
-  OfferDialog,
-  offerProgress,
-  openOfferDialog,
-} from '../offer-dialog/offer-dialog';
 import { openVehicleDialog } from '../vehicle-dialog/vehicle-dialog';
 import { VEHICLE_LABEL } from '../../../shared/models/checkout.models';
 import {
-  RiderOrder,
   RiderStats,
   RIDER_VERIFICATION_COPY,
   riderReviewState,
@@ -78,14 +70,12 @@ export class DeliveryDashboard {
   private readonly bbDialog = inject(BbDialog);
   private readonly router = inject(Router);
   private readonly session = inject(RiderSession);
-  private offerDialog: BbDialogRef<OfferDecision, OfferDialog> | null = null;
 
   protected readonly data = this.session.data;
   protected readonly loadError = this.session.loadError;
   protected readonly acting = this.session.acting;
   protected readonly switching = signal(false);
   protected readonly availabilityError = signal<string | null>(null);
-  protected readonly now = signal(Date.now());
   protected readonly stats = signal<RiderStats | null>(null);
   /** When the API has no /delivery/stats: hide the figures. */
   protected readonly statsUnavailable = signal(false);
@@ -126,37 +116,12 @@ export class DeliveryDashboard {
     const fix = this.gps.fix();
     return fix ? { latitude: fix.latitude, longitude: fix.longitude } : null;
   });
-  protected readonly offerSecondsLeft = computed(() => {
-    const expires = this.offer()?.offerExpiresAt;
-    return expires ? Math.max(0, Math.ceil((new Date(expires).getTime() - this.now()) / 1000)) : 0;
-  });
-  protected readonly offerProgress = computed(() =>
-    offerProgress(this.offerSecondsLeft(), this.offer()),
-  );
+  // The request's countdown and popup belong to the whole rider panel (RiderSession).
+  protected readonly offerSecondsLeft = this.session.offerSecondsLeft;
+  protected readonly offerProgress = this.session.offerProgress;
+  protected readonly openOffer = () => this.session.openOffer();
 
   constructor() {
-    toObservable(computed(() => this.offer() !== null))
-      .pipe(
-        switchMap((offered) => (offered ? interval(1000) : EMPTY)),
-        takeUntilDestroyed(),
-      )
-      .subscribe(() => this.now.set(Date.now()));
-
-    // A new request: announce it and show it as a popup; close the popup once it is gone.
-    let shownOffer: string | undefined;
-    effect(() => {
-      const offer = this.offer();
-      untracked(() => {
-        if (offer?.id === shownOffer) return;
-        shownOffer = offer?.id;
-        this.offerDialog?.close();
-        if (!offer) return;
-        this.now.set(Date.now());
-        this.notify.info(`New delivery request from ${offer.restaurantSnapshot.name}`);
-        this.openOffer();
-      });
-    });
-
     // Once per online session: the place name and the "location detected" popup.
     effect(() => {
       const online = this.online();
@@ -170,24 +135,9 @@ export class DeliveryDashboard {
             next: (p) => this.detectedPlace.set(p.area || p.city || p.label || null),
             error: () => undefined,
           });
-          this.showLocationPopup(fix.latitude, fix.longitude, fix.accuracy);
+          this.showLocationPopup(fix);
         }
       });
-    });
-  }
-
-  /** The request as a popup; it closes itself once the request has run out. */
-  protected openOffer(): void {
-    const order = this.offer();
-    if (this.offerDialog || !order) return;
-    this.offerDialog = openOfferDialog(this.bbDialog, {
-      order,
-      secondsLeft: this.offerSecondsLeft,
-    });
-    this.offerDialog.closed.subscribe((decision) => {
-      this.offerDialog = null;
-      if (decision === 'accept') this.accept(order);
-      else if (decision === 'decline') this.decline(order);
     });
   }
 
@@ -204,11 +154,13 @@ export class DeliveryDashboard {
     this.availabilityError.set(null);
     try {
       if (online) {
-        const { latitude, longitude, accuracy } = await this.geo.currentPrecise();
-        this.session.apply(await firstValueFrom(this.rider.goOnline(latitude, longitude)));
+        const here = await this.geo.currentPrecise();
+        this.session.apply(
+          await firstValueFrom(this.rider.goOnline(here.latitude, here.longitude)),
+        );
         this.notify.success('You are online. Requests near you will appear here.');
         this.session.locationShown = true;
-        this.showLocationPopup(latitude, longitude, accuracy);
+        this.showLocationPopup(here);
       } else {
         this.session.locationShown = false;
         this.session.apply(await firstValueFrom(this.rider.goOffline()));
@@ -229,36 +181,18 @@ export class DeliveryDashboard {
     }
   }
 
-  protected showLocationPopup(latitude: number, longitude: number, accuracy?: number): void {
-    openLocationDetectedDialog(this.bbDialog, {
-      latitude,
-      longitude,
-      accuracy,
-      area: this.detectedPlace() ?? undefined,
-    });
+  private showLocationPopup(at: { latitude: number; longitude: number; accuracy?: number }): void {
+    const { latitude, longitude, accuracy } = at;
+    const area = this.detectedPlace() ?? undefined;
+    openLocationDetectedDialog(this.bbDialog, { latitude, longitude, accuracy, area });
   }
 
   protected reopenLocationPopup(): void {
     const fix = this.gps.fix();
-    if (fix) {
-      this.showLocationPopup(fix.latitude, fix.longitude, fix.accuracy);
-      return;
-    }
+    if (fix) return this.showLocationPopup(fix);
     this.geo.currentPrecise().then(
-      (c) => this.showLocationPopup(c.latitude, c.longitude, c.accuracy),
+      (here) => this.showLocationPopup(here),
       () => this.notify.error('Could not detect location. Please check your device GPS.'),
     );
-  }
-
-  protected accept(order: RiderOrder): void {
-    this.session.run(
-      this.rider.accept(order.id),
-      'Accepted. Head to the restaurant.',
-      () => void this.router.navigateByUrl('/delivery/current'),
-    );
-  }
-
-  protected decline(order: RiderOrder): void {
-    this.session.run(this.rider.decline(order.id), 'Request declined');
   }
 }

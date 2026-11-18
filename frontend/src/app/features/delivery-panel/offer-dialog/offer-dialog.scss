@@ -52,6 +52,51 @@ np-progress-bar {
   }
 }
 
+.offer-map {
+  --bb-map-height: clamp(160px, 28vh, 220px);
+}
+
+.legs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+
+  li {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    column-gap: var(--bb-space-2);
+  }
+
+  np-icon {
+    --bb-icon-size: 18px;
+    color: var(--bb-plum);
+  }
+
+  strong {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // The road time sits under the distance, right-aligned.
+  .note {
+    grid-column: 2 / -1;
+    text-align: right;
+    font-size: 0.78rem;
+    margin-top: -4px;
+  }
+
+  .total {
+    padding-top: 6px;
+    border-top: 1px dashed var(--bb-border);
+    font-weight: 700;
+  }
+}
+
 .paid-tag {
   color: var(--bb-success);
 }

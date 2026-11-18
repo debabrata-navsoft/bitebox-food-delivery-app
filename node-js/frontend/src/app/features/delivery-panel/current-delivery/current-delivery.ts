@@ -1,14 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonComponent, IconComponent } from 'nexprime';
 import { NotificationService } from '../../../core/services/notification.service';
-import { MAX_USABLE_ACCURACY_M } from '../../../core/services/geolocation.service';
-import { DESKTOP_UP, mediaQuery } from '../../../core/services/media-query';
 import { RiderService } from '../../../core/services/order-management.service';
 import { RiderGps } from '../../../core/services/rider-gps.service';
 import { RiderSession } from '../../../core/services/rider-session.service';
-import { Point, etaMinutes, fromCoordinates } from '../../../core/services/routing.service';
+import { etaMinutes, fromCoordinates } from '../../../core/services/routing.service';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { OrderStatusChip } from '../../../shared/components/order-status-chip/order-status-chip';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
@@ -20,6 +18,7 @@ import {
   AT_OR_TO_RESTAURANT,
   RiderAction,
   RiderOrder,
+  collectsCash,
 } from '../../../shared/models/order-management.models';
 import { ItemCountPipe } from '../../../shared/pipes/item-count.pipe';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
@@ -62,7 +61,6 @@ const NEXT_ACTION: Partial<Record<RiderOrder['status'], RiderAction>> = {
   selector: 'bb-current-delivery',
   imports: [
     DecimalPipe,
-    NgTemplateOutlet,
     RouterLink,
     ButtonComponent,
     IconComponent,
@@ -90,8 +88,6 @@ export class CurrentDelivery {
   protected readonly loadError = this.session.loadError;
   protected readonly acting = this.session.acting;
   protected readonly active = this.session.active;
-  /** Desktop: the map gets its own card beside the details. */
-  protected readonly isDesktop = mediaQuery(DESKTOP_UP);
   protected readonly nextStep = computed(() => {
     const o = this.active();
     const action = o && (o.nextStatuses ? o.nextStatuses[0] : NEXT_ACTION[o.status]);
@@ -128,17 +124,13 @@ export class CurrentDelivery {
       ? `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=;${t.latitude},${t.longitude}`
       : null;
   });
-  protected readonly myPosition = computed<Point | null>(() => {
-    const fix = this.gps.fix();
-    return fix && fix.accuracy <= MAX_USABLE_ACCURACY_M
-      ? { latitude: fix.latitude, longitude: fix.longitude }
-      : null;
-  });
+  protected readonly myPosition = this.gps.position;
   protected readonly routeToStop = rerouteWhileMoving(
     this.myPosition,
     computed(() => this.stops()?.target ?? null),
   );
   protected readonly minutes = etaMinutes;
+  protected readonly collectsCash = collectsCash;
 
   protected advance(order: RiderOrder): void {
     const step = this.nextStep();

@@ -124,6 +124,10 @@ export interface RiderOrder extends Omit<Order, 'deliveryAddress' | 'rider' | 'c
   deliveryOtpRequired?: boolean;
 }
 
+/** True when the rider must collect the total in cash at the door (cash on delivery, not yet paid). */
+export const collectsCash = (o: Pick<Order, 'paymentMethod' | 'paymentStatus'>): boolean =>
+  o.paymentMethod === 'cod' && o.paymentStatus !== 'paid';
+
 /** GET /delivery/stats (Django API only). Money in paise. */
 export interface RiderStats {
   today: { deliveries: number; earningsPaise: number };

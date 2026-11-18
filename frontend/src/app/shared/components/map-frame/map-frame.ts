@@ -67,6 +67,12 @@ export class MapFrame {
     if (this.document.fullscreenEnabled && el.requestFullscreen) {
       el.requestFullscreen().then(
         () => {
+          // Closed (X or Escape) while the browser was still switching: leave it again at once,
+          // or the page would stay in full screen with no exit button.
+          if (!this.full()) {
+            if (this.document.fullscreenElement === el) void this.document.exitFullscreen().catch(() => undefined);
+            return;
+          }
           this.native = true;
           this.document.addEventListener('fullscreenchange', this.onFullscreenChange);
         },

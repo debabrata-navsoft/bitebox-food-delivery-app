@@ -57,7 +57,7 @@
             (click)="reopenLocationPopup()"
             title="Location auto-detected. Click to view details."
           >
-            <span class="live-dot" aria-hidden="true"></span>
+            <span class="bb-live-dot" aria-hidden="true"></span>
             <np-icon name="map-pin" class="mat-icon" matButtonIcon />
             <span
               >GPS Active:
@@ -250,7 +250,7 @@
             </p>
             @if (online() && gps.fix()) {
               <button type="button" class="view-location-btn" (click)="reopenLocationPopup()">
-                <span class="live-dot" aria-hidden="true"></span>
+                <span class="bb-live-dot" aria-hidden="true"></span>
                 <np-icon name="map-pin" class="mat-icon" matButtonIcon />
                 <span
                   >Location: <strong>{{ detectedPlace() || 'Auto-Detected' }}</strong> · View</span
@@ -263,7 +263,7 @@
             <div class="idle-map-wrap">
               <div class="map-status-bar">
                 <div class="map-status-left">
-                  <span class="live-dot" aria-hidden="true"></span>
+                  <span class="bb-live-dot" aria-hidden="true"></span>
                   <strong class="map-title">Live Map</strong>
                   <span class="map-place-text">· {{ detectedPlace() || 'GPS Active' }}</span>
                 </div>

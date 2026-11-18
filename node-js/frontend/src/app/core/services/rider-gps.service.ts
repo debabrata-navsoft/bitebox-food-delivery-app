@@ -1,10 +1,10 @@
-import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
+import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { MAX_USABLE_ACCURACY_M } from './geolocation.service';
 import { RiderService } from './order-management.service';
 import { LocationAck, RealtimeService } from './realtime.service';
-import { distanceMeters } from './routing.service';
+import { Point, distanceMeters } from './routing.service';
 
 export interface GpsFix {
   latitude: number;
@@ -25,6 +25,13 @@ export class RiderGps {
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
 
   readonly fix = signal<GpsFix | null>(null);
+  /** The latest fix when it is precise enough to draw and route from (null otherwise). */
+  readonly position = computed<Point | null>(() => {
+    const fix = this.fix();
+    return fix && fix.accuracy <= MAX_USABLE_ACCURACY_M
+      ? { latitude: fix.latitude, longitude: fix.longitude }
+      : null;
+  });
   readonly problem = signal<string | null>(null);
   readonly lastSharedAt = signal<number | null>(null);
 

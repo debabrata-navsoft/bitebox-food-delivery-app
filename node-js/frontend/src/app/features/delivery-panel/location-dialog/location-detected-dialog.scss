@@ -28,26 +28,6 @@
   font-weight: 600;
 }
 
-.pulsing-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--bb-success);
-  animation: dotPulse 2s infinite;
-}
-
-@keyframes dotPulse {
-  0%,
-  100% {
-    transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
-  }
-  50% {
-    transform: scale(1.1);
-    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
-  }
-}
-
 .close-btn {
   display: inline-flex;
   align-items: center;
@@ -90,7 +70,7 @@
   left: 50%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: 1.5px solid rgba(16, 185, 129, 0.45);
+  border: 1.5px solid color-mix(in srgb, var(--bb-success) 45%, transparent);
   animation: radarExp 2.8s infinite cubic-bezier(0.2, 0.8, 0.4, 1);
   &.ring-1 {
     width: 44px;
@@ -126,7 +106,7 @@
   border-radius: 50%;
   background: conic-gradient(
     from 0deg at 50% 50%,
-    rgba(16, 185, 129, 0.22) 0deg,
+    color-mix(in srgb, var(--bb-success) 22%, transparent) 0deg,
     transparent 60deg,
     transparent 360deg
   );
@@ -147,7 +127,7 @@
   border-radius: 50%;
   background: var(--bb-success-bg);
   border: 2px solid var(--bb-success);
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--bb-success) 30%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -164,7 +144,7 @@
 .pin-svg {
   width: 30px;
   height: 30px;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.15));
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 15%));
 }
 
 .pin-shadow {
@@ -172,7 +152,7 @@
   bottom: -3px;
   width: 14px;
   height: 4px;
-  background: rgba(5, 150, 105, 0.3);
+  background: color-mix(in srgb, var(--bb-success) 30%, transparent);
   border-radius: 50%;
 }
 
@@ -204,7 +184,7 @@
   align-items: center;
   justify-content: center;
   border: 2px solid var(--bb-surface);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--bb-shadow-sm);
   animation: checkPop 0.4s 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   np-icon {
     --bb-icon-size: 12px;
@@ -397,7 +377,7 @@
     color: #fff;
     border: none;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.28);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--bb-success) 28%, transparent);
     transition:
       background 0.15s,
       transform 0.1s;
@@ -405,7 +385,7 @@
       --bb-icon-size: 16px;
     }
     &:hover {
-      background: color-mix(in srgb, var(--bb-success-solid) 85%, #000);
+      background: color-mix(in srgb, var(--bb-success-solid) 85%, var(--bb-ink));
       transform: translateY(-1px);
     }
   }

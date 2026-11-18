@@ -327,7 +327,7 @@ h2 {
 .radar-wave-ring {
   position: absolute;
   border-radius: 50%;
-  border: 1.5px solid rgba(245, 158, 11, 0.45);
+  border: 1.5px solid color-mix(in srgb, var(--bb-warning) 45%, transparent);
   animation: radarWaveExpand 2.8s infinite cubic-bezier(0.2, 0.8, 0.4, 1);
   &.wave-1 {
     width: 44px;
@@ -367,29 +367,9 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--bb-warning) 25%, transparent);
   np-icon {
     --bb-icon-size: 26px;
-  }
-}
-
-.live-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--bb-success);
-  animation: dotBlink 2s infinite;
-}
-
-@keyframes dotBlink {
-  0%,
-  100% {
-    transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
-  }
-  50% {
-    transform: scale(1.1);
-    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
   }
 }
 

@@ -1,5 +1,5 @@
 @let o = order;
-<div class="offer" role="alert">
+<div class="offer">
   <header class="offer-head">
     <h2 bbDialogTitle>New delivery request</h2>
     <span class="countdown" [class.soon]="secondsLeft() <= 15">{{ secondsLeft() }}s</span>
@@ -40,6 +40,33 @@
       </li>
     </ol>
 
+    <bb-tracking-map
+      class="offer-map"
+      [restaurant]="restaurant"
+      [destination]="destination"
+      [rider]="me()"
+      [route]="path()"
+      [lineFrom]="restaurant"
+      label="Route: you, the restaurant and the customer"
+    />
+
+    <ul class="legs" aria-label="Distances">
+      @for (l of legs(); track l.label) {
+        <li [class.total]="$index === 2">
+          <np-icon [name]="l.icon" class="mat-icon" matButtonIcon />
+          <span>{{ l.label }}</span>
+          @if (l.meters !== null) {
+            <strong>{{ l.minutes === null ? '~' : '' }}{{ km(l.meters) }}</strong>
+            <span class="bb-muted note">{{
+              l.minutes === null ? 'straight line' : 'about ' + l.minutes + ' min by road'
+            }}</span>
+          } @else {
+            <span class="bb-muted note">Waiting for your GPS…</span>
+          }
+        </li>
+      }
+    </ul>
+
     <dl class="trip">
       @if (o.estimatedEarningsPaise !== undefined) {
         <div class="earn">
@@ -47,32 +74,18 @@
           <dd>{{ o.estimatedEarningsPaise | inr }}</dd>
         </div>
       }
-      @if (o.pickupDistanceMeters != null) {
-        <div>
-          <dt>To pickup</dt>
-          <dd>~{{ o.pickupDistanceMeters / 1000 | number: '1.1-1' }} km</dd>
-        </div>
-      }
-      <div>
-        <dt>Trip</dt>
-        <dd>~{{ o.distanceMeters / 1000 | number: '1.1-1' }} km</dd>
-      </div>
       <div>
         <dt>Items</dt>
         <dd>{{ o | itemCount }}</dd>
       </div>
       <div>
-        @let cod = o.paymentMethod === 'cod' && o.paymentStatus !== 'paid';
         <dt>{{ cod ? 'Cash to collect' : 'Payment' }}</dt>
         <dd [class.paid-tag]="!cod">
           {{ cod ? (o.pricing.totalPaise | inr) : 'Paid online' }}
         </dd>
       </div>
     </dl>
-    <p class="bb-muted small">
-      Distances are straight lines (you to the restaurant, restaurant to customer); road routes are
-      longer.
-    </p>
+    <p class="bb-muted small">Road times are estimates without live traffic.</p>
   </div>
 
   <div class="bb-dialog__actions work-actions">

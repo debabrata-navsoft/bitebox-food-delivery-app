@@ -11,8 +11,10 @@
   }
 } @else {
   @if (active(); as o) {
-    <div class="layout">
-      <section class="bb-card work details" aria-labelledby="active-title">
+    <!-- One card. Phones and tablets: details, map, payment in a column. Desktop: the map on the
+         right beside the details and payment (placed by CSS, so the map never reloads). -->
+    <section class="bb-card details" aria-labelledby="active-title">
+      <div class="work part top">
         <header class="work-head">
           <h2 id="active-title">Current delivery</h2>
           <bb-order-status-chip [status]="o.status" />
@@ -61,12 +63,46 @@
             <np-icon name="sticky-note" class="mat-icon" matButtonIcon />{{ o.note }}
           </p>
         }
+      </div>
 
-        @if (!isDesktop()) {
-          <ng-container [ngTemplateOutlet]="map" />
+      <div class="work part map-part">
+        @if (stops(); as s) {
+          <bb-tracking-map
+            [restaurant]="s.restaurant"
+            [destination]="s.destination"
+            [rider]="myPosition()"
+            [route]="routeToStop()?.path ?? null"
+            [lineFrom]="myPosition() ?? s.restaurant"
+            [label]="'Route to ' + (s.toRestaurant ? 'the restaurant' : 'the customer')"
+          >
+            @if (directionsUrl(); as url) {
+              <a
+                mapActions
+                class="bb-btn bb-btn--outlined bb-btn--small"
+                [href]="url"
+                target="_blank"
+                rel="noopener"
+                ><np-icon name="navigation" />Directions</a
+              >
+            }
+          </bb-tracking-map>
+          <p class="route-line">
+            @if (routeToStop(); as r) {
+              <np-icon name="route" class="mat-icon" matButtonIcon />
+              {{ r.distanceMeters / 1000 | number: '1.1-1' }} km · about
+              {{ minutes(r.durationSeconds) }} min by road to
+              {{ s.toRestaurant ? 'the restaurant' : 'the customer' }}
+              <span class="bb-muted">(estimate, no live traffic)</span>
+            } @else if (!myPosition()) {
+              <np-icon name="locate" class="mat-icon" matButtonIcon />
+              Waiting for your GPS position…
+            }
+          </p>
         }
+      </div>
 
-        @let isCod = o.paymentMethod === 'cod' && o.paymentStatus !== 'paid';
+      <div class="work part bottom">
+        @let isCod = collectsCash(o);
         <div [class]="isCod ? 'cash' : 'paid-online'">
           <np-icon [name]="isCod ? 'banknote' : 'circle-check'" class="mat-icon" matButtonIcon />
           <span>{{ isCod ? 'Collect in cash' : 'Paid online · Do not collect cash' }}</span>
@@ -91,51 +127,8 @@
             />
           </div>
         }
-      </section>
-      @if (isDesktop()) {
-        <section class="bb-card work map-card" aria-label="Route map">
-          <ng-container [ngTemplateOutlet]="map" />
-        </section>
-      }
-    </div>
-
-    <!-- On desktop the map has its own card beside the details; on phones and tablets it sits
-         between the stops and the payment. -->
-    <ng-template #map>
-      @if (stops(); as s) {
-        <bb-tracking-map
-          [restaurant]="s.restaurant"
-          [destination]="s.destination"
-          [rider]="myPosition()"
-          [route]="routeToStop()?.path ?? null"
-          [lineFrom]="myPosition() ?? s.restaurant"
-          [label]="'Route to ' + (s.toRestaurant ? 'the restaurant' : 'the customer')"
-        >
-          @if (directionsUrl(); as url) {
-            <a
-              mapActions
-              class="bb-btn bb-btn--outlined bb-btn--small"
-              [href]="url"
-              target="_blank"
-              rel="noopener"
-              ><np-icon name="navigation" />Directions</a
-            >
-          }
-        </bb-tracking-map>
-        <p class="route-line">
-          @if (routeToStop(); as r) {
-            <np-icon name="route" class="mat-icon" matButtonIcon />
-            {{ r.distanceMeters / 1000 | number: '1.1-1' }} km · about
-            {{ minutes(r.durationSeconds) }} min by road to
-            {{ s.toRestaurant ? 'the restaurant' : 'the customer' }}
-            <span class="bb-muted">(estimate, no live traffic)</span>
-          } @else if (!myPosition()) {
-            <np-icon name="locate" class="mat-icon" matButtonIcon />
-            Waiting for your GPS position…
-          }
-        </p>
-      }
-    </ng-template>
+      </div>
+    </section>
   } @else {
     <bb-empty-state
       icon="two_wheeler"

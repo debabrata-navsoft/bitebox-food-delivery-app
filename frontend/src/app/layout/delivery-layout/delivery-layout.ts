@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RiderSession } from '../../core/services/rider-session.service';
 import { NavItem, PanelShell } from '../panel-shell/panel-shell';
 
@@ -6,11 +6,15 @@ import { NavItem, PanelShell } from '../panel-shell/panel-shell';
   selector: 'bb-delivery-layout',
   imports: [PanelShell],
   templateUrl: './delivery-layout.html',
-  // One rider state (live refresh, GPS) for every delivery page.
+  // One rider state (live refresh, GPS, the request popup) for every delivery page.
   providers: [RiderSession],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeliveryLayout {
+  // Started here, not by the first page that reads it, so a new request pops up on every rider
+  // page (History, Earnings...), not only on the ones that use the rider state.
+  private readonly session = inject(RiderSession);
+
   protected readonly nav: NavItem[] = [
     { label: 'Dashboard', icon: 'space_dashboard', link: '/delivery', exact: true },
     { label: 'Current delivery', icon: 'navigation', link: '/delivery/current' },

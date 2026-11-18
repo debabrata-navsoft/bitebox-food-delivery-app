@@ -12,7 +12,7 @@ import { firstValueFrom } from 'rxjs';
 import { errorMessage, fieldErrors } from '../../../core/services/api-error';
 import { RiderService } from '../../../core/services/order-management.service';
 import { FieldError } from '../../../shared/forms/field-error/field-error';
-import { serverErrors } from '../../../shared/forms/form-errors';
+import { serverErrors, shownError } from '../../../shared/forms/form-errors';
 import {
   BB_DIALOG_DATA,
   BbDialog,
@@ -46,6 +46,7 @@ export class DeliveryCodeDialog {
   protected readonly ref = inject<BbDialogRef<RiderDashboard>>(BbDialogRef);
   private readonly rider = inject(RiderService);
 
+  protected readonly shownError = shownError;
   protected readonly error = signal<string | null>(null);
   protected readonly model = signal({ otp: '' });
   protected readonly form = form(

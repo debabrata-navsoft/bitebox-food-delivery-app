@@ -1066,6 +1066,29 @@ np-time-picker .time-picker-field {
   animation: bb-shimmer 1.4s ease infinite;
 }
 
+// A small green dot that pulses: "live" / "online" (rider dashboard, location popup).
+.bb-live-dot {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bb-success);
+  animation: bb-live-dot 2s infinite;
+}
+
+@keyframes bb-live-dot {
+  0%,
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--bb-success) 60%, transparent);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
 @keyframes bb-shimmer {
   0% {
     background-position: 100% 50%;

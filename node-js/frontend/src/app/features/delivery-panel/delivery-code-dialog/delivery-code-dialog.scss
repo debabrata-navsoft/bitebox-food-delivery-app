@@ -1,6 +1,73 @@
+.intro {
+  margin: 0;
+  color: var(--bb-ink-muted);
+  line-height: 1.5;
+
+  strong {
+    color: var(--bb-ink);
+  }
+  .order-no {
+    white-space: nowrap;
+  }
+}
+
+// The code on a soft panel: label, boxes and any error centred together.
 .code {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: var(--bb-space-3) 0 var(--bb-space-2);
+  gap: var(--bb-space-2);
+  margin: var(--bb-space-4) 0 var(--bb-space-1);
+  padding: var(--bb-space-4) var(--bb-space-3);
+  border-radius: var(--bb-radius);
+  background: var(--bb-bg);
+  text-align: center;
+}
+
+// NexPrime's emulated styles: reach the field inside np-input-otp.
+:host ::ng-deep .code np-input-otp {
+  .ui-field {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--bb-space-2);
+  }
+
+  .ui-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--bb-ink-muted);
+  }
+
+  .otp.otp {
+    --otp-box: clamp(48px, 14vw, 58px);
+    gap: clamp(8px, 3vw, 14px);
+  }
+
+  .otp__box.otp__box {
+    border-radius: var(--bb-radius-sm);
+    border-width: 1.5px;
+    background: var(--bb-surface);
+    color: var(--bb-ink);
+    font-size: 1.6rem;
+  }
+
+  // Neutral while typing; red only once the error is shown (after leaving the field or sending).
+  .otp__box.otp__box[aria-invalid='true'] {
+    border-color: var(--bb-border);
+    box-shadow: none;
+  }
+  .otp__box.otp__box--filled.otp__box--filled {
+    border-color: var(--bb-plum);
+  }
+  .otp__box.otp__box:focus {
+    border-color: var(--bb-plum);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--bb-plum) 22%, transparent);
+  }
+}
+
+:host ::ng-deep .code.has-error np-input-otp .otp__box.otp__box {
+  border-color: var(--bb-danger);
 }
