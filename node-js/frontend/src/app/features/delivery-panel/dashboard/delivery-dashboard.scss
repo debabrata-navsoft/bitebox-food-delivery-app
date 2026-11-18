@@ -196,8 +196,9 @@ h2 {
   margin-top: var(--bb-space-3);
   text-align: left;
 
-  bb-tracking-map ::ng-deep .map {
-    height: 260px;
+  // Through the map's height variable, so full screen (which sets it to 100%) still fills the screen.
+  bb-tracking-map {
+    --bb-map-height: 260px;
   }
 }
 
