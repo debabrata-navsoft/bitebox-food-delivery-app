@@ -1,53 +1,69 @@
 :host {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  column-gap: var(--bb-space-2);
-  align-content: start;
-  padding: var(--bb-space-4);
-  border-radius: var(--bb-radius);
-  background: var(--bb-surface);
-  border: 1px solid var(--bb-border);
+  display: flex;
+  flex-direction: column;
+  padding: 14px 14px 12px;
+  border-radius: var(--bb-radius, 12px);
+  background: var(--bb-surface, #fff);
+  border: 1px solid var(--bb-border, #e5e7eb);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   min-width: 0;
+  box-sizing: border-box;
   container-type: inline-size;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06);
+  }
+}
+
+.stat-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 6px;
+  min-width: 0;
 }
 
 .icon {
-  grid-row: span 2;
-  color: var(--bb-ink-muted);
+  --bb-icon-size: 18px;
+  color: var(--bb-ink-muted, #6b7280);
+  flex-shrink: 0;
 }
 
-.label {
-  font-size: 0.85rem;
-  color: var(--bb-ink-muted);
-}
-
-.value {
-  grid-column: 2;
-  font-size: 1.5rem;
-  font-variant-numeric: tabular-nums;
+.label,
+.value,
+.hint {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   line-height: 1.2;
 }
 
-.hint {
-  grid-column: 2;
+.label {
   font-size: 0.8rem;
-  color: var(--bb-ink-muted);
+  font-weight: 500;
+  color: var(--bb-ink-muted, #6b7280);
 }
 
-// Narrow tiles (two per row on phones): icon on its own line so label and value
-// get the full width instead of sharing it with the icon column.
-@container (max-width: 170px) {
-  .icon {
-    grid-row: auto;
-    margin-bottom: var(--bb-space-1);
-  }
-  .label,
-  .value,
-  .hint {
-    grid-column: 1 / -1;
-  }
-  .value {
-    font-size: 1.3rem;
-    overflow-wrap: anywhere;
-  }
+.value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--bb-ink, #111827);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 2px;
+}
+
+.hint {
+  font-size: 0.73rem;
+  color: var(--bb-ink-muted, #6b7280);
+}
+
+@container (max-width: 140px) {
+  :host { padding: 10px 8px 9px; }
+  .stat-top { gap: 5px; margin-bottom: 4px; }
+  .icon { --bb-icon-size: 15px; }
+  .label { font-size: 0.72rem; }
+  .value { font-size: 1.15rem; }
+  .hint { font-size: 0.68rem; }
 }

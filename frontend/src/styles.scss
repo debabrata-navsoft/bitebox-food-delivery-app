@@ -893,6 +893,23 @@ np-input-otp .otp.otp {
   }
 }
 
+.bb-location-detected-panel .cdk-dialog-container {
+  border-radius: var(--bb-radius-lg);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  animation: popupScaleIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes popupScaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.88) translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 .bb-dialog__title {
   margin: 0;
   padding: var(--bb-space-5) var(--bb-space-5) var(--bb-space-2);

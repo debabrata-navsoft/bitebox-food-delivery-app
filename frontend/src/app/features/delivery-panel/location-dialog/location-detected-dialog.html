@@ -1,0 +1,87 @@
+<div class="location-popup">
+  <div class="popup-top">
+    <div class="live-badge">
+      <span class="pulsing-dot" aria-hidden="true"></span>
+      <span>GPS Live & Verified</span>
+    </div>
+    <button type="button" class="close-btn" aria-label="Close dialog" (click)="close()">
+      <np-icon name="x" />
+    </button>
+  </div>
+
+  <div class="hero-stage" aria-hidden="true">
+    <div class="radar-box">
+      <div class="radar-ring ring-1"></div>
+      <div class="radar-ring ring-2"></div>
+      <div class="radar-ring ring-3"></div>
+      <div class="radar-sweep"></div>
+      <div class="radar-core">
+        <div class="pin-group">
+          <svg class="pin-svg" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="url(#pinGrad)" />
+            <circle cx="12" cy="9" r="3.2" fill="#fff" />
+            <defs>
+              <linearGradient id="pinGrad" x1="5" y1="2" x2="19" y2="22" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#10b981" />
+                <stop offset="1" stop-color="#059669" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="pin-shadow"></div>
+        </div>
+        <div class="check-bubble"><np-icon name="check" /></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-body">
+    <h2 class="title" [id]="titleId">Location Detected!</h2>
+    <p class="subtitle">Your real-time position has been verified.</p>
+
+    <div class="details-card">
+      <div class="place-row">
+        <div class="place-icon-wrap"><np-icon name="map-pin" /></div>
+        <div class="place-text">
+          @if (placeLoading()) {
+            <span class="loading-label">Detecting area name…</span>
+          } @else {
+            <strong class="place-title">{{ placeName() }}</strong>
+            @if (placeSub()) {
+              <span class="place-desc">{{ placeSub() }}</span>
+            }
+          }
+        </div>
+      </div>
+
+      <div class="meta-row">
+        <div class="meta-col">
+          <span class="meta-caption">Coordinates</span>
+          <span class="meta-value">{{ data.latitude | number: '1.4-4' }}°, {{ data.longitude | number: '1.4-4' }}°</span>
+        </div>
+        @if (data.accuracy != null) {
+          <div class="meta-col">
+            <span class="meta-caption">Accuracy</span>
+            <span class="meta-value accuracy-tag">
+              <span class="signal-bars" aria-hidden="true"><span class="bar bar-1"></span><span class="bar bar-2"></span><span class="bar bar-3"></span></span>
+              ±{{ Math.round(data.accuracy) }}m
+            </span>
+          </div>
+        }
+      </div>
+
+      <div class="ready-banner">
+        <np-icon name="circle-check" />
+        <span>Ready to receive nearby orders</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="popup-footer">
+    <button type="button" class="bb-btn bb-btn--accent ok-btn" (click)="close()" cdkFocusInitial>
+      <np-icon name="check" />
+      <span>OK, Got it</span>
+    </button>
+  </div>
+
+  <div class="timer-line" aria-hidden="true"><div class="timer-fill"></div></div>
+</div>

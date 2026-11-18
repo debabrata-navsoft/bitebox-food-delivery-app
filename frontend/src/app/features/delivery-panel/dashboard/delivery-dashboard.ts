@@ -26,6 +26,7 @@ import {
   GeolocationService,
   ImpreciseLocationError,
 } from '../../../core/services/geolocation.service';
+import { DeliveryLocationService } from '../../../core/services/delivery-location.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { RiderService } from '../../../core/services/order-management.service';
 import { liveRefresh } from '../../../core/services/poll';
@@ -39,6 +40,7 @@ import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { openDeliveryCode } from '../delivery-code-dialog/delivery-code-dialog';
+import { openLocationDetectedDialog } from '../location-dialog/location-detected-dialog';
 import { openVehicleDialog } from '../vehicle-dialog/vehicle-dialog';
 import { VEHICLE_LABEL } from '../../../shared/models/checkout.models';
 import {
@@ -107,6 +109,7 @@ const NEXT_ACTION: Partial<Record<RiderOrder['status'], RiderAction>> = {
 export class DeliveryDashboard {
   private readonly rider = inject(RiderService);
   private readonly geo = inject(GeolocationService);
+  private readonly locationService = inject(DeliveryLocationService);
   private readonly notify = inject(NotificationService);
   protected readonly gps = inject(RiderGps);
   private readonly bbDialog = inject(BbDialog);
@@ -118,8 +121,10 @@ export class DeliveryDashboard {
   protected readonly availabilityError = signal<string | null>(null);
   protected readonly now = signal(Date.now());
   protected readonly stats = signal<RiderStats | null>(null);
-  /** The API has no /delivery/stats (the Node API; Django has it): hide the figures. */
+  /** When the API has no /delivery/stats: hide the figures. */
   protected readonly statsUnavailable = signal(false);
+  protected readonly detectedPlace = signal<string | null>(null);
+  private hasShownLocationPopup = false;
 
   protected readonly profile = computed(() => this.data()?.profile ?? null);
   protected readonly online = computed(() => this.profile()?.isOnline ?? false);
@@ -193,6 +198,10 @@ export class DeliveryDashboard {
       ? { latitude: fix.latitude, longitude: fix.longitude }
       : null;
   });
+  protected readonly idlePosition = computed<Point | null>(() => {
+    const fix = this.gps.fix();
+    return fix ? { latitude: fix.latitude, longitude: fix.longitude } : null;
+  });
   protected readonly routeToStop = rerouteWhileMoving(
     this.myPosition,
     computed(() => this.stops()?.target ?? null),
@@ -228,8 +237,20 @@ export class DeliveryDashboard {
 
     effect(() => {
       const online = this.online();
-      const delivering = !!this.active();
-      untracked(() => this.gps.update(online, delivering));
+      const fix = this.gps.fix();
+      untracked(() => {
+        this.gps.update(online, !!this.active());
+        if (!online) {
+          this.hasShownLocationPopup = false;
+        } else if (fix && !this.hasShownLocationPopup) {
+          this.hasShownLocationPopup = true;
+          this.locationService.reverse(fix.latitude, fix.longitude).subscribe({
+            next: (p) => this.detectedPlace.set(p.area || p.city || p.label || null),
+            error: () => undefined,
+          });
+          this.showLocationPopup(fix.latitude, fix.longitude, fix.accuracy);
+        }
+      });
     });
 
     inject(DestroyRef).onDestroy(() => this.gps.stop());
@@ -258,10 +279,13 @@ export class DeliveryDashboard {
     this.availabilityError.set(null);
     try {
       if (online) {
-        const { latitude, longitude } = await this.geo.currentPrecise();
+        const { latitude, longitude, accuracy } = await this.geo.currentPrecise();
         this.apply(await firstValueFrom(this.rider.goOnline(latitude, longitude)));
         this.notify.success('You are online. Requests near you will appear here.');
+        this.hasShownLocationPopup = true;
+        this.showLocationPopup(latitude, longitude, accuracy);
       } else {
+        this.hasShownLocationPopup = false;
         this.apply(await firstValueFrom(this.rider.goOffline()));
       }
     } catch (err) {
@@ -278,6 +302,27 @@ export class DeliveryDashboard {
     } finally {
       this.switching.set(false);
     }
+  }
+
+  protected showLocationPopup(latitude: number, longitude: number, accuracy?: number): void {
+    openLocationDetectedDialog(this.bbDialog, {
+      latitude,
+      longitude,
+      accuracy,
+      area: this.detectedPlace() ?? undefined,
+    });
+  }
+
+  protected reopenLocationPopup(): void {
+    const fix = this.gps.fix();
+    if (fix) {
+      this.showLocationPopup(fix.latitude, fix.longitude, fix.accuracy);
+      return;
+    }
+    this.geo.currentPrecise().then(
+      (c) => this.showLocationPopup(c.latitude, c.longitude, c.accuracy),
+      () => this.notify.error('Could not detect location. Please check your device GPS.'),
+    );
   }
 
   protected accept(order: RiderOrder): void {

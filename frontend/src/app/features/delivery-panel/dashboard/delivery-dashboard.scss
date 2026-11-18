@@ -1,12 +1,14 @@
 @use 'breakpoints' as bp;
 
 .layout {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--bb-space-4);
-  align-items: start;
 
   @include bp.desktop-up {
+    display: grid;
     grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: start;
   }
 }
 
@@ -15,6 +17,32 @@
   flex-direction: column;
   gap: var(--bb-space-4);
   min-width: 0;
+}
+
+// Mobile and tablet: col-status unwraps so that status-card, vehicle-needed,
+// the main work/map card, and figures participate directly in .layout flex column.
+// This puts .figures AT THE BOTTOM (order: 4) on mobile/tablet, while on desktop
+// it stacks right under status-card with NO empty gap!
+@include bp.below-desktop {
+  .col-status {
+    display: contents;
+  }
+
+  .status-card {
+    order: 1;
+  }
+
+  .vehicle-needed {
+    order: 2;
+  }
+
+  .col-main {
+    order: 3;
+  }
+
+  .figures {
+    order: 4;
+  }
 }
 
 h2 {
@@ -261,7 +289,12 @@ h2 {
   gap: var(--bb-space-2);
   padding-block: var(--bb-space-6);
 
-  np-icon {
+  &.has-map {
+    padding-block: var(--bb-space-4);
+    align-items: stretch;
+  }
+
+  > np-icon {
     --bb-icon-size: 48px;
     color: var(--bb-amber-600);
   }
@@ -270,6 +303,187 @@ h2 {
     margin: 0;
     max-width: 360px;
   }
+}
+
+.idle-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--bb-space-2);
+}
+
+.idle-map-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bb-space-2);
+  margin-top: var(--bb-space-3);
+  text-align: left;
+
+  bb-tracking-map ::ng-deep .map {
+    height: 260px;
+  }
+}
+
+.map-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--bb-space-2);
+  padding: 6px 10px;
+  background: var(--bb-subtle, #f9fafb);
+  border: 1px solid var(--bb-border, #e5e7eb);
+  border-radius: var(--bb-radius-sm, 8px);
+  font-size: 0.8rem;
+  min-width: 0;
+}
+
+.map-status-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+
+  strong.map-title {
+    color: var(--bb-ink);
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+  }
+
+  .map-place-text {
+    color: var(--bb-ink-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.78rem;
+  }
+}
+
+.recenter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: var(--bb-radius-sm, 6px);
+  border: 1px solid var(--bb-border, #e5e7eb);
+  background: var(--bb-surface, #fff);
+  color: var(--bb-ink, #374151);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+
+  np-icon {
+    --bb-icon-size: 13px;
+    color: #10b981;
+    flex-shrink: 0;
+  }
+
+  .btn-label-long {
+    display: inline;
+  }
+
+  .btn-label-short {
+    display: none;
+  }
+
+  @include bp.phone-only {
+    padding: 3px 6px;
+    font-size: 0.72rem;
+
+    .btn-label-long {
+      display: none;
+    }
+    .btn-label-short {
+      display: inline;
+    }
+  }
+
+  &:hover {
+    background: var(--bb-subtle, #f3f4f6);
+    border-color: #d1d5db;
+  }
+}
+
+.detected-location-chip,
+.view-location-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #047857;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  np-icon { --bb-icon-size: 14px; color: #10b981; }
+  strong { color: #065f46; }
+  &:hover {
+    background: rgba(16, 185, 129, 0.18);
+    border-color: rgba(16, 185, 129, 0.4);
+    transform: translateY(-1px);
+  }
+}
+
+.radar-scan-wrapper {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.radar-wave-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(245, 158, 11, 0.45);
+  animation: radarWaveExpand 2.8s infinite cubic-bezier(0.2, 0.8, 0.4, 1);
+  &.wave-1 { width: 44px; height: 44px; }
+  &.wave-2 { width: 68px; height: 68px; animation-delay: 0.9s; }
+  &.wave-3 { width: 92px; height: 92px; animation-delay: 1.8s; }
+}
+
+@keyframes radarWaveExpand {
+  0% { transform: scale(0.5); opacity: 0.9; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+.radar-icon-center {
+  position: relative;
+  z-index: 2;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bb-amber-100, #fef3c7);
+  color: var(--bb-amber-600, #d97706);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+  np-icon { --bb-icon-size: 26px; }
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: dotBlink 2s infinite;
+}
+
+@keyframes dotBlink {
+  0%, 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+  50% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
 }
 
 .route-line {
@@ -308,6 +522,10 @@ h2 {
   display: grid;
   gap: var(--bb-space-3);
   grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  @include bp.phone-only {
+    gap: var(--bb-space-2);
+  }
 }
 
 .trip .earn dd {
