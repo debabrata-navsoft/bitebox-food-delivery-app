@@ -3,7 +3,16 @@
 .settings {
   display: grid;
   gap: var(--bb-space-4);
-  max-width: 880px;
+  align-items: start;
+
+  // Desktop: the full page width, the setting cards two per row; alerts and the save bar span it.
+  @include bp.desktop-up {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    > :not(section) {
+      grid-column: 1 / -1;
+    }
+  }
 }
 h2 {
   margin: 0 0 var(--bb-space-3);
