@@ -18,10 +18,18 @@
       noun="rating"
       [filterable]="s.count > 0"
       [selected]="rating()"
-      (pick)="rating.set($event)"
+      (pick)="pickRating($event)"
     />
   </section>
 }
+
+<bb-list-toolbar
+  [list]="ratingList"
+  [sections]="filterSections"
+  searchLabel="Search ratings"
+  placeholder="Order number or words"
+  [sortOptions]="sortOptions"
+/>
 
 <div class="bb-card list-card" [attr.aria-busy]="list.loading()">
   @if (list.showSkeleton()) {
@@ -29,10 +37,12 @@
       <span class="bb-skeleton row-skeleton"></span>
     }
   } @else if (list.empty()) {
-    <bb-empty-state
+    <bb-list-empty
+      [list]="ratingList"
       icon="star"
-      [title]="rating() ? 'No ratings with this score' : 'No ratings yet'"
+      title="No ratings yet"
       message="Customers can rate a delivery once it's complete."
+      noMatch="No ratings match these filters"
     />
   } @else {
     <ul class="rows" [class.bb-dim]="list.loading()">

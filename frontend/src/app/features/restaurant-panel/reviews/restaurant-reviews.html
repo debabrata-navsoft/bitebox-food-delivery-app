@@ -18,10 +18,10 @@
         [summary]="s.rating"
         [filterable]="s.rating.count > 0"
         [selected]="selectedRating()"
-        (pick)="filterBy({ rating: $event ? '' + $event : '', target: 'restaurant' })"
+        (pick)="pickRating($event)"
       />
       @if (s.unanswered > 0) {
-        <button class="unanswered" type="button" (click)="filterBy({ responded: 'false' })">
+        <button class="unanswered" type="button" (click)="filterBy({ reply: ['needed'] })">
           <np-icon name="message-square-reply" class="mat-icon" matButtonIcon />
           {{ s.unanswered }} {{ s.unanswered === 1 ? 'review needs' : 'reviews need' }} a reply
         </button>
@@ -43,9 +43,9 @@
               <button
                 type="button"
                 class="dish"
-                [class.selected]="filterModel().foodItemId === f.id"
-                [attr.aria-pressed]="filterModel().foodItemId === f.id"
-                (click)="filterBy({ foodItemId: filterModel().foodItemId === f.id ? '' : f.id, target: 'food' })"
+                [class.selected]="selectedDish() === f.id"
+                [attr.aria-pressed]="selectedDish() === f.id"
+                (click)="pickDish(f.id)"
               >
                 <span class="dish-name">{{ f.name }}</span>
                 <bb-stars [value]="f.rating.average" size="sm" />
@@ -62,13 +62,13 @@
   </section>
 </div>
 
-<div class="filters" role="group" aria-label="Filter reviews">
-  <np-select [formField]="filters.target" ariaLabel="About" [options]="targetOptions" />
-  <np-select [formField]="filters.foodItemId" ariaLabel="Dish" [options]="foodOptions()" />
-  <np-select [formField]="filters.rating" ariaLabel="Rating" [options]="ratingOptions" />
-  <np-select [formField]="filters.responded" ariaLabel="Reply status" [options]="respondedOptions" />
-  <np-select [formField]="filters.sort" ariaLabel="Sort" [options]="sortOptions" />
-</div>
+<bb-list-toolbar
+  [list]="reviewList"
+  [sections]="filterSections()"
+  searchLabel="Search reviews"
+  placeholder="Order number, dish or words"
+  [sortOptions]="sortOptions"
+/>
 
 @if (list.error(); as message) {
   <div class="bb-alert error" role="alert">
@@ -83,7 +83,13 @@
       <span class="bb-skeleton row-skeleton"></span>
     }
   } @else if (list.empty()) {
-    <bb-empty-state icon="star" title="No reviews match" message="Reviews appear here after customers rate delivered orders." />
+    <bb-list-empty
+      [list]="reviewList"
+      icon="star"
+      title="No reviews yet"
+      message="Reviews appear here after customers rate delivered orders."
+      noMatch="No reviews match these filters"
+    />
   } @else {
     <ul class="rows" [class.bb-dim]="list.loading()">
       @for (row of list.data()!.items; track row.order) {

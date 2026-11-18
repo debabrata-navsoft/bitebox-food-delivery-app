@@ -26,8 +26,11 @@ row (a restaurant under each of its cuisines).
 import uuid
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from datetime import date, datetime, time, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.db import connection
 from django.db.models import Count, F, Min, Q, QuerySet
 from django.db.models.functions import Collate, Lower, Trim
@@ -87,18 +90,21 @@ class MultiValueField(serializers.Field):
 
 class MultiIdField(MultiValueField):
     """A comma-separated list of ids (restaurant=<id>,<id>) → distinct UUIDs; any bad one is
-    "Invalid value"."""
+    "Invalid value". `keywords` (e.g. "me", "unassigned") are also accepted, kept as text."""
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, *, keywords: Sequence[str] = (), **kwargs: Any) -> None:
         super().__init__(max_length=36, **kwargs)
+        self.keywords = keywords
 
-    def to_internal_value(self, data: Any) -> list[uuid.UUID]:  # type: ignore[override]
-        ids: list[uuid.UUID] = []
+    def to_internal_value(self, data: Any) -> list[Any]:
+        ids: list[Any] = []
         for item in super().to_internal_value(data):
-            try:
-                value = uuid.UUID(item)
-            except ValueError:
-                self.fail("invalid")
+            value: Any = item
+            if item not in self.keywords:
+                try:
+                    value = uuid.UUID(item)
+                except ValueError:
+                    self.fail("invalid")
             if value not in ids:
                 ids.append(value)
         return ids
@@ -125,6 +131,28 @@ def any_of(values: Iterable[str], to_q: Callable[[str], Q]) -> Q:
     return match
 
 
+def text_search(search: str | None, *fields: str) -> Q:
+    """Rows with `search` (trimmed, any letter case) in one of `fields`; everything without."""
+    if not (search := (search or "").strip()):
+        return Q()
+    return any_of(fields, lambda field: Q(**{f"{field}__icontains": search}))
+
+
+def day_start(day: date) -> datetime:
+    """Midnight of a calendar day in the report time zone."""
+    return datetime.combine(day, time.min, tzinfo=ZoneInfo(settings.REPORT_TIMEZONE))
+
+
+def days_between(query: Mapping[str, Any], name: str, field: str = "created_at") -> Q:
+    """`<name>_from` / `<name>_to`: whole calendar days (inclusive) in the report time zone."""
+    match = Q()
+    if start := query.get(f"{name}_from"):
+        match &= Q(**{f"{field}__gte": day_start(start)})
+    if end := query.get(f"{name}_to"):
+        match &= Q(**{f"{field}__lt": day_start(end + timedelta(days=1))})
+    return match
+
+
 def _binary(expr: Any) -> Collate:
     """Compared by code point, so of a value's spellings the label is the one GET /cities shows
     (accounts.admin_services.distinct_names: "Mysuru" before "mysuru")."""
@@ -140,7 +168,8 @@ class Facet:
     open values, by count). `ignore_case` groups open values by their trimmed, lower-cased text
     (shown as one of the stored spellings). The filter keeps rows whose `field` is one of the
     values (`ignore_case`: equal after trimming, any letter case), or that match one of the
-    values' `cases`; `match` (values → Q) replaces that rule.
+    values' `cases`; `match` (values → Q) replaces that rule. `per`: what a count counts (e.g.
+    "order_id": the distinct orders of the rows; default the rows).
     """
 
     name: str
@@ -153,10 +182,14 @@ class Facet:
     label: str | None = None
     elements: bool = False
     match: Callable[[list[Any]], Q] | None = None
+    per: str = "pk"
 
     @property
     def path(self) -> str:
         return self.field or self.name
+
+    def _tally(self, **kwargs: Any) -> Count:
+        return Count(self.per, distinct=self.per != "pk", **kwargs)
 
     def filter(self, qs: QuerySet[Any], values: list[Any]) -> QuerySet[Any]:
         """The rows matching any of `values` (this facet's list filter)."""
@@ -179,7 +212,7 @@ class Facet:
             return self._count_ids(qs)
         if self.cases is not None:
             keys = {f"facet_{i}": v for i, v in enumerate(self.cases)}
-            totals = qs.aggregate(**{k: Count("pk", filter=self.cases[v]) for k, v in keys.items()})
+            totals = qs.aggregate(**{k: self._tally(filter=self.cases[v]) for k, v in keys.items()})
             counts = {v: totals[k] or 0 for k, v in keys.items()}
             return self._fixed(counts) if self.values is not None else self._open(counts)
         expr = F(self.path)
@@ -189,7 +222,7 @@ class Facet:
                 .exclude(facet_key__isnull=True)
                 .exclude(facet_key__in=list(self.exclude))
                 .values("facet_key")
-                .annotate(facet_label=Min(_binary(Trim(expr))), facet_count=Count("pk"))
+                .annotate(facet_label=Min(_binary(Trim(expr))), facet_count=self._tally())
                 .order_by("-facet_count", "facet_key")[: self.limit]
             )
             return [{"value": r["facet_label"], "count": r["facet_count"]} for r in rows]
@@ -197,7 +230,7 @@ class Facet:
             qs.annotate(facet_key=expr)
             .exclude(facet_key__isnull=True)
             .values("facet_key")
-            .annotate(facet_count=Count("pk"))
+            .annotate(facet_count=self._tally())
         )
         if self.values is not None:
             grouped = grouped.filter(facet_key__in=list(self.values))
@@ -213,7 +246,7 @@ class Facet:
             qs.annotate(facet_key=F(self.path))
             .exclude(facet_key__isnull=True)
             .values("facet_key")
-            .annotate(facet_count=Count("pk"), facet_label=Min(self.label))
+            .annotate(facet_count=self._tally(), facet_label=Min(self.label))
             .order_by("-facet_count", "facet_label", "facet_key")[: self.limit]
         )
         return [
@@ -302,6 +335,14 @@ def day_params(name: str) -> list[Any]:
         OpenApiParameter(f"{name}From", str, description="YYYY-MM-DD (report time zone)"),
         OpenApiParameter(f"{name}To", str, description="YYYY-MM-DD, inclusive"),
     ]
+
+
+def list_params(search: str, *filters: Any, days: str | None = None) -> list[Any]:
+    """A faceted list's parameters: page_params(search), `filters`, day_params(days), `facets`."""
+    return [*page_params(search), *filters, *(day_params(days) if days else ()), FACETS_PARAM]
+
+
+MULTI_NOTE = "Several values in one filter: any of them; filters combine with AND."
 
 
 def multi_param(name: str, values: Sequence[str] | None = None, description: str = "") -> Any:

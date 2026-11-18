@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { COIN_SOURCES } from "../config/rewards.js";
 import { ORDER_STATUS, Order } from "../models/order.model.js";
@@ -14,10 +15,11 @@ import {
 } from "../models/reward-campaign.model.js";
 import { ROLES, USER_STATUS, User } from "../models/user.model.js";
 import { ApiError } from "../utils/api-error.js";
-import { DAY_MS, localDate } from "../utils/dates.js";
-import { personView } from "../utils/people.js";
+import { DAY_MS, localDate, nextDay, zoneDayStart } from "../utils/dates.js";
+import { matchingUserIds, personView } from "../utils/people.js";
 import { escapeRegex, paginationMeta } from "../utils/pagination.js";
 import * as wallet from "./coin-wallet.service.js";
+import { allOf, dayRange, filteredPage, fixedFacet, idFacet, inList, textSearch, toId } from "./admin-accounts.js";
 import { foodValuePaise, ruleOn } from "./coins.service.js";
 import { notify } from "./notification.service.js";
 import { getRewardConfig } from "./reward-config.service.js";
@@ -598,17 +600,39 @@ function adminView(c) {
   };
 }
 
-export async function adminList({ status, type, search }, pagination) {
-  const filter = {};
-  if (status) filter.status = status;
-  if (type) filter.type = type;
-  if (search) filter.name = new RegExp(escapeRegex(search), "i");
-  const [items, total] = await Promise.all([
-    RewardCampaign.find(filter).sort({ createdAt: -1 }).skip(pagination.skip).limit(pagination.limit),
-    RewardCampaign.countDocuments(filter),
-  ]);
-  return { items: items.map(adminView), pagination: paginationMeta(pagination, total) };
+/** The campaigns list's Filters panel (each facet is also the filter of the same name). */
+const CAMPAIGN_FACETS = {
+  status: fixedFacet(Object.values(CS), "$status"),
+  type: fixedFacet(Object.values(CAMPAIGN_TYPES), "$type"),
+  trigger: fixedFacet(Object.values(CAMPAIGN_TRIGGERS), "$trigger"),
+  customerGroup: fixedFacet(Object.values(G), "$conditions.customerGroup"),
+};
+
+/**
+ * The campaigns list's filter: status, type, trigger and customer group (each one value or
+ * several), running on any day from runsFrom to runsTo (it ends on or after the first and starts
+ * before the last one is over, in the report time zone) and a name search.
+ */
+function campaignFilter({ status, type, trigger, customerGroup, runsFrom, runsTo, search }) {
+  const tz = env.reportTimezone;
+  return allOf(
+    inList("status", status),
+    inList("type", type),
+    inList("trigger", trigger),
+    inList("conditions.customerGroup", customerGroup),
+    runsFrom && { endAt: { $gte: zoneDayStart(runsFrom, tz) } },
+    runsTo && { startAt: { $lt: zoneDayStart(nextDay(runsTo), tz) } },
+    textSearch(search, ["name"]),
+  );
 }
+
+export const adminList = (query, pagination) =>
+  filteredPage(RewardCampaign, query, pagination, {
+    filterFor: campaignFilter,
+    facets: CAMPAIGN_FACETS,
+    find: (q) => q.sort({ createdAt: -1, _id: -1 }),
+    map: adminView,
+  });
 
 export async function adminGet(id) {
   const campaign = await RewardCampaign.findById(id).populate("conditions.restaurants", "name slug");
@@ -637,26 +661,39 @@ export async function adminGet(id) {
   };
 }
 
-/** Every reward claim (welcome, birthday, campaigns), newest first: the distribution history. */
-export async function adminClaims({ rewardType, campaign }, pagination) {
-  const filter = {};
-  if (rewardType) filter.rewardType = rewardType;
-  if (campaign) filter.campaign = campaign;
-  const [items, total] = await Promise.all([
-    RewardClaim.find(filter)
-      .sort({ claimedAt: -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit)
-      .populate("user", "name email")
-      .populate("campaign", "name"),
-    RewardClaim.countDocuments(filter),
-  ]);
-  return {
-    items: items.map((c) => ({
-      ...claimView(c, c.campaign),
-      customer: personView(c.user),
-    })),
-    pagination: paginationMeta(pagination, total),
-  };
+/** The reward history's Filters panel; campaign: the campaigns that gave rewards, with names. */
+const CLAIM_FACETS = {
+  rewardType: fixedFacet(Object.values(REWARD_TYPES), "$rewardType"),
+  status: fixedFacet(Object.values(CLAIM_STATUS), "$status"),
+  campaign: idFacet("$campaign", RewardCampaign),
+};
+
+/**
+ * The reward history's filter: reward type, state and campaign (each one value or several), the
+ * day claimed and a search over the customer (name, email, phone) or the campaign's name.
+ */
+async function claimFilter({ rewardType, status, campaign, claimedFrom, claimedTo, search }) {
+  const [users, campaigns] = search
+    ? await Promise.all([
+        matchingUserIds(search),
+        RewardCampaign.find({ name: new RegExp(escapeRegex(search), "i") }).select("_id").limit(200).lean(),
+      ])
+    : [];
+  return allOf(
+    inList("rewardType", rewardType),
+    inList("status", status),
+    inList("campaign", campaign, toId),
+    dayRange("claimedAt", claimedFrom, claimedTo),
+    search && { $or: [{ user: { $in: users } }, { campaign: { $in: campaigns.map((c) => c._id) } }] },
+  );
 }
+
+/** Every reward claim (welcome, birthday, campaigns), newest first: the distribution history. */
+export const adminClaims = (query, pagination) =>
+  filteredPage(RewardClaim, query, pagination, {
+    filterFor: claimFilter,
+    facets: CLAIM_FACETS,
+    find: (q) => q.sort({ claimedAt: -1, _id: -1 }).populate("user", "name email").populate("campaign", "name"),
+    map: (c) => ({ ...claimView(c, c.campaign), customer: personView(c.user) }),
+  });
 

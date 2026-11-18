@@ -1,3 +1,4 @@
+import { FilterSection } from '../components/filter-panel/filter-panel.models';
 import { Paginated } from './api.models';
 
 export type ReviewTarget = 'restaurant' | 'food' | 'rider';
@@ -256,11 +257,13 @@ export const SORT_OPTIONS = (Object.keys(SORT_LABEL) as ReviewSort[]).map((value
   label: SORT_LABEL[value],
 }));
 
-/** "Any rating", then 5 to 1 stars, as select options (values are strings). */
-export const RATING_FILTER_OPTIONS = [
-  { value: '', label: 'Any rating' },
-  ...[5, 4, 3, 2, 1].map((n) => ({ value: String(n), label: `${n} star${n > 1 ? 's' : ''}` })),
-];
+/** The Filters panel's star ratings, 5 to 1 (values are strings). */
+export const RATING_SECTION: FilterSection = {
+  kind: 'options',
+  key: 'rating',
+  label: 'Rating',
+  options: [5, 4, 3, 2, 1].map((n) => ({ value: String(n), label: `${n} star${n > 1 ? 's' : ''}` })),
+};
 
 /** What each admin action asks and says. The reason is always required and logged. */
 export const MODERATION_COPY: Record<

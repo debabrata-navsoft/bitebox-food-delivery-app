@@ -51,10 +51,14 @@
 <section class="bb-card bb-list-card block" aria-labelledby="history-title" [attr.aria-busy]="history.loading()">
   <div class="block-head">
     <h2 class="bb-h3" id="history-title">Payout history</h2>
-    <div class="status-filter">
-      <np-select [formField]="filters.status" ariaLabel="Payout status" [options]="statusOptions" />
-    </div>
   </div>
+  <bb-list-toolbar
+    class="history-toolbar"
+    [list]="payouts"
+    [sections]="filterSections()"
+    searchLabel="Search payouts"
+    placeholder="Payee or transfer reference"
+  />
   @if (history.error(); as message) {
     <div class="bb-alert error inset" role="alert">
       <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
@@ -66,7 +70,7 @@
       <span class="bb-skeleton row"></span>
     }
   } @else if (history.empty()) {
-    <bb-empty-state icon="history" title="No payouts yet" />
+    <bb-list-empty [list]="payouts" icon="history" title="No payouts yet" noMatch="No payouts match these filters" />
   } @else {
     <div class="bb-table-scroll" [class.bb-dim]="history.loading()">
       <table class="bb-table">

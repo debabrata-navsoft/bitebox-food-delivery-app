@@ -80,7 +80,7 @@ export const riderSetStatus = respond(async (req) => {
   return riders.dashboard(req.user._id);
 }, statusMessage);
 export const riderHistory = respond((req) =>
-  orders.riderHistory(req.user._id, page(req)),
+  orders.riderHistory(req.user._id, page(req), req.validatedQuery),
 );
 
 // Admin

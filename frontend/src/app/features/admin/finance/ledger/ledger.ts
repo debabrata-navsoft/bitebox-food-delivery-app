@@ -3,9 +3,10 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { ButtonComponent, IconComponent, PaginationComponent } from 'nexprime';
 import { FinanceService } from '../../../../core/services/admin/finance.service';
 import { NotificationService } from '../../../../core/services/notification.service';
-import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
+import { ListEmpty } from '../../../../shared/components/list-empty/list-empty';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
-import { pagedList } from '../../../../shared/list/paged-list';
+import { ListToolbar } from '../../../../shared/components/list-toolbar/list-toolbar';
+import { datesSection, filteredList, optionsSection } from '../../../../shared/list/filtered-list';
 import { LedgerAccount } from '../../../../shared/models/admin-roles.models';
 import { InrPipe } from '../../../../shared/pipes/money.pipes';
 
@@ -47,7 +48,8 @@ const ACCOUNT: Record<LedgerAccount, { label: string; hint: string; sign: 1 | -1
     ButtonComponent,
     IconComponent,
     PaginationComponent,
-    EmptyState,
+    ListEmpty,
+    ListToolbar,
     PageHeader,
     InrPipe,
   ],
@@ -61,9 +63,21 @@ export class LedgerPage {
   protected readonly account = ACCOUNT;
   protected readonly exporting = signal(false);
 
-  protected readonly list = pagedList((page, limit) => this.api.ledger({ page, limit }), {
+  protected readonly filterSections = [
+    optionsSection('account', 'Account', ACCOUNT),
+    optionsSection('event', 'Event', {
+      settlement: 'Order delivered',
+      payout: 'Payout paid',
+      refund: 'Refund after delivery',
+    }),
+    datesSection('created', 'Date'),
+  ];
+
+  /** The entries follow the filters; the balances above them are always the whole ledger. */
+  protected readonly entries = filteredList((query) => this.api.ledger(query), {
     errorText: 'Could not load the ledger.',
   });
+  protected readonly list = this.entries.list;
 
   protected exportCsv(): void {
     this.exporting.set(true);

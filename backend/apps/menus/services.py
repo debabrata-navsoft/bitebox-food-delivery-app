@@ -1,5 +1,6 @@
 """Categories and dishes (Node: category.service.js, food.service.js)."""
 
+import functools
 import uuid
 from typing import Any
 
@@ -143,10 +144,19 @@ def _filtered(qs: QuerySet[FoodItem], query: dict[str, Any]) -> QuerySet[FoodIte
     return qs
 
 
+def _owner_foods(restaurant: Restaurant, query: dict[str, Any]) -> QuerySet[FoodItem]:
+    """The restaurant's dishes matching the filters (OWNER_FACETS, `search`, `available`, `veg`)."""
+    qs = _filtered(FoodItem.objects.filter(restaurant=restaurant), {**query, "category": None})
+    return apply_facets(qs, query, OWNER_FACETS)
+
+
 def owner_list(restaurant: Restaurant, query: dict[str, Any], page: Page) -> dict[str, Any]:
-    qs = _filtered(FoodItem.objects.select_related("category").filter(restaurant=restaurant), query)
+    """The partner's menu, by category then name (facets: this restaurant's dishes only)."""
+    build = functools.partial(_owner_foods, restaurant)
+    qs = build(query).select_related("category")
     items, meta = paginate(qs.order_by("category__name", "name"), page)
-    return {"items": [food_json(i) for i in items], "pagination": meta}
+    result = {"items": [food_json(i) for i in items], "pagination": meta}
+    return with_facets(result, query, build, OWNER_FACETS)
 
 
 def _owner_item(restaurant: Restaurant, item_id: uuid.UUID) -> FoodItem:
@@ -215,6 +225,8 @@ ADMIN_FACETS = (
     Facet("type", values=list(FOOD_TYPE), cases=FOOD_TYPE),
     Facet("availability", values=list(AVAILABILITY), cases=AVAILABILITY),
 )
+# A partner's own menu: the same filters without the restaurant (Node: food.service.js).
+OWNER_FACETS = ADMIN_FACETS[1:]
 
 
 def _admin_foods(query: dict[str, Any]) -> QuerySet[FoodItem]:

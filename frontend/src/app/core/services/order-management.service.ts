@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse, Paginated } from '../../shared/models/api.models';
+import { ApiResponse } from '../../shared/models/api.models';
 import { Faceted, ListQuery } from '../../shared/list/filtered-list';
 import { Order, VehicleType } from '../../shared/models/checkout.models';
 import {
@@ -36,10 +36,14 @@ export class RestaurantOrdersService {
       .pipe(map((r) => r.data));
   }
 
-  history(page = 1, limit = 15): Observable<RestaurantOrderHistory> {
+  /**
+   * Finished orders. Filters: status, paymentMethod (several each), placedFrom/placedTo days and
+   * search (order number or the recipient's name); `facets: 1` adds the panel's counts.
+   */
+  history(query: ListQuery): Observable<RestaurantOrderHistory> {
     return this.http
       .get<ApiResponse<RestaurantOrderHistory>>(this.url, {
-        params: toParams({ view: 'history', page, limit }),
+        params: toParams({ ...query, view: 'history' }),
       })
       .pipe(map((r) => r.data));
   }
@@ -146,10 +150,14 @@ export class RiderService {
       .pipe(map((r) => r.data));
   }
 
-  history(page = 1, limit = 15): Observable<Paginated<RiderOrder>> {
+  /**
+   * Delivered and cancelled orders. Filters: status, restaurant (several each), placedFrom/placedTo
+   * days and search (order number); `facets: 1` adds the panel's counts.
+   */
+  history(query: ListQuery): Observable<Faceted<RiderOrder>> {
     return this.http
-      .get<ApiResponse<Paginated<RiderOrder>>>(`${this.url}/orders/history`, {
-        params: toParams({ page, limit }),
+      .get<ApiResponse<Faceted<RiderOrder>>>(`${this.url}/orders/history`, {
+        params: toParams(query),
       })
       .pipe(map((r) => r.data));
   }

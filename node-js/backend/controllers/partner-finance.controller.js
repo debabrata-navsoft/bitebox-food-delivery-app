@@ -33,12 +33,12 @@ const page = (req) => parsePagination(req.validatedQuery, { defaultLimit: 10 });
 const pdf = ({ name, pdf: body }) => ({ name, body, type: "application/pdf" });
 
 export const myPayouts = respond(async (req) =>
-  finance.myPayouts((await scope(req.user)).payouts, page(req)),
+  finance.myPayouts((await scope(req.user)).payouts, page(req), req.validatedQuery),
 );
 
 export const mySettlements = respond(async (req) => {
   const s = await scope(req.user);
-  return finance.settlementHistory(s.type, s.orders, page(req));
+  return finance.settlementHistory(s.type, s.orders, page(req), req.validatedQuery, s.payouts);
 });
 
 export const myStatement = download(async (req) => {

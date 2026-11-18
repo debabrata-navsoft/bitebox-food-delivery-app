@@ -8,6 +8,7 @@ from typing import Any
 
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import serializers
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -17,12 +18,26 @@ from apps.audit.services import audited
 from apps.rbac.roles import Permission
 from common.api import ApiError, ok
 from common.exceptions import flatten_validation
+from common.filters import facets_page, list_params, multi_param
 from common.pagination import Page
 from common.permissions import permission_required
 from common.schema import envelope, errors
 from common.validation import parse_id, validated
 
 from . import config, referrals, special, staff
+from .models import (
+    CampaignStatus,
+    CampaignTrigger,
+    CampaignType,
+    ClaimStatus,
+    CoinSource,
+    CustomerGroup,
+    ReferralRewardStatus,
+    ReferralRisk,
+    ReferralStatus,
+    RewardType,
+    TxnType,
+)
 from .serializers import (
     IDEMPOTENCY_KEY,
     AdminReferralQuery,
@@ -45,6 +60,16 @@ ADMIN_CAMPAIGN_RESULT = envelope("AdminCampaignResult")
 ADMIN_COIN_TRANSACTION_RESULT = envelope("AdminCoinTransactionResult")
 ADMIN_REFERRAL_RESULT = envelope("AdminReferralResult")
 REWARD_CONFIGURATION_RESULT = envelope("RewardConfigurationResult")
+CAMPAIGN_PAGE = facets_page("AdminCampaignPage", special.CAMPAIGN_FACETS)
+CLAIM_PAGE = facets_page("AdminRewardClaimPage", special.CLAIM_FACETS)
+TRANSACTION_PAGE = facets_page("AdminCoinTransactionPage", staff.TXN_FACETS)
+REFERRAL_PAGE = facets_page(
+    "AdminReferralPage",
+    referrals.REFERRAL_FACETS,
+    counts=serializers.DictField(
+        child=serializers.IntegerField(), help_text="Referrals per reward state (all of them)"
+    ),
+)
 
 
 class RewardsView(APIView):
@@ -93,8 +118,16 @@ class CampaignsView(RewardsView):
     @extend_schema(
         tags=TAGS,
         operation_id="admin_rewards_campaigns_list",
-        parameters=[CampaignListQuery],
-        responses={200: envelope("AdminCampaignPage"), **errors(401, 403, 422)},
+        parameters=list_params(
+            "Campaign name",
+            multi_param("status", CampaignStatus.values),
+            multi_param("type", CampaignType.values),
+            multi_param("trigger", CampaignTrigger.values, "CLAIM: claimed; ORDER: on orders"),
+            multi_param("customerGroup", CustomerGroup.values, "Who may get it"),
+            days="runs",
+        ),
+        description="runsFrom/runsTo: campaigns running on any of those days.",
+        responses={200: CAMPAIGN_PAGE, **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
         query = validated(CampaignListQuery, request.query_params)
@@ -171,8 +204,14 @@ class ClaimsView(RewardsView):
     @extend_schema(
         tags=TAGS,
         operation_id="admin_rewards_claims_list",
-        parameters=[ClaimListQuery],
-        responses={200: envelope("AdminRewardClaimPage"), **errors(401, 403, 422)},
+        parameters=list_params(
+            "The customer's name, email or phone, or the campaign name",
+            multi_param("rewardType", RewardType.values),
+            multi_param("status", ClaimStatus.values, "PENDING: coins being credited"),
+            multi_param("campaign", description="Campaign ids"),
+            days="claimed",
+        ),
+        responses={200: CLAIM_PAGE, **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
         query = validated(ClaimListQuery, request.query_params)
@@ -183,8 +222,16 @@ class TransactionsView(RewardsView):
     @extend_schema(
         tags=TAGS,
         operation_id="admin_rewards_transactions_list",
-        parameters=[AdminTransactionQuery],
-        responses={200: envelope("AdminCoinTransactionPage"), **errors(401, 403, 422)},
+        parameters=list_params(
+            "The customer's name, email or phone",
+            multi_param("type", TxnType.values),
+            multi_param("source", CoinSource.values),
+            multi_param("campaign", description="Campaign ids"),
+            OpenApiParameter("userId", str, description="One customer's history (user id)"),
+            OpenApiParameter("from", str, description="ISO date-time: created at or after"),
+            OpenApiParameter("to", str, description="ISO date-time: created at or before"),
+        ),
+        responses={200: TRANSACTION_PAGE, **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
         query = validated(AdminTransactionQuery, request.query_params)
@@ -270,8 +317,15 @@ class ReferralsView(RewardsView):
     @extend_schema(
         tags=TAGS,
         operation_id="admin_rewards_referrals_list",
-        parameters=[AdminReferralQuery],
-        responses={200: envelope("AdminReferralPage"), **errors(401, 403, 422)},
+        parameters=list_params(
+            "Either person's name, email, phone or referral code, or the code used",
+            multi_param("status", ReferralStatus.values, "The stage"),
+            multi_param("rewardStatus", ReferralRewardStatus.values),
+            multi_param("risk", ReferralRisk.values, "Risk signals"),
+            OpenApiParameter("flagged", bool, description="true: only those with a risk signal"),
+            days="created",
+        ),
+        responses={200: REFERRAL_PAGE, **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
         query = validated(AdminReferralQuery, request.query_params)

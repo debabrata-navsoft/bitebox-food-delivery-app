@@ -9,17 +9,20 @@ from rest_framework.views import APIView
 from apps.accounts.authentication import current_user
 from apps.rbac.roles import Role
 from common.api import ok
+from common.filters import facets_page, list_params, multi_param
 from common.pagination import Page
 from common.permissions import role_required
 from common.schema import envelope, errors
 from common.validation import parse_id, validated
 
 from . import services
+from .models import TicketType
 from .serializers import CreateTicketInput, MyTicketQuery, ReplyInput
 
 REQUESTERS = [role_required(Role.CUSTOMER, Role.RESTAURANT, Role.DELIVERY)]
 TAGS = ["Support"]
 TICKET = envelope("MyTicketResult")
+MY_TICKET_PAGE = facets_page("MyTicketPage", services.MINE_FACETS)
 
 
 class MyTicketsView(APIView):
@@ -28,8 +31,18 @@ class MyTicketsView(APIView):
     @extend_schema(
         tags=TAGS,
         operation_id="support_tickets_list",
-        parameters=[MyTicketQuery],
-        responses={200: envelope("MyTicketList"), **errors(401, 403, 422)},
+        parameters=list_params(
+            "Ticket number, subject or order number",
+            multi_param(
+                "status",
+                services.MINE_STATUSES,
+                "open: not resolved or closed yet (waiting_for_response included); "
+                "closed: resolved or closed",
+            ),
+            multi_param("type", TicketType.values),
+            days="created",
+        ),
+        responses={200: MY_TICKET_PAGE, **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
         query = validated(MyTicketQuery, request.query_params)

@@ -362,6 +362,12 @@ All are idempotent and safe to run on several API instances at once. Tests call 
   - Shared rules are in `shared/forms/form-rules.ts`. `shownError()` shows an error once the field is touched, and `serverErrors()` maps API 422 errors onto fields.
   - `NP_FORM_FIELDS` bundles the NexPrime inputs and helpers.
 - **Lists:** `shared/list/paged-list.ts#pagedList(fetch, opts)` handles paging, filters, loading and errors, and live refresh.
+- **List filters:** searchable lists use `shared/list/filtered-list.ts#filteredList(fetch, opts)` with `<bb-list-toolbar>`:
+  - The toolbar has the search box, a **Filters** button and an optional sort select, all on the right. Applied filters show as removable chips below.
+  - The Filters button opens `shared/components/filter-panel`, a side drawer with one section per filter (one section open at a time). It shows a live count beside each option and the total, from the list's `?facets=1` response.
+  - A page declares its sections as `FilterSection[]`: fixed options (`filterOptions(labels)`), open options whose values come from the API counts (`labelOf` names ids), or date ranges (`kind: 'dates'`, sent as `<key>From`/`<key>To`; `instants: true` sends ISO instants instead of days).
+  - `extra: () => ({...})` carries fixed parameters (a tab, a route `:view`, a payout type). Lists open with nothing selected.
+  - With `lazy: true` the list waits for the page's `load(1)`; with `pollMs` as well, live refresh starts at that first load.
 - **Icons:** `<np-icon name="…">` with Lucide names. Material names stored in data go through `| npIcon`.
 - **Styles:**
   - Brand tokens `--bb-*` live in `src/styles.scss`, with NexPrime's `--ui-*` variables mapped onto them.
@@ -1086,6 +1092,29 @@ Requesters (customer, restaurant or rider) use `GET/POST /support/tickets`, `GET
 | POST | `/admin/notifications/deliveries/{id}/retry` | `operations:view` (audited) | Send a failed or dead delivery again |
 | POST | `/admin/push/promotions` | `promotions:send` (rate limited, audited) | Push an offer to opted-in customers |
 | POST | `/newsletter/subscriptions` | public, rate limited | Subscribe an email |
+
+### List filters and counts
+
+Searchable lists share the same query rules in both APIs:
+
+- **Several values:** an option filter takes one value or several, comma-separated (`status=open,in_progress`). Values of one filter are OR'ed; different filters are AND'ed. Single values work as before.
+- **Counts:** `facets=1` adds `data.facets`, `{ <filter>: [{ value, count, label? }] }`. Each filter is counted with every other filter applied but not its own (standard faceted search). Fixed-value filters list every value (0 when none match); open ones (restaurants, categories, campaigns, assignees, dishes) list the values that occur, with a `label` for ids.
+- **Dates:** a range is `<name>From` / `<name>To`, whole days in the report time zone (some lists take ISO instants as `from`/`to`). A reversed range is a 422.
+- **Errors:** an unknown value is a 422 `VALIDATION_ERROR` with "Invalid value" on that field.
+- **Scope:** restaurant, rider and customer lists are scoped to the signed-in user on the server; their counts never include anyone else's rows. Admin lists keep their permission guards.
+- **Implementation:** Django `common/filters.py` (`Facet`, `apply_facets`, `with_facets`); Node `services/admin-accounts.js#facetCounts` and `validators/common.validators.js`.
+
+| Area | Lists with filters and counts |
+|---|---|
+| Admin: operations and accounts | orders, restaurants, delivery partners, food items, customers, restaurant and rider accounts, admins and operators, audit log |
+| Admin: finance | transactions (`/admin/payments`), restaurant and rider payouts, refunds, ledger |
+| Admin: support | support ticket queues, reviews (All and Reported tabs) |
+| Admin: coins and rewards | campaigns, referrals, coin transactions, reward history |
+| Admin: marketing | coupons and offers |
+| Restaurant panel | order history, menu, offers, reviews, earnings (by order and payouts), support tickets |
+| Rider panel | delivery history, ratings, earnings (by order and payouts), support tickets |
+
+Not filtered (not paginated lists): dashboards and overviews, commission, financial reports, categories, push promotions, the offer review queue, rewards settings, and the live restaurant order stages.
 
 ### Common error codes
 

@@ -1,4 +1,14 @@
 import { COIN_SOURCES, COIN_TXN_TYPES } from "../config/rewards.js";
+import { REFERRAL_REWARD_STATUS, REFERRAL_RISK, REFERRAL_STATUS } from "../models/referral.model.js";
+import {
+  CAMPAIGN_STATUS,
+  CAMPAIGN_TRIGGERS,
+  CAMPAIGN_TYPES,
+  CLAIM_STATUS,
+  CUSTOMER_GROUPS,
+  REWARD_TYPES,
+} from "../models/reward-campaign.model.js";
+import { dayParams, described, facetsParam, multi, searchParam } from "./openapi.filters.js";
 
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` });
 const ok = (data, description = "Success") => ({
@@ -237,8 +247,17 @@ export const rewardsPaths = {
   },
   "/admin/rewards/campaigns": {
     get: adminOp("Campaigns", {
-      parameters: [...paging, q("status", { type: "string" }), q("type", { type: "string" }), q("search", { type: "string" })],
-      responses: { 200: ok(list(ref("RewardCampaign"))) },
+      parameters: [
+        ...paging,
+        searchParam("Campaign name"),
+        multi("status", Object.values(CAMPAIGN_STATUS)),
+        multi("type", Object.values(CAMPAIGN_TYPES)),
+        multi("trigger", Object.values(CAMPAIGN_TRIGGERS), "CLAIM: claimed; ORDER: on orders"),
+        multi("customerGroup", Object.values(CUSTOMER_GROUPS), "Who may get it"),
+        ...dayParams("runsFrom", "runsTo", "day the campaign runs on (any day of the range)"),
+        facetsParam(["status", "type", "trigger", "customerGroup"]),
+      ],
+      responses: { 200: ok(list(ref("RewardCampaign"))), 422: err("Validation failed") },
     }),
     post: adminOp("Create a campaign (as a draft)", {
       requestBody: body(ref("RewardCampaignInput")),
@@ -262,14 +281,32 @@ export const rewardsPaths = {
   },
   "/admin/rewards/claims": {
     get: adminOp("Reward distribution history", {
-      parameters: [...paging, q("rewardType", { type: "string" }), q("campaign", { type: "string" })],
-      responses: { 200: ok(list(ref("RewardClaim"))) },
+      parameters: [
+        ...paging,
+        searchParam("The customer's name, email or phone, or the campaign name"),
+        multi("rewardType", Object.values(REWARD_TYPES)),
+        multi("status", Object.values(CLAIM_STATUS), "PENDING: coins being credited"),
+        multi("campaign", "id", "Campaign ids"),
+        ...dayParams("claimedFrom", "claimedTo", "day claimed"),
+        facetsParam(["rewardType", "status", "campaign"], [], ["campaign"]),
+      ],
+      responses: { 200: ok(list(ref("RewardClaim"))), 422: err("Validation failed") },
     }),
   },
   "/admin/rewards/transactions": {
     get: adminOp("Coin ledger across all customers", {
-      parameters: [...paging, q("type", { type: "string" }), q("source", { type: "string" }), q("search", { type: "string" }), q("userId", { type: "string" }), q("from", { type: "string", format: "date-time" }), q("to", { type: "string", format: "date-time" })],
-      responses: { 200: ok(list(ref("CoinTransaction"))) },
+      parameters: [
+        ...paging,
+        searchParam("The customer's name, email or phone"),
+        multi("type", Object.values(COIN_TXN_TYPES)),
+        multi("source", Object.values(COIN_SOURCES)),
+        multi("campaign", "id", "Campaign ids"),
+        described(q("userId", { type: "string" }), "One customer's history (user id)"),
+        described(q("from", { type: "string", format: "date-time" }), "Created at or after"),
+        described(q("to", { type: "string", format: "date-time" }), "Created at or before"),
+        facetsParam(["type", "source", "campaign"], [], ["campaign"]),
+      ],
+      responses: { 200: ok(list(ref("CoinTransaction"))), 422: err("Validation failed") },
     }),
   },
   "/admin/rewards/transactions/{id}": {
@@ -293,8 +330,26 @@ export const rewardsPaths = {
   },
   "/admin/rewards/referrals": {
     get: adminOp("Referrals, with risk signals", {
-      parameters: [...paging, q("status", { type: "string" }), q("rewardStatus", { type: "string" }), q("flagged", { type: "boolean" }), q("search", { type: "string" })],
-      responses: { 200: ok(list({ type: "object" })) },
+      parameters: [
+        ...paging,
+        searchParam("Either person's name, email, phone or referral code, or the code used"),
+        multi("status", Object.values(REFERRAL_STATUS), "The stage"),
+        multi("rewardStatus", Object.values(REFERRAL_REWARD_STATUS)),
+        multi("risk", Object.values(REFERRAL_RISK), "Risk signals"),
+        described(q("flagged", { type: "boolean" }), "true: only those with a risk signal"),
+        ...dayParams("createdFrom", "createdTo", "day created"),
+        facetsParam(["status", "rewardStatus", "risk"]),
+      ],
+      responses: {
+        200: ok({
+          ...list({ type: "object" }),
+          properties: {
+            ...list({ type: "object" }).properties,
+            counts: { type: "object", additionalProperties: { type: "integer" }, description: "Referrals per reward state (all of them)" },
+          },
+        }),
+        422: err("Validation failed"),
+      },
     }),
   },
   "/admin/rewards/referrals/{id}": {

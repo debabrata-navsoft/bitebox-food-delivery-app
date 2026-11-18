@@ -1,10 +1,11 @@
 <bb-page-header [title]="config().title" [subtitle]="config().subtitle" />
 
-<div class="bb-filters">
-  <np-text-input [formField]="filters.search" ariaLabel="Search tickets" placeholder="Ticket, order number, subject or name" icon="search" clearable />
-  <np-select [formField]="filters.status" ariaLabel="Status" [options]="statusOptions" />
-  <np-select [formField]="filters.priority" ariaLabel="Priority" [options]="priorityOptions" />
-</div>
+<bb-list-toolbar
+  [list]="tickets"
+  [sections]="filterSections()"
+  searchLabel="Search tickets"
+  placeholder="Ticket, order number, subject or name"
+/>
 
 @if (list.error(); as message) {
   <div class="bb-alert error" role="alert">
@@ -19,7 +20,13 @@
       <span class="bb-skeleton row"></span>
     }
   } @else if (list.empty()) {
-    <bb-empty-state icon="ticket" title="No tickets here" message="Try a different status or search." />
+    <bb-list-empty
+      [list]="tickets"
+      icon="ticket"
+      title="No tickets here"
+      noMatch="No tickets match these filters"
+      noMatchMessage="Try a different status or search."
+    />
   } @else {
     <div class="bb-table-scroll" [class.bb-dim]="list.loading()">
       <table class="bb-table">

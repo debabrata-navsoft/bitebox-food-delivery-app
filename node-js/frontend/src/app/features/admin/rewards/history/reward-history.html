@@ -1,8 +1,11 @@
 <bb-page-header title="Reward history" subtitle="Welcome, birthday, festival and promotional rewards given to customers." />
 
-<div class="bb-filters">
-  <np-select [formField]="filters.rewardType" ariaLabel="Reward type" [options]="typeOptions" />
-</div>
+<bb-list-toolbar
+  [list]="claims"
+  [sections]="filterSections"
+  searchLabel="Search rewards"
+  placeholder="Customer name, email or phone, or campaign"
+/>
 
 @if (list.error(); as message) {
   <div class="bb-alert error" role="alert">
@@ -17,7 +20,7 @@
       <span class="bb-skeleton row"></span>
     }
   } @else if (list.empty()) {
-    <bb-empty-state icon="gift" title="No rewards given yet" />
+    <bb-list-empty [list]="claims" icon="gift" title="No rewards given yet" noMatch="No rewards match these filters" />
   } @else {
     <div class="bb-table-scroll" [class.bb-dim]="list.loading()">
       <table class="bb-table">

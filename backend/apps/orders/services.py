@@ -3,6 +3,7 @@ Placing orders and what each role may do with them (Node: services/order.service
 services/order-management.service.js). Status changes always go through `workflow.transition`.
 """
 
+import functools
 import logging
 import secrets
 import uuid
@@ -15,7 +16,6 @@ from django.db import IntegrityError, transaction
 from django.db.models import Count, ExpressionWrapper, F, IntegerField, Q, QuerySet, Sum
 from django.utils import timezone
 
-from apps.accounts.admin_services import days_between
 from apps.accounts.models import User, UserStatus
 from apps.cart import services as cart_services
 from apps.cart.models import Cart
@@ -33,7 +33,7 @@ from apps.restaurants.models import Restaurant
 from apps.restaurants.presenters import geo_json
 from apps.reviews.models import Review, ReviewStatus, ReviewTarget
 from common.api import ApiError
-from common.filters import Facet, apply_facets, with_facets
+from common.filters import Facet, apply_facets, days_between, text_search, with_facets
 from common.geo import haversine_m
 from common.pagination import Page, paginate
 
@@ -364,29 +364,60 @@ def customer_cancel(user: User, order_id: uuid.UUID, reason: str | None) -> dict
 # ---------------------------------------------------------------------------
 # Restaurant
 # ---------------------------------------------------------------------------
+# The restaurant's order history (view=history): its Filters panel.
+# Node: order-management.service.js#HISTORY_FACETS.
+HISTORY_FACETS = (
+    Facet("status", values=FINAL_STATUSES),
+    Facet("payment_method", values=PaymentMethod.values),
+)
+
+
+def _in_view(query: dict[str, Any], statuses: tuple[str, ...]) -> dict[str, Any]:
+    """`status` narrowed to the view's statuses (others are ignored, as a single status was)."""
+    wanted = [s for s in query.get("status") or () if s in statuses]
+    return {**query, "status": wanted or None}
+
+
+def _restaurant_history(restaurant: Restaurant, query: dict[str, Any]) -> QuerySet[Order]:
+    """The restaurant's finished orders matching every filter: status, payment method, the day
+    placed and a search over the order number and the recipient's name (what the restaurant
+    sees of the customer)."""
+    qs = Order.objects.filter(
+        restaurant=restaurant, submitted_at__isnull=False, status__in=FINAL_STATUSES
+    )
+    return apply_facets(qs, query, HISTORY_FACETS).filter(
+        days_between(query, "placed"),
+        text_search(query.get("search"), "order_number", "delivery_address__recipient_name"),
+    )
+
+
 def restaurant_list(owner: User, query: dict[str, Any], page: Page) -> dict[str, Any]:
+    """
+    view=active: the orders in progress (at most 200, oldest first) with counts per status.
+    view=history: the finished ones, newest first, paged, filterable (HISTORY_FACETS, placed days,
+    search); `?facets=1` adds the Filters panel's counts, all within the partner's restaurant.
+    """
     restaurant = _own_restaurant(owner)
     view = query.get("view") or "active"
     statuses = FINAL_STATUSES if view == "history" else ACTIVE_STATUSES
-    status = query.get("status")
+    query = _in_view(query, statuses)
+    if view == "history":
+        build = functools.partial(_restaurant_history, restaurant)
+        rows, meta = paginate(presenters.with_details(build(query)).order_by("-created_at"), page)
+        result = {"items": [presenters.present_for_restaurant(o) for o in rows], "pagination": meta}
+        return with_facets(result, query, build, HISTORY_FACETS)
     base = Order.objects.filter(restaurant=restaurant, submitted_at__isnull=False)
-    qs = presenters.with_details(
-        base.filter(status=status) if status in statuses else base.filter(status__in=statuses)
+    wanted = query.get("status") or statuses
+    items = list(
+        presenters.with_details(base.filter(status__in=wanted)).order_by("created_at")[:200]
     )
-    if view == "active":
-        items = list(qs.order_by("created_at")[:200])
-        counts = (
-            base.filter(status__in=ACTIVE_STATUSES)
-            .values("status")
-            .annotate(n=Count("pk"))
-            .order_by()
-        )
-        return {
-            "items": [presenters.present_for_restaurant(o) for o in items],
-            "counts": {c["status"]: c["n"] for c in counts},
-        }
-    rows, meta = paginate(qs.order_by("-created_at"), page)
-    return {"items": [presenters.present_for_restaurant(o) for o in rows], "pagination": meta}
+    counts = (
+        base.filter(status__in=ACTIVE_STATUSES).values("status").annotate(n=Count("pk")).order_by()
+    )
+    return {
+        "items": [presenters.present_for_restaurant(o) for o in items],
+        "counts": {c["status"]: c["n"] for c in counts},
+    }
 
 
 def restaurant_get(owner: User, order_id: uuid.UUID) -> dict[str, Any]:
@@ -512,12 +543,29 @@ def _distance_to_restaurant(user: User, order_id: uuid.UUID) -> int | None:
     return haversine_m(fix, restaurant)
 
 
-def rider_history(user: User, page: Page) -> dict[str, Any]:
-    qs = presenters.with_details(
-        Order.objects.filter(delivery_partner=user, status__in=[S.DELIVERED, S.CANCELLED])
-    ).order_by("-updated_at")
-    rows, meta = paginate(qs, page)
-    return {"items": [presenters.present_for_rider(o, user.pk) for o in rows], "pagination": meta}
+# The rider's delivery history: its Filters panel (Node: order-management.service.js#RIDER_FACETS).
+RIDER_HISTORY_STATUSES = (S.DELIVERED, S.CANCELLED)
+RIDER_FACETS = (
+    Facet("status", values=RIDER_HISTORY_STATUSES),
+    Facet("restaurant", label="restaurant__name"),  # the restaurants they delivered for
+)
+
+
+def _rider_history(user: User, query: dict[str, Any]) -> QuerySet[Order]:
+    """The rider's delivered and cancelled orders matching RIDER_FACETS, the day placed and a
+    search over the order number."""
+    qs = Order.objects.filter(delivery_partner=user, status__in=RIDER_HISTORY_STATUSES)
+    return apply_facets(qs, query, RIDER_FACETS).filter(
+        days_between(query, "placed"), text_search(query.get("search"), "order_number")
+    )
+
+
+def rider_history(user: User, page: Page, query: dict[str, Any]) -> dict[str, Any]:
+    """Newest first; `?facets=1` adds the Filters panel's counts (only this rider's orders)."""
+    build = functools.partial(_rider_history, user)
+    rows, meta = paginate(presenters.with_details(build(query)).order_by("-updated_at"), page)
+    result = {"items": [presenters.present_for_rider(o, user.pk) for o in rows], "pagination": meta}
+    return with_facets(result, query, build, RIDER_FACETS)
 
 
 # ---------------------------------------------------------------------------

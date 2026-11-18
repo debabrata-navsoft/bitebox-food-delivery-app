@@ -1,4 +1,4 @@
-import { dayParams, facetsParam, multi } from "./openapi.filters.js";
+import { dayParams, facetsParam, multi, searchParam } from "./openapi.filters.js";
 
 const ORDER_STATUSES = [
   "pending",
@@ -136,7 +136,7 @@ export const ordersPaths = {
       tags: T.restaurant,
       summary: "My restaurant's orders",
       description:
-        "view=active (default): in-progress orders, oldest first, plus counts per status. view=history: finished orders, paginated.",
+        "view=active (default): in-progress orders, oldest first, plus counts per status. view=history: finished orders, paginated, filterable (status, paymentMethod, placed days, search). Several values in one filter: any of them; filters combine with AND. Only this restaurant's orders, rows and counts.",
       security: bearer,
       parameters: [
         {
@@ -144,12 +144,17 @@ export const ordersPaths = {
           name: "view",
           schema: { type: "string", enum: ["active", "history"] },
         },
-        { in: "query", name: "status", schema: { type: "string" } },
+        multi("status", ORDER_STATUSES, "Statuses outside the view are ignored"),
+        multi("paymentMethod", ["cod", "online"]),
+        ...dayParams("placedFrom", "placedTo", "day placed"),
+        searchParam("History: order number, or the recipient's name"),
+        facetsParam(["status", "paymentMethod"]),
         ...paging,
       ],
       responses: {
         200: ok({ type: "object" }),
         403: err("Not a restaurant partner"),
+        422: err("Invalid filter value"),
       },
     },
   },
@@ -322,9 +327,18 @@ export const ordersPaths = {
     get: {
       tags: T.rider,
       summary: "My finished deliveries",
+      description:
+        "Delivered and cancelled orders, newest first. Several values in one filter: any of them; filters combine with AND. Only this rider's orders, rows and counts.",
       security: bearer,
-      parameters: paging,
-      responses: { 200: ok({ type: "object" }) },
+      parameters: [
+        multi("status", ["delivered", "cancelled"]),
+        multi("restaurant", "id", "Restaurant ids"),
+        ...dayParams("placedFrom", "placedTo", "day placed"),
+        searchParam("Order number"),
+        facetsParam(["status", "restaurant"], [], ["restaurant"]),
+        ...paging,
+      ],
+      responses: { 200: ok({ type: "object" }), 422: err("Invalid filter value") },
     },
   },
 

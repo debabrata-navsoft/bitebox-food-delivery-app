@@ -19,6 +19,7 @@ import { DAY_MS, localMonth } from "../utils/dates.js";
 import { haversineMeters } from "../utils/geo.js";
 import { matchingUserIds, personView } from "../utils/people.js";
 import { escapeRegex, paginationMeta } from "../utils/pagination.js";
+import { allOf, dayRange, filteredPage, fixedFacet, flagFacet, inList } from "./admin-accounts.js";
 import * as wallet from "./coin-wallet.service.js";
 import { foodValuePaise, ruleOn } from "./coins.service.js";
 import { notify, notifyAdmins } from "./notification.service.js";
@@ -502,35 +503,56 @@ export async function myReferralHistory(userId, { status } = {}, pagination) {
 // Admin
 // ---------------------------------------------------------------------------
 
-export async function adminList({ status, rewardStatus, flagged, search }, pagination) {
-  const filter = {};
-  if (status) filter.status = status;
-  if (rewardStatus) filter.rewardStatus = rewardStatus;
-  if (flagged) filter["riskFlags.0"] = { $exists: true };
-  if (search) {
-    const ids = await matchingUserIds(search, ["referralCode"]);
-    filter.$or = [
-      { referrer: { $in: ids } },
-      { referred: { $in: ids } },
-      { code: new RegExp(escapeRegex(search), "i") },
-    ];
-  }
-  const [items, total, statusCounts] = await Promise.all([
-    Referral.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit)
-      .populate("referrer", "name email")
-      .populate("referred", "name email")
-      .populate("qualifyingOrder", "orderNumber status"),
-    Referral.countDocuments(filter),
+/** The referrals list's Filters panel (PENDING is never stored, so it is not offered). */
+const REFERRAL_FACETS = {
+  status: fixedFacet(Object.values(R).filter((s) => s !== R.PENDING), "$status"),
+  rewardStatus: fixedFacet(Object.values(RS), "$rewardStatus"),
+  risk: flagFacet(
+    Object.fromEntries(
+      Object.values(REFERRAL_RISK).map((r) => [r, { $in: [r, { $ifNull: ["$riskFlags", []] }] }]),
+    ),
+  ),
+};
+
+/**
+ * The referrals list's filter: stage, reward state and risk signal (each one value or several),
+ * any risk signal (`flagged`), the day created, and a search over either person (name, email,
+ * phone, referral code) or the code used.
+ */
+async function referralFilter({ status, rewardStatus, risk, flagged, createdFrom, createdTo, search }) {
+  const ids = search && (await matchingUserIds(search, ["referralCode"]));
+  return allOf(
+    inList("status", status),
+    inList("rewardStatus", rewardStatus),
+    inList("riskFlags", risk),
+    flagged && { "riskFlags.0": { $exists: true } },
+    dayRange("createdAt", createdFrom, createdTo),
+    search && {
+      $or: [
+        { referrer: { $in: ids } },
+        { referred: { $in: ids } },
+        { code: new RegExp(escapeRegex(search), "i") },
+      ],
+    },
+  );
+}
+
+export async function adminList(query, pagination) {
+  const [page, statusCounts] = await Promise.all([
+    filteredPage(Referral, query, pagination, {
+      filterFor: referralFilter,
+      facets: REFERRAL_FACETS,
+      find: (q) =>
+        q
+          .sort({ createdAt: -1, _id: -1 })
+          .populate("referrer", "name email")
+          .populate("referred", "name email")
+          .populate("qualifyingOrder", "orderNumber status"),
+      map: adminView,
+    }),
     Referral.aggregate([{ $group: { _id: "$rewardStatus", n: { $sum: 1 } } }]),
   ]);
-  return {
-    items: items.map(adminView),
-    pagination: paginationMeta(pagination, total),
-    counts: Object.fromEntries(statusCounts.map((c) => [c._id, c.n])),
-  };
+  return { ...page, counts: Object.fromEntries(statusCounts.map((c) => [c._id, c.n])) };
 }
 
 function adminView(r) {

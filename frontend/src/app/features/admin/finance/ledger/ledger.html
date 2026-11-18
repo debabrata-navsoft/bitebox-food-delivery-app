@@ -34,6 +34,12 @@
 
   <section class="bb-card list-card" aria-labelledby="entries-title" [attr.aria-busy]="list.loading()">
     <h2 class="bb-h3" id="entries-title">Entries</h2>
+    <bb-list-toolbar
+      [list]="entries"
+      [sections]="filterSections"
+      searchLabel="Search entries"
+      placeholder="Order number or payee"
+    />
     @if (d.items.length) {
       <div class="bb-table-scroll" [class.bb-dim]="list.loading()">
         <table class="bb-table">
@@ -67,7 +73,13 @@
         (rowsChange)="list.goTo(1, $event)"
       />
     } @else {
-      <bb-empty-state icon="book-open" title="No entries yet" message="Delivered orders appear here." />
+      <bb-list-empty
+        [list]="entries"
+        icon="book-open"
+        title="No entries yet"
+        message="Delivered orders appear here."
+        noMatch="No entries match these filters"
+      />
     }
   </section>
 } @else if (!list.error()) {

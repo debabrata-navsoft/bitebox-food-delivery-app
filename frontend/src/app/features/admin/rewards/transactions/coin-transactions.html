@@ -1,11 +1,12 @@
 <bb-page-header title="Coin transactions" subtitle="Every coin earned, held, spent, expired or reversed. Rows are never edited or deleted." />
 
-<div class="bb-filters">
-  <np-text-input [formField]="filters.search" placeholder="Customer name, email or phone" ariaLabel="Search customers" icon="search" clearable />
-  <np-select [formField]="filters.type" ariaLabel="Type" [options]="typeOptions" />
-  <np-select [formField]="filters.source" ariaLabel="Source" [options]="sourceOptions" />
-</div>
-@if (filterModel().userId) {
+<bb-list-toolbar
+  [list]="transactions"
+  [sections]="filterSections"
+  searchLabel="Search customers"
+  placeholder="Customer name, email or phone"
+/>
+@if (customer()) {
   <p class="one-customer">
     Showing one customer's history.
     <button class="bb-link-button" type="button" (click)="clearCustomer()">Show everyone</button>
@@ -25,7 +26,7 @@
       <span class="bb-skeleton row"></span>
     }
   } @else if (list.empty()) {
-    <bb-empty-state icon="coins" title="No transactions match" message="Try other filters." />
+    <bb-list-empty [list]="transactions" icon="coins" title="No transactions match" message="Try other filters." />
   } @else {
     <div class="bb-table-scroll" [class.bb-dim]="list.loading()">
       <table class="bb-table">

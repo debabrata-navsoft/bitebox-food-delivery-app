@@ -40,52 +40,59 @@
   }
 
   @if (tab() === 'history') {
-    @if (history.loading() && !history.data()) {
-      <span class="bb-skeleton" style="height: 240px"></span>
-    } @else if (history.error(); as message) {
+    <bb-list-toolbar
+      [list]="history"
+      [sections]="historySections"
+      searchLabel="Search order history"
+      placeholder="Order number or customer name"
+    />
+    @if (historyList.error(); as message) {
       <div class="bb-alert error" role="alert">
         <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
         <span
           >{{ message }}
-          <button class="bb-link-button" (click)="history.load(1)">Retry</button></span
+          <button class="bb-link-button" (click)="historyList.load(1)">Retry</button></span
         >
       </div>
-    } @else if (history.data(); as h) {
-      @if (h.items.length === 0) {
-        <bb-empty-state
-          icon="history"
-          title="No finished orders yet"
-          message="Delivered, rejected and cancelled orders appear here."
-        />
-      } @else {
-        <ul class="history bb-card">
-          @for (o of h.items; track o.id) {
-            <li>
-              <div class="h-main">
-                <strong>{{ o.orderNumber }}</strong>
-                <span class="bb-muted"
-                  >{{ o.createdAt | date: 'd MMM, h:mm a' }} · {{ o | itemCount }} ·
-                  {{ o.deliveryAddress.recipientName }}</span
-                >
-                @if (o.cancellation?.reason) {
-                  <span class="reason">{{ o.cancellation!.reason }}</span>
-                }
-              </div>
-              <span class="h-total">{{ o.pricing.totalPaise | inr }}</span>
-              <bb-order-status-chip [status]="o.status" />
-            </li>
-          }
-        </ul>
-        <np-pagination
-          [page]="h.pagination.page"
-          [rows]="h.pagination.limit"
-          [totalRecords]="h.pagination.total"
-          [rowsOptions]="[15, 30, 50]"
-          variant="compact"
-          (pageChange)="history.goTo($event)"
-          (rowsChange)="history.goTo(1, $event)"
-        />
-      }
+    }
+    @if (historyList.showSkeleton()) {
+      <span class="bb-skeleton" style="height: 240px"></span>
+    } @else if (historyList.empty()) {
+      <bb-list-empty
+        [list]="history"
+        icon="history"
+        title="No finished orders yet"
+        message="Delivered, rejected and cancelled orders appear here."
+        noMatch="No orders match these filters"
+      />
+    } @else if (historyList.data(); as h) {
+      <ul class="history bb-card" [class.bb-dim]="historyList.loading()" [attr.aria-busy]="historyList.loading()">
+        @for (o of h.items; track o.id) {
+          <li>
+            <div class="h-main">
+              <strong>{{ o.orderNumber }}</strong>
+              <span class="bb-muted"
+                >{{ o.createdAt | date: 'd MMM, h:mm a' }} · {{ o | itemCount }} ·
+                {{ o.deliveryAddress.recipientName }}</span
+              >
+              @if (o.cancellation?.reason) {
+                <span class="reason">{{ o.cancellation!.reason }}</span>
+              }
+            </div>
+            <span class="h-total">{{ o.pricing.totalPaise | inr }}</span>
+            <bb-order-status-chip [status]="o.status" />
+          </li>
+        }
+      </ul>
+      <np-pagination
+        [page]="h.pagination.page"
+        [rows]="h.pagination.limit"
+        [totalRecords]="h.pagination.total"
+        [rowsOptions]="[15, 30, 50]"
+        variant="compact"
+        (pageChange)="historyList.goTo($event)"
+        (rowsChange)="historyList.goTo(1, $event)"
+      />
     }
   } @else if (!board.board()) {
     <div class="grid">

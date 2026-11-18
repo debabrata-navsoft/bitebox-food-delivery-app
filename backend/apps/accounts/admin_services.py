@@ -2,10 +2,9 @@
 
 import re
 import uuid
-from collections.abc import Iterable, Mapping
-from datetime import date, datetime, time, timedelta
+from collections.abc import Iterable
+from datetime import datetime, timedelta
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.db import transaction
@@ -31,7 +30,7 @@ from apps.rbac.roles import (
 )
 from apps.uploads.storage import is_uploaded_image_url
 from common.api import ApiError
-from common.filters import Facet, apply_facets, with_facets
+from common.filters import Facet, apply_facets, days_between, with_facets
 from common.pagination import Page, paginate
 from common.permissions import NO_ACCESS
 
@@ -406,21 +405,6 @@ VERIFICATION_FILTERS = {
     "phone_unverified": Q(phone_verified_at__isnull=True),
 }
 _ID_SUFFIX = re.compile(r"^[0-9a-f]{6,32}$")
-
-
-def _day_start(day: date) -> datetime:
-    """Midnight of a calendar day in the report time zone."""
-    return datetime.combine(day, time.min, tzinfo=ZoneInfo(settings.REPORT_TIMEZONE))
-
-
-def days_between(query: Mapping[str, Any], name: str, field: str = "created_at") -> Q:
-    """`<name>_from` / `<name>_to`: whole calendar days (inclusive) in the report time zone."""
-    match = Q()
-    if start := query.get(f"{name}_from"):
-        match &= Q(**{f"{field}__gte": _day_start(start)})
-    if end := query.get(f"{name}_to"):
-        match &= Q(**{f"{field}__lt": _day_start(end + timedelta(days=1))})
-    return match
 
 
 def joined_between(query: dict[str, Any]) -> Q:

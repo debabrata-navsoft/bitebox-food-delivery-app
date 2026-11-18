@@ -1,15 +1,19 @@
 import { Resource, inject, signal } from '@angular/core';
-import { SelectOption } from 'nexprime';
 import { Observable } from 'rxjs';
 import { errorMessage } from '../../core/services/api-error';
 import { NotificationService } from '../../core/services/notification.service';
+import { optionsSection } from '../list/filtered-list';
 import { COUPON_STATUS_LABEL } from '../models/checkout.models';
 
-/** Helpers shared by the admin coupon list, the review queue and the restaurant's offers. */
-export const STATUS_OPTIONS: SelectOption[] = [
-  { value: '', label: 'Any status' },
-  ...Object.entries(COUPON_STATUS_LABEL).map(([value, label]) => ({ value, label })),
-];
+// Helpers shared by the admin coupon list, the review queue and the restaurant's offers.
+
+/** Filters panel sections of both lists. */
+export const COUPON_STATUS_SECTION = optionsSection('status', 'Status', COUPON_STATUS_LABEL);
+export const DISCOUNT_TYPE_SECTION = optionsSection('discountType', 'Discount', {
+  percent: 'Percentage off',
+  flat: 'Flat amount off',
+  free_delivery: 'Free delivery',
+});
 
 /** A resource's value, or undefined while loading or after an error (`value()` throws then). */
 export const loaded = <T>(resource: Resource<T>): T | undefined =>

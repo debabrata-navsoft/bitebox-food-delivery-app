@@ -2,17 +2,14 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse, Paginated } from '../../shared/models/api.models';
-import { PaymentStatus } from '../../shared/models/checkout.models';
+import { Faceted, ListQuery } from '../../shared/list/filtered-list';
+import { ApiResponse } from '../../shared/models/api.models';
 import {
   AdminPayment,
   AdminPaymentDetail,
   AdminReport,
   Earnings,
   PaymentInfo,
-  PaymentMethod,
-  OrderState,
-  PaymentProvider,
 } from '../../shared/models/payment.models';
 import { toParams } from './http-params';
 
@@ -36,23 +33,13 @@ export class ReportsService {
       .pipe(map((r) => r.data));
   }
 
-  payments(query: {
-    status?: PaymentStatus;
-    method?: PaymentMethod;
-    provider?: PaymentProvider;
-    /** Where the order stands (`cancelled` includes rejected). */
-    orderState?: OrderState;
-    /** Order number, or the customer's name, email or phone. */
-    search?: string;
-    /** One customer's payments (user id). */
-    customer?: string;
-    from?: string;
-    to?: string;
-    page?: number;
-    limit?: number;
-  }): Observable<Paginated<AdminPayment>> {
+  /**
+   * Every payment: status, method, provider, orderState, restaurant (one or several each), search,
+   * customer (user id), from/to (ISO instants); `facets: 1` adds the Filters panel's counts.
+   */
+  payments(query: ListQuery): Observable<Faceted<AdminPayment>> {
     return this.http
-      .get<ApiResponse<Paginated<AdminPayment>>>(`${this.api}/admin/payments`, {
+      .get<ApiResponse<Faceted<AdminPayment>>>(`${this.api}/admin/payments`, {
         params: toParams(query),
       })
       .pipe(map((r) => r.data));

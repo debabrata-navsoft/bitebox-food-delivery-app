@@ -20,7 +20,7 @@ from typing import Any
 
 from django.conf import settings
 from django.db import IntegrityError, transaction
-from django.db.models import F, Q, Sum
+from django.db.models import F, Q, QuerySet, Sum
 from django.utils import timezone
 
 from apps.accounts.models import User
@@ -45,6 +45,7 @@ from apps.orders.notifications import rupees as _rupees
 from apps.orders.workflow import Actor, transition
 from apps.realtime.events import emit_order_updated
 from common.api import ApiError
+from common.filters import Facet, apply_facets, text_search, with_facets
 from common.pagination import Page, paginate
 
 from .models import Payment, Provider, Refund, RefundStatus, WebhookEvent
@@ -689,30 +690,42 @@ ORDER_STATES: dict[str, tuple[str, ...]] = {
 }
 
 
-def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
-    """Newest first; filters by status, method, provider, the order's state, the customer, dates
-    and a search over the order number and the customer's name, email or phone."""
-    qs = Payment.objects.select_related("order", "user")
-    for field in ("status", "method", "provider"):
-        if query.get(field):
-            qs = qs.filter(**{field: query[field]})
-    if query.get("order_state"):
-        qs = qs.filter(order__status__in=ORDER_STATES[query["order_state"]])
+# The transactions list's Filters panel; `order_state` and `restaurant` look at the order.
+ADMIN_FACETS = (
+    Facet("status", values=PaymentStatus.values),
+    Facet("method", values=PaymentMethod.values),
+    Facet("provider", values=Provider.values),
+    Facet(
+        "order_state",
+        values=list(ORDER_STATES),
+        cases={state: Q(order__status__in=statuses) for state, statuses in ORDER_STATES.items()},
+    ),
+    Facet("restaurant", field="order__restaurant", label="order__restaurant__name"),
+)
+
+
+def _admin_payments(query: dict[str, Any]) -> QuerySet[Payment]:
+    """The payments matching every filter (ADMIN_FACETS, the customer, dates and the search)."""
+    qs = apply_facets(Payment.objects.all(), query, ADMIN_FACETS)
     if query.get("customer"):
         qs = qs.filter(order__customer_id=query["customer"])
     if query.get("from"):
         qs = qs.filter(created_at__gte=query["from"])
     if query.get("to"):
         qs = qs.filter(created_at__lte=query["to"])
-    if search := (query.get("search") or "").strip():
-        qs = qs.filter(
-            Q(order__order_number__icontains=search)
-            | Q(user__name__icontains=search)
-            | Q(user__email__icontains=search)
-            | Q(user__phone__icontains=search)
+    return qs.filter(
+        text_search(
+            query.get("search"), "order__order_number", "user__name", "user__email", "user__phone"
         )
+    )
+
+
+def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
+    """Newest first; `?facets=1` adds the Filters panel's counts."""
+    qs = _admin_payments(query).select_related("order", "user")
     rows, meta = paginate(qs.order_by("-created_at"), page)
-    return {"items": [_admin_row(p) for p in rows], "pagination": meta}
+    result = {"items": [_admin_row(p) for p in rows], "pagination": meta}
+    return with_facets(result, query, _admin_payments, ADMIN_FACETS)
 
 
 def admin_get(payment_id: uuid.UUID) -> dict[str, Any]:

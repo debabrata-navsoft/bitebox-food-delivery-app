@@ -3,18 +3,20 @@ Super admin views over the coin ledger: transactions, wallets, reversals and rep
 services/rewards-admin.service.js).
 """
 
+from collections.abc import Mapping
 from datetime import timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Q, QuerySet, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.finance.reports import day_keys
 from common.api import ApiError
+from common.filters import Facet, apply_facets, with_facets
 from common.pagination import Page, paginate
 
 from . import referrals, wallet
@@ -74,12 +76,18 @@ def _rows() -> Any:
     ).prefetch_related("allocations")
 
 
-def list_transactions(query: dict[str, Any], page: Page) -> dict[str, Any]:
-    qs = _rows().filter(status="posted")
-    if query.get("type"):
-        qs = qs.filter(type=query["type"])
-    if query.get("source"):
-        qs = qs.filter(source=query["source"])
+# The coin transactions list's Filters panel; campaign: the campaigns rows came from, with names.
+TXN_FACETS = (
+    Facet("type", values=T.values),
+    Facet("source", values=S.values),
+    Facet("campaign", field="campaign_id", label="campaign__name"),
+)
+
+
+def transaction_rows(query: Mapping[str, Any]) -> QuerySet[CoinTransaction]:
+    """Posted rows matching the facets, one customer (`user_id`), from/to (instants) and a
+    customer search (name, email, phone)."""
+    qs = apply_facets(CoinTransaction.objects.filter(status="posted"), query, TXN_FACETS)
     if query.get("user_id"):
         qs = qs.filter(user_id=query["user_id"])
     if query.get("from"):
@@ -88,8 +96,14 @@ def list_transactions(query: dict[str, Any], page: Page) -> dict[str, Any]:
         qs = qs.filter(created_at__lte=query["to"])
     if query.get("search"):
         qs = qs.filter(user_id__in=referrals.matching_user_ids(query["search"]))
-    rows, meta = paginate(qs.order_by("-created_at", "-pk"), page)
-    return {"items": [staff_txn_view(r) for r in rows], "pagination": meta}
+    return qs
+
+
+def list_transactions(query: dict[str, Any], page: Page) -> dict[str, Any]:
+    qs = transaction_rows(query).select_related("user", "created_by", "campaign")
+    rows, meta = paginate(qs.prefetch_related("allocations").order_by("-created_at", "-pk"), page)
+    result = {"items": [staff_txn_view(r) for r in rows], "pagination": meta}
+    return with_facets(result, query, transaction_rows, TXN_FACETS)
 
 
 def get_transaction(txn_id: Any) -> dict[str, Any]:

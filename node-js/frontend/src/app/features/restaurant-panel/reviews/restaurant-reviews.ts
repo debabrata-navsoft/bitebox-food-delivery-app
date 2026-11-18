@@ -1,45 +1,35 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { form } from '@angular/forms/signals';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
-import { IconComponent, PaginationComponent, SelectOption } from 'nexprime';
+import { IconComponent, PaginationComponent } from 'nexprime';
 import { errorMessage } from '../../../core/services/api-error';
 import { ReviewService } from '../../../core/services/review.service';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
+import { ListEmpty } from '../../../shared/components/list-empty/list-empty';
+import { FilterValue, onlyValue } from '../../../shared/components/filter-panel/filter-panel.models';
+import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { RatingSummary } from '../../../shared/components/rating-summary/rating-summary';
 import { ReviewOrderRow } from '../../../shared/components/review-order-row/review-order-row';
 import { Stars } from '../../../shared/components/stars/stars';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { pagedList } from '../../../shared/list/paged-list';
+import { datesSection, filteredList, optionsSection } from '../../../shared/list/filtered-list';
 import {
   RestaurantOrderReviews,
+  RATING_SECTION,
   RestaurantReviewSummary,
-  ReviewSort,
-  RATING_FILTER_OPTIONS,
   SORT_OPTIONS,
 } from '../../../shared/models/review.models';
 import { openRestaurantOrderReviews } from './order-dialog/restaurant-order-dialog';
 
-const ANY = '';
-
-interface Filters {
-  target: string;
-  foodItemId: string;
-  rating: string;
-  responded: string;
-  sort: string;
-}
 
 /** Reviews of the restaurant and its dishes, one row per order; the order dialog holds the replies. */
 @Component({
   selector: 'bb-restaurant-reviews',
   imports: [
     DecimalPipe,
-    NP_FORM_FIELDS,
+    ListToolbar,
     PaginationComponent,
     IconComponent,
-    EmptyState,
+    ListEmpty,
     PageHeader,
     RatingSummary,
     ReviewOrderRow,
@@ -56,55 +46,38 @@ export class RestaurantReviews {
   protected readonly summary = signal<RestaurantReviewSummary | null>(null);
   protected readonly summaryError = signal<string | null>(null);
 
-  protected readonly filterModel = signal<Filters>({
-    target: ANY,
-    foodItemId: ANY,
-    rating: ANY,
-    responded: ANY,
-    sort: 'newest',
-  });
-  protected readonly filters = form(this.filterModel);
-
-  protected readonly targetOptions: SelectOption[] = [
-    { value: ANY, label: 'Restaurant and dishes' },
-    { value: 'restaurant', label: 'Restaurant only' },
-    { value: 'food', label: 'Dishes only' },
-  ];
-  protected readonly ratingOptions = RATING_FILTER_OPTIONS;
-  protected readonly respondedOptions: SelectOption[] = [
-    { value: ANY, label: 'Replied or not' },
-    { value: 'false', label: 'Needs a reply' },
-    { value: 'true', label: 'Replied' },
-  ];
   protected readonly sortOptions = SORT_OPTIONS;
-  protected readonly foodOptions = computed<SelectOption[]>(() => [
-    { value: ANY, label: 'Any dish' },
-    ...(this.summary()?.foods ?? []).map((f) => ({ value: f.id, label: f.name })),
-  ]);
+  private readonly dishNames = computed(
+    () => new Map((this.summary()?.foods ?? []).map((f) => [f.id, f.name])),
+  );
+  /** The Filters panel; dishes are the ones with reviews (names from the API's counts). */
+  protected readonly filterSections = computed(() => {
+    const names = this.dishNames();
+    return [
+      optionsSection('target', 'About', { restaurant: 'The restaurant', food: 'Dishes' }),
+      RATING_SECTION,
+      optionsSection('reply', 'Reply', { needed: 'Needs a reply', replied: 'Replied' }),
+      optionsSection('photos', 'Photos', { with: 'With photos', without: 'Without photos' }),
+      optionsSection('dish', 'Dish', (id) => names.get(id) ?? 'Dish'),
+      datesSection('created', 'Written'),
+    ];
+  });
+
+  protected readonly reviewList = filteredList((query) => this.reviews.restaurantOrders(query), {
+    errorText: 'Could not load reviews.',
+    sort: 'newest',
+    limit: 10,
+  });
+  protected readonly list = this.reviewList.list;
+
   protected readonly ratedFoods = computed(() =>
     (this.summary()?.foods ?? []).filter((f) => f.rating.count > 0),
   );
-  protected readonly selectedRating = computed(() => Number(this.filterModel().rating) || null);
-
-  protected readonly list = pagedList(
-    (page, limit) => {
-      const f = this.filterModel();
-      return this.reviews.restaurantOrders({
-        target: (f.target || undefined) as 'restaurant' | 'food' | undefined,
-        foodItemId: f.foodItemId || undefined,
-        rating: Number(f.rating) || undefined,
-        responded: f.responded ? f.responded === 'true' : undefined,
-        sort: f.sort as ReviewSort,
-        page,
-        limit,
-      });
-    },
-    {
-      filterKey: () => JSON.stringify(this.filterModel()),
-      limit: 10,
-      errorText: 'Could not load reviews.',
-    },
+  /** The one dish or star rating picked (the summary cards highlight it), else none. */
+  protected readonly selectedRating = computed(
+    () => Number(onlyValue(this.reviewList.panel(), 'rating')) || null,
   );
+  protected readonly selectedDish = computed(() => onlyValue(this.reviewList.panel(), 'dish'));
 
   constructor() {
     this.loadSummary();
@@ -118,8 +91,17 @@ export class RestaurantReviews {
     });
   }
 
-  protected filterBy(patch: Partial<Filters>): void {
-    this.filterModel.update((f) => ({ ...f, ...patch }));
+  /** A shortcut from the summary cards: sets those Filters panel sections, keeps the rest. */
+  protected filterBy(patch: FilterValue): void {
+    this.reviewList.panel.update((v) => ({ ...v, ...patch }));
+  }
+
+  protected pickRating(stars: number | null): void {
+    this.filterBy(stars ? { rating: [String(stars)], target: ['restaurant'] } : { rating: [] });
+  }
+
+  protected pickDish(id: string): void {
+    this.filterBy(this.selectedDish() === id ? { dish: [] } : { dish: [id], target: ['food'] });
   }
 
   protected open(row: RestaurantOrderReviews): void {

@@ -1,9 +1,18 @@
 import { TableLabels } from '../../../../shared/list/table-labels';
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  OnInit,
+  signal,
+  untracked,
+} from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { form } from '@angular/forms/signals';
-import { ButtonComponent, IconComponent, PaginationComponent, SelectOption } from 'nexprime';
+import { ButtonComponent, IconComponent, PaginationComponent } from 'nexprime';
 import { Observable } from 'rxjs';
 import { FinanceService } from '../../../../core/services/admin/finance.service';
 import { errorMessage, resourceError } from '../../../../core/services/api-error';
@@ -11,14 +20,14 @@ import { NotificationService } from '../../../../core/services/notification.serv
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
-import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
-import { pagedList } from '../../../../shared/list/paged-list';
+import { ListEmpty } from '../../../../shared/components/list-empty/list-empty';
+import { ListToolbar } from '../../../../shared/components/list-toolbar/list-toolbar';
+import { datesSection, filteredList, optionsSection } from '../../../../shared/list/filtered-list';
 import {
   PAYOUT_STATUS_LABEL,
   PAYOUT_STATUS_TONE,
   Payout,
   PayoutDue,
-  PayoutStatus,
   PayoutType,
 } from '../../../../shared/models/admin-roles.models';
 import { InrPipe, formatPaise } from '../../../../shared/pipes/money.pipes';
@@ -42,11 +51,12 @@ const COPY: Record<PayoutType, { title: string; subtitle: string; payee: string 
   imports: [
     TableLabels,
     DatePipe,
-    NP_FORM_FIELDS,
+    ListToolbar,
     ButtonComponent,
     PaginationComponent,
     IconComponent,
     EmptyState,
+    ListEmpty,
     PageHeader,
     InrPipe,
   ],
@@ -54,7 +64,7 @@ const COPY: Record<PayoutType, { title: string; subtitle: string; payee: string 
   styleUrl: './payouts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PayoutsPage {
+export class PayoutsPage implements OnInit {
   private readonly api = inject(FinanceService);
   private readonly dialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
@@ -75,28 +85,32 @@ export class PayoutsPage {
     (this.due.hasValue() ? this.due.value() : []).reduce((n, r) => n + r.amountPaise, 0),
   );
 
-  protected readonly filterModel = signal({ status: '' });
-  protected readonly filters = form(this.filterModel);
-  protected readonly statusOptions: SelectOption[] = [
-    { value: '', label: 'Any status' },
-    ...(Object.keys(PAYOUT_STATUS_LABEL) as PayoutStatus[]).map((s) => ({
-      value: s,
-      label: PAYOUT_STATUS_LABEL[s],
-    })),
-  ];
-  protected readonly history = pagedList(
-    (page, limit) =>
-      this.api.payouts({
-        type: this.type(),
-        status: (this.filterModel().status || undefined) as PayoutStatus | undefined,
-        page,
-        limit,
-      }),
-    {
-      filterKey: () => `${this.type()}|${this.filterModel().status}`,
-      errorText: 'Could not load payouts.',
-    },
-  );
+  /** The payee section follows the page: restaurants, or riders (user ids), from the API's counts. */
+  protected readonly filterSections = computed(() => [
+    optionsSection('status', 'Status', PAYOUT_STATUS_LABEL),
+    this.type() === 'rider'
+      ? optionsSection('rider', 'Delivery partner')
+      : optionsSection('restaurant', 'Restaurant'),
+    datesSection('created', 'Created'),
+  ]);
+  protected readonly payouts = filteredList((query) => this.api.payouts(query), {
+    errorText: 'Could not load payouts.',
+    extra: () => ({ type: this.type() }),
+    lazy: true,
+  });
+  protected readonly history = this.payouts.list;
+
+  constructor() {
+    // Restaurants and riders don't mix: a switch between the two pages starts with no filters.
+    effect(() => {
+      this.type();
+      untracked(() => this.payouts.clear());
+    });
+  }
+
+  ngOnInit(): void {
+    this.history.load(1);
+  }
 
   protected payOut(row: PayoutDue): void {
     confirmed(this.dialog, {

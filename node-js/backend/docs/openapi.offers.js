@@ -1,6 +1,8 @@
 // Coupons and restaurant offers beyond the basic coupon CRUD (routes/coupon.routes.js): admin
 // status, copies and analytics, the restaurant-offer approval queue, partners' own offers, and what
 // customers see.
+import { described, facetsParam, multi, q } from "./openapi.filters.js";
+
 const ok = (data, description = "Success") => ({
   description,
   content: { "application/json": { schema: { type: "object", properties: { success: { const: true }, message: { type: "string" }, data } } } },
@@ -12,15 +14,19 @@ const paging = [
   { in: "query", name: "page", schema: { type: "integer", minimum: 1 } },
   { in: "query", name: "limit", schema: { type: "integer", minimum: 1, maximum: 100 } },
 ];
-const listQuery = [
+/** The coupon lists' filters (admins' and a partner's own offers); several values: any of them. */
+export const couponListQuery = [
   ...paging,
-  { in: "query", name: "search", schema: { type: "string" } },
-  { in: "query", name: "status", schema: { enum: ["active", "scheduled", "expired", "paused", "draft", "pending", "rejected"] } },
-  { in: "query", name: "owner", schema: { enum: ["platform", "restaurant"] } },
-  { in: "query", name: "kind", schema: { enum: ["coupon", "restaurant_offer", "platform_offer", "payment_offer"] } },
-  { in: "query", name: "sort", schema: { enum: ["newest", "oldest", "expiring", "most_used", "code"] } },
-  { in: "query", name: "from", schema: { type: "string", format: "date-time" } },
-  { in: "query", name: "to", schema: { type: "string", format: "date-time" } },
+  q("search", { type: "string" }),
+  q("active", { type: "boolean" }),
+  multi("status", ["active", "scheduled", "expired", "paused", "draft", "pending", "rejected"]),
+  multi("owner", ["platform", "restaurant"], "platform: BiteBox coupons; restaurant: restaurant offers"),
+  multi("kind", ["coupon", "restaurant_offer", "platform_offer", "payment_offer"]),
+  multi("audience", ["all", "new", "existing"]),
+  multi("discountType", ["percent", "flat", "free_delivery"]),
+  q("sort", { enum: ["newest", "oldest", "expiring", "most_used", "code"] }),
+  described(q("from", { type: "string", format: "date-time" }), "Valid on or after this time"),
+  described(q("to", { type: "string", format: "date-time" }), "Valid on or before this time"),
 ];
 const coupon = ok({ type: "object", properties: { coupon: { type: "object" } } });
 const offers = ok({ type: "object", properties: { offers: { type: "array", items: { type: "object" } } } });
@@ -86,7 +92,14 @@ export const offersPaths = {
     },
   },
   "/my/restaurant/offers": {
-    get: { tags: ["Restaurant offers"], summary: "My restaurant's offers", security: bearer, parameters: listQuery, responses: { 200: page } },
+    get: {
+      tags: ["Restaurant offers"],
+      summary: "My restaurant's offers",
+      description: "Several values in one filter: any of them; filters combine with AND. Only this restaurant's offers, rows and counts.",
+      security: bearer,
+      parameters: [...couponListQuery, facetsParam(["status", "discountType"])],
+      responses: { 200: page, 422: err("Invalid filter value") },
+    },
     post: {
       tags: ["Restaurant offers"],
       summary: "Create an offer (sent for approval when OFFER_APPROVAL_REQUIRED)",

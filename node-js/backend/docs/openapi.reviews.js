@@ -1,4 +1,5 @@
 import { REPORT_REASONS, REVIEW_POLICY } from "../config/reviews.js";
+import { dayParams, described, facetsParam, multi, q, searchParam } from "./openapi.filters.js";
 
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` });
 const ok = (data, description = "Success") => ({
@@ -59,6 +60,9 @@ const sort = {
     default: "newest",
   },
 };
+// The list filters (one value or several).
+const stars = multi("rating", ["1", "2", "3", "4", "5"], "Stars");
+const writtenDays = dayParams("createdFrom", "createdTo", "day written");
 const target = (values = ["restaurant", "food", "rider"]) => ({
   in: "query",
   name: "target",
@@ -383,14 +387,20 @@ export const reviewsPaths = {
     get: {
       tags: ["Reviews - Restaurant & rider"],
       summary:
-        "Reviews grouped by order: one row per order with its restaurant and dish reviews ",
+        "Reviews grouped by order: one row per order with its restaurant and dish reviews. Facet counts are orders with a matching review, of my restaurant only",
       security: bearer,
       parameters: [
-        target(["restaurant", "food"]),
-        { in: "query", name: "foodItemId", schema: { type: "string" } },
-        ratingFilter,
-        { in: "query", name: "responded", schema: { type: "boolean" } },
+        searchParam("Order number, dish or words of the review"),
+        multi("target", ["restaurant", "food"], "What the review is about"),
+        stars,
+        multi("reply", ["needed", "replied"], "needed: not replied to yet"),
+        multi("photos", ["with", "without"], "Reviews with or without photos"),
+        multi("dish", "id", "Dishes (my restaurant's)"),
+        described(q("foodItemId", { type: "string" }), "One dish (older form of dish)"),
+        described(q("responded", { type: "boolean" }), "Older form of reply: true replied, false needed"),
         sort,
+        ...writtenDays,
+        facetsParam(["target", "rating", "reply", "photos", "dish"], [], ["dish"]),
         ...paging,
       ],
       responses: { 200: ok({ type: "object" }) },
@@ -440,9 +450,17 @@ export const reviewsPaths = {
     get: {
       tags: ["Reviews - Restaurant & rider"],
       summary:
-        "Ratings of my deliveries (first name and order number only) with my summary",
+        "Ratings of my deliveries (first name and order number only) with my summary. Facet counts cover my ratings only",
       security: bearer,
-      parameters: [ratingFilter, sort, ...paging],
+      parameters: [
+        searchParam("Order number or words of the rating"),
+        stars,
+        multi("comment", ["with", "without"], "Ratings with or without words"),
+        sort,
+        ...writtenDays,
+        facetsParam(["rating", "comment"]),
+        ...paging,
+      ],
       responses: {
         200: reviewList("PublicReview", { summary: ref("RatingSummary") }),
       },
@@ -452,13 +470,16 @@ export const reviewsPaths = {
     get: {
       tags: ["Admin - Reviews"],
       summary:
-        "Reviews grouped by order (`reported=true` puts orders with open reports first)",
+        "Reviews grouped by order (`reported=true` puts orders with open reports first). Facet counts are orders with a matching review; the status facet counts every status, deleted included",
       security: bearer,
       parameters: [
-        target(),
-        { in: "query", name: "status", schema: { type: "string" } },
-        { in: "query", name: "reported", schema: { type: "boolean" } },
-        { in: "query", name: "restaurantId", schema: { type: "string" } },
+        searchParam("Order number, customer, dish or words of the review"),
+        multi("target", ["restaurant", "food", "rider"], "What the review is about"),
+        multi("status", ["published", "hidden", "removed", "deleted"], "None given: every status but deleted"),
+        stars,
+        multi("restaurant", "id", "Restaurant ids"),
+        described(q("reported", { type: "boolean" }), "true: orders with open reports, those first"),
+        described(q("restaurantId", { type: "string" }), "One restaurant's reviews"),
         {
           in: "query",
           name: "customer",
@@ -471,8 +492,8 @@ export const reviewsPaths = {
           schema: { type: "string" },
           description: "Orders with a review of this rider (user id)",
         },
-        ratingFilter,
-        { in: "query", name: "search", schema: { type: "string" } },
+        ...writtenDays,
+        facetsParam(["target", "status", "rating", "restaurant"], [], ["restaurant"]),
         ...paging,
       ],
       responses: { 200: ok({ type: "object" }), 403: err("Not an admin") },

@@ -5,19 +5,17 @@ import {
   afterNextRender,
   inject,
   input,
-  signal,
 } from '@angular/core';
-import { form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { Router, RouterLink } from '@angular/router';
-import { IconComponent, SelectOption } from 'nexprime';
+import { IconComponent } from 'nexprime';
 import { SupportService } from '../../../core/services/support.service';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
+import { ListEmpty } from '../../../shared/components/list-empty/list-empty';
+import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { pagedList } from '../../../shared/list/paged-list';
+import { datesSection, filteredList, optionsSection } from '../../../shared/list/filtered-list';
 import {
   TICKET_STATUS_LABEL,
   TICKET_STATUS_TONE,
@@ -26,17 +24,24 @@ import {
 import { openNewTicket } from '../new-ticket-dialog/new-ticket-dialog';
 import { supportBase } from '../support-base';
 
+/** A requester's ticket states: "Open" includes the ones waiting for their reply. */
+const STATUS_FILTER_LABEL = {
+  open: 'Open',
+  waiting_for_response: 'Waiting for your reply',
+  closed: 'Resolved or closed',
+};
+
 /** "Help & support" for customers, restaurants and riders: their tickets and a way to open one. */
 @Component({
   selector: 'bb-my-tickets',
   imports: [
     DatePipe,
     RouterLink,
-    NP_FORM_FIELDS,
+    ListToolbar,
     MatButtonModule,
     MatPaginatorModule,
     IconComponent,
-    EmptyState,
+    ListEmpty,
     PageHeader,
   ],
   templateUrl: './my-tickets.html',
@@ -55,23 +60,15 @@ export class MyTickets {
   /** ?order=BB-… (from an order page) opens the form with the order filled in. */
   readonly order = input<string>();
 
-  protected readonly filterModel = signal({ status: 'open' });
-  protected readonly filters = form(this.filterModel);
-  protected readonly statusOptions: SelectOption[] = [
-    { value: 'open', label: 'Open tickets' },
-    { value: 'closed', label: 'Resolved and closed' },
-    { value: '', label: 'All tickets' },
+  protected readonly filterSections = [
+    optionsSection('status', 'Status', STATUS_FILTER_LABEL),
+    optionsSection('type', 'About', TICKET_TYPE_LABEL),
+    datesSection('created', 'Opened'),
   ];
-
-  protected readonly list = pagedList(
-    (page, limit) =>
-      this.api.mine({
-        status: (this.filterModel().status || undefined) as 'open' | 'closed' | undefined,
-        page,
-        limit,
-      }),
-    { filterKey: () => this.filterModel().status, errorText: 'Could not load your tickets.' },
-  );
+  protected readonly ticketList = filteredList((query) => this.api.mine(query), {
+    errorText: 'Could not load your tickets.',
+  });
+  protected readonly list = this.ticketList.list;
 
   constructor() {
     afterNextRender(() => {

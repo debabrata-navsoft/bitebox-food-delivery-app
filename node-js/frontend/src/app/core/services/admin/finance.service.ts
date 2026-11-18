@@ -9,12 +9,12 @@ import {
   LedgerSummary,
   Payout,
   PayoutDue,
-  PayoutStatus,
   PayoutType,
   RefundRow,
   Transaction,
 } from '../../../shared/models/admin-roles.models';
-import { ApiResponse, Paginated } from '../../../shared/models/api.models';
+import { Faceted, ListQuery } from '../../../shared/list/filtered-list';
+import { ApiResponse } from '../../../shared/models/api.models';
 import { FileDownloadService } from '../file-download.service';
 import { toParams } from '../http-params';
 
@@ -37,22 +37,16 @@ export class FinanceService {
   commission = (days: number) => this.get<Commission>('commission', { days });
   transaction = (id: string) =>
     this.get<{ transaction: Transaction }>(`transactions/${id}`).pipe(map((d) => d.transaction));
-  refunds = (query: { state?: 'needed' | 'refunded'; page?: number; limit?: number }) =>
-    this.get<Paginated<RefundRow>>('refunds', query);
+  /** The refund queue: state, restaurant, updatedFrom/updatedTo, search; `facets: 1` adds the counts. */
+  refunds = (query: ListQuery) => this.get<Faceted<RefundRow>>('refunds', query);
 
   due = (type: PayoutType) =>
     this.get<{ items: PayoutDue[] }>('payouts/due', { type }).pipe(map((d) => d.items));
-  payouts = (query: {
-    type?: PayoutType;
-    status?: PayoutStatus;
-    /** One restaurant's payouts. */
-    restaurant?: string;
-    /** One rider's payouts (user id). */
-    rider?: string;
-    page?: number;
-    limit?: number;
-  }) =>
-    this.get<Paginated<Payout>>('payouts', query);
+  /**
+   * Payout history: type, status, restaurant, rider (riders' user ids), createdFrom/createdTo and
+   * search; `facets: 1` adds the counts.
+   */
+  payouts = (query: ListQuery) => this.get<Faceted<Payout>>('payouts', query);
   createPayout = (type: PayoutType, payeeId: string, note?: string) =>
     this.post<{ payout: Payout }>('payouts', { type, payeeId, note }).pipe(map((d) => d.payout));
   markPaid = (id: string, reference: string) =>
@@ -71,8 +65,9 @@ export class FinanceService {
       .delete<ApiResponse<CommissionRules>>(`${this.url}/commission/rules/${restaurantId}`)
       .pipe(map((r) => r.data));
 
-  ledger = (query: { days?: number; page?: number; limit?: number }) =>
-    this.get<LedgerSummary>('ledger', query);
+  /** Balances (whole ledger) and entries: account, event, createdFrom/createdTo, search. */
+  ledger = (query: ListQuery & { days?: number }) =>
+    this.get<LedgerSummary & Pick<Faceted<unknown>, 'facets'>>('ledger', query);
   statement = (id: string) =>
     this.files.save(
       `${this.url}/payouts/${encodeURIComponent(id)}/statement`,

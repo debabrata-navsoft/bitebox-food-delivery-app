@@ -5,6 +5,7 @@ import {
   booleanQuery,
   dayRangeRules,
   facetsQuery,
+  filteredListRules,
   multiId,
   multiValue,
   latitudeRule,
@@ -35,11 +36,13 @@ const longitude = () => longitudeRule(body("longitude"));
 export const customerCancelRules = [mongoIdParam(), reason()];
 
 // Restaurant
-export const restaurantListRules = [
-  query("view").optional().isIn(["active", "history"]),
-  query("status").optional().isIn(Object.values(S)),
-  ...paginationRules,
-];
+// Several values allowed (OR; statuses outside the view are ignored); history also by day placed.
+export const restaurantListRules = filteredListRules([
+  query("view").optional().isIn(["active", "history"]).withMessage("Invalid value"),
+  multiValue("status", Object.values(S)),
+  multiValue("paymentMethod", Object.values(PAYMENT_METHODS)),
+  ...dayRangeRules("placedFrom", "placedTo"),
+]);
 export const restaurantStatusRules = [
   mongoIdParam(),
   body("status")
@@ -94,7 +97,11 @@ export const riderStatusRules = [
     .matches(/^\d{4}$/)
     .withMessage("Enter the 4-digit code"),
 ];
-export const riderHistoryRules = paginationRules;
+export const riderHistoryRules = filteredListRules([
+  multiValue("status", [S.DELIVERED, S.CANCELLED]),
+  multiId("restaurant"),
+  ...dayRangeRules("placedFrom", "placedTo"),
+]);
 
 // Admin
 export const adminOrderListRules = [

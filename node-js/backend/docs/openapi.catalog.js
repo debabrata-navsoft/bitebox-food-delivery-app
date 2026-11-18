@@ -476,17 +476,22 @@ export const catalogPaths = {
     get: {
       tags: T.mine,
       summary: "My menu items",
+      description: "Several values in one filter: any of them; filters combine with AND. Only this restaurant's dishes, rows and counts.",
       security: bearer,
       parameters: [
         ...paging,
         q("search", { type: "string" }),
-        q("category", { type: "string" }),
+        multi("category", "id", "Category ids"),
+        multi("type", ["veg", "non_veg"]),
+        multi("availability", ["available", "unavailable"]),
         q("available", { type: "boolean" }),
         q("veg", { type: "boolean" }),
+        facetsParam(["category", "type", "availability"], [], ["category"]),
       ],
       responses: {
         200: ok(paged(ref("FoodItem"))),
         404: err("No restaurant yet"),
+        422: err("Invalid filter value"),
       },
     },
     post: {

@@ -7,13 +7,13 @@ can be paid twice.
 
 import functools
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
 from django.db import IntegrityError, transaction
-from django.db.models import Count, F, Q, Sum
+from django.db.models import Count, F, Q, QuerySet, Sum
 from django.utils import timezone
 
 from apps.accounts.models import User, UserStatus
@@ -22,6 +22,7 @@ from apps.orders.models import Order, OrderStatus
 from apps.rbac.roles import Role
 from apps.restaurants.models import Restaurant
 from common.api import ApiError
+from common.filters import Facet, apply_facets, days_between, text_search, with_facets
 from common.pagination import Page, paginate
 
 from . import wallet
@@ -37,7 +38,7 @@ from .models import (
 )
 from .orders import food_value_paise
 from .quote import get_reward_config, rule_on
-from .referrals import person
+from .referrals import matching_user_ids, person
 
 logger = logging.getLogger("bitebox.coins")
 
@@ -744,16 +745,30 @@ def admin_view(c: RewardCampaign, restaurants: list[Any] | None = None) -> dict[
     }
 
 
+# The campaigns list's Filters panel.
+CAMPAIGN_FACETS = (
+    Facet("status", values=CampaignStatus.values),
+    Facet("type", values=CampaignType.values),
+    Facet("trigger", values=CampaignTrigger.values),
+    Facet("customer_group", values=CustomerGroup.values),
+)
+
+
+def campaign_rows(query: Mapping[str, Any]) -> QuerySet[RewardCampaign]:
+    """The campaigns matching the facets, running on any day from runs_from to runs_to, and a
+    name search."""
+    qs = apply_facets(RewardCampaign.objects.all(), query, CAMPAIGN_FACETS)
+    # Runs on one of those days: ends on or after the first, starts before the last one is over.
+    qs = qs.filter(days_between({"runs_from": query.get("runs_from")}, "runs", "end_at"))
+    qs = qs.filter(days_between({"runs_to": query.get("runs_to")}, "runs", "start_at"))
+    return qs.filter(text_search(query.get("search"), "name"))
+
+
 def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
-    qs = RewardCampaign.objects.prefetch_related("restaurants")
-    if query.get("status"):
-        qs = qs.filter(status=query["status"])
-    if query.get("type"):
-        qs = qs.filter(type=query["type"])
-    if query.get("search"):
-        qs = qs.filter(name__icontains=query["search"])
-    rows, meta = paginate(qs.order_by("-created_at"), page)
-    return {"items": [admin_view(c) for c in rows], "pagination": meta}
+    qs = campaign_rows(query).prefetch_related("restaurants")
+    rows, meta = paginate(qs.order_by("-created_at", "-pk"), page)
+    result = {"items": [admin_view(c) for c in rows], "pagination": meta}
+    return with_facets(result, query, campaign_rows, CAMPAIGN_FACETS)
 
 
 def admin_get(campaign_id: Any) -> dict[str, Any]:
@@ -782,13 +797,30 @@ def admin_get(campaign_id: Any) -> dict[str, Any]:
 
 def admin_claims(query: dict[str, Any], page: Page) -> dict[str, Any]:
     """Every reward claim (welcome, birthday, campaigns), newest first."""
-    qs = RewardClaim.objects.select_related("user", "campaign")
-    if query.get("reward_type"):
-        qs = qs.filter(reward_type=query["reward_type"])
-    if query.get("campaign"):
-        qs = qs.filter(campaign_id=query["campaign"])
-    rows, meta = paginate(qs.order_by("-created_at"), page)
-    return {
+    qs = claim_rows(query).select_related("user", "campaign")
+    rows, meta = paginate(qs.order_by("-created_at", "-pk"), page)
+    result = {
         "items": [{**claim_view(c), "customer": person(c.user)} for c in rows],
         "pagination": meta,
     }
+    return with_facets(result, query, claim_rows, CLAIM_FACETS)
+
+
+# The reward history's Filters panel; campaign: the campaigns that gave rewards, with names.
+CLAIM_FACETS = (
+    Facet("reward_type", values=RewardType.values),
+    Facet("status", values=ClaimStatus.values),
+    Facet("campaign", field="campaign_id", label="campaign__name"),
+)
+
+
+def claim_rows(query: Mapping[str, Any]) -> QuerySet[RewardClaim]:
+    """The claims matching the facets, the day claimed and a search over the customer or
+    campaign."""
+    qs = apply_facets(RewardClaim.objects.all(), query, CLAIM_FACETS)
+    qs = qs.filter(days_between(query, "claimed"))
+    if search := (query.get("search") or "").strip():
+        qs = qs.filter(
+            Q(user_id__in=matching_user_ids(search)) | Q(campaign__name__icontains=search)
+        )
+    return qs

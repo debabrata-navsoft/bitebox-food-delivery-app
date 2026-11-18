@@ -14,14 +14,27 @@ import {
 } from "../models/review.model.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/api-error.js";
-import { escapeRegex } from "../utils/pagination.js";
 import { notify } from "./notification.service.js";
 import * as rewardEvents from "./reward-events.js";
 import { day, fillDays, since } from "./reports.service.js";
 import {
+  allOf,
+  anyMatch,
+  dayRange,
+  facetCounts,
+  fixedFacet,
+  idFacet,
+  inList,
+  listOf,
+  textSearch,
+} from "./admin-accounts.js";
+import {
+  RATINGS,
+  STARS,
   groupReviews,
   orderGroup,
   orderPage,
+  perOrder,
   refreshFor,
   reviewChanged,
   summarize,
@@ -72,26 +85,49 @@ function presentForAdmin(review) {
   };
 }
 
-function adminFilter({ target, status, reported, rating, search, restaurantId, customer, rider }) {
-  const filter = {
-    status: status ?? { $ne: S.DELETED },
-    ...(target && { target }),
-    ...(rating && { rating }),
-    ...(restaurantId && { restaurant: toId(restaurantId) }),
-    ...(customer && { customer: toId(customer) }),
-    ...(rider && { deliveryPartner: toId(rider) }),
-    ...(reported === true && { openReports: { $gt: 0 } }),
-  };
-  if (search) {
-    const re = new RegExp(escapeRegex(search.trim()), "i");
-    filter.$or = [
-      { orderNumber: re },
-      { customerName: re },
-      { foodName: re },
-      { comment: re },
-    ];
-  }
-  return filter;
+/**
+ * The reviews matching every filter: target, status, rating and restaurant (each one value or
+ * several, any of them; no status: every one but deleted, unless `anyStatus`), the restaurant,
+ * customer or rider of an account page, open reports, the day written and a search.
+ */
+function adminFilter(
+  { target, status, rating, restaurant, reported, search, restaurantId, customer, rider, createdFrom, createdTo },
+  { anyStatus = false } = {},
+) {
+  return allOf(
+    listOf(status).length ? inList("status", status) : !anyStatus && { status: { $ne: S.DELETED } },
+    inList("target", target),
+    anyMatch(rating, STARS),
+    inList("restaurant", restaurant, toId),
+    restaurantId && { restaurant: toId(restaurantId) },
+    customer && { customer: toId(customer) },
+    rider && { deliveryPartner: toId(rider) },
+    reported === true && { openReports: { $gt: 0 } },
+    dayRange("createdAt", createdFrom, createdTo),
+    textSearch(search, ["orderNumber", "customerName", "foodName", "comment"]),
+  );
+}
+
+/** The review list's rows are orders: each option counts orders (perOrder), not reviews. */
+const REVIEW_FACETS = {
+  target: fixedFacet(Object.values(REVIEW_TARGETS), "$_id.v", perOrder("$target")),
+  status: fixedFacet(Object.values(S), "$_id.v", perOrder("$status")),
+  rating: fixedFacet(RATINGS, { $toString: "$_id.v" }, perOrder("$rating")),
+  restaurant: idFacet("$_id.v", Restaurant, { stages: perOrder("$restaurant") }),
+};
+
+/** `{ facets }` with `facets=1`: each counted over the other filters; status over every status. */
+async function reviewFacets(query) {
+  if (!query.facets) return {};
+  const { status, ...others } = REVIEW_FACETS;
+  const [rest, statuses] = await Promise.all([
+    facetCounts(Review, others, adminFilter, query),
+    facetCounts(Review, { status }, (q) => adminFilter(q, { anyStatus: true }), {
+      ...query,
+      status: undefined,
+    }),
+  ]);
+  return { facets: Object.fromEntries(Object.keys(REVIEW_FACETS).map((k) => [k, rest[k] ?? statuses[k]])) };
 }
 
 /** Order row fields every admin view shares. */
@@ -102,9 +138,12 @@ const adminOrderView = ({ reviews, ...group }, present) => ({
   reviews: present(reviews),
 });
 
-/** One row per order: every review of it (deleted ones only when asked for). */
+/**
+ * One row per order: every review of it (deleted ones only when asked for). `facets=1` adds the
+ * Filters panel's counts (orders per option).
+ */
 export async function adminOrders(query, pagination) {
-  const [{ orderIds, pagination: meta }, [reported]] = await Promise.all([
+  const [{ orderIds, pagination: meta }, [reported], facets] = await Promise.all([
     orderPage(adminFilter(query), query.reported === true ? "reported" : "newest", pagination),
     // Orders with an open report on a visible review: the "Reported" tab badge.
     Review.aggregate([
@@ -112,10 +151,11 @@ export async function adminOrders(query, pagination) {
       { $group: { _id: "$order" } },
       { $count: "n" },
     ]),
+    reviewFacets(query),
   ]);
   const reviews = await Review.find({
     order: { $in: orderIds },
-    ...(query.status !== S.DELETED && { status: { $ne: S.DELETED } }),
+    ...(!listOf(query.status).includes(S.DELETED) && { status: { $ne: S.DELETED } }),
   }).populate(POPULATE);
   return {
     items: groupReviews(orderIds, reviews).map((g) =>
@@ -123,6 +163,7 @@ export async function adminOrders(query, pagination) {
     ),
     pagination: meta,
     counts: { reported: reported?.n ?? 0 },
+    ...facets,
   };
 }
 

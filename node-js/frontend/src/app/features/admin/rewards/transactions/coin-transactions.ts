@@ -1,23 +1,20 @@
 import { TableLabels } from '../../../../shared/list/table-labels';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
-import { form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorModule } from '@angular/material/paginator';
-import { IconComponent, SelectOption } from 'nexprime';
+import { IconComponent } from 'nexprime';
 import { filter } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AdminRewardsService } from '../../../../core/services/admin/admin-rewards.service';
 import { NotificationService } from '../../../../core/services/notification.service';
-import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
+import { ListEmpty } from '../../../../shared/components/list-empty/list-empty';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
-import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
-import { pagedList } from '../../../../shared/list/paged-list';
+import { ListToolbar } from '../../../../shared/components/list-toolbar/list-toolbar';
+import { datesSection, filteredList, optionsSection } from '../../../../shared/list/filtered-list';
 import {
   AdminCoinTransaction,
-  CoinSource,
-  CoinTxnType,
   SOURCE_LABEL,
   TXN_TYPE_LABEL,
 } from '../../../../shared/models/rewards.models';
@@ -28,7 +25,7 @@ import { WalletDialog } from '../wallet-dialog/wallet-dialog';
 @Component({
   selector: 'bb-coin-transactions',
   imports: [
-    TableLabels,DatePipe, NP_FORM_FIELDS, MatButtonModule, MatPaginatorModule, IconComponent, EmptyState, PageHeader],
+    TableLabels,DatePipe, ListToolbar, MatButtonModule, MatPaginatorModule, IconComponent, ListEmpty, PageHeader],
   templateUrl: './coin-transactions.html',
   styleUrl: './coin-transactions.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,41 +40,32 @@ export class CoinTransactionsPage {
   /** ?userId= from other pages (one customer's history). */
   readonly userId = input<string>();
 
-  protected readonly filterModel = signal({ search: '', type: '', source: '', userId: '' });
-  protected readonly filters = form(this.filterModel);
-  protected readonly typeOptions: SelectOption[] = [
-    { value: '', label: 'Any type' },
-    ...Object.entries(TXN_TYPE_LABEL).map(([value, label]) => ({ value, label })),
-  ];
-  protected readonly sourceOptions: SelectOption[] = [
-    { value: '', label: 'Any source' },
-    ...Object.entries(SOURCE_LABEL).map(([value, label]) => ({ value, label })),
+  /** The customer whose history is shown ('' for everyone). */
+  protected readonly customer = signal('');
+
+  protected readonly filterSections = [
+    optionsSection('type', 'Type', TXN_TYPE_LABEL),
+    optionsSection('source', 'Source', SOURCE_LABEL),
+    optionsSection('campaign', 'Campaign'), // from the API's counts
+    datesSection('created', 'Date', ['from', 'to']),
   ];
 
   constructor() {
     effect(() => {
       const id = this.userId() ?? '';
-      untracked(() => this.filterModel.update((f) => ({ ...f, userId: id })));
+      untracked(() => this.customer.set(id));
     });
   }
 
-  protected readonly list = pagedList(
-    (page, limit) => {
-      const f = this.filterModel();
-      return this.api.transactions({
-        search: f.search.trim() || undefined,
-        type: (f.type || undefined) as CoinTxnType | undefined,
-        source: (f.source || undefined) as CoinSource | undefined,
-        userId: f.userId || undefined,
-        page,
-        limit,
-      });
-    },
-    { filterKey: () => JSON.stringify(this.filterModel()), errorText: 'Could not load coin transactions.' },
-  );
+  protected readonly transactions = filteredList((query) => this.api.transactions(query), {
+    errorText: 'Could not load coin transactions.',
+    instants: true,
+    extra: () => ({ userId: this.customer() || undefined }),
+  });
+  protected readonly list = this.transactions.list;
 
   protected clearCustomer(): void {
-    this.filterModel.update((f) => ({ ...f, userId: '' }));
+    this.customer.set('');
   }
 
   protected wallet(t: AdminCoinTransaction): void {

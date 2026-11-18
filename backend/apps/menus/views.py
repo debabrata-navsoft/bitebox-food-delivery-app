@@ -10,7 +10,7 @@ from apps.audit.services import audited
 from apps.rbac.roles import Permission, Role
 from apps.restaurants.services import require_own_restaurant
 from common.api import ok
-from common.filters import FACETS_PARAM, facets_page, multi_param
+from common.filters import FACETS_PARAM, MULTI_NOTE, facets_page, list_params, multi_param
 from common.http import PublicCacheMixin
 from common.pagination import Page
 from common.permissions import PUBLIC, permission_required, role_required
@@ -26,7 +26,7 @@ from .serializers import (
     AvailabilityInput,
     CategoryInput,
     FoodInput,
-    FoodListQuery,
+    OwnerFoodListQuery,
     PublicFoodQuery,
 )
 
@@ -69,17 +69,27 @@ class FoodDetailView(PublicCacheMixin, APIView):
 # --- partner --------------------------------------------------------------------------------------
 
 PARTNER = [role_required(Role.RESTAURANT)]
+OWNER_FOOD_PAGE = facets_page("PartnerFoodPage", services.OWNER_FACETS)
 
 
 class MyFoodsView(APIView):
     permission_classes = PARTNER
 
     @extend_schema(
-        tags=["Partner"], parameters=LIST, responses={200: ANY, **errors(401, 403, 404, 422)}
+        tags=["Partner"],
+        description=MULTI_NOTE,
+        parameters=list_params(
+            "Dish name (or part of it)",
+            *(OpenApiParameter(n, bool) for n in ("available", "veg")),
+            multi_param("category", description="Category ids"),
+            multi_param("type", FOOD_TYPE_VALUES),
+            multi_param("availability", AVAILABILITY_VALUES),
+        ),
+        responses={200: OWNER_FOOD_PAGE, **errors(401, 403, 404, 422)},
     )
     def get(self, request: Request) -> Response:
         restaurant = require_own_restaurant(current_user(request))
-        query = validated(FoodListQuery, request.query_params)
+        query = validated(OwnerFoodListQuery, request.query_params)
         return ok(services.owner_list(restaurant, query, Page.from_query(query, default_limit=50)))
 
     @extend_schema(

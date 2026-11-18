@@ -23,6 +23,7 @@ from apps.finance.reports import day_keys
 from apps.notifications.services import notify
 from apps.restaurants.models import Restaurant, RestaurantStatus
 from common.api import ApiError
+from common.filters import apply_facets, days_between
 from common.pagination import Page
 
 from . import rewards
@@ -38,12 +39,14 @@ from .models import (
     ReviewTarget,
 )
 from .services import (
+    OrderFacet,
     group_reviews,
     order_group,
     order_page,
     refresh_for,
     response_view,
     review_changed,
+    stars_facet,
     summarize,
 )
 
@@ -111,13 +114,22 @@ def present_for_admin(review: Review) -> dict[str, Any]:
     return data
 
 
-def _admin_filter(query: dict[str, Any]) -> QuerySet[Review]:
-    qs = Review.objects.all()
-    qs = qs.filter(status=query["status"]) if query.get("status") else qs.exclude(status=S.DELETED)
-    if query.get("target"):
-        qs = qs.filter(target=query["target"])
-    if query.get("rating"):
-        qs = qs.filter(rating=query["rating"])
+# The review list's Filters panel (rows are orders).
+ADMIN_FACETS = (
+    OrderFacet("target", values=ReviewTarget.values),
+    OrderFacet("status", values=S.values),
+    stars_facet(OrderFacet),
+    OrderFacet("restaurant", label="restaurant__name"),
+)
+
+
+def _admin_filter(query: dict[str, Any], any_status: bool = False) -> QuerySet[Review]:
+    """The reviews matching every filter: ADMIN_FACETS (no status: every one but deleted, unless
+    `any_status`), the restaurant, customer or rider of an account page, open reports, the day
+    written and a search over the order number, customer, dish and words."""
+    qs = apply_facets(Review.objects.all(), query, ADMIN_FACETS)
+    if not query.get("status") and not any_status:
+        qs = qs.exclude(status=S.DELETED)
     if query.get("restaurant_id"):
         qs = qs.filter(restaurant_id=query["restaurant_id"])
     if query.get("customer"):
@@ -126,6 +138,7 @@ def _admin_filter(query: dict[str, Any]) -> QuerySet[Review]:
         qs = qs.filter(target=ReviewTarget.RIDER, delivery_partner_id=query["rider"])
     if query.get("reported") is True:
         qs = qs.filter(open_reports__gt=0)
+    qs = qs.filter(days_between(query, "created"))
     search = (query.get("search") or "").strip()
     if search:
         qs = qs.filter(
@@ -135,6 +148,17 @@ def _admin_filter(query: dict[str, Any]) -> QuerySet[Review]:
             | Q(comment__icontains=search)
         )
     return qs
+
+
+def _admin_facets(query: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    """Each facet counted over the other filters (orders, not reviews); the status facet over
+    every status, deleted included."""
+    return {
+        spec.name: spec.count(
+            _admin_filter({**query, spec.name: None}, any_status=spec.name == "status")
+        )
+        for spec in ADMIN_FACETS
+    }
 
 
 def _admin_order_view(group: dict[str, Any], reviews: list[Any]) -> dict[str, Any]:
@@ -149,7 +173,8 @@ def _admin_order_view(group: dict[str, Any], reviews: list[Any]) -> dict[str, An
 
 
 def admin_orders(query: dict[str, Any], page: Page) -> dict[str, Any]:
-    """One row per order with every review of it (deleted ones only when asked for)."""
+    """One row per order with every review of it (deleted ones only when asked for). `?facets=1`
+    adds the Filters panel's counts."""
     sort = "reported" if query.get("reported") is True else "newest"
     order_ids, meta = order_page(_admin_filter(query), sort, page)
     # Orders with an open report on a visible review: the "Reported" tab badge.
@@ -162,13 +187,16 @@ def admin_orders(query: dict[str, Any], page: Page) -> dict[str, Any]:
     reviews = Review.objects.filter(order_id__in=order_ids).select_related(
         "restaurant", "delivery_partner", "response"
     )
-    if query.get("status") != S.DELETED:
+    if S.DELETED not in (query.get("status") or []):
         reviews = reviews.exclude(status=S.DELETED)
     items = [
         _admin_order_view(g, [present_for_admin(r) for r in g["reviews"]])
         for g in group_reviews(order_ids, list(reviews))
     ]
-    return {"items": items, "pagination": meta, "counts": {"reported": reported}}
+    result = {"items": items, "pagination": meta, "counts": {"reported": reported}}
+    if query.get("facets"):
+        result["facets"] = _admin_facets(query)
+    return result
 
 
 def _load_detailed(**filters: Any) -> list[Review]:

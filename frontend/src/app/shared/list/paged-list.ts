@@ -39,18 +39,25 @@ export function pagedList<T extends { items: readonly unknown[] }>(
       finalize(() => current() && loading.set(false)),
     );
   };
+  // Live refresh (built here, in the injection context): its first request is the first load, so
+  // a lazy list starts it at `load(1)`, once the page has set its filters.
+  const live = opts.pollMs
+    ? liveRefresh(request, { pollMs: opts.pollMs, debounceMs: 1000, when: opts.when }).pipe(
+        takeUntilDestroyed(destroyRef),
+      )
+    : null;
+  let polling = false;
   const load = (p: number) => {
     page = p;
-    request().subscribe();
+    if (live && !polling) {
+      polling = true;
+      live.subscribe();
+    } else {
+      request().subscribe();
+    }
   };
 
-  if (opts.pollMs) {
-    liveRefresh(request, { pollMs: opts.pollMs, debounceMs: 1000, when: opts.when })
-      .pipe(takeUntilDestroyed(destroyRef))
-      .subscribe();
-  } else if (!opts.lazy) {
-    load(1);
-  }
+  if (!opts.lazy) load(1);
   if (opts.filterKey) {
     toObservable(computed(opts.filterKey))
       .pipe(

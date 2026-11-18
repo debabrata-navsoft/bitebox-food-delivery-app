@@ -5,7 +5,8 @@ import {
   TICKET_STATUS,
   TICKET_TYPES,
 } from "../models/support-ticket.model.js";
-import { mongoIdParam, paginationRules } from "./common.validators.js";
+import { MINE_STATUSES } from "../services/support.service.js";
+import { filteredListRules, isObjectId, mongoIdParam, multiValue } from "./common.validators.js";
 
 const message = (field = "message") =>
   body(field)
@@ -33,23 +34,27 @@ export const createTicketRules = [
     .matches(/^BB-\d{6}-[A-Z0-9]{6}$/i)
     .withMessage("Order numbers look like BB-261105-ABC123"),
 ];
-export const myTicketListRules = [
-  ...paginationRules,
-  query("status").optional().isIn(["open", "closed"]),
-];
+// status: open, waiting_for_response, closed (`status=open` / `status=closed` work as before).
+export const myTicketListRules = filteredListRules(
+  [multiValue("status", MINE_STATUSES), multiValue("type", Object.values(TICKET_TYPES))],
+  "created",
+);
 export const replyRules = [mongoIdParam(), message("body")];
 
-export const staffListRules = [
-  ...paginationRules,
-  query("status").optional().isIn([...Object.values(TICKET_STATUS), "active"]),
-  query("priority").optional().isIn(Object.values(TICKET_PRIORITY)),
-  query("requesterRole").optional().isIn(REQUESTER_ROLES),
-  query("type").optional().isIn(Object.values(TICKET_TYPES)),
-  query("assignee").optional().isIn(["me", "unassigned"]),
-  query("search").optional().isString().trim().isLength({ max: 100 }),
-  // Tickets one person raised (the admin customer profile).
-  query("requester").optional().isMongoId().withMessage("Invalid id"),
-];
+export const staffListRules = filteredListRules(
+  [
+    // "active": not resolved or closed yet.
+    multiValue("status", [...Object.values(TICKET_STATUS), "active"]),
+    multiValue("priority", Object.values(TICKET_PRIORITY)),
+    multiValue("requesterRole", REQUESTER_ROLES),
+    multiValue("type", Object.values(TICKET_TYPES)),
+    // "me" (the signed-in admin), "unassigned" or admins' user ids.
+    multiValue("assignee", (v) => v === "me" || v === "unassigned" || isObjectId(v)),
+    // Tickets one person raised (the admin customer profile).
+    query("requester").optional().isMongoId().withMessage("Invalid id"),
+  ],
+  "created",
+);
 export const updateTicketRules = [
   mongoIdParam(),
   body("status").optional().isIn(Object.values(TICKET_STATUS)),

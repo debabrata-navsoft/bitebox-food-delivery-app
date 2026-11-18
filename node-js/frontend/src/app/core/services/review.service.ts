@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { Faceted, ListQuery } from '../../shared/list/filtered-list';
 import { ApiResponse } from '../../shared/models/api.models';
 import {
   AdminOrderReviewPage,
@@ -114,19 +115,15 @@ export class ReviewService {
   }
 
   // Restaurant
-  /** One row per order (filters pick the orders; a row shows the whole order). */
+  /**
+   * One row per order (filters pick the orders; a row shows the whole order). target, rating,
+   * reply, photos and dish take one value or several (the Filters panel); `facets: 1` adds its
+   * counts, over this restaurant's reviews only.
+   */
   restaurantOrders(
-    query: ReviewListQuery & {
-      target?: 'restaurant' | 'food';
-      foodItemId?: string;
-      responded?: boolean;
-    },
-  ): Observable<ReviewPage<RestaurantOrderReviews>> {
-    const { responded, ...rest } = query;
-    return this.get('my/restaurant/reviews/orders', {
-      ...rest,
-      ...(responded !== undefined && { responded: String(responded) }),
-    });
+    query: ListQuery,
+  ): Observable<ReviewPage<RestaurantOrderReviews> & Pick<Faceted<RestaurantOrderReviews>, 'facets'>> {
+    return this.get('my/restaurant/reviews/orders', query);
   }
 
   restaurantOrder(orderId: string): Observable<RestaurantOrderReviews> {
@@ -155,26 +152,36 @@ export class ReviewService {
   }
 
   // Rider
-  riderReviews(query: ReviewListQuery): Observable<ReviewPage<RiderReview>> {
+  /** rating and comment take one value or several (the Filters panel); `facets: 1` adds its counts. */
+  riderReviews(
+    query: ListQuery,
+  ): Observable<ReviewPage<RiderReview> & Pick<Faceted<RiderReview>, 'facets'>> {
     return this.get('delivery/reviews', query);
   }
 
   // Admin
-  /** One row per order; `reported` puts orders with open reports first. */
-  adminOrders(query: {
-    target?: ReviewTarget;
-    status?: ReviewStatus;
-    reported?: boolean;
-    rating?: number;
-    search?: string;
-    /** Orders of one customer (user id). */
-    customer?: string;
-    restaurantId?: string;
-    /** Orders with a review of this rider (user id). */
-    rider?: string;
-    page?: number;
-    limit?: number;
-  }): Observable<AdminOrderReviewPage> {
+  /**
+   * One row per order; `reported` puts orders with open reports first. target, status, rating and
+   * restaurant take one value or several (the Filters panel); `facets: 1` adds its counts.
+   */
+  adminOrders(
+    query:
+      | ListQuery
+      | {
+          target?: ReviewTarget;
+          status?: ReviewStatus;
+          reported?: boolean;
+          rating?: number;
+          search?: string;
+          /** Orders of one customer (user id). */
+          customer?: string;
+          restaurantId?: string;
+          /** Orders with a review of this rider (user id). */
+          rider?: string;
+          page?: number;
+          limit?: number;
+        },
+  ): Observable<AdminOrderReviewPage & Pick<Faceted<AdminOrderReviews>, 'facets'>> {
     return this.get('admin/reviews/orders', query);
   }
 

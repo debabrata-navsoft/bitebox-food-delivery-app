@@ -2,6 +2,8 @@
 
 export const q = (name, schema) => ({ in: "query", name, schema });
 export const described = (param, description) => ({ ...param, description });
+/** `search` (at most 100 characters): what it matches. */
+export const searchParam = (description) => described(q("search", { type: "string", maxLength: 100 }), description);
 
 /**
  * A multi-value filter: one value or several, comma-separated (any of them match); every item is

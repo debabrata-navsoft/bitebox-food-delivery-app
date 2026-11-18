@@ -13,8 +13,19 @@ import {
 } from "../models/coupon.model.js";
 import { FoodItem } from "../models/food-item.model.js";
 import { ORDER_STATUS, Order } from "../models/order.model.js";
+import { Restaurant } from "../models/restaurant.model.js";
 import { ApiError } from "../utils/api-error.js";
-import { escapeRegex, paginationMeta } from "../utils/pagination.js";
+import {
+  allOf,
+  filteredPage,
+  fixedFacet,
+  flagFacet,
+  idFacet,
+  inList,
+  listOf,
+  textSearch,
+  toId,
+} from "./admin-accounts.js";
 import { notify, notifyAdmins } from "./notification.service.js";
 import { couponDiscount } from "./pricing.service.js";
 
@@ -359,34 +370,101 @@ export const SORTS = {
   code: { code: 1 },
 };
 
-async function list(base, query, pagination) {
+// The same rules as STATUS_FILTERS, as aggregation expressions (the status facet's counts).
+const approvedExpr = { $eq: [{ $ifNull: ["$approvalStatus", APPROVAL_STATUS.APPROVED] }, APPROVAL_STATUS.APPROVED] };
+const approvalIs = (status) => ({ $eq: ["$approvalStatus", status] });
+const STATUS_EXPRS = (now) => ({
+  active: {
+    $and: [approvedExpr, { $eq: ["$isActive", true] }, { $lte: ["$validFrom", now] }, { $gte: ["$validUntil", now] }],
+  },
+  scheduled: { $and: [approvedExpr, { $gt: ["$validFrom", now] }] },
+  expired: { $lt: ["$validUntil", now] },
+  paused: { $and: [approvedExpr, { $eq: ["$isActive", false] }] },
+  draft: approvalIs(APPROVAL_STATUS.DRAFT),
+  pending: approvalIs(APPROVAL_STATUS.PENDING),
+  rejected: approvalIs(APPROVAL_STATUS.REJECTED),
+});
+
+/** Coupons owned by (or limited to) any of these restaurants, or listing one in their scope; null for none. */
+const forRestaurants = (value) => {
+  const wanted = listOf(value).map(toId);
+  return wanted.length ? { $or: [{ restaurant: { $in: wanted } }, { restaurants: { $in: wanted } }] } : null;
+};
+
+/** A coupon's restaurants: its own (or the one it is limited to) and its scope, each once. */
+const RESTAURANT_STAGES = [
+  {
+    $project: {
+      rid: {
+        $setUnion: [
+          { $cond: [{ $ifNull: ["$restaurant", false] }, ["$restaurant"], []] },
+          { $ifNull: ["$restaurants", []] },
+        ],
+      },
+    },
+  },
+  { $unwind: "$rid" },
+];
+
+/**
+ * The coupon list's filters and facet counts (`facets=1`), as in Django
+ * (apps/coupons/services.py#list_facets): status (STATUS_FILTERS, which may overlap, as in the
+ * analytics totals), kind, owner (the source), audience, discount type and restaurant (each
+ * coupon once per restaurant it is for, with the name). Missing fields count as their defaults.
+ */
+const listFacets = (now) => ({
+  status: flagFacet(STATUS_EXPRS(now)),
+  kind: fixedFacet(Object.values(COUPON_KINDS), {
+    $ifNull: [
+      "$kind",
+      { $cond: [{ $eq: ["$source", COUPON_SOURCES.RESTAURANT] }, COUPON_KINDS.RESTAURANT_OFFER, COUPON_KINDS.COUPON] },
+    ],
+  }),
+  owner: fixedFacet(Object.values(COUPON_SOURCES), { $ifNull: ["$source", COUPON_SOURCES.PLATFORM] }),
+  audience: fixedFacet(Object.values(AUDIENCES), { $ifNull: ["$audience", AUDIENCES.ALL] }),
+  discountType: fixedFacet(Object.values(DISCOUNT_TYPES), "$discountType"),
+  restaurant: idFacet("$rid", Restaurant, { stages: RESTAURANT_STAGES }),
+});
+
+/** Selected values, plus null (a missing field) when `fallback`, the field's default, is one. */
+const withDefault = (values, fallback) => listOf(values).flatMap((v) => (v === fallback ? [v, null] : [v]));
+
+/** The coupons matching the search, `active`, the validity range and every multi-value filter. */
+function listFilter(base, query, now) {
+  const any = (values, rule) => (listOf(values).length ? { $or: listOf(values).map(rule) } : null);
+  return allOf(
+    base,
+    textSearch(query.search, ["code", "name"]),
+    query.active !== undefined && { isActive: query.active },
+    any(query.status, (s) => STATUS_FILTERS[s](now)),
+    any(query.kind, kindFilter),
+    inList("source", withDefault(query.owner, COUPON_SOURCES.PLATFORM)),
+    inList("audience", withDefault(query.audience, AUDIENCES.ALL)),
+    inList("discountType", query.discountType),
+    query.from && { validUntil: { $gte: new Date(query.from) } },
+    query.to && { validFrom: { $lte: new Date(query.to) } },
+    forRestaurants(query.restaurant),
+  );
+}
+
+/**
+ * The facets a partner's own offer list counts: status and discount type (the rest is the same
+ * for all its offers). Django: apps/coupons/services.py#own_facets.
+ */
+const ownFacets = (now) => {
+  const { status, discountType } = listFacets(now);
+  return { status, discountType };
+};
+
+/** Every list filter applies (listFilter); `facets=1` counts the `counted` facets. */
+function list(base, query, pagination, counted = listFacets) {
   const now = new Date();
-  const and = [base];
-  if (query.search) {
-    const pattern = new RegExp(escapeRegex(query.search), "i");
-    and.push({ $or: [{ code: pattern }, { name: pattern }] });
-  }
-  if (query.active !== undefined) and.push({ isActive: query.active });
-  if (query.status) and.push(STATUS_FILTERS[query.status](now));
-  if (query.kind) and.push(kindFilter(query.kind));
-  if (query.owner)
-    and.push({ source: query.owner === COUPON_SOURCES.PLATFORM ? { $in: [query.owner, null] } : query.owner });
-  if (query.from) and.push({ validUntil: { $gte: new Date(query.from) } });
-  if (query.to) and.push({ validFrom: { $lte: new Date(query.to) } });
-  if (query.restaurant) {
-    and.push({ $or: [{ restaurant: query.restaurant }, { restaurants: query.restaurant }] });
-  }
-  const filter = { $and: and };
-  const [items, total] = await Promise.all([
-    populated(
-      Coupon.find(filter)
-        .sort(SORTS[query.sort] ?? SORTS.newest)
-        .skip(pagination.skip)
-        .limit(pagination.limit),
-    ),
-    Coupon.countDocuments(filter),
-  ]);
-  return { items: items.map(couponJson), pagination: paginationMeta(pagination, total) };
+  return filteredPage(Coupon, query, pagination, {
+    filterFor: (q) => listFilter(base, q, now),
+    facets: counted(now),
+    find: (q) => populated(q.sort(SORTS[query.sort] ?? SORTS.newest)),
+    map: couponJson,
+  });
 }
 
 export const adminList = (query, pagination) => list({}, query, pagination);
@@ -581,7 +659,8 @@ async function submit(coupon, draft, restaurant) {
   );
 }
 
-export const ownList = (restaurant, query, pagination) => list(ownFilter(restaurant), query, pagination);
+/** The partner's offers; `facets=1` counts status and discount type over this restaurant's offers only. */
+export const ownList = (restaurant, query, pagination) => list(ownFilter(restaurant), query, pagination, ownFacets);
 
 export const ownGet = (restaurant, id) =>
   found(populated(Coupon.findOne({ _id: id, ...ownFilter(restaurant) })), "Offer not found");

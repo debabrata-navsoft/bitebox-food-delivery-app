@@ -11,10 +11,12 @@
   </section>
 }
 
-<div class="bb-filters">
-  <np-text-input [formField]="filters.search" placeholder="Search by name" ariaLabel="Search offers" icon="search" clearable />
-  <np-select [formField]="filters.status" ariaLabel="Status" [options]="statusOptions" />
-</div>
+<bb-list-toolbar
+  [list]="offers"
+  [sections]="filterSections"
+  searchLabel="Search offers"
+  placeholder="Search by name"
+/>
 
 @if (list.error(); as message) {
   <div class="bb-alert error" role="alert">
@@ -29,9 +31,15 @@
       <span class="bb-skeleton row"></span>
     }
   } @else if (list.empty()) {
-    <bb-empty-state icon="ticket-percent" title="No offers yet" message="Create an offer to bring in more orders.">
+    <bb-list-empty
+      [list]="offers"
+      icon="ticket-percent"
+      title="No offers yet"
+      message="Create an offer to bring in more orders."
+      noMatch="No offers match these filters"
+    >
       <np-button severity="primary" label="Create an offer" (clicked)="open()" />
-    </bb-empty-state>
+    </bb-list-empty>
   } @else {
     <div class="bb-table-scroll" [class.bb-dim]="list.loading()">
       <table class="bb-table">

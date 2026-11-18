@@ -1,7 +1,6 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { form } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import {
   ButtonComponent,
@@ -15,22 +14,26 @@ import { filter } from 'rxjs';
 import { AdminCouponService } from '../../../core/services/checkout-api.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
+import { ListEmpty } from '../../../shared/components/list-empty/list-empty';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
 import { channelsLabel, conditionsLabel, discountLabel, scopeLabel } from '../../../shared/coupons/coupon-labels';
-import { STATUS_OPTIONS, loaded, rowActions } from '../../../shared/coupons/coupon-list';
+import {
+  COUPON_STATUS_SECTION,
+  DISCOUNT_TYPE_SECTION,
+  loaded,
+  rowActions,
+} from '../../../shared/coupons/coupon-list';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
+import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
 import { COMPACT_MENU_WIDTH, toggleEndAligned } from '../../../shared/menu/end-aligned-menu';
-import { pagedList } from '../../../shared/list/paged-list';
+import { datesSection, filteredList, optionsSection } from '../../../shared/list/filtered-list';
 import { TableLabels } from '../../../shared/list/table-labels';
 import {
   AdminCoupon,
   COUPON_KIND_LABEL,
   COUPON_STATUS_LABEL,
   COUPON_STATUS_TONE,
-  CouponQuery,
 } from '../../../shared/models/checkout.models';
 import { InrPipe, formatPaise } from '../../../shared/pipes/money.pipes';
 import { CouponFormDialog } from './coupon-form-dialog/coupon-form-dialog';
@@ -41,12 +44,12 @@ import { CouponFormDialog } from './coupon-form-dialog/coupon-form-dialog';
   imports: [
     DatePipe,
     RouterLink,
-    NP_FORM_FIELDS,
+    ListToolbar,
     ButtonComponent,
     IconComponent,
     MenuComponent,
     PaginationComponent,
-    EmptyState,
+    ListEmpty,
     PageHeader,
     StatTile,
     TableLabels,
@@ -72,19 +75,7 @@ export class AdminCoupons {
   /** Hidden while loading or after an error. */
   protected readonly totals = computed(() => loaded(this.stats));
 
-  protected readonly filterModel = signal({ search: '', status: '', kind: '', owner: '', sort: 'newest' });
-  protected readonly filters = form(this.filterModel);
-  protected readonly statusOptions = STATUS_OPTIONS;
   protected readonly kindLabel = COUPON_KIND_LABEL;
-  protected readonly kindOptions: SelectOption[] = [
-    { value: '', label: 'Every type' },
-    ...Object.entries(COUPON_KIND_LABEL).map(([value, label]) => ({ value, label })),
-  ];
-  protected readonly ownerOptions: SelectOption[] = [
-    { value: '', label: 'Everyone' },
-    { value: 'platform', label: 'BiteBox coupons' },
-    { value: 'restaurant', label: 'Restaurant offers' },
-  ];
   protected readonly sortOptions: SelectOption[] = [
     { value: 'newest', label: 'Newest first' },
     { value: 'oldest', label: 'Oldest first' },
@@ -93,21 +84,38 @@ export class AdminCoupons {
     { value: 'code', label: 'Code A–Z' },
   ];
 
-  protected readonly list = pagedList(
-    (page, limit) => {
-      const f = this.filterModel();
-      return this.service.list({
-        search: f.search.trim() || undefined,
-        status: (f.status || undefined) as CouponQuery['status'],
-        owner: (f.owner || undefined) as CouponQuery['owner'],
-        kind: (f.kind || undefined) as CouponQuery['kind'],
-        sort: f.sort as CouponQuery['sort'],
-        page,
-        limit,
-      });
-    },
-    { filterKey: () => JSON.stringify(this.filterModel()), errorText: 'Could not load coupons.' },
+  /** Names of the restaurants on this page, for a chip whose counts haven't loaded. */
+  private readonly restaurantNames = computed(
+    () =>
+      new Map(
+        (this.list.data()?.items ?? []).flatMap((c) =>
+          typeof c.restaurant === 'object' && c.restaurant ? [[c.restaurant.id, c.restaurant.name] as const] : [],
+        ),
+      ),
   );
+
+  protected readonly filterSections = [
+    COUPON_STATUS_SECTION,
+    optionsSection('kind', 'Type', COUPON_KIND_LABEL),
+    optionsSection('owner', 'Created by', { platform: 'BiteBox coupons', restaurant: 'Restaurant offers' }),
+    optionsSection('audience', 'Audience', {
+      all: 'All customers',
+      new: 'New customers',
+      existing: 'Returning customers',
+    }),
+    DISCOUNT_TYPE_SECTION,
+    // From the API's counts, with their names.
+    optionsSection('restaurant', 'Restaurant', (id) => this.restaurantNames().get(id) ?? id),
+    // Coupons valid at some time in the range (`from` / `to` as instants).
+    datesSection('valid', 'Valid between', ['from', 'to']),
+  ];
+
+  protected readonly coupons = filteredList((query) => this.service.list(query), {
+    errorText: 'Could not load coupons.',
+    sort: 'newest',
+    instants: true,
+  });
+  protected readonly list = this.coupons.list;
 
   protected readonly toggleMenu = (menu: MenuComponent, event: Event) =>
     toggleEndAligned(menu, event, COMPACT_MENU_WIDTH);

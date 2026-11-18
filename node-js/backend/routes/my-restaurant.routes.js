@@ -5,8 +5,9 @@ import * as restaurants from "../controllers/restaurant.controller.js";
 import { authenticate, authorize } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
 import { ROLES } from "../models/user.model.js";
-import { mongoIdParam, paginationRules } from "../validators/common.validators.js";
+import { mongoIdParam } from "../validators/common.validators.js";
 import * as partnerFinance from "../controllers/partner-finance.controller.js";
+import { myPayoutRules, mySettlementRules } from "../validators/finance.validators.js";
 import * as foodRules from "../validators/food.validators.js";
 import * as reports from "../services/reports.service.js";
 import * as reviews from "../services/review.service.js";
@@ -54,9 +55,9 @@ router.patch(
 router.delete("/foods/:id", validate([mongoIdParam()]), foods.ownerDelete);
 
 router.get("/stats", orders.restaurantStats);
-router.get("/payouts", validate(paginationRules), partnerFinance.myPayouts);
+router.get("/payouts", validate(myPayoutRules), partnerFinance.myPayouts);
 router.get("/payouts/:id/statement", validate([mongoIdParam()]), partnerFinance.myStatement);
-router.get("/settlements", validate(paginationRules), partnerFinance.mySettlements);
+router.get("/settlements", validate(mySettlementRules), partnerFinance.mySettlements);
 router.get(
   "/orders",
   validate(orderRules.restaurantListRules),

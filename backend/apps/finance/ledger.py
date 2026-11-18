@@ -14,13 +14,15 @@ Rows are immutable (a database trigger refuses updates and deletes).
 """
 
 import uuid
+from collections.abc import Mapping
 from datetime import datetime, timedelta
 from typing import Any
 
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, QuerySet, Sum
 from django.utils import timezone
 
+from common.filters import Facet, apply_facets, days_between, text_search, with_facets
 from common.pagination import Page, paginate
 
 from .models import LedgerAccount, LedgerEntry, OrderSettlement, Payout, PayoutType
@@ -104,9 +106,32 @@ def post_refund(order: Any, refund_id: Any, amount: int, from_restaurant: int) -
     )
 
 
-def summary(days: int, page: Page, now: datetime | None = None) -> dict[str, Any]:
-    """Balances per account (all time and in the window), whether every group balances, and the
-    newest entries."""
+# Each event's key prefix (post_settlement, post_payout_paid, post_refund).
+EVENTS = {
+    "settlement": Q(key__startswith="settle:"),
+    "payout": Q(key__startswith="payout:"),
+    "refund": Q(key__startswith="refund:"),
+}
+FACETS = (
+    Facet("account", values=A.values),
+    Facet("event", values=list(EVENTS), cases=EVENTS),
+)
+
+
+def entries(query: Mapping[str, Any]) -> QuerySet[LedgerEntry]:
+    """The entries matching the facets, the day posted and a search over the description (it
+    names the order number or the payee)."""
+    qs = apply_facets(LedgerEntry.objects.all(), query, FACETS)
+    return qs.filter(
+        days_between(query, "created"), text_search(query.get("search"), "description")
+    )
+
+
+def summary(
+    days: int, page: Page, query: Mapping[str, Any], now: datetime | None = None
+) -> dict[str, Any]:
+    """Balances per account (all time and in the window) and whether every group balances, over
+    the whole ledger; then the newest entries matching `query`'s filters (and facets)."""
     since = (now or timezone.now()) - timedelta(days=days)
     totals = dict(
         LedgerEntry.objects.values_list("account").annotate(s=Sum("amount_paise")).order_by()
@@ -123,8 +148,10 @@ def summary(days: int, page: Page, now: datetime | None = None) -> dict[str, Any
         .exclude(s=0)
         .aggregate(n=Count("entry_group"))["n"]
     )
-    rows, meta = paginate(LedgerEntry.objects.select_related("order").order_by("-created_at"), page)
-    return {
+    rows, meta = paginate(
+        entries(query).select_related("order").order_by("-created_at", "-id"), page
+    )
+    result = {
         "days": days,
         "accounts": [
             {
@@ -150,3 +177,4 @@ def summary(days: int, page: Page, now: datetime | None = None) -> dict[str, Any
         ],
         "pagination": meta,
     }
+    return with_facets(result, query, entries, FACETS)

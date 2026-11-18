@@ -4,7 +4,7 @@ import { FoodItem } from "../models/food-item.model.js";
 import { RESTAURANT_STATUS, Restaurant } from "../models/restaurant.model.js";
 import { ApiError } from "../utils/api-error.js";
 import { escapeRegex, paginationMeta } from "../utils/pagination.js";
-import { allOf, facetsIf, fixedFacet, idFacet, inList, toId } from "./admin-accounts.js";
+import { allOf, facetsIf, filteredPage, fixedFacet, idFacet, inList, toId } from "./admin-accounts.js";
 
 const EDITABLE = [
   "name",
@@ -51,18 +51,19 @@ function listFilter(base, { search, category, available, veg }) {
   return filter;
 }
 
-export async function ownerList(restaurantId, query, pagination) {
-  const filter = listFilter({ restaurant: restaurantId }, query);
-  const [items, total] = await Promise.all([
-    FoodItem.find(filter)
-      .sort({ category: 1, name: 1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit)
-      .populate("category", "name slug icon"),
-    FoodItem.countDocuments(filter),
-  ]);
-  return { items, pagination: paginationMeta(pagination, total) };
-}
+/** The owner's dishes matching the filters (OWNER_FACETS, search, the `available` and `veg` flags). */
+const ownerFilter = (restaurantId, query) => adminFilter({ ...query, restaurant: [String(restaurantId)] });
+
+/**
+ * The partner's menu; category, type and availability take several values (OR); `facets=1` adds
+ * the Filters panel's counts (this restaurant's dishes only). Django: apps/menus/services.py#owner_list.
+ */
+export const ownerList = (restaurantId, query, pagination) =>
+  filteredPage(FoodItem, query, pagination, {
+    filterFor: (q) => ownerFilter(restaurantId, q),
+    facets: OWNER_FACETS,
+    find: (q) => q.sort({ category: 1, name: 1 }).populate("category", "name slug icon"),
+  });
 
 export async function ownerCreate(restaurantId, input) {
   await assertActiveCategory(input.category);
@@ -139,6 +140,8 @@ const ADMIN_FACETS = {
   type: fixedFacet(FOOD_TYPES, { $cond: ["$isVeg", "veg", "non_veg"] }),
   availability: fixedFacet(FOOD_AVAILABILITY, { $cond: ["$isAvailable", "available", "unavailable"] }),
 };
+// A partner's own menu: the same filters without the restaurant (Django: menus OWNER_FACETS).
+const { restaurant: _restaurantFacet, ...OWNER_FACETS } = ADMIN_FACETS;
 
 export async function adminList(query, pagination) {
   const filter = adminFilter(query);

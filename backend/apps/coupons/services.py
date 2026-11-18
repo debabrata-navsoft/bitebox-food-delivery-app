@@ -8,9 +8,11 @@ One engine decides everything: `problem()` says why a coupon cannot be used on a
 coupon applies to. Prices are always computed here and in apps/cart/pricing.py, never by clients.
 """
 
+import functools
 import secrets
 import uuid
-from collections.abc import Iterable
+from collections import Counter
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -25,6 +27,7 @@ from apps.cart.pricing import coupon_discount, js_round
 from apps.menus.models import FoodItem
 from apps.restaurants.models import Restaurant
 from common.api import ApiError
+from common.filters import Facet, apply_facets, text_search, with_facets
 from common.pagination import Page, paginate
 
 from .models import ApprovalStatus, Audience, Coupon, CouponRedemption, DiscountType, Kind, Source
@@ -446,35 +449,88 @@ SORTS = {
 }
 
 
-def _list(qs: QuerySet[Coupon], query: dict[str, Any], page: Page) -> dict[str, Any]:
-    now = timezone.now()
-    if search := (query.get("search") or "").strip():
-        qs = qs.filter(Q(code__icontains=search) | Q(name__icontains=search))
-    if query.get("active") is not None:
-        qs = qs.filter(is_active=query["active"])
-    if status := query.get("status"):
-        qs = qs.filter(STATUS_FILTERS[status](now))
-    if kind := query.get("kind"):
-        qs = qs.filter(kind=kind)
-    if owner := query.get("owner"):
-        qs = qs.filter(source=owner)
-    if restaurant := query.get("restaurant"):
-        qs = qs.filter(
-            Q(restaurant_id=restaurant)
-            | Q(
-                pk__in=Coupon.restaurants.through.objects.filter(restaurant_id=restaurant).values(
-                    "coupon_id"
-                )
+class RestaurantFacet(Facet):
+    """
+    The restaurants a coupon is for: the one that owns it (or that it is limited to) and the
+    ones in its scope, each coupon counted once per restaurant; `{value: id, label, count}`,
+    by count then name. The filter keeps coupons for any of the selected restaurants.
+    """
+
+    def count(self, qs: QuerySet[Any]) -> list[dict[str, Any]]:
+        pairs = set(qs.filter(restaurant__isnull=False).values_list("pk", "restaurant_id"))
+        pairs |= set(
+            Coupon.restaurants.through.objects.filter(coupon_id__in=qs.values("pk")).values_list(
+                "coupon_id", "restaurant_id"
             )
         )
+        counts = Counter(restaurant for _, restaurant in pairs)
+        names = dict(Restaurant.objects.filter(pk__in=counts).values_list("pk", "name"))
+        rows = sorted(
+            counts.items(), key=lambda p: (-p[1], (names.get(p[0]) or "").casefold(), str(p[0]))
+        )
+        return [
+            {"value": str(pk), "label": names.get(pk), "count": n} for pk, n in rows[: self.limit]
+        ]
+
+
+def _for_restaurants(ids: list[Any]) -> Q:
+    """Coupons owned by (or limited to) any of these restaurants, or listing one in their scope."""
+    scoped = Coupon.restaurants.through.objects.filter(restaurant_id__in=ids).values("coupon_id")
+    return Q(restaurant_id__in=ids) | Q(pk__in=scoped)
+
+
+def list_facets(now: datetime) -> tuple[Facet, ...]:
+    """
+    The coupon list's filters and facet counts (`?facets=1`): status (STATUS_FILTERS, which may
+    overlap, as in the analytics totals), kind, owner (the source), audience, discount type and
+    restaurant. Node: services/coupon.service.js#LIST_FACETS.
+    """
+    status = {key: rule(now) for key, rule in STATUS_FILTERS.items()}
+    return (
+        Facet("status", values=list(status), cases=status),
+        Facet("kind", values=Kind.values),
+        Facet("owner", values=Source.values, field="source"),
+        Facet("audience", values=Audience.values),
+        Facet("discount_type", values=DiscountType.values),
+        RestaurantFacet("restaurant", label="name", match=_for_restaurants),
+    )
+
+
+def _filtered(
+    qs: QuerySet[Coupon], query: dict[str, Any], specs: tuple[Facet, ...]
+) -> QuerySet[Coupon]:
+    """The coupons matching the search, `active`, the validity range and every facet's filter."""
+    qs = qs.filter(text_search(query.get("search"), "code", "name"))
+    if query.get("active") is not None:
+        qs = qs.filter(is_active=query["active"])
     if query.get("from"):
         qs = qs.filter(valid_until__gte=query["from"])
     if query.get("to"):
         qs = qs.filter(valid_from__lte=query["to"])
+    return apply_facets(qs, query, specs)
+
+
+def own_facets(now: datetime) -> tuple[Facet, ...]:
+    """The facets a partner's own offer list counts: status and discount type (the rest is the
+    same for all its offers). Node: services/coupon.service.js#OWN_FACETS."""
+    return tuple(spec for spec in list_facets(now) if spec.name in ("status", "discount_type"))
+
+
+def _list(
+    qs: QuerySet[Coupon],
+    query: dict[str, Any],
+    page: Page,
+    counted: Callable[[datetime], tuple[Facet, ...]] = list_facets,
+) -> dict[str, Any]:
+    """Every list filter applies (list_facets); `?facets=1` counts the `counted` facets."""
+    now = timezone.now()
+    build = functools.partial(_filtered, qs, specs=list_facets(now))
     items, meta = paginate(
-        _with_scopes(qs).order_by(SORTS.get(query.get("sort") or "", "-created_at")), page
+        _with_scopes(build(query)).order_by(SORTS.get(query.get("sort") or "", "-created_at")),
+        page,
     )
-    return {"items": [coupon_json(c) for c in items], "pagination": meta}
+    result = {"items": [coupon_json(c) for c in items], "pagination": meta}
+    return with_facets(result, query, build, counted(now))
 
 
 def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
@@ -723,7 +779,9 @@ def _save_own(restaurant: Restaurant, coupon: Coupon, data: dict[str, Any]) -> C
 
 
 def own_list(restaurant: Restaurant, query: dict[str, Any], page: Page) -> dict[str, Any]:
-    return _list(_own_offers(restaurant), query, page)
+    """The partner's offers (search, status, discount type, validity dates); `?facets=1` adds
+    the Filters panel's counts, over this restaurant's offers only."""
+    return _list(_own_offers(restaurant), query, page, own_facets)
 
 
 def own_get(restaurant: Restaurant, offer_id: uuid.UUID) -> Coupon:

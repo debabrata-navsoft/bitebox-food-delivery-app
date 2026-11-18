@@ -1,6 +1,17 @@
 import crypto from "node:crypto";
 import { LEDGER_ACCOUNTS, LedgerEntry } from "../models/ledger-entry.model.js";
 import { paginationMeta } from "../utils/pagination.js";
+import {
+  allOf,
+  anyMatch,
+  dayRange,
+  facetsIf,
+  fixedFacet,
+  flagFacet,
+  inList,
+  mapValues,
+  textSearch,
+} from "./admin-accounts.js";
 
 /**
  * The double-entry finance ledger (same rules as backend-django/apps/finance/ledger.py). Each
@@ -73,15 +84,41 @@ export const postRefund = (order, refundId, amount, fromRestaurant) =>
     { order: order._id, description: `Refund on order ${order.orderNumber}` },
   );
 
+/** Each event's key prefix (postSettlement, postPayoutPaid, postRefund). */
+export const LEDGER_EVENTS = Object.freeze({ settlement: "settle:", payout: "payout:", refund: "refund:" });
+const eventMatches = mapValues(LEDGER_EVENTS, (prefix) => ({ key: new RegExp(`^${prefix}`) }));
+
+/**
+ * The entries list's filter: account and event (each one value or several, any of them), the day
+ * posted and a search over the description (it names the order number or the payee).
+ */
+function entryFilter({ account, event, createdFrom, createdTo, search }) {
+  return allOf(
+    inList("account", account),
+    anyMatch(event, eventMatches),
+    dayRange("createdAt", createdFrom, createdTo),
+    textSearch(search, ["description"]),
+  );
+}
+
+/** The entries list's Filters panel (each facet is also the filter of the same name). */
+const FACETS = {
+  account: fixedFacet(LEDGER_ACCOUNTS, "$account"),
+  event: flagFacet(
+    mapValues(LEDGER_EVENTS, (prefix) => ({ $eq: [{ $substrCP: ["$key", 0, prefix.length] }, prefix] })),
+  ),
+};
+
 /** Balances per account (all time and in the window), whether every group balances, entries. */
-export async function summary(days, pagination) {
+export async function summary(days, pagination, query = {}) {
   const since = new Date(Date.now() - days * 86_400_000);
   const balance = (match) =>
     LedgerEntry.aggregate([
       { $match: match },
       { $group: { _id: "$account", paise: { $sum: "$amountPaise" } } },
     ]);
-  const [all, window, unbalanced, items, total] = await Promise.all([
+  const filter = entryFilter(query);
+  const [all, window, unbalanced, items, total, facets] = await Promise.all([
     balance({}),
     balance({ createdAt: { $gte: since } }),
     LedgerEntry.aggregate([
@@ -89,13 +126,14 @@ export async function summary(days, pagination) {
       { $match: { s: { $ne: 0 } } },
       { $count: "n" },
     ]),
-    LedgerEntry.find()
+    LedgerEntry.find(filter)
       .sort({ createdAt: -1, _id: -1 })
       .skip(pagination.skip)
       .limit(pagination.limit)
       .populate("order", "orderNumber")
       .lean(),
-    LedgerEntry.countDocuments(),
+    LedgerEntry.countDocuments(filter),
+    facetsIf(query, LedgerEntry, FACETS, entryFilter),
   ]);
   const map = (rows) => new Map(rows.map((r) => [r._id, r.paise]));
   const [a, w] = [map(all), map(window)];
@@ -119,5 +157,6 @@ export async function summary(days, pagination) {
       createdAt: e.createdAt,
     })),
     pagination: paginationMeta(pagination, total),
+    ...facets,
   };
 }

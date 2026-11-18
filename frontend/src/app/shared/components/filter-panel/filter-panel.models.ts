@@ -29,3 +29,9 @@ export interface FilterPreview {
 /** Selected values, dates kept as they are. */
 export const countSelected = (value: FilterValue): number =>
   Object.values(value).reduce<number>((n, v) => n + (Array.isArray(v) ? v.length : v ? 1 : 0), 0);
+
+/** The one value chosen in a section, or null with none or several. */
+export const onlyValue = (value: FilterValue, key: string): string | null => {
+  const v = value[key];
+  return Array.isArray(v) && v.length === 1 ? v[0] : null;
+};

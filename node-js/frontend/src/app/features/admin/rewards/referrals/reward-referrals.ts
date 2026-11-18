@@ -1,28 +1,25 @@
 import { TableLabels } from '../../../../shared/list/table-labels';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { RouterLink } from '@angular/router';
-import { IconComponent, SelectOption, ToggleComponent } from 'nexprime';
+import { IconComponent } from 'nexprime';
 import { switchMap } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AdminRewardsService } from '../../../../core/services/admin/admin-rewards.service';
 import { errorMessage } from '../../../../core/services/api-error';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
-import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
+import { ListEmpty } from '../../../../shared/components/list-empty/list-empty';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
-import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
-import { pagedList } from '../../../../shared/list/paged-list';
+import { ListToolbar } from '../../../../shared/components/list-toolbar/list-toolbar';
+import { datesSection, filterOptions, filteredList, optionsSection } from '../../../../shared/list/filtered-list';
 import {
   AdminReferral,
   REFERRAL_REWARD_LABEL,
   REFERRAL_STATUS_LABEL,
   RISK_LABEL,
-  ReferralRewardStatus,
-  ReferralStatus,
 } from '../../../../shared/models/rewards.models';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 
@@ -30,7 +27,7 @@ import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 @Component({
   selector: 'bb-reward-referrals',
   imports: [
-    TableLabels,DatePipe, RouterLink, NP_FORM_FIELDS, ToggleComponent, MatButtonModule, MatPaginatorModule, IconComponent, EmptyState, PageHeader],
+    TableLabels,DatePipe, RouterLink, ListToolbar, MatButtonModule, MatPaginatorModule, IconComponent, ListEmpty, PageHeader],
   templateUrl: './reward-referrals.html',
   styleUrl: './reward-referrals.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,37 +43,31 @@ export class RewardReferralsPage {
   protected readonly busy = signal<string | null>(null);
   protected readonly expanded = signal<string | null>(null);
 
-  protected readonly filterModel = signal({ search: '', status: '', rewardStatus: '', flagged: false });
-  protected readonly filters = form(this.filterModel);
-  protected readonly statusOptions: SelectOption[] = [
-    { value: '', label: 'Any stage' },
-    ...(['REGISTERED', 'FIRST_ORDER_PLACED', 'ORDER_DELIVERED', 'REWARD_CREDITED', 'REJECTED', 'EXPIRED'] as const).map((s) => ({
-      value: s,
-      label: REFERRAL_STATUS_LABEL[s],
-    })),
-  ];
-  protected readonly rewardOptions: SelectOption[] = [
-    { value: '', label: 'Any reward state' },
-    ...Object.entries(REFERRAL_REWARD_LABEL).map(([value, label]) => ({ value, label })),
+  protected readonly filterSections = [
+    optionsSection(
+      'status',
+      'Stage',
+      filterOptions(REFERRAL_STATUS_LABEL, [
+        'REGISTERED',
+        'FIRST_ORDER_PLACED',
+        'ORDER_DELIVERED',
+        'REWARD_CREDITED',
+        'REJECTED',
+        'EXPIRED',
+      ]),
+    ),
+    optionsSection('rewardStatus', 'Reward', REFERRAL_REWARD_LABEL),
+    optionsSection('risk', 'Risk signals', RISK_LABEL),
+    datesSection('created', 'Signed up'),
   ];
 
-  protected readonly list = pagedList(
-    (page, limit) => {
-      const f = this.filterModel();
-      return this.api.referrals({
-        search: f.search.trim() || undefined,
-        status: (f.status || undefined) as ReferralStatus | undefined,
-        rewardStatus: (f.rewardStatus || undefined) as ReferralRewardStatus | undefined,
-        flagged: f.flagged || undefined,
-        page,
-        limit,
-      });
-    },
-    { filterKey: () => JSON.stringify(this.filterModel()), errorText: 'Could not load referrals.' },
-  );
+  protected readonly referrals = filteredList((query) => this.api.referrals(query), {
+    errorText: 'Could not load referrals.',
+  });
+  protected readonly list = this.referrals.list;
 
   protected showHeld(): void {
-    this.filterModel.update((f) => ({ ...f, rewardStatus: 'HELD' }));
+    this.referrals.panel.set({ rewardStatus: ['HELD'] });
   }
 
   protected toggle(r: AdminReferral): void {

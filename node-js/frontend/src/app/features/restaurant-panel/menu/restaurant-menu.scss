@@ -1,28 +1,3 @@
-@use 'breakpoints' as bp;
-
-.filters {
-  display: grid;
-  gap: var(--bb-space-3);
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  margin-bottom: var(--bb-space-3);
-
-  .search {
-    grid-column: 1 / -1;
-  }
-
-  @include bp.desktop-up {
-    grid-template-columns: minmax(0, 1fr) 220px 180px;
-
-    .search {
-      grid-column: auto;
-    }
-  }
-}
-
-.count {
-  margin-bottom: var(--bb-space-2);
-}
-
 .items {
   list-style: none;
   margin: 0;

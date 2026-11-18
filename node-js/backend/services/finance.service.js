@@ -11,7 +11,22 @@ import { Restaurant } from "../models/restaurant.model.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/api-error.js";
 import { paginationMeta } from "../utils/pagination.js";
-import { paymentView } from "./payments/payment.service.js";
+import { orderStages, paymentPage, paymentSearch, paymentView } from "./payments/payment.service.js";
+import {
+  allOf,
+  anyMatch,
+  facetsIf,
+  fixedFacet,
+  flagFacet,
+  idFacet,
+  dayRange,
+  filteredPage,
+  inList,
+  listOf,
+  mapValues,
+  textSearch,
+  toId,
+} from "./admin-accounts.js";
 import { CommissionRule } from "../models/commission-rule.model.js";
 import { RESTAURANT_FOOD_EXPR, restaurantFood } from "./earnings.service.js";
 import { postPayoutPaid, postRefund } from "./ledger.service.js";
@@ -300,53 +315,100 @@ export async function cancelPayout(id, note) {
   return payout.toJSON();
 }
 
-export async function listPayouts({ type, status, restaurant, rider }, pagination) {
-  const filter = {};
-  if (type) filter.type = type;
-  if (status) filter.status = status;
-  if (restaurant) filter.restaurant = restaurant;
-  if (rider) {
-    filter.payee = rider;
-    filter.type ??= PAYOUT_TYPES.RIDER;
-  }
-  const [items, total] = await Promise.all([
-    Payout.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit),
-    Payout.countDocuments(filter),
-  ]);
-  return {
-    items: items.map((p) => p.toJSON()),
-    pagination: paginationMeta(pagination, total),
-  };
-}
+/** A rider payout's payee (the rider's user id); null for restaurant payouts. */
+const RIDER_OF = { $cond: [{ $eq: ["$type", PAYOUT_TYPES.RIDER] }, "$payee", null] };
 
 /**
- * Refund queue: online payments already refunded, plus paid ones whose order closed without
- * a refund (the automatic refund failed and needs a retry).
+ * The payout history's filter: type, status, restaurant and rider (each one value or several, any
+ * of them; `rider` matches rider payouts only), the day created and a search over the payee's name
+ * and the transfer reference.
  */
-export async function refunds({ state }, pagination) {
-  const closed = await Order.find({
-    status: { $in: [S.CANCELLED, S.REJECTED] },
-    paymentMethod: PAYMENT_METHODS.ONLINE,
-    paymentStatus: P.PAID,
-  })
-    .select("_id")
-    .limit(500)
-    .lean();
-  const needed = { status: P.PAID, order: { $in: closed.map((o) => o._id) } };
-  const done = { status: P.REFUNDED };
-  const filter =
-    state === "needed" ? needed : state === "refunded" ? done : { $or: [needed, done] };
-  const [items, total] = await Promise.all([
-    Payment.find(filter)
-      .sort({ updatedAt: -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit)
-      .populate("order", "orderNumber status cancellation")
-      .populate("user", "name email"),
-    Payment.countDocuments(filter),
+function payoutFilter({ type, status, restaurant, rider, createdFrom, createdTo, search }) {
+  const riders = listOf(rider);
+  return allOf(
+    inList("type", type),
+    inList("status", status),
+    inList("restaurant", restaurant, toId),
+    riders.length && { type: PAYOUT_TYPES.RIDER, payee: { $in: riders.map(toId) } },
+    dayRange("createdAt", createdFrom, createdTo),
+    textSearch(search, ["payeeName", "reference"]),
+  );
+}
+
+/** The payout history's Filters panel (each facet is also the filter of the same name). */
+const PAYOUT_FACETS = {
+  status: fixedFacet(Object.values(PAYOUT_STATUS), "$status"),
+  restaurant: idFacet("$restaurant", Restaurant),
+  rider: idFacet(RIDER_OF, User),
+};
+
+/** Payouts matching `filterFor(query)`, newest first, with the `facets` counts when asked for. */
+const payoutPage = (query, pagination, filterFor, facets) =>
+  filteredPage(Payout, query, pagination, {
+    filterFor,
+    facets,
+    find: (q) => q.sort({ createdAt: -1 }),
+    map: (p) => p.toJSON(),
+  });
+
+export const listPayouts = (query, pagination) => payoutPage(query, pagination, payoutFilter, PAYOUT_FACETS);
+
+const REFUNDED = [P.REFUNDED, P.PARTIALLY_REFUNDED];
+const CLOSED = [S.CANCELLED, S.REJECTED];
+/**
+ * The refund queue's states, as matches (after orderStages) and as expressions (facet counts):
+ * online payments of closed orders still paid (the automatic refund failed), and payments
+ * refunded fully or partly.
+ */
+const REFUND_STATES = {
+  needed: {
+    match: { status: P.PAID, method: PAYMENT_METHODS.ONLINE, "o.status": { $in: CLOSED } },
+    expr: {
+      $and: [
+        { $eq: ["$status", P.PAID] },
+        { $eq: ["$method", PAYMENT_METHODS.ONLINE] },
+        { $in: [{ $ifNull: ["$o.status", null] }, CLOSED] },
+      ],
+    },
+  },
+  refunded: { match: { status: { $in: REFUNDED } }, expr: { $in: ["$status", REFUNDED] } },
+};
+const stateMatches = mapValues(REFUND_STATES, (v) => v.match);
+
+/** The refund queue's stages: state and restaurant (one value or several), last change days, search. */
+async function refundStages({ state, restaurant, updatedFrom, updatedTo, search }) {
+  return [
+    {
+      $match: allOf(
+        { $or: [{ status: P.PAID, method: PAYMENT_METHODS.ONLINE }, { status: { $in: REFUNDED } }] },
+        dayRange("updatedAt", updatedFrom, updatedTo),
+        await paymentSearch(search),
+      ),
+    },
+    ...orderStages(),
+    {
+      $match: allOf(
+        { $or: Object.values(stateMatches) },
+        anyMatch(state, stateMatches),
+        inList("o.restaurant", restaurant, toId),
+      ),
+    },
+  ];
+}
+
+const REFUND_FACETS = {
+  state: flagFacet(mapValues(REFUND_STATES, (v) => v.expr)),
+  restaurant: idFacet("$o.restaurant", Restaurant),
+};
+
+/**
+ * Online payments refunded (fully or partly), plus paid ones of closed orders that still need a
+ * refund (the automatic one failed); latest change first. `facets=1` adds the panel's counts.
+ */
+export async function refunds(query, pagination) {
+  const [{ items, total }, facets] = await Promise.all([
+    refundStages(query).then((stages) => paymentPage(stages, pagination, { updatedAt: -1, _id: -1 })),
+    facetsIf(query, Payment, REFUND_FACETS, refundStages),
   ]);
   return {
     items: items.map((p) => ({
@@ -365,6 +427,7 @@ export async function refunds({ state }, pagination) {
       updatedAt: p.updatedAt,
     })),
     pagination: paginationMeta(pagination, total),
+    ...facets,
   };
 }
 
@@ -504,33 +567,74 @@ export async function applyRefund(order, refundId, amount) {
 
 // Partner history and the settlement report --------------------------------------------------
 
-/** A partner's own payouts (`match`: { restaurant } or { type: "rider", payee }). */
-export const myPayouts = (match, pagination) => listPayoutsMatching(match, pagination);
+/**
+ * A partner's own payouts (`match`: { restaurant } or { type: "rider", payee }), filtered by
+ * status (one value or several), the day created and a search; `facets=1` adds the status
+ * counts, over this partner's payouts only.
+ */
+export const myPayouts = (match, pagination, query = {}) =>
+  payoutPage(query, pagination, (q) => allOf(match, payoutFilter(q)), { status: PAYOUT_FACETS.status });
 
-async function listPayoutsMatching(filter, pagination) {
-  const [items, total] = await Promise.all([
-    Payout.find(filter).sort({ createdAt: -1 }).skip(pagination.skip).limit(pagination.limit),
-    Payout.countDocuments(filter),
-  ]);
-  return { items: items.map((p) => p.toJSON()), pagination: paginationMeta(pagination, total) };
+/** A settlement's payout state: due (in no payout yet; a cancelled payout releases its orders),
+ * pending (in a payout being paid) or paid. */
+export const SETTLEMENT_STATES = ["due", PAYOUT_STATUS.PENDING, PAYOUT_STATUS.PAID];
+
+/**
+ * A partner's settled orders (`match`) filtered by payout state (one value or several), the day
+ * settled and a search over the order number. `payoutMatch` scopes the payout lookup to this
+ * partner's payouts.
+ */
+async function settlementFilter(type, match, payoutMatch, { status, settledFrom, settledTo, search }) {
+  const { link } = SIDE[type];
+  const states = listOf(status);
+  const inPayout = states.filter((s) => s !== "due");
+  const payoutIds = inPayout.length
+    ? await Payout.find({ ...payoutMatch, status: { $in: inPayout } }).distinct("_id")
+    : [];
+  return allOf(
+    { ...match, status: S.DELIVERED, "settlement.at": { $ne: null } },
+    states.length && {
+      $or: [
+        ...(states.includes("due") ? [{ [link]: null }] : []),
+        ...(inPayout.length ? [{ [link]: { $in: payoutIds } }] : []),
+      ],
+    },
+    dayRange("settlement.at", settledFrom, settledTo),
+    textSearch(search, ["orderNumber"]),
+  );
 }
 
-/** Per delivered order: what it paid this partner and whether it has been paid out. */
-export async function settlementHistory(type, match, pagination) {
-  const filter = { ...match, status: S.DELIVERED, "settlement.at": { $ne: null } };
+/** The settlement history's Filters panel: each order's payout state. */
+const settlementFacets = (type) => ({
+  status: fixedFacet(SETTLEMENT_STATES, { $ifNull: [{ $first: "$p.status" }, "due"] }, [
+    {
+      $lookup: {
+        from: Payout.collection.name,
+        localField: SIDE[type].link,
+        foreignField: "_id",
+        pipeline: [{ $project: { status: 1 } }],
+        as: "p",
+      },
+    },
+  ]),
+});
+
+/**
+ * Per delivered order: what it paid this partner and whether it has been paid out. `facets=1`
+ * adds the Filters panel's counts, over this partner's settlements only.
+ */
+export function settlementHistory(type, match, pagination, query = {}, payoutMatch = {}) {
   const link = type === PAYOUT_TYPES.RESTAURANT ? "restaurant" : "rider";
-  const [orders, total] = await Promise.all([
-    Order.find(filter)
-      .sort({ "settlement.at": -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit)
-      .select("orderNumber pricing restaurantDiscountPaise settlement payouts")
-      .populate(`payouts.${link}`, "status paidAt")
-      .lean(),
-    Order.countDocuments(filter),
-  ]);
-  return {
-    items: orders.map((o) => {
+  return filteredPage(Order, query, pagination, {
+    filterFor: (q) => settlementFilter(type, match, payoutMatch, q),
+    facets: settlementFacets(type),
+    find: (q) =>
+      q
+        .sort({ "settlement.at": -1, _id: -1 })
+        .select("orderNumber pricing restaurantDiscountPaise settlement payouts")
+        .populate(`payouts.${link}`, "status paidAt")
+        .lean(),
+    map: (o) => {
       const s = o.settlement;
       const food = restaurantFood(o);
       const adjustment = s.refundAdjustmentPaise ?? 0;
@@ -546,9 +650,8 @@ export async function settlementHistory(type, match, pagination) {
         netPaise: type === PAYOUT_TYPES.RIDER ? s.riderPaise : s.restaurantPaise - adjustment,
         payout: payout ? { id: String(payout._id), status: payout.status, paidAt: payout.paidAt ?? null } : null,
       };
-    }),
-    pagination: paginationMeta(pagination, total),
-  };
+    },
+  });
 }
 
 /** Text a spreadsheet would run as a formula (starts with = + - @, tab or CR): quote it. */

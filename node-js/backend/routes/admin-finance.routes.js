@@ -143,9 +143,13 @@ export const adminFinanceRouter = Router()
   )
   .get(
     "/ledger",
-    validate([...daysRules, ...rules.pageRules]),
+    validate([...daysRules, ...rules.ledgerRules]),
     respond((req) =>
-      ledger.summary(req.validatedQuery.days ?? 30, parsePagination(req.validatedQuery)),
+      ledger.summary(
+        req.validatedQuery.days ?? 30,
+        parsePagination(req.validatedQuery),
+        req.validatedQuery,
+      ),
     ),
   )
   .get(

@@ -4,8 +4,9 @@ import { ButtonComponent, ButtonToggleComponent, PaginationComponent } from 'nex
 import { NotificationService } from '../../../core/services/notification.service';
 import { PartnerFinanceService } from '../../../core/services/partner-finance.service';
 import { EarningsScope } from '../../../core/services/reports.service';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
-import { pagedList } from '../../../shared/list/paged-list';
+import { ListEmpty } from '../../../shared/components/list-empty/list-empty';
+import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
+import { datesSection, filteredList, optionsSection } from '../../../shared/list/filtered-list';
 import { PAYOUT_STATUS_TONE, Payout } from '../../../shared/models/admin-roles.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 
@@ -16,6 +17,8 @@ const PAYOUT_LABEL: Record<Payout['status'], string> = {
   paid: 'Paid',
   cancelled: 'Cancelled',
 };
+// A settlement's payout state (a cancelled payout releases its orders, so they are due again).
+const SETTLEMENT_LABEL = { due: 'Due', pending: PAYOUT_LABEL.pending, paid: PAYOUT_LABEL.paid };
 
 /**
  * A partner's settlement history (what each delivered order paid them, and whether it has been
@@ -28,8 +31,9 @@ const PAYOUT_LABEL: Record<Payout['status'], string> = {
     ButtonComponent,
     ButtonToggleComponent,
     PaginationComponent,
-    EmptyState,
+    ListEmpty,
     InrPipe,
+    ListToolbar,
   ],
   templateUrl: './settlement-history.html',
   styleUrl: './settlement-history.scss',
@@ -48,23 +52,28 @@ export class SettlementHistory implements OnInit {
   protected readonly payoutLabel = PAYOUT_LABEL;
   protected readonly payoutTone = PAYOUT_STATUS_TONE;
 
+  protected readonly settlementSections = [
+    optionsSection('status', 'Payout', SETTLEMENT_LABEL),
+    datesSection('settled', 'Settled'),
+  ];
+  protected readonly payoutSections = [
+    optionsSection('status', 'Status', PAYOUT_LABEL),
+    datesSection('created', 'Created'),
+  ];
+
   // Lazy: the `scope` input is only set after construction (loaded in ngOnInit).
-  protected readonly settlements = pagedList(
-    (page, limit) => this.api.settlements(this.scope(), page, limit),
-    {
-      limit: 10,
-      lazy: true,
-      errorText: 'Could not load your settlements.',
-    },
-  );
-  protected readonly payouts = pagedList(
-    (page, limit) => this.api.payouts(this.scope(), page, limit),
-    {
-      limit: 10,
-      lazy: true,
-      errorText: 'Could not load your payouts.',
-    },
-  );
+  protected readonly settlementList = filteredList((query) => this.api.settlements(this.scope(), query), {
+    limit: 10,
+    lazy: true,
+    errorText: 'Could not load your settlements.',
+  });
+  protected readonly settlements = this.settlementList.list;
+  protected readonly payoutList = filteredList((query) => this.api.payouts(this.scope(), query), {
+    limit: 10,
+    lazy: true,
+    errorText: 'Could not load your payouts.',
+  });
+  protected readonly payouts = this.payoutList.list;
 
   ngOnInit(): void {
     this.settlements.load(1);

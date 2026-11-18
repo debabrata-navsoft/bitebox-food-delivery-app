@@ -6,9 +6,12 @@
     </button>
   </bb-page-header>
 
-  <div class="bb-filters narrow">
-    <np-select [formField]="filters.status" ariaLabel="Show" [options]="statusOptions" />
-  </div>
+  <bb-list-toolbar
+    [list]="ticketList"
+    [sections]="filterSections"
+    searchLabel="Search your tickets"
+    placeholder="Ticket number, subject or order number"
+  />
 
   @if (list.error(); as message) {
     <div class="bb-alert error" role="alert">
@@ -23,7 +26,13 @@
         <span class="bb-skeleton row"></span>
       }
     } @else if (list.empty()) {
-      <bb-empty-state icon="life-buoy" title="No tickets here" message="Open a ticket and our support team will get back to you." />
+      <bb-list-empty
+        [list]="ticketList"
+        icon="life-buoy"
+        title="No tickets yet"
+        message="Open a ticket and our support team will get back to you."
+        noMatch="No tickets match these filters"
+      />
     } @else {
       <ul class="tickets" [class.bb-dim]="list.loading()">
         @for (t of list.data()!.items; track t.id) {

@@ -4,11 +4,7 @@
   }
 </bb-page-header>
 
-<div class="bb-filters">
-  <np-text-input [formField]="filters.search" placeholder="Search by name" ariaLabel="Search campaigns" icon="search" clearable />
-  <np-select [formField]="filters.status" ariaLabel="Status" [options]="statusOptions" />
-  <np-select [formField]="filters.type" ariaLabel="Type" [options]="typeOptions" />
-</div>
+<bb-list-toolbar [list]="campaigns" [sections]="filterSections" searchLabel="Search campaigns" placeholder="Search by name" />
 
 @if (list.error(); as message) {
   <div class="bb-alert error" role="alert">
@@ -23,11 +19,17 @@
       <span class="bb-skeleton row"></span>
     }
   } @else if (list.empty()) {
-    <bb-empty-state icon="party-popper" title="No campaigns here" message="Create a festival or promotional campaign to reward customers.">
+    <bb-list-empty
+      [list]="campaigns"
+      icon="party-popper"
+      title="No campaigns here"
+      message="Create a festival or promotional campaign to reward customers."
+      noMatch="No campaigns match these filters"
+    >
       @if (canManage) {
         <np-button severity="primary" label="Create a campaign" (clicked)="open()" />
       }
-    </bb-empty-state>
+    </bb-list-empty>
   } @else {
     <div class="bb-table-scroll" [class.bb-dim]="list.loading()">
       <table class="bb-table">

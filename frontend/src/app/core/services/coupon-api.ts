@@ -1,7 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { ApiResponse, Paginated } from '../../shared/models/api.models';
+import { Faceted, ListQuery } from '../../shared/list/filtered-list';
+import { ApiResponse } from '../../shared/models/api.models';
 import { AdminCoupon, CouponAnalytics, CouponQuery } from '../../shared/models/checkout.models';
 import { toParams } from './http-params';
 
@@ -19,9 +20,10 @@ export abstract class CouponApi<TInput> {
     return request.pipe(map((r) => r.data.coupon));
   }
 
-  list(query: CouponQuery): Observable<Paginated<AdminCoupon>> {
+  /** Filters take one value or several (the Filters panel); `facets: 1` adds its counts. */
+  list(query: CouponQuery | ListQuery): Observable<Faceted<AdminCoupon>> {
     return this.http
-      .get<ApiResponse<Paginated<AdminCoupon>>>(this.url, { params: toParams(query) })
+      .get<ApiResponse<Faceted<AdminCoupon>>>(this.url, { params: toParams(query) })
       .pipe(map((r) => r.data));
   }
 

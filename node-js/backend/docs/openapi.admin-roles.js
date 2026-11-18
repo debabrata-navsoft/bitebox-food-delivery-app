@@ -1,4 +1,4 @@
-import { dayParams, described, facetsParam, multi, q } from "./openapi.filters.js";
+import { dayParams, described, facetsParam, multi, q, searchParam as search } from "./openapi.filters.js";
 
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` });
 const ok = (description = "Success", data = { type: "object" }) => ({
@@ -32,6 +32,21 @@ const id = { in: "path", name: "id", required: true, schema: { type: "string" } 
 const paging = [
   q("page", { type: "integer", minimum: 1 }),
   q("limit", { type: "integer", minimum: 1, maximum: 100 }),
+];
+/** A partner's own payouts and settlements (restaurant panel, rider earnings). */
+const myPayoutParams = [
+  ...paging,
+  search("The transfer reference"),
+  multi("status", ["pending", "paid", "cancelled"]),
+  ...dayParams("createdFrom", "createdTo", "day created"),
+  facetsParam(["status"]),
+];
+const mySettlementParams = [
+  ...paging,
+  search("Order number"),
+  multi("status", ["due", "pending", "paid"], "due: in no payout yet; pending: in a payout being paid"),
+  ...dayParams("settledFrom", "settledTo", "day settled"),
+  facetsParam(["status"]),
 ];
 const days = q("days", { type: "integer", minimum: 1, maximum: 365, default: 30 });
 const forbidden = { 401: err("Not signed in"), 403: err("Your role lacks this permission") };
@@ -111,7 +126,6 @@ export const adminRolesTags = [
 export const adminRolesSchemas = {};
 
 const VERIFICATION = ["email_verified", "email_unverified", "phone_verified", "phone_unverified"];
-const search = (description) => described(q("search", { type: "string", maxLength: 100 }), description);
 /** joinedFrom and joinedTo: inclusive days in the report time zone; `what`: e.g. "day created". */
 const joinedDays = (what) => dayParams("joinedFrom", "joinedTo", what);
 const sortParam = (values, description) =>
@@ -513,7 +527,14 @@ export const adminRolesPaths = {
   "/admin/finance/refunds": {
     get: op(F, "Refunded payments and refunds still needed", {
       who: "finance:view",
-      params: [...paging, q("state", { type: "string", enum: ["needed", "refunded"] })],
+      params: [
+        ...paging,
+        search("Order number, or the customer's name, email or phone"),
+        multi("state", ["needed", "refunded"], "needed: paid online orders cancelled or rejected whose refund failed; refunded: refunded fully or partly"),
+        multi("restaurant", "id", "Restaurant ids (the orders' restaurants)"),
+        ...dayParams("updatedFrom", "updatedTo", "day of the last change"),
+        facetsParam(["state", "restaurant"], [], ["restaurant"]),
+      ],
     }),
   },
   "/admin/finance/payouts/due": {
@@ -527,10 +548,13 @@ export const adminRolesPaths = {
       who: "payouts:manage",
       params: [
         ...paging,
-        q("type", { type: "string", enum: ["restaurant", "rider"] }),
-        q("status", { type: "string", enum: ["pending", "paid", "cancelled"] }),
-        { ...q("restaurant", { type: "string" }), description: "One restaurant's payouts (restaurant id)" },
-        { ...q("rider", { type: "string" }), description: "One rider's payouts (the rider's user id)" },
+        search("The payee's name or the transfer reference"),
+        multi("type", ["restaurant", "rider"], "The page's payout type"),
+        multi("status", ["pending", "paid", "cancelled"]),
+        multi("restaurant", "id", "Restaurants' payouts (restaurant ids)"),
+        multi("rider", "id", "Riders' payouts (the riders' user ids; rider payouts only)"),
+        ...dayParams("createdFrom", "createdTo", "day created"),
+        facetsParam(["status", "restaurant", "rider"], [], ["restaurant", "rider"]),
       ],
     }),
     post: op(F, "Create a payout for everything a payee is owed", {
@@ -577,7 +601,18 @@ export const adminRolesPaths = {
     delete: op(F, "Remove a restaurant's own commission (the global rate applies)", { who: "payouts:manage", params: [id] }),
   },
   "/admin/finance/ledger": {
-    get: op(F, "Ledger balances per account, balance check and entries", { who: "finance:view", params: [days, ...paging] }),
+    get: op(F, "Ledger balances per account, balance check and entries", {
+      who: "finance:view",
+      params: [
+        days,
+        ...paging,
+        search("The entry's description (an order number or a payee)"),
+        multi("account", ["customer_payments", "restaurant_payable", "rider_payable", "platform_revenue", "tax_payable", "payouts"]),
+        multi("event", ["settlement", "payout", "refund"], "settlement: an order delivered; payout: a payout paid; refund: after delivery"),
+        ...dayParams("createdFrom", "createdTo", "day posted"),
+        facetsParam(["account", "event"]),
+      ],
+    }),
   },
   "/admin/finance/settlements.csv": {
     get: op(F, "Settlement report as CSV (one row per delivered order)", {
@@ -591,12 +626,12 @@ export const adminRolesPaths = {
   "/orders/{id}/invoice": {
     get: { tags: ["Orders"], summary: "My delivered order's invoice (PDF)", security: bearer, parameters: [id], responses: { 200: ok("PDF"), 404: err("Not found"), 409: err("Not delivered yet") } },
   },
-  "/my/restaurant/payouts": { get: { tags: ["Restaurant - Orders"], summary: "My payouts", security: bearer, parameters: paging, responses: { 200: ok() } } },
+  "/my/restaurant/payouts": { get: { tags: ["Restaurant - Orders"], summary: "My payouts (facet counts cover mine only)", security: bearer, parameters: myPayoutParams, responses: { 200: ok() } } },
   "/my/restaurant/payouts/{id}/statement": { get: { tags: ["Restaurant - Orders"], summary: "A payout statement (PDF)", security: bearer, parameters: [id], responses: { 200: ok("PDF") } } },
-  "/my/restaurant/settlements": { get: { tags: ["Restaurant - Orders"], summary: "Per-order settlements with payout status", security: bearer, parameters: paging, responses: { 200: ok() } } },
-  "/delivery/payouts": { get: { tags: ["Delivery"], summary: "My payouts", security: bearer, parameters: paging, responses: { 200: ok() } } },
+  "/my/restaurant/settlements": { get: { tags: ["Restaurant - Orders"], summary: "Per-order settlements with payout status (facet counts cover mine only)", security: bearer, parameters: mySettlementParams, responses: { 200: ok() } } },
+  "/delivery/payouts": { get: { tags: ["Delivery"], summary: "My payouts (facet counts cover mine only)", security: bearer, parameters: myPayoutParams, responses: { 200: ok() } } },
   "/delivery/payouts/{id}/statement": { get: { tags: ["Delivery"], summary: "A payout statement (PDF)", security: bearer, parameters: [id], responses: { 200: ok("PDF") } } },
-  "/delivery/settlements": { get: { tags: ["Delivery"], summary: "Per-delivery pay with payout status", security: bearer, parameters: paging, responses: { 200: ok() } } },
+  "/delivery/settlements": { get: { tags: ["Delivery"], summary: "Per-delivery pay with payout status (facet counts cover mine only)", security: bearer, parameters: mySettlementParams, responses: { 200: ok() } } },
 
   "/admin/support/dashboard": {
     get: op(S, "Ticket counts", { who: "support:manage" }),
@@ -609,13 +644,17 @@ export const adminRolesPaths = {
       who: "support:manage",
       params: [
         ...paging,
-        q("status", { type: "string", enum: [...TICKET_STATUS, "active"] }),
-        q("priority", { type: "string", enum: PRIORITY }),
-        q("requesterRole", { type: "string", enum: ["customer", "restaurant", "delivery"] }),
-        q("type", { type: "string", enum: TICKET_TYPES }),
-        q("assignee", { type: "string", enum: ["me", "unassigned"] }),
-        q("search", { type: "string" }),
+        search("Ticket number, subject, order number or the requester's name"),
+        multi("status", [...TICKET_STATUS, "active"], "active: not resolved or closed yet"),
+        multi("priority", PRIORITY),
+        multi("type", TICKET_TYPES),
+        multi("requesterRole", ["customer", "restaurant", "delivery"]),
+        multi("assignee", null, "me (you), unassigned, or the assigned admins' user ids"),
         { ...q("requester", { type: "string" }), description: "Tickets raised by this user id" },
+        ...dayParams("createdFrom", "createdTo", "day created"),
+        ((p) => described(p, `${p.description}. assignee starts with { value: "unassigned", label: "Not assigned", count } (always)`))(
+          facetsParam(["status", "priority", "type", "requesterRole", "assignee"], [], ["assignee"]),
+        ),
       ],
     }),
   },
@@ -651,8 +690,19 @@ export const adminRolesPaths = {
   },
 
   "/support/tickets": {
-    get: op(H, "My tickets", {
-      params: [...paging, q("status", { type: "string", enum: ["open", "closed"] })],
+    get: op(H, "My tickets (facet counts cover my tickets only)", {
+      params: [
+        ...paging,
+        search("Ticket number, subject or order number"),
+        multi(
+          "status",
+          ["open", "waiting_for_response", "closed"],
+          "open: not resolved or closed yet (waiting_for_response included); closed: resolved or closed",
+        ),
+        multi("type", TICKET_TYPES),
+        ...dayParams("createdFrom", "createdTo", "day created"),
+        facetsParam(["status", "type"]),
+      ],
     }),
     post: op(H, "Raise a ticket", {
       status: 201,

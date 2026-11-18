@@ -396,11 +396,17 @@ def day_field() -> serializers.DateField:
 class JoinedListQuery(PageQuery):
     """
     The admin lists (customers, restaurants, riders, orders): page, limit and search, plus
-    `<day_range>_from` / `<day_range>_to` (calendar days in the report time zone, day_field())
-    declared by each list.
+    `<day_range>_from` / `<day_range>_to` (calendar days in the report time zone, day_field()),
+    declared for each subclass that sets `day_range`.
     """
 
     day_range = "joined"
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if "day_range" in cls.__dict__:
+            for end in ("from", "to"):
+                cls._declared_fields.setdefault(f"{cls.day_range}_{end}", day_field())
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         name = self.day_range

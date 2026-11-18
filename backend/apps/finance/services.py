@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, F, Max, Min, Q, Sum
+from django.db.models import Case, Count, F, Max, Min, Q, QuerySet, Sum, When
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 
@@ -29,6 +29,7 @@ from apps.orders.presenters import payment_view
 from apps.payments.models import Payment
 from apps.restaurants.models import Restaurant
 from common.api import ApiError
+from common.filters import Facet, apply_facets, days_between, text_search, with_facets
 from common.pagination import Page, paginate
 
 from . import ledger
@@ -187,19 +188,39 @@ def _settlement_json(s: OrderSettlement) -> dict[str, Any]:
     }
 
 
-def refunds(state: str | None, page: Page) -> dict[str, Any]:
+# The refund queue: online payments of closed orders still paid (the automatic refund failed),
+# and payments refunded fully or partly.
+REFUND_STATES = {
+    "needed": Q(status=P.PAID, method=PaymentMethod.ONLINE, order__status__in=CLOSED),
+    "refunded": Q(status__in=[P.REFUNDED, P.PARTIALLY_REFUNDED]),
+}
+REFUND_FACETS = (
+    Facet("state", values=list(REFUND_STATES), cases=REFUND_STATES),
+    Facet("restaurant", field="order__restaurant", label="order__restaurant__name"),
+)
+
+
+def _refund_queue(query: dict[str, Any]) -> QuerySet[Payment]:
+    """The queue's payments matching every filter (REFUND_FACETS, last change days, search)."""
+    qs = Payment.objects.filter(REFUND_STATES["needed"] | REFUND_STATES["refunded"])
+    return apply_facets(qs, query, REFUND_FACETS).filter(
+        days_between(query, "updated", "updated_at"),
+        text_search(
+            query.get("search"), "order__order_number", "user__name", "user__email", "user__phone"
+        ),
+    )
+
+
+def refunds(query: dict[str, Any], page: Page) -> dict[str, Any]:
     """Online payments refunded (fully or partly), plus paid ones of closed orders that still
-    need a refund (the automatic one failed)."""
-    needed = Q(status=P.PAID, method=PaymentMethod.ONLINE, order__status__in=CLOSED)
-    done = Q(status__in=[P.REFUNDED, P.PARTIALLY_REFUNDED])
-    where = needed if state == "needed" else done if state == "refunded" else needed | done
+    need a refund (the automatic one failed); latest change first."""
     qs = (
-        Payment.objects.filter(where)
+        _refund_queue(query)
         .select_related("order", "order__cancellation", "user")
         .order_by("-updated_at")
     )
     rows, meta = paginate(qs, page)
-    return {
+    result = {
         "items": [
             {
                 "id": str(p.pk),
@@ -219,6 +240,7 @@ def refunds(state: str | None, page: Page) -> dict[str, Any]:
         ],
         "pagination": meta,
     }
+    return with_facets(result, query, _refund_queue, REFUND_FACETS)
 
 
 def commission_report(days: int) -> dict[str, Any]:
@@ -479,17 +501,40 @@ def cancel_payout(payout_id: Any, note: str | None) -> dict[str, Any]:
     return payout_json(payout)
 
 
-def list_payouts(query: dict[str, Any], page: Page, **scope: Any) -> dict[str, Any]:
-    qs = Payout.objects.filter(**scope)
-    for field in ("type", "status"):
-        if query.get(field):
-            qs = qs.filter(**{field: query[field]})
-    if query.get("restaurant"):
-        qs = qs.filter(restaurant_id=query["restaurant"])
-    if query.get("rider"):
-        qs = qs.filter(type=PayoutType.RIDER, payee_id=query["rider"])
-    rows, meta = paginate(qs.order_by("-created_at"), page)
-    return {"items": [payout_json(p) for p in rows], "pagination": meta}
+# The payout history's Filters panel. `rider` is a rider payout's payee (a user id), so it counts
+# rider payouts only; `restaurant` counts restaurant payouts.
+PAYOUT_FACETS = (
+    Facet("status", values=PayoutStatus.values),
+    Facet("restaurant", label="restaurant__name"),
+    Facet("rider", field="rider_id", label="payee__name"),
+)
+
+
+def _payouts(query: dict[str, Any], **scope: Any) -> QuerySet[Payout]:
+    """The payouts in `scope` matching the type, PAYOUT_FACETS, the day created and a search over
+    the payee's name and the transfer reference."""
+    qs = Payout.objects.filter(**scope).annotate(
+        rider_id=Case(When(type=PayoutType.RIDER, then=F("payee_id")))
+    )
+    if query.get("type"):
+        qs = qs.filter(type__in=query["type"])
+    return apply_facets(qs, query, PAYOUT_FACETS).filter(
+        days_between(query, "created"),
+        text_search(query.get("search"), "payee_name", "reference"),
+    )
+
+
+# A partner's own payout list (/my/restaurant/payouts, /delivery/payouts): status only.
+MY_PAYOUT_FACETS = PAYOUT_FACETS[:1]
+
+
+def list_payouts(
+    query: dict[str, Any], page: Page, specs: tuple[Facet, ...] = PAYOUT_FACETS, **scope: Any
+) -> dict[str, Any]:
+    """Newest first; `?facets=1` adds `specs`' counts, over the payouts in `scope` only."""
+    rows, meta = paginate(_payouts(query, **scope).order_by("-created_at"), page)
+    result = {"items": [payout_json(p) for p in rows], "pagination": meta}
+    return with_facets(result, query, lambda q: _payouts(q, **scope), specs)
 
 
 # ---------------------------------------------------------------------------
@@ -528,14 +573,36 @@ def restaurant_of(owner: User) -> Restaurant:
     return restaurant
 
 
-def settlement_history(page: Page, type: str, **scope: Any) -> dict[str, Any]:
-    """Per delivered order: what it paid this partner and whether it has been paid out."""
+# A settlement's payout state: due (in no payout yet; a cancelled payout releases its orders),
+# pending (in a payout being paid) or paid.
+SETTLEMENT_STATES = ["due", PayoutStatus.PENDING, PayoutStatus.PAID]
+
+
+def settlement_facets(type: str) -> tuple[Facet, ...]:
+    """The settlement history's Filters panel for a payee type (`status`, by its payout)."""
     link = SIDE[type]["link"]
-    qs = (
-        OrderSettlement.objects.filter(order__status=S.DELIVERED, **scope)
-        .select_related("order", link)
-        .order_by("-settled_at")
+    cases = {s: Q(**{f"{link}__status": s}) for s in SETTLEMENT_STATES[1:]}
+    cases["due"] = Q(**{f"{link}__isnull": True})
+    return (Facet("status", values=SETTLEMENT_STATES, cases=cases),)
+
+
+def _settlements(type: str, query: dict[str, Any], **scope: Any) -> QuerySet[OrderSettlement]:
+    """The partner's settlements (`scope`) matching the status, the day settled and a search
+    over the order number."""
+    qs = OrderSettlement.objects.filter(order__status=S.DELIVERED, **scope)
+    return apply_facets(qs, query, settlement_facets(type)).filter(
+        days_between(query, "settled", "settled_at"),
+        text_search(query.get("search"), "order__order_number"),
     )
+
+
+def settlement_history(
+    page: Page, type: str, query: dict[str, Any], **scope: Any
+) -> dict[str, Any]:
+    """Per delivered order: what it paid this partner and whether it has been paid out.
+    `?facets=1` adds the Filters panel's counts, over this partner's settlements only."""
+    link = SIDE[type]["link"]
+    qs = _settlements(type, query, **scope).select_related("order", link).order_by("-settled_at")
     rows, meta = paginate(qs, page)
     items = []
     for s in rows:
@@ -562,7 +629,12 @@ def settlement_history(page: Page, type: str, **scope: Any) -> dict[str, Any]:
                 else None,
             }
         )
-    return {"items": items, "pagination": meta}
+    return with_facets(
+        {"items": items, "pagination": meta},
+        query,
+        lambda q: _settlements(type, q, **scope),
+        settlement_facets(type),
+    )
 
 
 def spreadsheet_safe(text: str) -> str:

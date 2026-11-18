@@ -1,7 +1,7 @@
 """/admin/support: the support queue, ticket handling and the support dashboard (Node:
 support.routes.js adminSupportRouter)."""
 
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,17 +10,20 @@ from apps.accounts.authentication import current_user
 from apps.audit.services import audited
 from apps.rbac.roles import Permission
 from common.api import ok
+from common.filters import facets_page, list_params, multi_param
 from common.pagination import Page
 from common.permissions import permission_required
 from common.schema import envelope, errors
 from common.validation import parse_id, validated
 
 from . import services
+from .models import RequesterRole, TicketPriority, TicketStatus, TicketType
 from .serializers import EscalateInput, StaffMessageInput, StaffTicketQuery, UpdateTicketInput
 
 SUPPORT = [permission_required(Permission.SUPPORT_MANAGE)]
 TAGS = ["Admin: support"]
 TICKET = envelope("SupportTicketResult")
+TICKET_PAGE = facets_page("SupportTicketPage", services.STAFF_FACETS)
 
 
 def _update_note(request: Request) -> str:
@@ -58,8 +61,24 @@ class SupportTicketsView(APIView):
     @extend_schema(
         tags=TAGS,
         operation_id="admin_support_tickets_list",
-        parameters=[StaffTicketQuery],
-        responses={200: envelope("SupportTicketList"), **errors(401, 403, 422)},
+        parameters=list_params(
+            "Ticket number, subject, order number or the requester's name",
+            multi_param(
+                "status",
+                [*TicketStatus.values, "active"],
+                "active: not resolved or closed yet",
+            ),
+            multi_param("priority", TicketPriority.values),
+            multi_param("type", TicketType.values),
+            multi_param("requesterRole", RequesterRole.values),
+            multi_param(
+                "assignee",
+                description="me (you), unassigned, or the assigned admins' user ids",
+            ),
+            OpenApiParameter("requester", str, description="Tickets raised by this user id"),
+            days="created",
+        ),
+        responses={200: TICKET_PAGE, **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
         query = validated(StaffTicketQuery, request.query_params)

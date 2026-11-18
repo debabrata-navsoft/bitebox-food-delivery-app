@@ -9,6 +9,7 @@ sends the code.
 import logging
 import secrets
 import unicodedata
+from collections.abc import Mapping
 from datetime import datetime, timedelta
 from typing import Any
 from urllib.parse import quote
@@ -16,7 +17,7 @@ from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Q, QuerySet, Sum
 from django.utils import timezone
 
 from apps.accounts.models import Session, User, UserStatus
@@ -25,6 +26,7 @@ from apps.notifications.services import notify, notify_admins
 from apps.orders.models import Order, OrderStatus
 from apps.rbac.roles import Permission, Role
 from common.api import ApiError
+from common.filters import Facet, apply_facets, days_between, with_facets
 from common.geo import GeoPoint, haversine_m
 from common.pagination import Page, paginate
 
@@ -578,25 +580,39 @@ def _admin_qs() -> Any:
     ).prefetch_related("history")
 
 
-def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
-    qs = _admin_qs()
-    if query.get("status"):
-        qs = qs.filter(status=query["status"])
-    if query.get("reward_status"):
-        qs = qs.filter(reward_status=query["reward_status"])
+# A referral carries a risk signal: risk_flags (a JSON list) holds it.
+RISKS = {r: Q(risk_flags__icontains=f'"{r}"') for r in ReferralRisk.values}
+# The referrals list's Filters panel (PENDING is never stored, so it is not offered).
+REFERRAL_FACETS = (
+    Facet("status", values=[s for s in ReferralStatus.values if s != ReferralStatus.PENDING]),
+    Facet("reward_status", values=ReferralRewardStatus.values),
+    Facet("risk", values=list(RISKS), cases=RISKS),
+)
+
+
+def admin_rows(query: Mapping[str, Any]) -> QuerySet[Referral]:
+    """The referrals matching the facets, `flagged` (any risk signal), the day created and a
+    search over either person (name, email, phone, referral code) or the code used."""
+    qs = apply_facets(Referral.objects.all(), query, REFERRAL_FACETS)
     if query.get("flagged"):
         qs = qs.exclude(risk_flags=[])
-    search = query.get("search")
-    if search:
+    qs = qs.filter(days_between(query, "created"))
+    if search := (query.get("search") or "").strip():
         ids = matching_user_ids(search, ("referral_code",))
         qs = qs.filter(Q(referrer_id__in=ids) | Q(referred_id__in=ids) | Q(code__icontains=search))
-    rows, meta = paginate(qs.order_by("-created_at"), page)
+    return qs
+
+
+def admin_list(query: dict[str, Any], page: Page) -> dict[str, Any]:
+    qs = admin_rows(query).select_related("referrer", "referred", "qualifying_order")
+    rows, meta = paginate(qs.prefetch_related("history").order_by("-created_at", "-pk"), page)
     counts = Referral.objects.values("reward_status").annotate(n=Count("pk")).order_by()
-    return {
+    result = {
         "items": [admin_view(r) for r in rows],
         "pagination": meta,
         "counts": {c["reward_status"]: c["n"] for c in counts},
     }
+    return with_facets(result, query, admin_rows, REFERRAL_FACETS)
 
 
 def admin_get(referral_id: Any) -> dict[str, Any]:

@@ -1,5 +1,3 @@
-@use 'breakpoints' as bp;
-
 :host {
   display: flex;
   flex-direction: column;
@@ -17,19 +15,6 @@
 
   &.alert {
     background: var(--bb-amber);
-  }
-}
-
-.filters {
-  display: grid;
-  gap: var(--bb-space-3);
-
-  @include bp.tablet-up {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  @include bp.desktop-up {
-    grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
   }
 }
 

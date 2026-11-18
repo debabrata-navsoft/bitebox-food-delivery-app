@@ -1,7 +1,13 @@
 import { computed, signal } from '@angular/core';
 import { form } from '@angular/forms/signals';
 import { Observable, map } from 'rxjs';
-import { FilterOption, FilterPreview, FilterValue, countSelected } from '../components/filter-panel/filter-panel.models';
+import {
+  FilterOption,
+  FilterPreview,
+  FilterSection,
+  FilterValue,
+  countSelected,
+} from '../components/filter-panel/filter-panel.models';
 import { isoDay } from '../forms/dates';
 import { Paginated } from '../models/api.models';
 import { OrderEvent } from '../../core/services/realtime.service';
@@ -23,6 +29,33 @@ export const filterOptions = (
   });
 
 /**
+ * A checkbox section: fixed options from `labels` (or a list), or with none (or a name lookup)
+ * the values the API's counts return, e.g. restaurants.
+ */
+export const optionsSection = (
+  key: string,
+  label: string,
+  labels?:
+    Record<string, string | { label: string }> | FilterOption[] | ((value: string) => string),
+): FilterSection =>
+  typeof labels === 'function'
+    ? { kind: 'options', key, label, labelOf: labels }
+    : {
+        kind: 'options',
+        key,
+        label,
+        options: labels && (Array.isArray(labels) ? labels : filterOptions(labels)),
+      };
+
+/** A from/to date section, under `${key}From` / `${key}To` or `params`. */
+export const datesSection = (
+  key: string,
+  label: string,
+  params?: [from: string, to: string],
+): FilterSection =>
+  params ? { kind: 'dates', key, label, params } : { kind: 'dates', key, label };
+
+/**
  * Panel filters as API parameters: option lists as they are, dates as `YYYY-MM-DD` days, or with
  * `instants` as the start of the first and the end of the last local day (ISO timestamps).
  */
@@ -42,10 +75,11 @@ export function filtersToQuery(v: FilterValue, instants = false): ListQuery {
 /**
  * An admin list with the global Filters panel: the search box and sort order (`toolbar`, a Signal
  * Form), the panel's applied filters (`panel`), the paged list, the panel's live preview (total and
- * counts for a draft) and clearing. Call in an injection context.
+ * counts for a draft) and clearing. `list.data()` keeps the response's own type (with any extras,
+ * e.g. totals). Call in an injection context.
  */
-export function filteredList<R>(
-  fetch: (query: ListQuery & { page: number; limit: number; facets?: 1 }) => Observable<Faceted<R>>,
+export function filteredList<P extends Faceted<unknown>>(
+  fetch: (query: ListQuery & { page: number; limit: number; facets?: 1 }) => Observable<P>,
   opts: {
     errorText: string;
     sort?: string;

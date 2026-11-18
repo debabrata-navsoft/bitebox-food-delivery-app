@@ -107,6 +107,14 @@ class AdminFoodListQuery(FacetQuery, FoodListQuery):
     availability = multi_choice(AVAILABILITY_VALUES)
 
 
+class OwnerFoodListQuery(FacetQuery, FoodListQuery):
+    """GET /my/restaurant/foods (the boolean `veg` and `available` work as before)."""
+
+    category = MultiIdField()  # type: ignore[assignment]
+    type = multi_choice(FOOD_TYPE_VALUES)
+    availability = multi_choice(AVAILABILITY_VALUES)
+
+
 class PublicFoodQuery(PageQuery):
     category = UUIDRef(required=False)
     veg = QueryBoolean()

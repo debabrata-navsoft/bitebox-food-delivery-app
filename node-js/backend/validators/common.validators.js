@@ -73,6 +73,10 @@ export function dayRangeRules(from, to, { message = "Invalid value", orderMessag
   ];
 }
 
+/** `${name}From` and `${name}To` days (dayRangeRules); `to` before `from`: "Must be on or after ${name}From". */
+export const dayRangeQuery = (name) =>
+  dayRangeRules(`${name}From`, `${name}To`, { orderMessage: `Must be on or after ${name}From` });
+
 /** A `reason` (3-500 characters, trimmed), required when `when` (a condition) holds. */
 export const requiredReason = (when) =>
   body("reason")
@@ -96,7 +100,7 @@ export const splitList = (value) =>
     .filter((v) => v !== "");
 
 /** A 24-character hex id (a MongoDB ObjectId as text). */
-const isObjectId = (value) => /^[0-9a-f]{24}$/i.test(value);
+export const isObjectId = (value) => /^[0-9a-f]{24}$/i.test(value);
 
 /**
  * A multi-value list filter: one value or several, comma-separated, sanitised to an array (empty
@@ -123,3 +127,16 @@ export const multiId = (name) => multiValue(name, isObjectId);
 
 /** `facets=1` (true/false/1/0): also return the list's facet counts (see admin-accounts#facetCounts). */
 export const facetsQuery = () => booleanQuery("facets");
+
+/**
+ * A filtered list's query: paging, `search`, the list's own `filters` (multi-value ones take one
+ * value or several, comma-separated: any of them), `${days}From`/`${days}To` when `days` is given
+ * (dayRangeQuery) and `facets`.
+ */
+export const filteredListRules = (filters, days) => [
+  ...paginationRules,
+  searchQuery(),
+  ...filters,
+  ...(days ? dayRangeQuery(days) : []),
+  facetsQuery(),
+];

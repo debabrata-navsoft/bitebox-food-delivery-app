@@ -3,6 +3,7 @@ import { Order } from "../models/order.model.js";
 import { Restaurant } from "../models/restaurant.model.js";
 import {
   OPEN_TICKET_STATUSES,
+  REQUESTER_ROLES,
   TICKET_PRIORITY,
   TICKET_STATUS,
   TICKET_TYPES,
@@ -11,8 +12,21 @@ import {
 import { ADMIN_ROLES, ROLES, USER_STATUS, User } from "../models/user.model.js";
 import { ApiError } from "../utils/api-error.js";
 import { randomCode } from "../utils/codes.js";
-import { escapeRegex, paginationMeta } from "../utils/pagination.js";
 import { notify, notifyAdmins } from "./notification.service.js";
+import {
+  allOf,
+  anyMatch,
+  dayRange,
+  filteredPage,
+  fixedFacet,
+  flagFacet,
+  idFacet,
+  inList,
+  listOf,
+  mapValues,
+  textSearch,
+  toId,
+} from "./admin-accounts.js";
 
 const T = TICKET_STATUS;
 const STATUS_LABEL = {
@@ -184,23 +198,45 @@ export async function create(user, { type, subject, message, orderNumber }) {
   return requesterView(ticket);
 }
 
-export async function listMine(user, { status }, pagination) {
-  const filter = { raisedBy: user._id };
-  if (status === "open") filter.status = { $in: OPEN_TICKET_STATUSES };
-  else if (status === "closed") filter.status = { $in: [T.RESOLVED, T.CLOSED] };
-  const [items, total] = await Promise.all([
-    SupportTicket.find(filter)
-      .sort({ lastActivityAt: -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit)
-      .select("-messages -history"),
-    SupportTicket.countDocuments(filter),
-  ]);
-  return {
-    items: items.map((t) => ({ ...requesterView({ ...t.toObject(), messages: [] }) })),
-    pagination: paginationMeta(pagination, total),
-  };
+/**
+ * A requester's ticket states (overlapping): "open" is every ticket not resolved or closed yet
+ * (waiting for their reply included), "closed" every resolved or closed one.
+ */
+export const MINE_STATUSES = ["open", T.WAITING_FOR_RESPONSE, "closed"];
+const MINE_STATUS_SETS = {
+  open: OPEN_TICKET_STATUSES,
+  [T.WAITING_FOR_RESPONSE]: [T.WAITING_FOR_RESPONSE],
+  closed: [T.RESOLVED, T.CLOSED],
+};
+
+/**
+ * The tickets `user` raised matching the Filters panel (status and type: one value or several,
+ * any of them), the day created and a search over the number, subject and order number.
+ */
+function mineFilter(user, { status, type, createdFrom, createdTo, search }) {
+  return allOf(
+    { raisedBy: user._id },
+    anyMatch(status, mapValues(MINE_STATUS_SETS, (set) => ({ status: { $in: set } }))),
+    inList("type", type),
+    dayRange("createdAt", createdFrom, createdTo),
+    textSearch(search, ["number", "subject", "orderNumber"]),
+  );
 }
+
+/** "Help & support"'s Filters panel, counted over the requester's own tickets only. */
+const MINE_FACETS = {
+  status: flagFacet(mapValues(MINE_STATUS_SETS, (set) => ({ $in: ["$status", set] }))),
+  type: fixedFacet(Object.values(TICKET_TYPES), "$type"),
+};
+
+/** The requester's own tickets, most recent activity first; `facets=1` adds the panel's counts. */
+export const listMine = (user, query, pagination) =>
+  filteredPage(SupportTicket, query, pagination, {
+    filterFor: (q) => mineFilter(user, q),
+    facets: MINE_FACETS,
+    find: (q) => q.sort({ lastActivityAt: -1, _id: -1 }).select("-messages -history"),
+    map: (t) => requesterView({ ...t.toObject(), messages: [] }),
+  });
 
 async function findMine(user, id) {
   const ticket = await SupportTicket.findOne({ _id: id, raisedBy: user._id });
@@ -276,35 +312,66 @@ export async function dashboard() {
   };
 }
 
+/** `status=active`: every status not resolved or closed yet. */
+const statusesOf = (values) =>
+  [...new Set(listOf(values).flatMap((v) => (v === "active" ? OPEN_TICKET_STATUSES : [v])))];
+
+/**
+ * The queue's filter: status, priority, type, requester role and assignee (each one value or
+ * several, any of them; `assignee` takes "unassigned" or admin ids, "me" already resolved), the
+ * requester, the day created and a search over the number, subject, order number and name.
+ */
+function ticketFilter({ status, priority, type, requesterRole, assignee, requester, createdFrom, createdTo, search }) {
+  return allOf(
+    inList("status", statusesOf(status)),
+    inList("priority", priority),
+    inList("type", type),
+    inList("requesterRole", requesterRole),
+    anyMatch(
+      assignee,
+      Object.fromEntries(
+        listOf(assignee).map((v) => [v, v === "unassigned" ? { assignee: null } : { assignee: toId(v) }]),
+      ),
+    ),
+    requester && { raisedBy: toId(requester) },
+    dayRange("createdAt", createdFrom, createdTo),
+    textSearch(search, ["number", "subject", "orderNumber", "requesterName"]),
+  );
+}
+
+/** The queue's Filters panel (each facet is also the filter of the same name). */
+const TICKET_FACETS = {
+  status: fixedFacet(Object.values(TICKET_STATUS), "$status"),
+  priority: fixedFacet(Object.values(TICKET_PRIORITY), "$priority"),
+  type: fixedFacet(Object.values(TICKET_TYPES), "$type"),
+  requesterRole: fixedFacet(REQUESTER_ROLES, "$requesterRole"),
+  assignee: idFacet("$assignee", User),
+};
+
+/**
+ * Most recent activity first. Filters: see ticketFilter. `facets=1` adds the Filters panel's
+ * counts; `assignee` lists "Not assigned" first (always), then the admins with tickets.
+ */
 export async function list(staff, query, pagination) {
-  const filter = {};
-  if (query.status === "active") filter.status = { $in: OPEN_TICKET_STATUSES };
-  else if (query.status) filter.status = query.status;
-  if (query.priority) filter.priority = query.priority;
-  if (query.requesterRole) filter.requesterRole = query.requesterRole;
-  if (query.type) filter.type = query.type;
-  if (query.requester) filter.raisedBy = query.requester;
-  if (query.assignee === "me") filter.assignee = staff._id;
-  else if (query.assignee === "unassigned") filter.assignee = null;
-  if (query.search) {
-    const pattern = new RegExp(escapeRegex(query.search), "i");
-    filter.$or = [
-      { number: pattern },
-      { subject: pattern },
-      { orderNumber: pattern },
-      { requesterName: pattern },
-    ];
+  const q = {
+    ...query,
+    ...(query.assignee && {
+      assignee: listOf(query.assignee).map((v) => (v === "me" ? String(staff._id) : v)),
+    }),
+  };
+  const page = await filteredPage(SupportTicket, q, pagination, {
+    filterFor: ticketFilter,
+    facets: TICKET_FACETS,
+    find: (found) => found.sort({ lastActivityAt: -1, _id: -1 }).select("-history").populate("assignee", "name"),
+    map: staffSummary,
+  });
+  if (page.facets) {
+    const unassigned = await SupportTicket.countDocuments(
+      allOf(ticketFilter({ ...q, assignee: undefined }), { assignee: null }),
+    );
+    page.facets.assignee = [{ value: "unassigned", label: "Not assigned", count: unassigned }, ...page.facets.assignee];
   }
-  const [items, total] = await Promise.all([
-    SupportTicket.find(filter)
-      .sort({ lastActivityAt: -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit)
-      .select("-history")
-      .populate("assignee", "name"),
-    SupportTicket.countDocuments(filter),
-  ]);
-  return { items: items.map(staffSummary), pagination: paginationMeta(pagination, total) };
+  return page;
 }
 
 async function findTicket(id) {

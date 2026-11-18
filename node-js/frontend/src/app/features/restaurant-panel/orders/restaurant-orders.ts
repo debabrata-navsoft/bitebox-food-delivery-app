@@ -24,9 +24,11 @@ import { RestaurantOrdersService } from '../../../core/services/order-management
 import { RestaurantOrderBoard } from '../../../core/services/restaurant-order-board';
 import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
+import { ListEmpty } from '../../../shared/components/list-empty/list-empty';
 import { OrderStatusChip } from '../../../shared/components/order-status-chip/order-status-chip';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { pagedList } from '../../../shared/list/paged-list';
+import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
+import { datesSection, filteredList, optionsSection } from '../../../shared/list/filtered-list';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
 import { OrderStatus } from '../../../shared/models/checkout.models';
 import {
@@ -71,6 +73,8 @@ const NEXT: Partial<
     NpIconPipe,
     PaginationComponent,
     EmptyState,
+    ListEmpty,
+    ListToolbar,
     OrderStatusChip,
     PageHeader,
     VegBadge,
@@ -94,11 +98,20 @@ export class RestaurantOrders {
   protected readonly busy = signal<ReadonlySet<string>>(new Set());
   protected readonly now = signal(Date.now());
 
-  protected readonly history = pagedList((page, limit) => this.api.history(page, limit), {
+  /** The History tab's Filters panel (the live stage tabs have none). */
+  protected readonly historySections = [
+    optionsSection('status', 'Status', { delivered: 'Delivered', rejected: 'Rejected', cancelled: 'Cancelled' }),
+    optionsSection('paymentMethod', 'Payment', { cod: 'Cash on delivery', online: 'Paid online' }),
+    datesSection('placed', 'Order date'),
+  ];
+
+  /** Finished orders: loaded when the History tab first opens. */
+  protected readonly history = filteredList((query) => this.api.history(query), {
     limit: 15,
     lazy: true,
     errorText: 'Could not load order history.',
   });
+  protected readonly historyList = this.history.list;
 
   protected readonly countFor = (tab: (typeof TABS)[number]) =>
     tab.statuses.reduce((sum, s) => sum + (this.board.board()?.counts[s] ?? 0), 0);
@@ -128,7 +141,7 @@ export class RestaurantOrders {
     const tab = Array.isArray(value) ? value[0] : value;
     if (!tab) return;
     this.tab.set(tab);
-    if (tab === 'history' && !this.history.data()) this.history.load(1);
+    if (tab === 'history' && !this.historyList.data()) this.historyList.load(1);
   }
 
   protected minutesAgo(order: RestaurantOrder): number {

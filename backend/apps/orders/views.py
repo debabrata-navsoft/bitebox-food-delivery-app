@@ -25,6 +25,7 @@ from common.filters import (
     MultiIdField,
     day_params,
     facets_page,
+    list_params,
     multi_choice,
     multi_param,
     page_params,
@@ -202,9 +203,22 @@ class OrderCancelView(APIView):
 # ---------------------------------------------------------------------------
 # Restaurant partner
 # ---------------------------------------------------------------------------
-class RestaurantListQuery(PageQuery):
+class RestaurantListQuery(FacetQuery, JoinedListQuery):
+    """GET /my/restaurant/orders: statuses outside the view are ignored."""
+
     view = _choice(["active", "history"], "Invalid value", required=False)
-    status = _choice(S.values, "Invalid value", required=False)
+    status = multi_choice(S.values)
+    payment_method = multi_choice(PaymentMethod.values)
+    day_range = "placed"
+
+
+RESTAURANT_HISTORY_PAGE = facets_page(
+    "RestaurantOrderPage",
+    services.HISTORY_FACETS,
+    counts=serializers.DictField(
+        child=serializers.IntegerField(), required=False, help_text="view=active: orders per status"
+    ),
+)
 
 
 class RestaurantStatusInput(serializers.Serializer):
@@ -233,8 +247,19 @@ class MyOrdersView(APIView):
     @extend_schema(
         tags=["My restaurant"],
         operation_id="my_restaurant_orders_list",
-        parameters=[RestaurantListQuery],
-        responses={200: ORDER_LIST, **errors(401, 403, 404, 422)},
+        description=(
+            "view=active: the orders in progress with counts per status. view=history: the "
+            "finished ones, paged; several values in one filter: any of them; filters combine "
+            "with AND."
+        ),
+        parameters=list_params(
+            "History: order number or the recipient's name",
+            OpenApiParameter("view", str, enum=["active", "history"]),
+            multi_param("status", S.values, "Statuses outside the view are ignored"),
+            multi_param("paymentMethod", PaymentMethod.values),
+            days="placed",
+        ),
+        responses={200: RESTAURANT_HISTORY_PAGE, **errors(401, 403, 404, 422)},
     )
     def get(self, request: Request) -> Response:
         query = validated(RestaurantListQuery, request.query_params)

@@ -1,3 +1,6 @@
+import { facetsParam, multi } from "./openapi.filters.js";
+import { couponListQuery } from "./openapi.offers.js";
+
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` });
 const ok = (data, description = "Success") => ({
   description,
@@ -641,19 +644,18 @@ export const checkoutPaths = {
     get: {
       tags: T.admin,
       summary: "All coupons",
+      description: "Several values in one filter: any of them; filters combine with AND.",
       security: bearer,
       parameters: [
-        ...paging,
-        { in: "query", name: "search", schema: { type: "string" } },
-        { in: "query", name: "active", schema: { type: "boolean" } },
-        {
-          in: "query",
-          name: "restaurant",
-          schema: { type: "string" },
-          description: "This restaurant's own offers and the coupons limited to it (restaurant id)",
-        },
+        ...couponListQuery,
+        multi("restaurant", "id", "Restaurant ids: their own offers and the coupons limited to them"),
+        facetsParam(["status", "kind", "owner", "audience", "discountType", "restaurant"], [], ["restaurant"]),
       ],
-      responses: { 200: ok({ type: "object" }), 403: err("Not an admin") },
+      responses: {
+        200: ok({ type: "object" }),
+        403: err("Not an admin"),
+        422: err("Invalid filter value"),
+      },
     },
     post: {
       tags: T.admin,

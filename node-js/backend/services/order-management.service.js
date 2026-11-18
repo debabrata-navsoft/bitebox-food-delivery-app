@@ -15,7 +15,19 @@ import { ROLES, USER_STATUS, User } from "../models/user.model.js";
 import { haversineMeters } from "../utils/geo.js";
 import { ApiError } from "../utils/api-error.js";
 import { escapeRegex, paginationMeta } from "../utils/pagination.js";
-import { facetsIf, fixedFacet, idFacet, inList, joinedRange, listOf, toId } from "./admin-accounts.js";
+import {
+  allOf,
+  dayRange,
+  facetsIf,
+  filteredPage,
+  fixedFacet,
+  idFacet,
+  inList,
+  joinedRange,
+  listOf,
+  textSearch,
+  toId,
+} from "./admin-accounts.js";
 import { dispatchSafely } from "./dispatch.service.js";
 import { settlementFor } from "./earnings.service.js";
 import { inCurrent } from "./reports.service.js";
@@ -221,50 +233,60 @@ async function ownRestaurantId(ownerId) {
   return restaurant._id;
 }
 
-export async function restaurantList(
-  ownerId,
-  { view = "active", status },
-  pagination,
-) {
+/** `status` narrowed to the view's statuses (others are ignored, as a single status was). */
+const inView = (status, statuses) => listOf(status).filter((s) => statuses.includes(s));
+
+// The restaurant's order history (view=history): its Filters panel. Each facet is also the filter
+// of the same name (several values: any of them). Django: apps/orders/services.py#HISTORY_FACETS.
+const HISTORY_FACETS = {
+  status: fixedFacet(FINAL_STATUSES, "$status"),
+  paymentMethod: fixedFacet(Object.values(PAYMENT_METHODS), "$paymentMethod"),
+};
+
+/** The restaurant's finished orders matching every filter (status, payment method, placed days, search). */
+function restaurantHistoryFilter(restaurant, { status, paymentMethod, placedFrom, placedTo, search }) {
+  const wanted = inView(status, FINAL_STATUSES);
+  return allOf(
+    { restaurant, submittedAt: { $ne: null }, status: { $in: wanted.length ? wanted : FINAL_STATUSES } },
+    inList("paymentMethod", paymentMethod),
+    dayRange("createdAt", placedFrom, placedTo),
+    // What the restaurant sees of the customer: the recipient's name.
+    textSearch(search, ["orderNumber", "deliveryAddress.recipientName"]),
+  );
+}
+
+/**
+ * view=active: the orders in progress (at most 200, oldest first) with counts per status.
+ * view=history: the finished ones, newest first, paged, filterable (HISTORY_FACETS, placed days,
+ * search); `facets=1` adds the Filters panel's counts, all within the partner's restaurant.
+ */
+export async function restaurantList(ownerId, query, pagination) {
   const restaurant = await ownRestaurantId(ownerId);
-  const statuses = view === "history" ? FINAL_STATUSES : ACTIVE_STATUSES;
+  if (query.view === "history")
+    return filteredPage(Order, query, pagination, {
+      filterFor: (q) => restaurantHistoryFilter(restaurant, q),
+      facets: HISTORY_FACETS,
+      find: (q) => q.sort({ createdAt: -1 }),
+      map: presentForRestaurant,
+    });
   // Unpaid online orders (no submittedAt) are not the restaurant's yet.
-  const filter = {
-    restaurant,
-    submittedAt: { $ne: null },
-    status: status && statuses.includes(status) ? status : { $in: statuses },
-  };
-
-  if (view === "active") {
-    const [items, counts] = await Promise.all([
-      Order.find(filter).sort({ createdAt: 1 }).limit(200),
-      Order.aggregate([
-        {
-          $match: {
-            restaurant,
-            submittedAt: { $ne: null },
-            status: { $in: ACTIVE_STATUSES },
-          },
-        },
-        { $group: { _id: "$status", n: { $sum: 1 } } },
-      ]),
-    ]);
-    return {
-      items: items.map(presentForRestaurant),
-      counts: Object.fromEntries(counts.map((c) => [c._id, c.n])),
-    };
-  }
-
-  const [items, total] = await Promise.all([
-    Order.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit),
-    Order.countDocuments(filter),
+  const wanted = inView(query.status, ACTIVE_STATUSES);
+  const [items, counts] = await Promise.all([
+    Order.find({
+      restaurant,
+      submittedAt: { $ne: null },
+      status: { $in: wanted.length ? wanted : ACTIVE_STATUSES },
+    })
+      .sort({ createdAt: 1 })
+      .limit(200),
+    Order.aggregate([
+      { $match: { restaurant, submittedAt: { $ne: null }, status: { $in: ACTIVE_STATUSES } } },
+      { $group: { _id: "$status", n: { $sum: 1 } } },
+    ]),
   ]);
   return {
     items: items.map(presentForRestaurant),
-    pagination: paginationMeta(pagination, total),
+    counts: Object.fromEntries(counts.map((c) => [c._id, c.n])),
   };
 }
 
@@ -398,23 +420,32 @@ export async function riderSetStatus(userId, orderId, status, otp) {
   return presentForRider(order, userId);
 }
 
-export async function riderHistory(userId, pagination) {
-  const filter = {
-    deliveryPartner: userId,
-    status: { $in: [S.DELIVERED, S.CANCELLED] },
-  };
-  const [items, total] = await Promise.all([
-    Order.find(filter)
-      .sort({ updatedAt: -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit),
-    Order.countDocuments(filter),
-  ]);
-  return {
-    items: items.map((o) => presentForRider(o, userId)),
-    pagination: paginationMeta(pagination, total),
-  };
+// The rider's delivery history: its Filters panel (Django: apps/orders/services.py#RIDER_FACETS).
+const RIDER_HISTORY_STATUSES = [S.DELIVERED, S.CANCELLED];
+const RIDER_FACETS = {
+  status: fixedFacet(RIDER_HISTORY_STATUSES, "$status"),
+  restaurant: idFacet("$restaurant", Restaurant), // the restaurants they delivered for
+};
+
+/** The rider's delivered and cancelled orders matching every filter (status, restaurant, placed days, search). */
+function riderHistoryFilter(userId, { status, restaurant, placedFrom, placedTo, search }) {
+  const wanted = listOf(status);
+  return allOf(
+    { deliveryPartner: toId(userId), status: { $in: wanted.length ? wanted : RIDER_HISTORY_STATUSES } },
+    inList("restaurant", restaurant, toId),
+    dayRange("createdAt", placedFrom, placedTo),
+    textSearch(search, ["orderNumber"]),
+  );
 }
+
+/** Newest first; `facets=1` adds the Filters panel's counts (only this rider's orders). */
+export const riderHistory = (userId, pagination, query = {}) =>
+  filteredPage(Order, query, pagination, {
+    filterFor: (q) => riderHistoryFilter(userId, q),
+    facets: RIDER_FACETS,
+    find: (q) => q.sort({ updatedAt: -1 }),
+    map: (o) => presentForRider(o, userId),
+  });
 
 // Admin
 /** All orders, filterable by status (or "active") and searchable by order number. */

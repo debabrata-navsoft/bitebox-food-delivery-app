@@ -19,6 +19,14 @@ from apps.orders.notifications import rupees
 from apps.rbac.roles import Permission, Role
 from common.api import ApiError, ok
 from common.fields import UUIDRef
+from common.filters import (
+    FacetQuery,
+    MultiIdField,
+    facets_page,
+    list_params,
+    multi_choice,
+    multi_param,
+)
 from common.pagination import Page
 from common.permissions import PUBLIC, permission_required, role_required
 from common.schema import envelope, errors
@@ -180,12 +188,15 @@ class RazorpayWebhookView(APIView):
 # ---------------------------------------------------------------------------
 # Admin
 # ---------------------------------------------------------------------------
-class AdminPaymentQuery(PageQuery):
-    status = _choice(PaymentStatus.values, "Invalid value", required=False)
-    method = _choice(PaymentMethod.values, "Invalid value", required=False)
-    provider = _choice(Provider.values, "Invalid value", required=False)
+class AdminPaymentQuery(FacetQuery, PageQuery):
+    """GET /admin/payments."""
+
+    status = multi_choice(PaymentStatus.values)
+    method = multi_choice(PaymentMethod.values)
+    provider = multi_choice(Provider.values)
     # Where the order stands, so finance can find cancelled orders that still hold money.
-    order_state = _choice(list(services.ORDER_STATES), "Invalid value", required=False)
+    order_state = multi_choice(list(services.ORDER_STATES))
+    restaurant = MultiIdField()  # the orders' restaurants
     # Payments of one customer's orders (the admin customer profile).
     customer = UUIDRef(message="Invalid value", required=False)
     to = serializers.DateTimeField(required=False)
@@ -195,13 +206,30 @@ class AdminPaymentQuery(PageQuery):
         self.fields["from"] = serializers.DateTimeField(required=False)
 
 
+ADMIN_PAYMENT_PAGE = facets_page("AdminPaymentPage", services.ADMIN_FACETS)
+
+
 class AdminPaymentsView(APIView):
     permission_classes = [permission_required(Permission.FINANCE_VIEW)]
 
     @extend_schema(
         tags=["Admin: payments"],
-        parameters=[AdminPaymentQuery],
-        responses={200: PAYMENT_LIST, **errors(401, 403, 422)},
+        parameters=list_params(
+            "Order number, or the customer's name, email or phone",
+            multi_param("status", PaymentStatus.values),
+            multi_param("method", PaymentMethod.values),
+            multi_param("provider", Provider.values),
+            multi_param(
+                "orderState",
+                list(services.ORDER_STATES),
+                "Where the order stands (cancelled includes rejected)",
+            ),
+            multi_param("restaurant", description="Restaurant ids (the orders' restaurants)"),
+            OpenApiParameter("customer", str, description="The customer's user id"),
+            OpenApiParameter("from", str, description="ISO date-time: created at or after"),
+            OpenApiParameter("to", str, description="ISO date-time: created at or before"),
+        ),
+        responses={200: ADMIN_PAYMENT_PAGE, **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
         query = validated(AdminPaymentQuery, request.query_params)

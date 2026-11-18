@@ -7,7 +7,7 @@ import {
   PAYMENT_CHANNELS,
 } from "../models/coupon.model.js";
 import { OFFER_KINDS, SORTS, STATUS_FILTERS } from "../services/coupon.service.js";
-import { booleanQuery, mongoIdParam, paginationRules, searchQuery } from "./common.validators.js";
+import { booleanQuery, filteredListRules, mongoIdParam, multiId, multiValue } from "./common.validators.js";
 
 /** Coupons and restaurant offers (Django: apps/coupons/views.py serializers). */
 const isId = (v) => /^[a-f0-9]{24}$/i.test(String(v));
@@ -99,19 +99,21 @@ export const updateCouponRules = [mongoIdParam(), ...couponRules({ partial: true
 export const createOfferRules = couponRules({ partial: false, partner: true });
 export const updateOfferRules = [mongoIdParam(), ...couponRules({ partial: true, partner: true })];
 
-export const couponListRules = [
-  ...paginationRules,
-  searchQuery(),
+/** The coupon lists' filters (admins' and a partner's own offers). */
+const couponFilters = [
   booleanQuery("active"),
-  query("status").optional().isIn(Object.keys(STATUS_FILTERS)),
-  query("owner").optional().isIn(Object.values(COUPON_SOURCES)),
-  query("kind").optional().isIn(Object.values(COUPON_KINDS)),
+  multiValue("status", Object.keys(STATUS_FILTERS)),
+  multiValue("owner", Object.values(COUPON_SOURCES)),
+  multiValue("kind", Object.values(COUPON_KINDS)),
+  multiValue("audience", Object.values(AUDIENCES)),
+  multiValue("discountType", Object.values(DISCOUNT_TYPES)),
   query("sort").optional().isIn(Object.keys(SORTS)),
   query("from").optional().isISO8601(),
   query("to").optional().isISO8601(),
-  // One restaurant's own offers and the coupons limited to it (the admin restaurant account view).
-  query("restaurant").optional().isMongoId().withMessage("Invalid id"),
 ];
+/** GET /admin/coupons: also restaurants (their own offers and the coupons limited to them). */
+export const adminCouponListRules = filteredListRules([...couponFilters, multiId("restaurant")]);
+export const ownOfferListRules = filteredListRules(couponFilters);
 export const activeRules = [mongoIdParam(), body("isActive").isBoolean().withMessage("isActive must be true or false").toBoolean()];
 export const reasonRules = [mongoIdParam(), body("reason").optional().isString().trim().isLength({ max: 300 })];
 export const availableCouponRules = [query("restaurantId").optional().isMongoId()];

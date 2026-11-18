@@ -7,12 +7,7 @@
   </button>
 </bb-page-header>
 
-<div class="bb-filters">
-  <np-text-input [formField]="filters.search" placeholder="Name, email or code" ariaLabel="Search referrals" icon="search" clearable />
-  <np-select [formField]="filters.status" ariaLabel="Stage" [options]="statusOptions" />
-  <np-select [formField]="filters.rewardStatus" ariaLabel="Reward" [options]="rewardOptions" />
-  <np-toggle class="flagged" [formField]="filters.flagged" label="Only with risk signals" />
-</div>
+<bb-list-toolbar [list]="referrals" [sections]="filterSections" searchLabel="Search referrals" placeholder="Name, email or code" />
 
 @if (list.error(); as message) {
   <div class="bb-alert error" role="alert">
@@ -27,7 +22,13 @@
       <span class="bb-skeleton row"></span>
     }
   } @else if (list.empty()) {
-    <bb-empty-state icon="user-plus" title="No referrals here" message="Referrals appear when customers sign up with a friend's code." />
+    <bb-list-empty
+      [list]="referrals"
+      icon="user-plus"
+      title="No referrals here"
+      message="Referrals appear when customers sign up with a friend's code."
+      noMatch="No referrals match these filters"
+    />
   } @else {
     <div class="bb-table-scroll" [class.bb-dim]="list.loading()">
       <table class="bb-table">

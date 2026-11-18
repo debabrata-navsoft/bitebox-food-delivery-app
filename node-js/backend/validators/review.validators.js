@@ -6,11 +6,14 @@ import {
   REVIEW_TARGETS,
 } from "../models/review.model.js";
 import { isUploadedImageUrl } from "../services/upload.service.js";
+import { RATINGS, REPLY_STATES, WITH_OR_WITHOUT } from "../services/review.service.js";
 import {
   booleanQuery,
+  filteredListRules,
   mongoIdParam,
+  multiId,
+  multiValue,
   paginationRules,
-  searchQuery,
 } from "./common.validators.js";
 
 const T = REVIEW_TARGETS;
@@ -127,14 +130,21 @@ export const reportRules = [
 ];
 
 // Restaurant
-export const restaurantListRules = [
-  query("target").optional().isIn([T.RESTAURANT, T.FOOD]),
-  query("foodItemId").optional().isMongoId(),
-  ratingQuery(),
-  booleanQuery("responded"),
-  sortQuery(),
-  ...paginationRules,
-];
+// target, rating, reply, photos and dish: one value or several, comma-separated (any of them);
+// `rating=4`, foodItemId and responded still work.
+export const restaurantListRules = filteredListRules(
+  [
+    multiValue("target", [T.RESTAURANT, T.FOOD]),
+    multiValue("rating", RATINGS),
+    multiValue("reply", REPLY_STATES),
+    multiValue("photos", WITH_OR_WITHOUT),
+    multiId("dish"),
+    query("foodItemId").optional().isMongoId(),
+    booleanQuery("responded"),
+    sortQuery(),
+  ],
+  "created",
+);
 export const responseRules = [
   mongoIdParam(),
   body("text")
@@ -146,22 +156,30 @@ export const responseRules = [
 ];
 
 // Rider
-export const riderListRules = [ratingQuery(), sortQuery(), ...paginationRules];
+// rating and comment: one value or several, comma-separated (any of them).
+export const riderListRules = filteredListRules(
+  [multiValue("rating", RATINGS), multiValue("comment", WITH_OR_WITHOUT), sortQuery()],
+  "created",
+);
 
 // Admin
-export const adminListRules = [
-  query("target").optional().isIn(Object.values(T)),
-  query("status").optional().isIn(Object.values(REVIEW_STATUS)),
-  query("restaurantId").optional().isMongoId(),
-  // Orders of one customer that have reviews (the admin customer profile).
-  query("customer").optional().isMongoId().withMessage("Invalid id"),
-  // Orders with a review of one rider (the admin delivery partner account view).
-  query("rider").optional().isMongoId().withMessage("Invalid id"),
-  booleanQuery("reported"),
-  ratingQuery(),
-  searchQuery(),
-  ...paginationRules,
-];
+// target, status, rating and restaurant: one value or several, comma-separated (any of them).
+export const adminListRules = filteredListRules(
+  [
+    multiValue("target", Object.values(T)),
+    multiValue("status", Object.values(REVIEW_STATUS)), // none: every status but deleted
+    multiValue("rating", RATINGS),
+    multiId("restaurant"),
+    // One restaurant's reviews (the admin restaurant account view's links).
+    query("restaurantId").optional().isMongoId(),
+    // Orders of one customer that have reviews (the admin customer profile).
+    query("customer").optional().isMongoId().withMessage("Invalid id"),
+    // Orders with a review of one rider (the admin delivery partner account view).
+    query("rider").optional().isMongoId().withMessage("Invalid id"),
+    booleanQuery("reported"),
+  ],
+  "created",
+);
 export const moderateRules = [
   mongoIdParam(),
   body("action")

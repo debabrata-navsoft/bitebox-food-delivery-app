@@ -7,6 +7,7 @@ their own offers only), and what customers see (/coupons/available, /coupons/off
 
 from typing import Any
 
+from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
 from rest_framework.request import Request
@@ -20,6 +21,15 @@ from apps.rbac.roles import Permission, Role
 from apps.restaurants.services import get_public, require_own_restaurant
 from common.api import ok
 from common.fields import ImageUrlField, QueryBoolean, UUIDRef
+from common.filters import (
+    MULTI_NOTE,
+    FacetQuery,
+    MultiIdField,
+    facets_page,
+    list_params,
+    multi_choice,
+    multi_param,
+)
 from common.http import PublicCacheMixin
 from common.pagination import Page
 from common.permissions import PUBLIC, permission_required, role_required
@@ -143,12 +153,17 @@ class OfferInput(CouponInput):
     draft = serializers.BooleanField(required=False, default=False)
 
 
-class ListQuery(PageQuery):
+class ListQuery(FacetQuery, PageQuery):
+    """The coupon lists (admins' and a partner's own offers, where `facets=1` counts status and
+    discount type only)."""
+
     active = QueryBoolean()
-    status = serializers.ChoiceField(choices=list(services.STATUS_FILTERS), required=False)
+    status = multi_choice(services.STATUS_FILTERS)
     # Platform coupons or restaurant offers ("source" would clash with DRF's Field.source).
-    owner = serializers.ChoiceField(choices=Source.values, required=False)
-    kind = serializers.ChoiceField(choices=Kind.values, required=False)
+    owner = multi_choice(Source.values)
+    kind = multi_choice(Kind.values)
+    audience = multi_choice(Audience.values)
+    discount_type = multi_choice(DiscountType.values)
     sort = serializers.ChoiceField(choices=list(services.SORTS), required=False)
     from_ = serializers.DateTimeField(required=False)
     to = serializers.DateTimeField(required=False)
@@ -181,8 +196,16 @@ class OffersQuery(serializers.Serializer):
 
 
 LIST_PARAMS = [
-    OpenApiParameter(n, str)
-    for n in ("search", "active", "status", "owner", "sort", "from", "to", "page", "limit")
+    *list_params("Code or name (or part of it)"),
+    OpenApiParameter("active", bool),
+    multi_param("status", list(services.STATUS_FILTERS)),
+    multi_param("owner", Source.values, "platform: BiteBox coupons; restaurant: restaurant offers"),
+    multi_param("kind", Kind.values),
+    multi_param("audience", Audience.values),
+    multi_param("discountType", DiscountType.values),
+    OpenApiParameter("sort", str, enum=list(services.SORTS)),
+    OpenApiParameter("from", str, description="ISO date-time: valid on or after it"),
+    OpenApiParameter("to", str, description="ISO date-time: valid on or before it"),
 ]
 
 
@@ -245,8 +268,11 @@ class RestaurantOffersView(PublicCacheMixin, APIView):
 
 
 class AdminListQuery(ListQuery):
-    # A restaurant's own offers and the coupons scoped to it (its account page).
-    restaurant = UUIDRef(required=False)
+    # Restaurants' own offers and the coupons limited to them (one: its account page).
+    restaurant = MultiIdField()
+
+
+ADMIN_COUPON_PAGE = facets_page("AdminCouponPage", services.list_facets(timezone.now()))
 
 
 # ---------------------------------------------------------------------------
@@ -255,8 +281,15 @@ class AdminListQuery(ListQuery):
 class AdminCouponsView(AdminView):
     @extend_schema(
         tags=["Admin: coupons"],
-        parameters=[*LIST_PARAMS, OpenApiParameter("restaurant", str)],
-        responses={200: ANY, **errors(401, 403, 422)},
+        description=MULTI_NOTE,
+        parameters=[
+            *LIST_PARAMS,
+            multi_param(
+                "restaurant",
+                description="Restaurant ids: their own offers and the coupons limited to them",
+            ),
+        ],
+        responses={200: ADMIN_COUPON_PAGE, **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
         query = validated(AdminListQuery, request.query_params)
@@ -369,11 +402,15 @@ class AdminRejectOfferView(AdminView):
 # ---------------------------------------------------------------------------
 # Restaurant partners: their own offers
 # ---------------------------------------------------------------------------
+OWN_OFFER_PAGE = facets_page("PartnerOfferPage", services.own_facets(timezone.now()))
+
+
 class OwnOffersView(PartnerView):
     @extend_schema(
         tags=["Restaurant offers"],
+        description=MULTI_NOTE,
         parameters=LIST_PARAMS,
-        responses={200: ANY, **errors(401, 403, 404, 422)},
+        responses={200: OWN_OFFER_PAGE, **errors(401, 403, 404, 422)},
     )
     def get(self, request: Request) -> Response:
         restaurant = self.restaurant(request)

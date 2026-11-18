@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse, Paginated } from '../../shared/models/api.models';
+import { ApiResponse } from '../../shared/models/api.models';
 import {
   FoodItem,
   FoodItemInput,
@@ -11,6 +11,7 @@ import {
   RestaurantInput,
   RestaurantUpdate,
 } from '../../shared/models/catalog.models';
+import { Faceted, ListQuery } from '../../shared/list/filtered-list';
 import { toParams } from './http-params';
 
 export interface MyRestaurantState {
@@ -72,17 +73,13 @@ export class MyRestaurantService {
       .pipe(map((res) => res.data.restaurant));
   }
 
-  foods(
-    query: {
-      search?: string;
-      category?: string;
-      available?: boolean;
-      page?: number;
-      limit?: number;
-    } = {},
-  ): Observable<Paginated<FoodItem>> {
+  /**
+   * The menu: search, plus category, type (veg, non_veg) and availability (one value or several,
+   * the Filters panel); `facets: 1` adds its counts.
+   */
+  foods(query: ListQuery = {}): Observable<Faceted<FoodItem>> {
     return this.http
-      .get<ApiResponse<Paginated<FoodItem>>>(`${this.url}/foods`, { params: toParams(query) })
+      .get<ApiResponse<Faceted<FoodItem>>>(`${this.url}/foods`, { params: toParams(query) })
       .pipe(map((res) => res.data));
   }
 

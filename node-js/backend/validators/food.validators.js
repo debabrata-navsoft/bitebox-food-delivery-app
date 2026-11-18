@@ -2,6 +2,7 @@ import { body, query } from "express-validator";
 import {
   booleanQuery,
   facetsQuery,
+  filteredListRules,
   imageUrlBody,
   multiId,
   multiValue,
@@ -53,15 +54,13 @@ export const availabilityRules = [
     .toBoolean(),
 ];
 
-const listRules = [
-  ...paginationRules,
-  searchQuery(),
-  query("category").optional().isMongoId(),
+export const ownerListRules = filteredListRules([
   booleanQuery("available"),
   booleanQuery("veg"),
-];
-
-export const ownerListRules = listRules;
+  multiId("category"),
+  multiValue("type", FOOD_TYPES),
+  multiValue("availability", FOOD_AVAILABILITY),
+]);
 export const adminListRules = [
   ...paginationRules,
   searchQuery(),

@@ -1,6 +1,7 @@
 """/admin/reviews: the moderation queue, decisions and rating analytics (Node: review.routes.js)."""
 
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import serializers
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -9,18 +10,25 @@ from apps.accounts.authentication import current_user
 from apps.audit.services import audited
 from apps.rbac.roles import Permission
 from common.api import ok
+from common.filters import facets_page, list_params, multi_param
 from common.pagination import Page
 from common.permissions import permission_required
 from common.schema import envelope, errors
 from common.validation import parse_id, validated
 
 from . import moderation
-from .serializers import AdminReviewQuery, DaysQuery, DismissInput, ModerateInput
+from .models import ReviewStatus, ReviewTarget
+from .serializers import RATINGS, AdminReviewQuery, DaysQuery, DismissInput, ModerateInput
 
 MODERATE = [permission_required(Permission.REVIEWS_MODERATE)]
 TAGS = ["Admin: reviews"]
 REVIEW = envelope("AdminReviewResult")
 ORDERS = envelope("AdminReviewOrders")
+ORDER_PAGE = facets_page(
+    "AdminReviewOrderPage",
+    moderation.ADMIN_FACETS,
+    counts=serializers.DictField(child=serializers.IntegerField()),
+)
 
 
 def _moderation_note(request: Request) -> str:
@@ -34,8 +42,25 @@ class AdminReviewOrdersView(APIView):
 
     @extend_schema(
         tags=TAGS,
-        parameters=[AdminReviewQuery],
-        responses={200: ORDERS, **errors(401, 403, 422)},
+        parameters=list_params(
+            "Order number, customer, dish or words of the review",
+            multi_param("target", ReviewTarget.values, "What the review is about"),
+            multi_param("status", ReviewStatus.values, "None given: every status but deleted"),
+            multi_param("rating", RATINGS, "Stars"),
+            multi_param("restaurant", description="Restaurant ids"),
+            OpenApiParameter("restaurantId", str, description="One restaurant's reviews"),
+            OpenApiParameter(
+                "customer", str, description="Orders of this customer (user id) with reviews"
+            ),
+            OpenApiParameter(
+                "rider", str, description="Orders with a review of this rider (user id)"
+            ),
+            OpenApiParameter(
+                "reported", bool, description="true: orders with open reports, those first"
+            ),
+            days="created",
+        ),
+        responses={200: ORDER_PAGE, **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
         query = validated(AdminReviewQuery, request.query_params)

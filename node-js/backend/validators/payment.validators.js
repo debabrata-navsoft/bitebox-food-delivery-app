@@ -1,6 +1,7 @@
 import { body, query } from "express-validator";
 import { PAYMENT_METHODS, PAYMENT_STATUS } from "../models/order.model.js";
-import { mongoIdParam, paginationRules } from "./common.validators.js";
+import { PAYMENT_PROVIDERS } from "../services/payments/payment.service.js";
+import { filteredListRules, mongoIdParam, multiId, multiValue } from "./common.validators.js";
 
 export const orderIdRules = [mongoIdParam("orderId")];
 export const confirmRules = [
@@ -25,19 +26,19 @@ export const mockRules = [
 export const daysRules = [
   query("days").optional().isInt({ min: 1, max: 365 }).toInt(),
 ];
-export const adminPaymentListRules = [
-  query("status").optional().isIn(Object.values(PAYMENT_STATUS)),
-  query("method").optional().isIn(Object.values(PAYMENT_METHODS)),
-  query("provider").optional().isIn(["cash_on_delivery", "razorpay", "mock"]),
-  query("orderState").optional().isIn(["active", "delivered", "cancelled"]),
-  // Order number, or the customer's name, email or phone.
-  query("search").optional().isString().trim().isLength({ max: 100 }),
+// search: the order number, or the customer's name, email or phone.
+export const adminPaymentListRules = filteredListRules([
+  multiValue("status", Object.values(PAYMENT_STATUS)),
+  multiValue("method", Object.values(PAYMENT_METHODS)),
+  multiValue("provider", PAYMENT_PROVIDERS),
+  // Where the order stands (`cancelled` includes rejected).
+  multiValue("orderState", ["active", "delivered", "cancelled"]),
+  multiId("restaurant"), // the orders' restaurants
   query("from").optional().isISO8601().toDate(),
   query("to").optional().isISO8601().toDate(),
   // Payments of one customer's orders (the admin customer profile).
   query("customer").optional().isMongoId().withMessage("Invalid id"),
-  ...paginationRules,
-];
+]);
 export const paymentIdRules = [mongoIdParam()];
 export const refundRules = [
   mongoIdParam(),

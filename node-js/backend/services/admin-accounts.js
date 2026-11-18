@@ -52,6 +52,16 @@ export function joinedRange(joinedFrom, joinedTo) {
   };
 }
 
+/** `{ [field]: joinedRange(from, to) }`, or null when neither day is given. */
+export function dayRange(field, from, to) {
+  const range = joinedRange(from, to);
+  return range && { [field]: range };
+}
+
+/** `object` with each value passed through `fn(value, key)`. */
+export const mapValues = (object, fn) =>
+  Object.fromEntries(Object.entries(object).map(([key, value]) => [key, fn(value, key)]));
+
 /** Matches a typed name (a city, a zone) exactly, ignoring letter case and outer spaces. */
 export const sameName = (name) => new RegExp(`^\\s*${escapeRegex(name.trim())}\\s*$`, "i");
 
@@ -289,3 +299,17 @@ export async function facetCounts(Model, facets, filterFor, query) {
 /** `{ facets }` (see facetCounts) when the query asks for them (`facets=1`), else `{}` (no queries). */
 export const facetsIf = async (query, Model, facets, filterFor) =>
   query.facets ? { facets: await facetCounts(Model, facets, filterFor, query) } : {};
+
+/**
+ * One page of `Model.find(filterFor(query))` (`find` adds the sort, select, populate...), each
+ * row through `map`, with its pagination and, with `facets=1`, the `facets` counts.
+ */
+export async function filteredPage(Model, query, pagination, { filterFor, facets, find, map = (row) => row }) {
+  const filter = await filterFor(query);
+  const [items, total, counts] = await Promise.all([
+    find(Model.find(filter)).skip(pagination.skip).limit(pagination.limit),
+    Model.countDocuments(filter),
+    facetsIf(query, Model, facets, filterFor),
+  ]);
+  return { items: items.map((row) => map(row)), pagination: paginationMeta(pagination, total), ...counts };
+}

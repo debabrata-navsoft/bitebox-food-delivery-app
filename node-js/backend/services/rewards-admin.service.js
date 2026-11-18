@@ -4,8 +4,8 @@ import { CoinWallet } from "../models/coin-wallet.model.js";
 import { CAMPAIGN_STATUS, RewardCampaign } from "../models/reward-campaign.model.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/api-error.js";
-import { paginationMeta } from "../utils/pagination.js";
 import { matchingUserIds, personView } from "../utils/people.js";
+import { allOf, filteredPage, fixedFacet, idFacet, inList, toId } from "./admin-accounts.js";
 import * as wallet from "./coin-wallet.service.js";
 import * as referrals from "./referral.service.js";
 import { coinsToPaise, getRewardConfig } from "./reward-config.service.js";
@@ -48,26 +48,36 @@ function staffTxnView(row) {
   };
 }
 
-export async function listTransactions({ type, source, search, userId, from, to }, pagination) {
-  const filter = { ...posted };
-  if (type) filter.type = type;
-  if (source) filter.source = source;
-  if (userId) filter.user = userId;
-  if (from || to) filter.createdAt = { ...(from && { $gte: from }), ...(to && { $lte: to }) };
-  if (search) {
-    filter.user = { $in: await matchingUserIds(search) };
-  }
-  const [rows, total] = await Promise.all([
-    CoinTransaction.find(filter)
-      .sort({ createdAt: -1, _id: -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit)
-      .populate("user", "name email")
-      .lean(),
-    CoinTransaction.countDocuments(filter),
-  ]);
-  return { items: rows.map(staffTxnView), pagination: paginationMeta(pagination, total) };
+/** The coin transactions list's Filters panel; campaign: the campaigns rows came from, with names. */
+const TXN_FACETS = {
+  type: fixedFacet(Object.values(COIN_TXN_TYPES), "$type"),
+  source: fixedFacet(Object.values(COIN_SOURCES), "$source"),
+  campaign: idFacet("$campaign", RewardCampaign),
+};
+
+/**
+ * Posted rows matching every filter: type, source and campaign (each one value or several), one
+ * customer (`userId`), from/to (instants) and a customer search (name, email, phone).
+ */
+async function transactionFilter({ type, source, campaign, search, userId, from, to }) {
+  return allOf(
+    posted,
+    inList("type", type),
+    inList("source", source),
+    inList("campaign", campaign, toId),
+    userId && { user: toId(userId) },
+    (from || to) && { createdAt: { ...(from && { $gte: from }), ...(to && { $lte: to }) } },
+    search && { user: { $in: await matchingUserIds(search) } },
+  );
 }
+
+export const listTransactions = (query, pagination) =>
+  filteredPage(CoinTransaction, query, pagination, {
+    filterFor: transactionFilter,
+    facets: TXN_FACETS,
+    find: (q) => q.sort({ createdAt: -1, _id: -1 }).populate("user", "name email").lean(),
+    map: staffTxnView,
+  });
 
 export async function getTransaction(id) {
   const row = await CoinTransaction.findById(id)

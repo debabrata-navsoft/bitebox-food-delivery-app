@@ -1,39 +1,51 @@
 """/my/restaurant/reviews/*: the restaurant panel's reviews page (Node: my-restaurant.routes)."""
 
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.authentication import current_user
+from apps.accounts.serializers import JoinedListQuery
 from apps.rbac.roles import Role
 from common.api import ok
 from common.fields import QueryBoolean, UUIDRef
+from common.filters import (
+    FacetQuery,
+    MultiIdField,
+    facets_page,
+    list_params,
+    multi_choice,
+    multi_param,
+)
 from common.pagination import Page
 from common.permissions import role_required
 from common.schema import envelope, errors
-from common.validation import PageQuery, parse_id, validated
+from common.validation import parse_id, validated
 
 from . import services
 from .models import RESPONSE_MAX, ReviewTarget
-from .serializers import SORTS, choice_query
+from .serializers import RATINGS, SORTS, WITH_OR_WITHOUT, choice_query
 
 PARTNER = [role_required(Role.RESTAURANT)]
 RESULT = envelope("RestaurantReviewsResult")
+TARGETS = [ReviewTarget.RESTAURANT, ReviewTarget.FOOD]
+ORDER_PAGE = facets_page("RestaurantReviewOrderPage", services.RESTAURANT_FACETS)
 
 
-class RestaurantReviewQuery(PageQuery):
-    target = choice_query([ReviewTarget.RESTAURANT, ReviewTarget.FOOD])
-    food_item_id = UUIDRef(message="Invalid value", required=False)
-    rating = serializers.IntegerField(
-        required=False,
-        min_value=1,
-        max_value=5,
-        error_messages=dict.fromkeys(("invalid", "min_value", "max_value"), "Invalid value"),
-    )
-    responded = QueryBoolean()
+class RestaurantReviewQuery(FacetQuery, JoinedListQuery):
+    """GET /my/restaurant/reviews/orders (the older single filters still work)."""
+
+    target = multi_choice(TARGETS)
+    rating = multi_choice(RATINGS)
+    reply = multi_choice(services.REPLY_STATES)
+    photos = multi_choice(WITH_OR_WITHOUT)
+    dish = MultiIdField()
+    food_item_id = UUIDRef(message="Invalid value", required=False)  # one dish (older links)
+    responded = QueryBoolean()  # true: replied; false: needs a reply (older form of `reply`)
     sort = choice_query(SORTS)
+    day_range = "created"
 
 
 class ResponseInput(serializers.Serializer):
@@ -56,8 +68,21 @@ class ReviewOrdersView(APIView):
 
     @extend_schema(
         tags=["My restaurant"],
-        parameters=[RestaurantReviewQuery],
-        responses={200: RESULT, **errors(401, 403, 404, 422)},
+        parameters=list_params(
+            "Order number, dish or words of the review",
+            multi_param("target", TARGETS, "What the review is about"),
+            multi_param("rating", RATINGS, "Stars"),
+            multi_param("reply", services.REPLY_STATES, "needed: not replied to yet"),
+            multi_param("photos", WITH_OR_WITHOUT, "Reviews with or without photos"),
+            multi_param("dish", description="Dish ids (this restaurant's)"),
+            OpenApiParameter("foodItemId", str, description="One dish (older form of `dish`)"),
+            OpenApiParameter(
+                "responded", bool, description="Older form of `reply`: true replied, false needed"
+            ),
+            OpenApiParameter("sort", str, enum=SORTS),
+            days="created",
+        ),
+        responses={200: ORDER_PAGE, **errors(401, 403, 404, 422)},
     )
     def get(self, request: Request) -> Response:
         query = validated(RestaurantReviewQuery, request.query_params)

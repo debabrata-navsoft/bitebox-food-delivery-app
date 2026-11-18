@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from apps.accounts.admin_services import STATUS_MESSAGES
 from apps.accounts.authentication import current_user
 from apps.accounts.models import UserStatus
-from apps.accounts.serializers import StatusInput, user_json
+from apps.accounts.serializers import JoinedListQuery, StatusInput, user_json
 from apps.audit.services import audited, note
 from apps.dispatch import services as dispatch
 from apps.finance import reports
@@ -24,13 +24,17 @@ from apps.orders.views import STATUS_MESSAGE
 from apps.rbac.roles import Permission, Role
 from apps.restaurants.serializers import RestaurantAddressInput
 from apps.reviews import services as review_services
+from apps.reviews.serializers import RATINGS, SORTS, WITH_OR_WITHOUT, RiderReviewQuery
 from common.api import ok
 from common.fields import QueryBoolean
 from common.filters import (
     FACETS_PARAM,
+    MULTI_NOTE,
     FacetQuery,
+    MultiIdField,
     MultiValueField,
     facets_page,
+    list_params,
     multi_choice,
     multi_param,
     page_params,
@@ -201,29 +205,34 @@ class RiderOrderStatusView(APIView):
         return ok(services.dashboard(user), message=STATUS_MESSAGE[data["status"]])
 
 
+class RiderHistoryQuery(FacetQuery, JoinedListQuery):
+    """GET /delivery/orders/history."""
+
+    status = multi_choice(orders.RIDER_HISTORY_STATUSES)
+    restaurant = MultiIdField()
+    day_range = "placed"
+
+
+RIDER_HISTORY_PAGE = facets_page("RiderHistoryPage", orders.RIDER_FACETS)
+
+
 class RiderHistoryView(APIView):
     permission_classes = RIDER
 
     @extend_schema(
-        tags=["Delivery"], parameters=[PageQuery], responses={200: RESULT, **errors(401, 403, 422)}
+        tags=["Delivery"],
+        description=MULTI_NOTE,
+        parameters=list_params(
+            "Order number (or part of it)",
+            multi_param("status", orders.RIDER_HISTORY_STATUSES),
+            multi_param("restaurant", description="Restaurant ids"),
+            days="placed",
+        ),
+        responses={200: RIDER_HISTORY_PAGE, **errors(401, 403, 422)},
     )
     def get(self, request: Request) -> Response:
-        query = validated(PageQuery, request.query_params)
-        return ok(orders.rider_history(current_user(request), Page.from_query(query)))
-
-
-class RiderReviewQuery(PageQuery):
-    rating = serializers.IntegerField(
-        required=False,
-        min_value=1,
-        max_value=5,
-        error_messages=dict.fromkeys(("invalid", "min_value", "max_value"), "Invalid value"),
-    )
-    sort = serializers.ChoiceField(
-        choices=["newest", "oldest", "highest", "lowest"],
-        required=False,
-        error_messages=dict.fromkeys(("invalid_choice", "null", "blank"), "Invalid value"),
-    )
+        query = validated(RiderHistoryQuery, request.query_params)
+        return ok(orders.rider_history(current_user(request), Page.from_query(query), query))
 
 
 class RiderReviewsView(APIView):
@@ -231,8 +240,21 @@ class RiderReviewsView(APIView):
 
     @extend_schema(
         tags=["Delivery"],
-        parameters=[RiderReviewQuery],
-        responses={200: envelope("RiderReviews"), **errors(401, 403, 422)},
+        parameters=list_params(
+            "Order number or words of the rating",
+            multi_param("rating", RATINGS, "Stars"),
+            multi_param("comment", WITH_OR_WITHOUT, "Ratings with or without words"),
+            OpenApiParameter("sort", str, enum=SORTS),
+            days="created",
+        ),
+        responses={
+            200: facets_page(
+                "RiderReviewPage",
+                review_services.RIDER_FACETS,
+                summary=serializers.JSONField(),
+            ),
+            **errors(401, 403, 422),
+        },
     )
     def get(self, request: Request) -> Response:
         query = validated(RiderReviewQuery, request.query_params)

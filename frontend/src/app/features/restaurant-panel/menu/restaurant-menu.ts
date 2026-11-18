@@ -6,36 +6,34 @@ import {
   computed,
   inject,
   input,
+  linkedSignal,
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
-import { catchError, filter, of } from 'rxjs';
+import { catchError, filter, of, tap } from 'rxjs';
 import { CatalogService } from '../../../core/services/catalog.service';
 import { errorMessage } from '../../../core/services/api-error';
 import { MyRestaurantService } from '../../../core/services/my-restaurant.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
+import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
-import { FoodItem, categoryIdOf } from '../../../shared/models/catalog.models';
+import { filteredList, optionsSection } from '../../../shared/list/filtered-list';
+import { FoodItem } from '../../../shared/models/catalog.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { FoodFormDialog, FoodFormData } from '../food-form-dialog/food-form-dialog';
-
-type AvailabilityFilter = 'all' | 'available' | 'unavailable';
-
-import { form } from '@angular/forms/signals';
 import {
   ButtonComponent,
   IconComponent,
   MenuComponent,
   type MenuItem,
-  SelectOption,
+  PaginationComponent,
   ToggleComponent,
 } from 'nexprime';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import {
@@ -43,17 +41,22 @@ import {
   toggleEndAligned,
 } from '../../../shared/menu/end-aligned-menu';
 
+/**
+ * The partner's menu: a paged list filtered on the server (search plus the Filters panel's
+ * category, type and availability, with live counts), availability toggles and the dish form.
+ */
 @Component({
   selector: 'bb-restaurant-menu',
   imports: [
     ToggleComponent,
-    NP_FORM_FIELDS,
     RouterLink,
     ButtonComponent,
     IconComponent,
     NpIconPipe,
     MenuComponent,
+    PaginationComponent,
     EmptyState,
+    ListToolbar,
     PageHeader,
     VegBadge,
     InrPipe,
@@ -69,6 +72,7 @@ export class RestaurantMenu implements OnInit {
   private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
 
+  /** ?available=true (the dashboard's "available dishes" card) preselects available dishes. */
   readonly available = input<string>();
 
   protected readonly categories = toSignal(
@@ -77,7 +81,32 @@ export class RestaurantMenu implements OnInit {
       .pipe(catchError(() => of([]))),
     { initialValue: [] },
   );
-  protected readonly items = signal<FoodItem[]>([]);
+  private readonly categoryNames = computed(() => new Map(this.categories().map((c) => [c.id, c.name])));
+
+  protected readonly filterSections = [
+    // The categories this menu uses (the API's counts, with their names).
+    optionsSection('category', 'Category', (id) => this.categoryNames().get(id) ?? id),
+    optionsSection('type', 'Type', { veg: 'Veg', non_veg: 'Non-veg' }),
+    optionsSection('availability', 'Availability', { available: 'Available', unavailable: 'Unavailable' }),
+  ];
+
+  /** No restaurant yet: the API answers 404. */
+  protected readonly noRestaurant = signal(false);
+  protected readonly menu = filteredList(
+    (query) =>
+      this.service.foods(query).pipe(
+        tap({
+          error: (err: unknown) => {
+            if (err instanceof HttpErrorResponse && err.status === 404) this.noRestaurant.set(true);
+          },
+        }),
+      ),
+    { errorText: 'Could not load your menu.', limit: 50, lazy: true },
+  );
+  protected readonly list = this.menu.list;
+  /** The page's rows; availability changes, edits and deletions apply here at once. */
+  protected readonly items = linkedSignal<FoodItem[]>(() => this.list.data()?.items ?? []);
+
   protected readonly toggleMenu = (menu: MenuComponent, event: Event) =>
     toggleEndAligned(menu, event, COMPACT_MENU_WIDTH);
   /** Each dish's actions menu (built once per list change, not on every render). */
@@ -93,62 +122,11 @@ export class RestaurantMenu implements OnInit {
         ]),
       ),
   );
-  protected readonly loading = signal(true);
-  protected readonly noRestaurant = signal(false);
-  protected readonly error = signal<string | null>(null);
   protected readonly busyId = signal<string | null>(null);
-  protected readonly total = signal(0);
-
-  protected readonly filterModel = signal({
-    search: '',
-    category: '',
-    availability: 'all' as AvailabilityFilter,
-  });
-  protected readonly filters = form(this.filterModel);
-  protected readonly categoryOptions = computed<SelectOption[]>(() => [
-    { value: '', label: 'All categories' },
-    ...this.categories().map((c) => ({ value: c.id, label: c.name })),
-  ]);
-  protected readonly availabilityOptions: SelectOption[] = [
-    { value: 'all', label: 'All dishes' },
-    { value: 'available', label: 'Available' },
-    { value: 'unavailable', label: 'Unavailable' },
-  ];
-
-  protected readonly filtered = computed(() => {
-    const { search, category, availability } = this.filterModel();
-    const term = search.trim().toLowerCase();
-    return this.items().filter(
-      (i) =>
-        (!term || i.name.toLowerCase().includes(term)) &&
-        (!category || categoryIdOf(i) === category) &&
-        (availability === 'all' || (availability === 'available') === i.isAvailable),
-    );
-  });
-
-  constructor() {
-    this.load();
-  }
 
   ngOnInit(): void {
-    if (this.available() === 'true') this.filters.availability().value.set('available');
-  }
-
-  protected load(): void {
-    this.loading.set(true);
-    this.error.set(null);
-    this.service.foods({ limit: 100 }).subscribe({
-      next: (res) => {
-        this.items.set(res.items);
-        this.total.set(res.pagination.total);
-        this.loading.set(false);
-      },
-      error: (err: unknown) => {
-        if (err instanceof HttpErrorResponse && err.status === 404) this.noRestaurant.set(true);
-        else this.error.set(errorMessage(err, 'Could not load your menu.'));
-        this.loading.set(false);
-      },
-    });
+    if (this.available() === 'true') this.menu.panel.set({ availability: ['available'] });
+    this.list.load(1);
   }
 
   protected openForm(item?: FoodItem): void {
@@ -160,11 +138,8 @@ export class RestaurantMenu implements OnInit {
       .closed
       .pipe(filter((saved): saved is FoodItem => !!saved))
       .subscribe((saved) => {
-        this.items.update((list) =>
-          item
-            ? list.map((i) => (i.id === saved.id ? saved : i))
-            : [...list, saved].sort((a, b) => a.name.localeCompare(b.name)),
-        );
+        if (item) this.items.update((list) => list.map((i) => (i.id === saved.id ? saved : i)));
+        else this.list.reload(); // where a new dish lands depends on the filters and the page
         this.notify.success(item ? 'Dish saved' : 'Dish added to your menu');
       });
   }
@@ -199,6 +174,7 @@ export class RestaurantMenu implements OnInit {
       this.service.deleteFood(item.id).subscribe({
         next: () => {
           this.items.update((list) => list.filter((i) => i.id !== item.id));
+          if (!this.items().length) this.list.reload(); // the page emptied: fetch what is left
           this.notify.success('Dish deleted');
           this.busyId.set(null);
         },

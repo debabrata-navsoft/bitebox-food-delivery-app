@@ -7,16 +7,18 @@ import {
 } from "../config/rewards.js";
 import {
   REFERRAL_REWARD_STATUS,
+  REFERRAL_RISK,
   REFERRAL_STATUS,
 } from "../models/referral.model.js";
 import {
   CAMPAIGN_STATUS,
   CAMPAIGN_TRIGGERS,
   CAMPAIGN_TYPES,
+  CLAIM_STATUS,
   CUSTOMER_GROUPS,
   REWARD_TYPES,
 } from "../models/reward-campaign.model.js";
-import { paginationRules } from "./common.validators.js";
+import { filteredListRules, multiId, multiValue, paginationRules } from "./common.validators.js";
 
 export const cartCoinsRules = [
   body("coins")
@@ -130,25 +132,33 @@ export const campaignStatusRules = [
   param("id").isMongoId(),
   body("action").isIn(["activate", "pause", "end"]).withMessage("Choose activate, pause or end"),
 ];
-export const campaignListRules = [
-  ...paginationRules,
-  query("status").optional().isIn(Object.values(CAMPAIGN_STATUS)),
-  query("type").optional().isIn(Object.values(CAMPAIGN_TYPES)),
-  query("search").optional().isString().trim().isLength({ max: 100 }),
-];
-export const claimListRules = [
-  ...paginationRules,
-  query("rewardType").optional().isIn(Object.values(REWARD_TYPES)),
-  query("campaign").optional().isMongoId(),
-];
+export const campaignListRules = filteredListRules(
+  [
+    multiValue("status", Object.values(CAMPAIGN_STATUS)),
+    multiValue("type", Object.values(CAMPAIGN_TYPES)),
+    multiValue("trigger", Object.values(CAMPAIGN_TRIGGERS)),
+    multiValue("customerGroup", Object.values(CUSTOMER_GROUPS)),
+  ],
+  "runs", // campaigns running on any of those days
+);
+export const claimListRules = filteredListRules(
+  [
+    multiValue("rewardType", Object.values(REWARD_TYPES)),
+    multiValue("status", Object.values(CLAIM_STATUS)),
+    multiId("campaign"),
+  ],
+  "claimed",
+);
 
-export const adminTransactionListRules = [
-  ...coinTransactionListRules,
-  query("search").optional().isString().trim().isLength({ max: 100 }),
+export const adminTransactionListRules = filteredListRules([
+  multiValue("type", Object.values(COIN_TXN_TYPES)),
+  multiValue("source", Object.values(COIN_SOURCES)),
+  multiId("campaign"),
+  // One customer's history (links from other pages).
   query("userId").optional().isMongoId(),
   query("from").optional().isISO8601().toDate(),
   query("to").optional().isISO8601().toDate(),
-];
+]);
 
 export const reverseTransactionRules = [
   param("id").isMongoId(),
@@ -160,13 +170,15 @@ export const reverseTransactionRules = [
   body("reason").isString().trim().isLength({ min: 3, max: 300 }).withMessage("Give a reason (3-300 characters)"),
 ];
 
-export const adminReferralListRules = [
-  ...paginationRules,
-  query("status").optional().isIn(Object.values(REFERRAL_STATUS)),
-  query("rewardStatus").optional().isIn(Object.values(REFERRAL_REWARD_STATUS)),
-  query("flagged").optional().isBoolean().toBoolean(),
-  query("search").optional().isString().trim().isLength({ max: 100 }),
-];
+export const adminReferralListRules = filteredListRules(
+  [
+    multiValue("status", Object.values(REFERRAL_STATUS)),
+    multiValue("rewardStatus", Object.values(REFERRAL_REWARD_STATUS)),
+    multiValue("risk", Object.values(REFERRAL_RISK)),
+    query("flagged").optional().isBoolean().toBoolean(), // any risk signal
+  ],
+  "created",
+);
 export const referralDecisionRules = (noteRequired) => [
   param("id").isMongoId(),
   (noteRequired ? body("note") : body("note").optional())

@@ -3,7 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Payout } from '../../shared/models/admin-roles.models';
-import { ApiResponse, Paginated } from '../../shared/models/api.models';
+import { Faceted, ListQuery } from '../../shared/list/filtered-list';
+import { ApiResponse } from '../../shared/models/api.models';
 import { EarningsScope } from './reports.service';
 import { FileDownloadService } from './file-download.service';
 import { toParams } from './http-params';
@@ -31,19 +32,18 @@ export class PartnerFinanceService {
     return `${environment.baseUrl}/${scope === 'restaurant' ? 'my/restaurant' : 'delivery'}`;
   }
 
-  private list<T>(scope: EarningsScope, path: string, page: number, limit: number) {
+  private list<T>(scope: EarningsScope, path: string, query: ListQuery) {
     return this.http
-      .get<ApiResponse<Paginated<T>>>(`${this.base(scope)}/${path}`, {
-        params: toParams({ page, limit }),
-      })
+      .get<ApiResponse<Faceted<T>>>(`${this.base(scope)}/${path}`, { params: toParams(query) })
       .pipe(map((r) => r.data));
   }
 
-  settlements = (scope: EarningsScope, page = 1, limit = 10) =>
-    this.list<SettlementRow>(scope, 'settlements', page, limit);
+  /** status (due, pending, paid), settledFrom/settledTo and search; `facets: 1` adds counts. */
+  settlements = (scope: EarningsScope, query: ListQuery) =>
+    this.list<SettlementRow>(scope, 'settlements', query);
 
-  payouts = (scope: EarningsScope, page = 1, limit = 10) =>
-    this.list<Payout>(scope, 'payouts', page, limit);
+  /** status (pending, paid, cancelled), createdFrom/createdTo and search; `facets: 1` adds counts. */
+  payouts = (scope: EarningsScope, query: ListQuery) => this.list<Payout>(scope, 'payouts', query);
 
   statement(scope: EarningsScope, id: string): Promise<void> {
     return this.files.save(

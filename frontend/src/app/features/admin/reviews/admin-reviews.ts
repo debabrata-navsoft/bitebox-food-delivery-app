@@ -1,21 +1,18 @@
 import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
-import { form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorModule } from '@angular/material/paginator';
-import { IconComponent, SelectOption, TabsComponent } from 'nexprime';
+import { IconComponent, TabsComponent } from 'nexprime';
 import { ReviewService } from '../../../core/services/review.service';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
+import { ListEmpty } from '../../../shared/components/list-empty/list-empty';
+import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { ReviewOrderRow } from '../../../shared/components/review-order-row/review-order-row';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { pagedList } from '../../../shared/list/paged-list';
+import { datesSection, filteredList, optionsSection } from '../../../shared/list/filtered-list';
 import {
   AdminOrderReviewPage,
   AdminOrderReviews,
-  ReviewStatus,
-  ReviewTarget,
-  RATING_FILTER_OPTIONS,
+  RATING_SECTION,
   STATUS_LABEL,
   TARGET_PLURAL,
 } from '../../../shared/models/review.models';
@@ -28,12 +25,12 @@ const TABS = ['all', 'reported', 'analytics'] as const;
 @Component({
   selector: 'bb-admin-reviews',
   imports: [
-    NP_FORM_FIELDS,
+    ListToolbar,
     MatButtonModule,
     MatPaginatorModule,
     TabsComponent,
     IconComponent,
-    EmptyState,
+    ListEmpty,
     PageHeader,
     ReviewOrderRow,
     ReviewAnalyticsPanel,
@@ -49,41 +46,26 @@ export class AdminReviews {
   protected readonly activeTab = signal(0);
   protected readonly tab = computed(() => TABS[this.activeTab()]);
 
-  protected readonly filterModel = signal({ target: '', status: '', rating: '', search: '' });
-  protected readonly filters = form(this.filterModel);
-  protected readonly targetOptions: SelectOption[] = [
-    { value: '', label: 'Restaurants, dishes and riders' },
-    ...(Object.keys(TARGET_PLURAL) as ReviewTarget[]).map((t) => ({ value: t, label: TARGET_PLURAL[t] })),
-  ];
-  protected readonly statusOptions: SelectOption[] = [
-    { value: '', label: 'Any status (not deleted)' },
-    ...(Object.keys(STATUS_LABEL) as ReviewStatus[]).map((s) => ({
-      value: s,
-      label: STATUS_LABEL[s],
-    })),
-  ];
-  protected readonly ratingOptions = RATING_FILTER_OPTIONS;
+  /** The reported tab is the moderation queue, open whatever the status, so it has no status filter. */
+  protected readonly filterSections = computed(() => [
+    optionsSection('target', 'About', TARGET_PLURAL),
+    ...(this.tab() === 'all' ? [optionsSection('status', 'Status', STATUS_LABEL)] : []),
+    RATING_SECTION,
+    optionsSection('restaurant', 'Restaurant'), // from the API's counts
+    datesSection('created', 'Written'),
+  ]);
 
-  protected readonly list = pagedList(
-    (page, limit) => {
-      const f = this.filterModel();
-      return this.reviews.adminOrders({
-        reported: this.tab() === 'reported' || undefined,
-        target: (f.target || undefined) as ReviewTarget | undefined,
-        status: (this.tab() === 'all' && f.status ? f.status : undefined) as ReviewStatus | undefined,
-        rating: Number(f.rating) || undefined,
-        search: f.search.trim() || undefined,
-        page,
-        limit,
-      });
-    },
+  protected readonly reviewList = filteredList(
+    ({ status, ...query }) =>
+      this.reviews.adminOrders({ ...query, ...(this.tab() === 'all' && { status }) }),
     {
-      filterKey: () => `${this.tab()}|${JSON.stringify(this.filterModel())}`,
+      errorText: 'Could not load reviews.',
+      extra: () => ({ reported: this.tab() === 'reported' ? 'true' : undefined }),
       pollMs: 60_000,
       when: () => false, // order events don't change reviews; just the slow poll
-      errorText: 'Could not load reviews.',
     },
   );
+  protected readonly list = this.reviewList.list;
 
   /** Tab badge; keeps the last count while the list is cleared for a tab switch. */
   protected readonly reportedCount = linkedSignal<AdminOrderReviewPage | null, number | undefined>({

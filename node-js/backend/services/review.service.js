@@ -16,6 +16,18 @@ import { emptyRating } from "../models/rating-summary.schema.js";
 import { ROLES } from "../models/user.model.js";
 import { ApiError } from "../utils/api-error.js";
 import { paginationMeta } from "../utils/pagination.js";
+import {
+  allOf,
+  anyMatch,
+  dayRange,
+  facetsIf,
+  fixedFacet,
+  flagFacet,
+  idFacet,
+  inList,
+  mapValues,
+  textSearch,
+} from "./admin-accounts.js";
 import * as rewardEvents from "./reward-events.js";
 import {
   notify,
@@ -695,16 +707,85 @@ export function orderGroup(order, reviews) {
   };
 }
 
-/** What a restaurant may see: published reviews of it and its dishes, never the rider's. */
-const restaurantFilter = (restaurantId, query = {}) => ({
-  restaurant: restaurantId,
-  status: REVIEW_STATUS.PUBLISHED,
-  target: query.target ?? { $in: [T.RESTAURANT, T.FOOD] },
-  ...(query.foodItemId && { foodItem: toId(query.foodItemId) }),
-  ...(query.rating && { rating: query.rating }),
-  ...(query.responded === true && { "response.text": { $exists: true } }),
-  ...(query.responded === false && { "response.text": { $exists: false } }),
-});
+// Filters panel values shared by the restaurant and rider lists.
+export const RATINGS = ["1", "2", "3", "4", "5"];
+export const REPLY_STATES = ["needed", "replied"];
+export const WITH_OR_WITHOUT = ["with", "without"];
+export const STARS = Object.fromEntries(RATINGS.map((r) => [r, { rating: Number(r) }]));
+const REPLIED = { "response.text": { $exists: true } };
+const NOT_REPLIED = { "response.text": { $exists: false } };
+const REPLY_MATCH = { needed: NOT_REPLIED, replied: REPLIED };
+const PHOTO_MATCH = {
+  with: { "images.0": { $exists: true } },
+  without: { "images.0": { $exists: false } },
+};
+const COMMENT_MATCH = {
+  with: { comment: { $exists: true, $nin: ["", null] } },
+  without: { comment: { $in: ["", null] } },
+};
+
+/**
+ * What a restaurant may see: published reviews of it and its dishes, never the rider's; narrowed
+ * by the Filters panel (target, rating, reply, photos, dish: one value or several, any of them),
+ * the older single filters (foodItemId, responded), the day written and a search over the order
+ * number, dish and words.
+ */
+function restaurantFilter(restaurantId, query = {}) {
+  return allOf(
+    {
+      restaurant: restaurantId,
+      status: REVIEW_STATUS.PUBLISHED,
+      target: { $in: [T.RESTAURANT, T.FOOD] },
+    },
+    inList("target", query.target),
+    anyMatch(query.rating, STARS),
+    anyMatch(query.reply, REPLY_MATCH),
+    anyMatch(query.photos, PHOTO_MATCH),
+    inList("foodItem", query.dish, toId),
+    query.foodItemId && { foodItem: toId(query.foodItemId) },
+    query.responded === true && REPLIED,
+    query.responded === false && NOT_REPLIED,
+    dayRange("createdAt", query.createdFrom, query.createdTo),
+    textSearch(query.search, ["orderNumber", "foodName", "comment"]),
+  );
+}
+
+/** An aggregation expression: the text at `path` is not empty. */
+const hasText = (path) => ({ $gt: [{ $strLenCP: { $ifNull: [path, ""] } }, 0] });
+const hasPhotos = { $gt: [{ $size: { $ifNull: ["$images", []] } }, 0] };
+/** Grouped per order (the restaurant list's rows): one row per order and value. */
+export const perOrder = (path) => [{ $group: { _id: { o: "$order", v: path } } }];
+/** One row per order with each flag 1 when any of its matching reviews is so. */
+const orderFlags = (flags) => [
+  {
+    $group: {
+      _id: "$order",
+      ...mapValues(flags, (cond) => ({ $max: { $cond: [cond, 1, 0] } })),
+    },
+  },
+];
+const flagsOf = (names) => Object.fromEntries(names.map((n) => [n, { $eq: [`$${n}`, 1] }]));
+
+/**
+ * The restaurant review list's Filters panel: each option counts orders with a matching review
+ * (the rows are orders). Each facet is also the filter of the same name.
+ */
+const RESTAURANT_FACETS = {
+  target: fixedFacet([T.RESTAURANT, T.FOOD], "$_id.v", perOrder("$target")),
+  rating: fixedFacet(RATINGS, { $toString: "$_id.v" }, perOrder("$rating")),
+  reply: flagFacet(
+    flagsOf(REPLY_STATES),
+    orderFlags({
+      needed: { $not: [hasText("$response.text")] },
+      replied: hasText("$response.text"),
+    }),
+  ),
+  photos: flagFacet(
+    flagsOf(WITH_OR_WITHOUT),
+    orderFlags({ with: hasPhotos, without: { $not: [hasPhotos] } }),
+  ),
+  dish: idFacet("$_id.v", FoodItem, { stages: perOrder("$foodItem") }),
+};
 
 function restaurantOrderView({ customerName, reviews, ...group }, reported) {
   return {
@@ -715,14 +796,17 @@ function restaurantOrderView({ customerName, reviews, ...group }, reported) {
   };
 }
 
-/** One row per order: its restaurant and dish reviews together. */
+/**
+ * One row per order: its restaurant and dish reviews together. `facets=1` adds the Filters
+ * panel's counts (orders), over this restaurant's reviews only.
+ */
 export async function restaurantOrders(ownerId, query, pagination) {
   const restaurant = await ownRestaurant(ownerId);
-  const { orderIds, pagination: meta } = await orderPage(
-    restaurantFilter(restaurant._id, query),
-    query.sort,
-    pagination,
-  );
+  const filterFor = (q) => restaurantFilter(restaurant._id, q);
+  const [{ orderIds, pagination: meta }, facets] = await Promise.all([
+    orderPage(filterFor(query), query.sort, pagination),
+    facetsIf(query, Review, RESTAURANT_FACETS, filterFor),
+  ]);
   const reviews = await Review.find({
     ...restaurantFilter(restaurant._id),
     order: { $in: orderIds },
@@ -731,6 +815,7 @@ export async function restaurantOrders(ownerId, query, pagination) {
   return {
     items: groupReviews(orderIds, reviews).map((g) => restaurantOrderView(g, reported)),
     pagination: meta,
+    ...facets,
   };
 }
 
@@ -807,21 +892,39 @@ export async function deleteResponse(ownerId, reviewId) {
 }
 
 // Rider
+/** The rider's own published ratings matching the Filters panel, the day written and a search. */
+function riderFilter(userId, query = {}) {
+  return allOf(
+    { target: T.RIDER, deliveryPartner: userId, status: REVIEW_STATUS.PUBLISHED },
+    anyMatch(query.rating, STARS),
+    anyMatch(query.comment, COMMENT_MATCH),
+    dayRange("createdAt", query.createdFrom, query.createdTo),
+    textSearch(query.search, ["orderNumber", "comment"]),
+  );
+}
+
+/** The rider ratings' Filters panel (rows are reviews). */
+const RIDER_FACETS = {
+  rating: fixedFacet(RATINGS, { $toString: "$rating" }),
+  comment: flagFacet({ with: hasText("$comment"), without: { $not: [hasText("$comment")] } }),
+};
+
+/**
+ * The rider's ratings (the summary covers all of them). `facets=1` adds the Filters panel's
+ * counts, over this rider's ratings only.
+ */
 export async function riderList(userId, query, pagination) {
-  const filter = {
-    target: T.RIDER,
-    deliveryPartner: userId,
-    status: REVIEW_STATUS.PUBLISHED,
-    ...(query.rating && { rating: query.rating }),
-  };
-  const [profile, result] = await Promise.all([
+  const filterFor = (q) => riderFilter(userId, q);
+  const [profile, result, facets] = await Promise.all([
     DeliveryPartner.findOne({ user: userId }).select("rating"),
-    page(filter, query, pagination),
+    page(filterFor(query), query, pagination),
+    facetsIf(query, Review, RIDER_FACETS, filterFor),
   ]);
   const reported = await reportedBy(userId, result.items);
   return {
     summary: profile?.rating ?? emptyRating(),
     items: result.items.map((r) => presentForRider(r, reported)),
     pagination: result.pagination,
+    ...facets,
   };
 }

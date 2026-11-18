@@ -1,21 +1,20 @@
 import { TableLabels } from '../../../../shared/list/table-labels';
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { form } from '@angular/forms/signals';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatPaginatorModule } from '@angular/material/paginator';
-import { IconComponent, SelectOption } from 'nexprime';
+import { IconComponent } from 'nexprime';
 import { AdminRewardsService } from '../../../../core/services/admin/admin-rewards.service';
-import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
+import { ListEmpty } from '../../../../shared/components/list-empty/list-empty';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
-import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
-import { pagedList } from '../../../../shared/list/paged-list';
-import { REWARD_TYPE_LABEL, RewardType } from '../../../../shared/models/rewards.models';
+import { ListToolbar } from '../../../../shared/components/list-toolbar/list-toolbar';
+import { datesSection, filteredList, optionsSection } from '../../../../shared/list/filtered-list';
+import { REWARD_TYPE_LABEL } from '../../../../shared/models/rewards.models';
 
 /** Reward distribution history: every welcome, birthday and campaign reward given. */
 @Component({
   selector: 'bb-reward-history',
   imports: [
-    TableLabels,DatePipe, NP_FORM_FIELDS, MatPaginatorModule, IconComponent, EmptyState, PageHeader],
+    TableLabels,DatePipe, ListToolbar, MatPaginatorModule, IconComponent, ListEmpty, PageHeader],
   templateUrl: './reward-history.html',
   styleUrl: './reward-history.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,15 +22,14 @@ import { REWARD_TYPE_LABEL, RewardType } from '../../../../shared/models/rewards
 export class RewardHistoryPage {
   private readonly api = inject(AdminRewardsService);
   protected readonly typeLabel = REWARD_TYPE_LABEL;
-  protected readonly filterModel = signal({ rewardType: '' });
-  protected readonly filters = form(this.filterModel);
-  protected readonly typeOptions: SelectOption[] = [
-    { value: '', label: 'All rewards' },
-    ...Object.entries(REWARD_TYPE_LABEL).map(([value, label]) => ({ value, label })),
+  protected readonly filterSections = [
+    optionsSection('rewardType', 'Reward', REWARD_TYPE_LABEL),
+    optionsSection('status', 'State', { PENDING: 'Paying', ISSUED: 'Paid' }),
+    optionsSection('campaign', 'Campaign'), // from the API's counts
+    datesSection('claimed', 'Given'),
   ];
-  protected readonly list = pagedList(
-    (page, limit) =>
-      this.api.claims({ rewardType: (this.filterModel().rewardType || undefined) as RewardType | undefined, page, limit }),
-    { filterKey: () => this.filterModel().rewardType, errorText: 'Could not load the reward history.' },
-  );
+  protected readonly claims = filteredList((query) => this.api.claims(query), {
+    errorText: 'Could not load the reward history.',
+  });
+  protected readonly list = this.claims.list;
 }

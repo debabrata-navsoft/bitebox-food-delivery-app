@@ -10,6 +10,7 @@ import {
   Payment,
 } from "../../models/order.model.js";
 import { REFUND_STATUS, Refund } from "../../models/refund.model.js";
+import { Restaurant } from "../../models/restaurant.model.js";
 import { User } from "../../models/user.model.js";
 import { emitOrderUpdated } from "../../sockets/events.js";
 import { ApiError } from "../../utils/api-error.js";
@@ -22,6 +23,17 @@ import {
   rupees,
 } from "../order-notifications.js";
 import { startSweepLoop } from "../../utils/sweep-loop.js";
+import {
+  allOf,
+  facetsIf,
+  fixedFacet,
+  flagFacet,
+  idFacet,
+  inList,
+  listOf,
+  mapValues,
+  toId,
+} from "../admin-accounts.js";
 import * as rewardEvents from "../reward-events.js";
 import { mockProvider } from "./mock.provider.js";
 import { razorpayFromEnv } from "./razorpay.provider.js";
@@ -675,57 +687,116 @@ function adminRow(p) {
   };
 }
 
-/**
- * All payments, newest first, filterable by status, method, provider, date and a search over the
- * order number and the customer's name, email or phone. Includes the order number and customer.
- */
 /** `orderState` filter: where the order stands (finance finds cancelled orders still holding money). */
 const ORDER_STATES = Object.freeze({
   active: ACTIVE_STATUSES,
   delivered: [ORDER_STATUS.DELIVERED],
   cancelled: [ORDER_STATUS.CANCELLED, ORDER_STATUS.REJECTED],
 });
+export const PAYMENT_PROVIDERS = Object.freeze(["cash_on_delivery", "razorpay", "mock"]);
 
-export async function adminList(
-  { status, method, provider, orderState, search, from, to, customer },
-  pagination,
-) {
-  const filter = {};
-  if (customer) filter.user = customer; // the payer is always the order's customer
-  if (status) filter.status = status;
-  if (method) filter.method = method;
-  if (provider) filter.provider = provider;
-  if (orderState)
-    filter.order = {
-      $in: await Order.distinct("_id", { status: { $in: ORDER_STATES[orderState] } }),
-    };
-  if (from || to)
-    filter.createdAt = { ...(from && { $gte: from }), ...(to && { $lte: to }) };
-  if (search) {
-    const pattern = new RegExp(escapeRegex(search), "i");
-    const ids = (docs) => docs.map((d) => d._id);
-    const [orders, users] = await Promise.all([
-      Order.find({ orderNumber: pattern }).select("_id").limit(200).lean(),
-      User.find({ $or: [{ name: pattern }, { email: pattern }, { phone: pattern }] })
-        .select("_id")
-        .limit(200)
-        .lean(),
-    ]);
-    filter.$or = [{ order: { $in: ids(orders) } }, { user: { $in: ids(users) } }];
-  }
-  const [items, total] = await Promise.all([
-    Payment.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit)
-      .populate("order", "orderNumber status")
-      .populate("user", "name email"),
-    Payment.countDocuments(filter),
+/** Stages adding each payment's order as `o` ({ status, restaurant }), for filters and facets on it. */
+export const orderStages = () => [
+  {
+    $lookup: {
+      from: Order.collection.name,
+      localField: "order",
+      foreignField: "_id",
+      pipeline: [{ $project: { status: 1, restaurant: 1 } }],
+      as: "o",
+    },
+  },
+  { $set: { o: { $first: "$o" } } },
+];
+
+/** A match on payments by order number or the customer's name, email or phone; null without a search. */
+export async function paymentSearch(search) {
+  if (!search) return null;
+  const pattern = new RegExp(escapeRegex(search), "i");
+  const ids = (docs) => docs.map((d) => d._id);
+  const [orders, users] = await Promise.all([
+    Order.find({ orderNumber: pattern }).select("_id").limit(200).lean(),
+    User.find({ $or: [{ name: pattern }, { email: pattern }, { phone: pattern }] })
+      .select("_id")
+      .limit(200)
+      .lean(),
   ]);
+  return { $or: [{ order: { $in: ids(orders) } }, { user: { $in: ids(users) } }] };
+}
+
+/**
+ * Runs `stages` (payments), newest first, and loads one page of them with their order and
+ * customer. Returns { items (documents), total }.
+ */
+export async function paymentPage(stages, pagination, sort = { createdAt: -1, _id: -1 }) {
+  const [{ rows, total }] = await Payment.aggregate([
+    ...stages,
+    { $sort: sort },
+    {
+      $facet: {
+        rows: [{ $skip: pagination.skip }, { $limit: pagination.limit }, { $project: { _id: 1 } }],
+        total: [{ $count: "n" }],
+      },
+    },
+  ]);
+  const docs = await Payment.find({ _id: { $in: rows.map((r) => r._id) } })
+    .populate("order", "orderNumber status cancellation")
+    .populate("user", "name email");
+  const byId = new Map(docs.map((d) => [String(d._id), d]));
   return {
-    items: items.map(adminRow),
-    pagination: paginationMeta(pagination, total),
+    items: rows.map((r) => byId.get(String(r._id))).filter(Boolean),
+    total: total[0]?.n ?? 0,
   };
+}
+
+/**
+ * The transactions list's stages: payment filters (status, method, provider: each one value or
+ * several; the customer, dates, search), then, when asked for, the order's state and restaurant.
+ */
+async function adminStages({ status, method, provider, orderState, restaurant, search, from, to, customer }) {
+  const stages = [
+    {
+      $match: allOf(
+        customer && { user: toId(customer) }, // the payer is always the order's customer
+        inList("status", status),
+        inList("method", method),
+        inList("provider", provider),
+        (from || to) && { createdAt: { ...(from && { $gte: from }), ...(to && { $lte: to }) } },
+        await paymentSearch(search),
+      ),
+    },
+  ];
+  const states = listOf(orderState);
+  const onOrder = allOf(
+    states.length && { "o.status": { $in: states.flatMap((s) => ORDER_STATES[s]) } },
+    inList("o.restaurant", restaurant, toId),
+  );
+  return Object.keys(onOrder).length ? [...stages, ...orderStages(), { $match: onOrder }] : stages;
+}
+
+/** The transactions list's Filters panel (each facet is also the filter of the same name). */
+const ADMIN_FACETS = {
+  status: fixedFacet(Object.values(P), "$status"),
+  method: fixedFacet(Object.values(PAYMENT_METHODS), "$method"),
+  provider: fixedFacet(PAYMENT_PROVIDERS, "$provider"),
+  orderState: flagFacet(
+    mapValues(ORDER_STATES, (statuses) => ({ $in: [{ $ifNull: ["$o.status", null] }, statuses] })),
+    orderStages,
+  ),
+  restaurant: idFacet("$o.restaurant", Restaurant, { stages: orderStages }),
+};
+
+/**
+ * All payments, newest first, filterable by status, method, provider, the order's state and
+ * restaurant (each one value or several, any of them), the customer, dates and a search over the
+ * order number and the customer's name, email or phone. `facets=1` adds the Filters panel's counts.
+ */
+export async function adminList(query, pagination) {
+  const [{ items, total }, facets] = await Promise.all([
+    adminStages(query).then((stages) => paymentPage(stages, pagination)),
+    facetsIf(query, Payment, ADMIN_FACETS, adminStages),
+  ]);
+  return { items: items.map(adminRow), pagination: paginationMeta(pagination, total), ...facets };
 }
 
 /** One payment with its refunds and the gateway events applied to it (the audit trail). */

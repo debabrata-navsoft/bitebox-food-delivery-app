@@ -1,7 +1,6 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { form } from '@angular/forms/signals';
 import {
   ButtonComponent,
   IconComponent,
@@ -13,21 +12,25 @@ import { filter } from 'rxjs';
 import { MyOffersService } from '../../../core/services/my-offers.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
+import { ListEmpty } from '../../../shared/components/list-empty/list-empty';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
 import { conditionsLabel, discountLabel, itemsLabel } from '../../../shared/coupons/coupon-labels';
-import { STATUS_OPTIONS, loaded, rowActions } from '../../../shared/coupons/coupon-list';
+import {
+  COUPON_STATUS_SECTION,
+  DISCOUNT_TYPE_SECTION,
+  loaded,
+  rowActions,
+} from '../../../shared/coupons/coupon-list';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { pagedList } from '../../../shared/list/paged-list';
+import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
+import { datesSection, filteredList } from '../../../shared/list/filtered-list';
 import { TableLabels } from '../../../shared/list/table-labels';
 import { COMPACT_MENU_WIDTH, toggleEndAligned } from '../../../shared/menu/end-aligned-menu';
 import {
   AdminCoupon,
   COUPON_STATUS_LABEL,
   COUPON_STATUS_TONE,
-  CouponQuery,
 } from '../../../shared/models/checkout.models';
 import { formatPaise } from '../../../shared/pipes/money.pipes';
 import { OfferFormDialog } from './offer-form-dialog/offer-form-dialog';
@@ -45,12 +48,12 @@ const SAVED: Partial<Record<AdminCoupon['status'], string>> = {
   selector: 'bb-restaurant-offers',
   imports: [
     DatePipe,
-    NP_FORM_FIELDS,
+    ListToolbar,
     ButtonComponent,
     IconComponent,
     MenuComponent,
     PaginationComponent,
-    EmptyState,
+    ListEmpty,
     PageHeader,
     StatTile,
     TableLabels,
@@ -74,22 +77,19 @@ export class RestaurantOffers {
   /** Hidden while loading or after an error. */
   protected readonly totals = computed(() => loaded(this.stats));
 
-  protected readonly filterModel = signal({ search: '', status: '' });
-  protected readonly filters = form(this.filterModel);
-  protected readonly statusOptions = STATUS_OPTIONS;
+  protected readonly filterSections = [
+    COUPON_STATUS_SECTION,
+    DISCOUNT_TYPE_SECTION,
+    // Offers running at some time in the range (`from` / `to` as instants).
+    datesSection('valid', 'Runs between', ['from', 'to']),
+  ];
 
-  protected readonly list = pagedList(
-    (page, limit) => {
-      const f = this.filterModel();
-      return this.service.list({
-        search: f.search.trim() || undefined,
-        status: (f.status || undefined) as CouponQuery['status'],
-        page,
-        limit,
-      });
-    },
-    { filterKey: () => JSON.stringify(this.filterModel()), errorText: 'Could not load your offers.' },
-  );
+  /** The restaurant's own offers; the panel's counts cover only them. */
+  protected readonly offers = filteredList((query) => this.service.list(query), {
+    errorText: 'Could not load your offers.',
+    instants: true,
+  });
+  protected readonly list = this.offers.list;
 
   protected readonly toggleMenu = (menu: MenuComponent, event: Event) =>
     toggleEndAligned(menu, event, COMPACT_MENU_WIDTH);

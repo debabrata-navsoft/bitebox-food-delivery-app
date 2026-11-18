@@ -14,14 +14,12 @@
 @if (tab() === 'analytics') {
   <bb-review-analytics />
 } @else {
-  <div class="filters" role="group" aria-label="Filter reviews">
-    <np-text-input [formField]="filters.search" ariaLabel="Search reviews" placeholder="Order number, customer, dish or words" icon="search" clearable />
-    <np-select [formField]="filters.target" ariaLabel="About" [options]="targetOptions" />
-    @if (tab() === 'all') {
-      <np-select [formField]="filters.status" ariaLabel="Status" [options]="statusOptions" />
-    }
-    <np-select [formField]="filters.rating" ariaLabel="Rating" [options]="ratingOptions" />
-  </div>
+  <bb-list-toolbar
+    [list]="reviewList"
+    [sections]="filterSections()"
+    searchLabel="Search reviews"
+    placeholder="Order number, customer, dish or words"
+  />
 
   @if (list.error(); as message) {
     <div class="bb-alert error" role="alert">
@@ -36,10 +34,12 @@
         <span class="bb-skeleton row-skeleton"></span>
       }
     } @else if (list.empty()) {
-      <bb-empty-state
+      <bb-list-empty
+        [list]="reviewList"
         [icon]="tab() === 'reported' ? 'verified_user' : 'star'"
-        [title]="tab() === 'reported' ? 'No reported reviews' : 'No reviews match these filters'"
+        [title]="tab() === 'reported' ? 'No reported reviews' : 'No reviews yet'"
         [message]="tab() === 'reported' ? 'Reports from customers, restaurants and riders appear here.' : ''"
+        noMatch="No reviews match these filters"
       />
     } @else {
       <ul class="rows" [class.bb-dim]="list.loading()">

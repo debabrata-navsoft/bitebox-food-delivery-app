@@ -1,14 +1,12 @@
 import { TableLabels } from '../../../../shared/list/table-labels';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { form } from '@angular/forms/signals';
 import { MatDialog } from '@angular/material/dialog';
 import {
   ButtonComponent,
   IconComponent,
   MenuComponent,
   PaginationComponent,
-  SelectOption,
   type MenuItem,
 } from 'nexprime';
 import { COMPACT_MENU_WIDTH, toggleEndAligned } from '../../../../shared/menu/end-aligned-menu';
@@ -18,17 +16,17 @@ import { AdminRewardsService } from '../../../../core/services/admin/admin-rewar
 import { errorMessage } from '../../../../core/services/api-error';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
-import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
+import { ListEmpty } from '../../../../shared/components/list-empty/list-empty';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
-import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
-import { pagedList } from '../../../../shared/list/paged-list';
+import { ListToolbar } from '../../../../shared/components/list-toolbar/list-toolbar';
+import { datesSection, filteredList, optionsSection } from '../../../../shared/list/filtered-list';
 import {
   AdminCampaign,
   CAMPAIGN_STATUS_LABEL,
   CAMPAIGN_STATUS_TONE,
   CAMPAIGN_TYPE_LABEL,
+  CUSTOMER_GROUP_LABEL,
   CampaignStatus,
-  CampaignType,
 } from '../../../../shared/models/rewards.models';
 import { CampaignDetailDialog } from '../campaign-detail-dialog/campaign-detail-dialog';
 import { CampaignFormDialog } from '../campaign-form-dialog/campaign-form-dialog';
@@ -40,7 +38,7 @@ type Action = 'activate' | 'pause' | 'end';
 @Component({
   selector: 'bb-reward-campaigns',
   imports: [
-    TableLabels,DatePipe, NP_FORM_FIELDS, ButtonComponent, MenuComponent, PaginationComponent, IconComponent, EmptyState, PageHeader],
+    TableLabels,DatePipe, ListToolbar, ButtonComponent, MenuComponent, PaginationComponent, IconComponent, ListEmpty, PageHeader],
   templateUrl: './reward-campaigns.html',
   styleUrl: './reward-campaigns.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,30 +54,18 @@ export class RewardCampaignsPage {
   protected readonly typeLabel = CAMPAIGN_TYPE_LABEL;
   protected readonly busy = signal<string | null>(null);
 
-  protected readonly filterModel = signal({ status: '', type: '', search: '' });
-  protected readonly filters = form(this.filterModel);
-  protected readonly statusOptions: SelectOption[] = [
-    { value: '', label: 'Any status' },
-    ...Object.entries(CAMPAIGN_STATUS_LABEL).map(([value, label]) => ({ value, label })),
-  ];
-  protected readonly typeOptions: SelectOption[] = [
-    { value: '', label: 'Any type' },
-    ...Object.entries(CAMPAIGN_TYPE_LABEL).map(([value, label]) => ({ value, label })),
+  protected readonly filterSections = [
+    optionsSection('status', 'Status', CAMPAIGN_STATUS_LABEL),
+    optionsSection('type', 'Type', CAMPAIGN_TYPE_LABEL),
+    optionsSection('trigger', 'How customers get it', { CLAIM: 'Claimed', ORDER: 'On orders' }),
+    optionsSection('customerGroup', 'Customers', CUSTOMER_GROUP_LABEL),
+    datesSection('runs', 'Runs'), // campaigns running on any day of the range
   ];
 
-  protected readonly list = pagedList(
-    (page, limit) => {
-      const f = this.filterModel();
-      return this.api.campaigns({
-        status: (f.status || undefined) as CampaignStatus | undefined,
-        type: (f.type || undefined) as CampaignType | undefined,
-        search: f.search.trim() || undefined,
-        page,
-        limit,
-      });
-    },
-    { filterKey: () => JSON.stringify(this.filterModel()), errorText: 'Could not load campaigns.' },
-  );
+  protected readonly campaigns = filteredList((query) => this.api.campaigns(query), {
+    errorText: 'Could not load campaigns.',
+  });
+  protected readonly list = this.campaigns.list;
 
   protected actions(c: AdminCampaign): Action[] {
     const moves: Record<CampaignStatus, Action[]> = {

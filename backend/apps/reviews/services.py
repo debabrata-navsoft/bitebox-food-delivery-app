@@ -4,12 +4,14 @@ editing, deleting, reporting), the public lists, the restaurant panel and the ri
 Admin moderation and analytics are in `moderation.py`.
 """
 
+import functools
 import uuid
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any
 
 from django.db import IntegrityError, transaction
-from django.db.models import Avg, Count, Max, Min, QuerySet, Sum
+from django.db.models import Avg, Count, Max, Min, Q, QuerySet, Sum
 from django.utils import timezone
 
 from apps.accounts.models import User
@@ -23,6 +25,7 @@ from apps.rbac.roles import Permission, Role
 from apps.restaurants.models import Restaurant
 from apps.restaurants.presenters import rating_json
 from common.api import ApiError
+from common.filters import Facet, apply_facets, days_between, text_search, with_facets
 from common.pagination import Page, paginate
 
 from . import rewards
@@ -37,6 +40,7 @@ from .models import (
     ReviewStatus,
     ReviewTarget,
 )
+from .serializers import RATINGS, WITH_OR_WITHOUT
 
 T = ReviewTarget
 
@@ -219,6 +223,19 @@ def order_page(
     return [g["order_id"] for g in rows], meta
 
 
+# A facet of a review list whose rows are orders (admin, restaurant): each option counts the
+# orders with a matching review (not the reviews).
+OrderFacet = functools.partial(Facet, per="order_id")
+
+
+def stars_facet(cls: Callable[..., Facet] = Facet) -> Facet:
+    """`rating`: whole stars ("1".."5"), each its own count."""
+    return cls("rating", values=RATINGS, cases={stars: Q(rating=int(stars)) for stars in RATINGS})
+
+
+REPLY_STATES = ["needed", "replied"]
+
+
 # ---------------------------------------------------------------------------
 # Restaurant
 # ---------------------------------------------------------------------------
@@ -229,26 +246,46 @@ def _own_restaurant(owner: User) -> Restaurant:
     return restaurant
 
 
+# The restaurant review list's Filters panel (rows are orders).
+RESTAURANT_FACETS = (
+    OrderFacet("target", values=[T.RESTAURANT, T.FOOD]),
+    stars_facet(OrderFacet),
+    OrderFacet(
+        "reply",
+        values=REPLY_STATES,
+        cases={"needed": Q(response__isnull=True), "replied": Q(response__isnull=False)},
+    ),
+    OrderFacet(
+        "photos",
+        values=WITH_OR_WITHOUT,
+        cases={"with": ~Q(images=[]), "without": Q(images=[])},
+    ),
+    # The restaurant's dishes with reviews (id, name, orders).
+    OrderFacet("dish", field="food_item_id", label="food_item__name"),
+)
+
+
 def _restaurant_reviews(
     restaurant: Restaurant, query: dict[str, Any] | None = None
 ) -> QuerySet[Review]:
-    """What a restaurant may see: published reviews of it and its dishes, never the rider's."""
+    """What a restaurant may see: published reviews of it and its dishes, never the rider's;
+    narrowed by RESTAURANT_FACETS, the older single filters (foodItemId, responded), the day
+    written and a search over the order number, dish and words."""
     query = query or {}
-    qs = Review.objects.filter(restaurant=restaurant, status=ReviewStatus.PUBLISHED)
-    qs = (
-        qs.filter(target=query["target"])
-        if query.get("target")
-        else qs.filter(target__in=[T.RESTAURANT, T.FOOD])
+    qs = Review.objects.filter(
+        restaurant=restaurant,
+        status=ReviewStatus.PUBLISHED,
+        target__in=[T.RESTAURANT, T.FOOD],
     )
+    qs = apply_facets(qs, query, RESTAURANT_FACETS)
     if query.get("food_item_id"):
         qs = qs.filter(food_item_id=query["food_item_id"])
-    if query.get("rating"):
-        qs = qs.filter(rating=query["rating"])
     if query.get("responded") is True:
         qs = qs.filter(response__isnull=False)
     elif query.get("responded") is False:
         qs = qs.filter(response__isnull=True)
-    return qs
+    qs = qs.filter(days_between(query, "created"))
+    return qs.filter(text_search(query.get("search"), "order_number", "food_name", "comment"))
 
 
 def _restaurant_order_view(group: dict[str, Any], reported: set[str]) -> dict[str, Any]:
@@ -263,7 +300,8 @@ def _restaurant_order_view(group: dict[str, Any], reported: set[str]) -> dict[st
 
 
 def restaurant_orders(owner: User, query: dict[str, Any], page: Page) -> dict[str, Any]:
-    """One row per order: its restaurant and dish reviews together."""
+    """One row per order: its restaurant and dish reviews together. `?facets=1` adds the Filters
+    panel's counts (orders), over this restaurant's reviews only."""
     restaurant = _own_restaurant(owner)
     order_ids, meta = order_page(_restaurant_reviews(restaurant, query), query.get("sort"), page)
     reviews = list(
@@ -271,7 +309,10 @@ def restaurant_orders(owner: User, query: dict[str, Any], page: Page) -> dict[st
     )
     reported = _reported_by(owner, reviews)
     items = [_restaurant_order_view(g, reported) for g in group_reviews(order_ids, reviews)]
-    return {"items": items, "pagination": meta}
+    result = {"items": items, "pagination": meta}
+    return with_facets(
+        result, query, lambda q: _restaurant_reviews(restaurant, q), RESTAURANT_FACETS
+    )
 
 
 def restaurant_order(owner: User, order_id: uuid.UUID) -> dict[str, Any]:
@@ -370,11 +411,29 @@ def present_for_rider(review: Review, reported: set[str]) -> dict[str, Any]:
     }
 
 
-def rider_list(user: User, query: dict[str, Any], page: Page) -> dict[str, Any]:
+# The rider's ratings list's Filters panel (rows are reviews).
+RIDER_FACETS = (
+    stars_facet(),
+    Facet(
+        "comment",
+        values=WITH_OR_WITHOUT,
+        cases={"with": ~Q(comment=""), "without": Q(comment="")},
+    ),
+)
+
+
+def _rider_reviews(user: User, query: dict[str, Any]) -> QuerySet[Review]:
+    """The rider's own published ratings matching RIDER_FACETS, the day written and a search over
+    the order number and words."""
     qs = Review.objects.filter(target=T.RIDER, delivery_partner=user, status=ReviewStatus.PUBLISHED)
-    if query.get("rating"):
-        qs = qs.filter(rating=query["rating"])
-    items, meta = paginate(_sorted(qs, query.get("sort")), page)
+    qs = apply_facets(qs, query, RIDER_FACETS).filter(days_between(query, "created"))
+    return qs.filter(text_search(query.get("search"), "order_number", "comment"))
+
+
+def rider_list(user: User, query: dict[str, Any], page: Page) -> dict[str, Any]:
+    """The rider's ratings (summary over all of them). `?facets=1` adds the Filters panel's
+    counts, over this rider's ratings only."""
+    items, meta = paginate(_sorted(_rider_reviews(user, query), query.get("sort")), page)
     profile = DeliveryPartner.objects.filter(user=user).first()
     summary = (
         rating_json(profile)
@@ -382,11 +441,12 @@ def rider_list(user: User, query: dict[str, Any], page: Page) -> dict[str, Any]:
         else {"average": 0, "count": 0, "distribution": [0, 0, 0, 0, 0]}
     )
     reported = _reported_by(user, items)
-    return {
+    result = {
         "summary": summary,
         "items": [present_for_rider(r, reported) for r in items],
         "pagination": meta,
     }
+    return with_facets(result, query, lambda q: _rider_reviews(user, q), RIDER_FACETS)
 
 
 def _sorted(qs: QuerySet[Review], sort: str | None) -> QuerySet[Review]:

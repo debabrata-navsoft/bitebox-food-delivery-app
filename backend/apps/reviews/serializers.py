@@ -9,8 +9,10 @@ from typing import Any
 from rest_framework import serializers
 from rest_framework.fields import empty
 
+from apps.accounts.serializers import JoinedListQuery
 from apps.uploads.storage import is_uploaded_image_url
 from common.fields import QueryBoolean, UUIDRef
+from common.filters import FacetQuery, MultiIdField, multi_choice
 from common.validation import PageQuery
 
 from .models import (
@@ -146,16 +148,35 @@ class MyReviewsQuery(PageQuery):
     sort = choice_query(SORTS)
 
 
-class AdminReviewQuery(PageQuery):
-    target = choice_query(ReviewTarget.values)
-    status = choice_query(ReviewStatus.values)
+RATINGS = ["1", "2", "3", "4", "5"]
+# Reviews with or without photos / words (`photos`, `comment`).
+WITH_OR_WITHOUT = ["with", "without"]
+
+
+class AdminReviewQuery(FacetQuery, JoinedListQuery):
+    """GET /admin/reviews/orders."""
+
+    target = multi_choice(ReviewTarget.values)
+    status = multi_choice(ReviewStatus.values)  # none: every status but deleted
+    rating = multi_choice(RATINGS)
+    restaurant = MultiIdField()
+    # One restaurant's reviews (the admin restaurant account page; kept for its links).
     restaurant_id = UUIDRef(message="Invalid value", required=False)
     # Reviews written by one customer (the admin customer profile).
     customer = UUIDRef(message="Invalid value", required=False)
     # Orders with a review of one rider (user id; the admin rider account page).
     rider = UUIDRef(message="Invalid value", required=False)
     reported = QueryBoolean()
-    rating = rating_query()
+    day_range = "created"
+
+
+class RiderReviewQuery(FacetQuery, JoinedListQuery):
+    """GET /delivery/reviews."""
+
+    rating = multi_choice(RATINGS)
+    comment = multi_choice(WITH_OR_WITHOUT)
+    sort = choice_query(SORTS)
+    day_range = "created"
 
 
 class DaysQuery(serializers.Serializer):

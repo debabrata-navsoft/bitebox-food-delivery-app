@@ -5,10 +5,22 @@
   </header>
 
   @if (view() === 'settlements') {
+    <bb-list-toolbar
+      [list]="settlementList"
+      [sections]="settlementSections"
+      searchLabel="Search settlements"
+      placeholder="Order number"
+    />
     @if (settlements.error(); as message) {
       <p class="error" role="alert">{{ message }} <button class="bb-link-button" (click)="settlements.load(1)">Retry</button></p>
     } @else if (settlements.empty()) {
-      <bb-empty-state icon="receipt" title="Nothing settled yet" message="Delivered orders appear here." />
+      <bb-list-empty
+        [list]="settlementList"
+        icon="receipt"
+        title="Nothing settled yet"
+        message="Delivered orders appear here."
+        noMatch="No settlements match these filters"
+      />
     } @else if (settlements.data(); as d) {
       <ul class="rows" [class.bb-dim]="settlements.loading()">
         @for (s of d.items; track s.orderId) {
@@ -41,10 +53,22 @@
       />
     }
   } @else {
+    <bb-list-toolbar
+      [list]="payoutList"
+      [sections]="payoutSections"
+      searchLabel="Search payouts"
+      placeholder="Transfer reference"
+    />
     @if (payouts.error(); as message) {
       <p class="error" role="alert">{{ message }} <button class="bb-link-button" (click)="payouts.load(1)">Retry</button></p>
     } @else if (payouts.empty()) {
-      <bb-empty-state icon="landmark" title="No payouts yet" message="BiteBox pays out what you're owed regularly." />
+      <bb-list-empty
+        [list]="payoutList"
+        icon="landmark"
+        title="No payouts yet"
+        message="BiteBox pays out what you're owed regularly."
+        noMatch="No payouts match these filters"
+      />
     } @else if (payouts.data(); as d) {
       <ul class="rows" [class.bb-dim]="payouts.loading()">
         @for (p of d.items; track p.id) {

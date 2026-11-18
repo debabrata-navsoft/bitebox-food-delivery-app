@@ -1,3 +1,5 @@
+import { facetsParam, multi, searchParam } from "./openapi.filters.js";
+
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` });
 const ok = (data, description = "Success") => ({
   description,
@@ -300,24 +302,21 @@ export const paymentsPaths = {
       summary: "All payments",
       security: bearer,
       parameters: [
-        { in: "query", name: "status", schema: { type: "string" } },
-        { in: "query", name: "method", schema: { type: "string" } },
-        { in: "query", name: "provider", schema: { type: "string" } },
-        {
-          in: "query",
-          name: "orderState",
-          schema: {
-            type: "string",
-            enum: ["active", "delivered", "cancelled"],
-          },
-          description: "Where the order stands; cancelled includes rejected",
-        },
+        multi("status", ["pending", "paid", "failed", "refunded", "partially_refunded", "cancelled"]),
+        multi("method", ["cod", "online"]),
+        multi("provider", ["cash_on_delivery", "razorpay", "mock"]),
+        multi("orderState", ["active", "delivered", "cancelled"], "Where the order stands; cancelled includes rejected"),
+        multi("restaurant", "id", "Restaurant ids (the orders' restaurants)"),
+        searchParam("Order number, or the customer's name, email or phone"),
+        { in: "query", name: "from", schema: { type: "string", format: "date-time" }, description: "Created at or after" },
+        { in: "query", name: "to", schema: { type: "string", format: "date-time" }, description: "Created at or before" },
         {
           in: "query",
           name: "customer",
           schema: { type: "string" },
           description: "Payments of this customer's orders (user id)",
         },
+        facetsParam(["status", "method", "provider", "orderState", "restaurant"], [], ["restaurant"]),
         ...paging,
       ],
       responses: { 200: ok({ type: "object" }), 403: err("Not an admin") },
