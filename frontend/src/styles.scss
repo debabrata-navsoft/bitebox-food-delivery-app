@@ -1784,3 +1784,15 @@ $text-button: '.mat-mdc-button-base:not(.mat-mdc-icon-button)';
 body.bb-map-full-open {
   overflow: hidden;
 }
+
+// Panel icon rail: a group's flyout menu. The pane and panel are Material's (outside the
+// component), so they are styled here; the menu's contents are in panel-shell.scss. The menu
+// starts over its icon (overlapTrigger) and the whole pane moves right, beside the 72px rail and
+// level with the icon, so nothing invisible covers the other rail icons.
+.cdk-overlay-pane:has(> .bb-rail-menu) {
+  margin-left: 62px;
+}
+
+.bb-rail-menu {
+  min-width: 220px;
+}

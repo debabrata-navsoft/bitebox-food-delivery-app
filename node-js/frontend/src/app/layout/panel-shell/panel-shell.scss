@@ -106,9 +106,68 @@
     max(var(--bb-page-gutter), env(safe-area-inset-right));
 
   @include bp.desktop-up {
+    --bb-page-gutter: 24px;
     padding-inline: var(--bb-page-gutter);
   }
 }
+
+// Desktop sidebar toggle: a round button on the sidebar's edge (280px, or the 72px rail), centred on the header's
+// 64px height. It glides with the sidebar, its arrows turn round as it opens and closes, and it
+// fills amber on hover (plum would vanish into the sidebar).
+.sidebar-toggle {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 16px);
+  left: calc(280px - 16px);
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--bb-border);
+  border-radius: 50%;
+  background: var(--bb-surface);
+  box-shadow: var(--bb-shadow-sm);
+  color: var(--bb-ink-muted);
+  cursor: pointer;
+  transition:
+    left 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+  --bb-icon-size: 18px;
+
+  .icon {
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  &:hover {
+    border-color: var(--bb-amber);
+    background: var(--bb-amber);
+    color: var(--bb-on-accent);
+    box-shadow: var(--bb-shadow);
+    transform: scale(1.08);
+  }
+  &:active {
+    transform: scale(0.94);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--bb-plum);
+    outline-offset: 2px;
+  }
+
+  // Icon rail: on the rail's edge, arrows pointing the way it will open.
+  &.collapsed {
+    left: calc(72px - 16px);
+
+    .icon {
+      transform: rotate(180deg);
+    }
+  }
+}
+
 
 .spacer {
   flex: 1;
@@ -168,14 +227,24 @@
   }
 }
 
+// Admin, restaurant and rider pages use the screen's width (wider than the customer site's
+// 1200px column), with a slimmer side gap on desktops.
 .page {
+  --bb-page-gutter: 16px;
   flex: 1;
   width: 100%;
-  max-width: var(--bb-content-max);
+  max-width: 1680px;
   margin-inline: auto;
   padding: var(--bb-space-5) var(--bb-page-gutter) calc(var(--bb-space-7) + env(safe-area-inset-bottom));
   padding-inline: max(var(--bb-page-gutter), env(safe-area-inset-left))
     max(var(--bb-page-gutter), env(safe-area-inset-right));
+
+  @include bp.tablet-up {
+    --bb-page-gutter: 20px;
+  }
+  @include bp.desktop-up {
+    --bb-page-gutter: 24px;
+  }
 
   // Phones: the page title sits closer to the header bar.
   @include bp.phone-only {
@@ -248,6 +317,9 @@
   place-items: center;
   background: var(--bb-amber);
   color: var(--bb-on-accent);
+  // As a list item's end slot, Material colours the count with its own (theme-dependent) token;
+  // keep it dark on amber in both themes.
+  --mat-list-list-item-trailing-supporting-text-color: var(--bb-on-accent);
   font-size: 0.75rem;
   font-weight: 800;
 }
@@ -256,4 +328,106 @@
   @include bp.phone-only {
     display: none !important;
   }
+}
+
+// Desktop icon rail (sidebar collapsed): 72px of icons with tooltips; groups open a flyout menu.
+// The widths are set here (not measured by the sidenav) so the sidebar and the page glide together.
+@include bp.desktop-up {
+  .sidebar {
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .content {
+    margin-left: 280px !important;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .shell.rail {
+    .content {
+      margin-left: 72px !important;
+    }
+
+    .sidebar {
+      width: 72px;
+    }
+
+    .sidebar-brand {
+      align-items: center;
+      padding-inline: 0;
+    }
+
+    .mark {
+      display: block;
+      border-radius: 10px;
+    }
+
+    .nav {
+      padding-inline: 10px;
+      --mat-list-list-item-leading-icon-start-space: 14px;
+      --mat-list-list-item-leading-icon-end-space: 0;
+
+      a,
+      .group {
+        position: relative;
+        padding-inline: 0;
+      }
+
+      // Only the icon: the title and any chevron go; a count becomes a corner badge.
+      ::ng-deep .mdc-list-item__content,
+      .chevron {
+        display: none;
+      }
+      ::ng-deep .mdc-list-item__end {
+        position: static;
+        margin: 0;
+        padding: 0;
+      }
+
+      .nav-badge {
+        position: absolute;
+        top: 4px;
+        right: 6px;
+        min-width: 16px;
+        height: 16px;
+        padding: 0 4px;
+        font-size: 0.62rem;
+        line-height: 16px;
+      }
+
+      .group.active {
+        --mat-list-list-item-leading-icon-color: var(--bb-amber);
+        background: rgb(255 181 46 / 18%);
+        border-radius: 12px;
+      }
+    }
+
+    .sidebar-footer .signout {
+      justify-content: center;
+      min-width: 0;
+      padding-inline: 0;
+
+      np-icon {
+        margin: 0;
+      }
+    }
+  }
+}
+
+// Rail flyout contents (from this template, so styled here): a title, the links, their counts.
+.rail-menu-title {
+  margin: 0;
+  padding: var(--bb-space-2) var(--bb-space-4) var(--bb-space-1);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bb-ink-muted);
+}
+
+.mat-mdc-menu-item.active {
+  color: var(--bb-plum);
+  font-weight: 700;
+}
+
+.menu-badge {
+  margin-left: var(--bb-space-2);
 }

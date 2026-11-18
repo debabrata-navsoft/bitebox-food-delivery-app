@@ -1,5 +1,20 @@
 <a class="skip-link" href="#main">Skip to content</a>
-<mat-sidenav-container class="shell" autosize>
+<!-- Desktop: the full sidebar or a narrow icon rail. A round button on the line between the
+     sidebar and the page, level with the header. -->
+@if (isDesktop()) {
+  <button
+    type="button"
+    class="sidebar-toggle"
+    [class.collapsed]="rail()"
+    (click)="toggleSidebar()"
+    [attr.aria-label]="rail() ? 'Expand the menu' : 'Collapse the menu'"
+    [attr.aria-expanded]="!rail()"
+  >
+    <np-icon name="chevrons-left" class="mat-icon icon" />
+  </button>
+}
+
+<mat-sidenav-container class="shell" [class.rail]="rail()">
   <mat-sidenav
     #drawer
     class="sidebar"
@@ -10,13 +25,62 @@
     aria-label="Panel navigation"
   >
     <div class="sidebar-brand">
-      <bb-brand-logo variant="light" [height]="34" />
-      <span class="panel-chip">{{ panelLabel() }}</span>
+      @if (rail()) {
+        <img class="mark" src="/bitebox-favicon.svg" [alt]="'BiteBox ' + panelLabel()" width="36" height="36" />
+      } @else {
+        <bb-brand-logo variant="light" [height]="34" />
+        <span class="panel-chip">{{ panelLabel() }}</span>
+      }
     </div>
 
     <mat-nav-list class="nav">
       @for (item of navItems(); track item.label) {
-        @if (item.children; as children) {
+        @if (item.children && rail()) {
+          <!-- Icon rail: the group's pages in a flyout menu. -->
+          <button
+            mat-list-item
+            type="button"
+            class="group rail-trigger"
+            [class.active]="groupActive(item)"
+            [matMenuTriggerFor]="groupMenu"
+            #trigger="matMenuTrigger"
+            (menuOpened)="railMenuOpened(trigger)"
+            [matTooltip]="item.label"
+            matTooltipPosition="right"
+            [attr.aria-label]="item.label"
+          >
+            <np-icon [name]="item.icon | npIcon" class="mat-icon" matListItemIcon />
+            @if (groupBadge(item); as count) {
+              <span matListItemMeta class="nav-badge" [attr.aria-label]="count + ' new'">{{
+                count
+              }}</span>
+            }
+          </button>
+          <mat-menu
+            #groupMenu="matMenu"
+            xPosition="after"
+            [overlapTrigger]="true"
+            [hasBackdrop]="false"
+            class="bb-rail-menu"
+          >
+            <p class="rail-menu-title">{{ item.label }}</p>
+            @for (child of item.children; track child.label) {
+              <a
+                mat-menu-item
+                [routerLink]="child.link"
+                [queryParams]="child.query"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="child.query ? withQuery : { exact: !!child.exact }"
+              >
+                <np-icon [name]="child.icon | npIcon" class="mat-icon" matButtonIcon />
+                <span>{{ child.label }}</span>
+                @if (child.badge?.(); as count) {
+                  <span class="nav-badge menu-badge">{{ count }}</span>
+                }
+              </a>
+            }
+          </mat-menu>
+        } @else if (item.children; as children) {
           @let open = openGroups().has(item.label);
           <button
             mat-list-item
@@ -51,6 +115,9 @@
     <ng-template #link let-item>
       <a
         mat-list-item
+        [matTooltip]="rail() ? item.label : ''"
+        matTooltipPosition="right"
+        [attr.aria-label]="rail() ? item.label : null"
         [routerLink]="item.link"
         [queryParams]="item.query"
         routerLinkActive="active"
@@ -68,9 +135,18 @@
     </ng-template>
 
     <div class="sidebar-footer">
-      <button mat-button class="signout" (click)="logout()">
+      <button
+        mat-button
+        class="signout"
+        (click)="logout()"
+        [matTooltip]="rail() ? 'Sign out' : ''"
+        matTooltipPosition="right"
+        [attr.aria-label]="rail() ? 'Sign out' : null"
+      >
         <np-icon name="log-out" class="mat-icon" matButtonIcon />
-        Sign out
+        @if (!rail()) {
+          Sign out
+        }
       </button>
     </div>
   </mat-sidenav>
