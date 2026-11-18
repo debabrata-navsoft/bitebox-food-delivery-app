@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { ButtonComponent, SelectComponent, SelectOption } from 'nexprime';
+import { DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ButtonComponent, IconComponent } from 'nexprime';
 import {
   BB_DIALOG_DATA,
   BbDialog,
@@ -7,13 +8,15 @@ import {
   BbDialogTitle,
 } from '../../../../shared/dialog/bb-dialog';
 import { RestaurantOrder } from '../../../../shared/models/order-management.models';
+import { ItemCountPipe } from '../../../../shared/pipes/item-count.pipe';
+import { InrPipe } from '../../../../shared/pipes/money.pipes';
 
-const CHOICES = [10, 15, 20, 25, 30, 40, 45, 60, 75, 90];
+const CHOICES = [10, 15, 20, 25, 30, 45, 60, 90];
 
 /** Accept an order with a preparation time (master prompt §3B); closes with the minutes. */
 @Component({
   selector: 'bb-accept-dialog',
-  imports: [BbDialogTitle, ButtonComponent, SelectComponent],
+  imports: [DatePipe, BbDialogTitle, ButtonComponent, IconComponent, InrPipe, ItemCountPipe],
   templateUrl: './accept-dialog.html',
   styleUrl: './accept-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,16 +24,10 @@ const CHOICES = [10, 15, 20, 25, 30, 40, 45, 60, 75, 90];
 export class AcceptDialog {
   protected readonly order = inject<RestaurantOrder>(BB_DIALOG_DATA);
   protected readonly ref = inject<BbDialogRef<number>>(BbDialogRef);
-  protected readonly options: SelectOption[] = CHOICES.map((m) => ({
-    value: String(m),
-    label: `${m} minutes`,
-  }));
+  protected readonly choices = CHOICES;
   protected readonly minutes = signal(20);
-
-  protected pick(value: unknown): void {
-    const m = Number(value);
-    if (m) this.minutes.set(m);
-  }
+  /** When the food should be ready if accepted now. */
+  protected readonly readyAt = computed(() => Date.now() + this.minutes() * 60_000);
 }
 
 export const askPrepTime = (dialog: BbDialog, order: RestaurantOrder) =>

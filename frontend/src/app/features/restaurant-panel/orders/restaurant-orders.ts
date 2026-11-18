@@ -29,7 +29,11 @@ import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { pagedList } from '../../../shared/list/paged-list';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
 import { OrderStatus } from '../../../shared/models/checkout.models';
-import { RestaurantAction, RestaurantOrder } from '../../../shared/models/order-management.models';
+import {
+  RestaurantAction,
+  RestaurantOrder,
+  collectsCash,
+} from '../../../shared/models/order-management.models';
 import { ItemCountPipe } from '../../../shared/pipes/item-count.pipe';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
@@ -85,6 +89,7 @@ export class RestaurantOrders {
 
   protected readonly tabs = TABS;
   protected readonly next = NEXT;
+  protected readonly collectsCash = collectsCash;
   protected readonly tab = signal<Tab>('new');
   protected readonly busy = signal<ReadonlySet<string>>(new Set());
   protected readonly now = signal(Date.now());

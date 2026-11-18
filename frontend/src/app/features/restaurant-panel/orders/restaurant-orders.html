@@ -2,7 +2,13 @@
   title="Orders"
   subtitle="Accept new orders quickly: unanswered ones are rejected automatically."
 >
-  <np-button severity="primary" variant="outlined" icon="refresh-cw" label="Refresh" (clicked)="board.refresh()" />
+  <np-button
+    severity="primary"
+    variant="outlined"
+    icon="refresh-cw"
+    label="Refresh"
+    (clicked)="board.refresh()"
+  />
 </bb-page-header>
 
 @if (board.noRestaurant()) {
@@ -115,6 +121,7 @@
       @for (o of shown(); track o.id) {
         <article
           class="bb-card order"
+          [attr.data-status]="o.status"
           [class.urgent]="o.status === 'pending' && minutesLeft(o) <= 3"
           [attr.aria-labelledby]="'order-' + o.id"
         >
@@ -148,21 +155,24 @@
             @for (item of o.items; track item.foodItem) {
               <li>
                 <bb-veg-badge [veg]="item.isVeg" />
-                <span class="qty">{{ item.quantity }} ×</span>
+                <span class="qty">{{ item.quantity }}×</span>
                 <span>{{ item.name }}</span>
               </li>
             }
           </ul>
 
           @if (o.note) {
-            <p class="note"><np-icon name="sticky-note" class="mat-icon" matButtonIcon />{{ o.note }}</p>
+            <p class="note">
+              <np-icon name="sticky-note" class="mat-icon" matButtonIcon />{{ o.note }}
+            </p>
           }
 
           <div class="total">
-            @let isPaid = o.paymentMethod === 'online' || o.paymentStatus === 'paid';
-            <span>
-              {{ o | itemCount }} ·
-              <span [class.pay-paid]="isPaid">{{ isPaid ? 'Paid online' : 'Cash on delivery' }}</span>
+            @let cash = collectsCash(o);
+            <span class="bb-muted">{{ o | itemCount }}</span>
+            <span class="bb-badge pay" [class]="cash ? 'tone-warn' : 'tone-good'">
+              <np-icon [name]="cash ? 'banknote' : 'circle-check'" class="mat-icon" matButtonIcon />
+              {{ cash ? 'Cash on delivery' : 'Paid online' }}
             </span>
             <strong>{{ o.pricing.totalPaise | inr }}</strong>
           </div>
@@ -205,7 +215,11 @@
             </div>
           } @else {
             <p class="waiting">
-              <np-icon [name]="(o.riderAssigned ? 'two_wheeler' : 'hourglass_top') | npIcon" class="mat-icon" matButtonIcon />
+              <np-icon
+                [name]="(o.riderAssigned ? 'two_wheeler' : 'hourglass_top') | npIcon"
+                class="mat-icon"
+                matButtonIcon
+              />
               @switch (o.status) {
                 @case ('ready_for_pickup') {
                   Looking for a nearby rider…
@@ -219,7 +233,10 @@
               }
             </p>
             @if (o.pickupBy) {
-              <p class="bb-muted pickup-by">Cancelled automatically at {{ o.pickupBy | date: 'h:mm a' }} if no rider picks it up.</p>
+              <p class="bb-muted pickup-by">
+                Cancelled automatically at {{ o.pickupBy | date: 'h:mm a' }} if no rider picks it
+                up.
+              </p>
             }
           }
         </article>

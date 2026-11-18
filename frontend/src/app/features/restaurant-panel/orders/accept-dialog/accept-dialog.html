@@ -1,20 +1,40 @@
 <h2 bbDialogTitle>Accept order {{ order.orderNumber }}</h2>
-<div class="bb-dialog__content">
-  <p class="bb-muted">How long will the food take? The customer sees when it should be ready.</p>
-  <np-select
-    class="times"
-    label="Ready in"
-    [options]="options"
-    [value]="'' + minutes()"
-    (valueChange)="pick($event)"
-  />
+<div class="bb-dialog__content body">
+  <p class="summary">
+    <span>{{ order | itemCount }} · {{ order.deliveryAddress.recipientName }}</span>
+    <strong>{{ order.pricing.totalPaise | inr }}</strong>
+  </p>
+
+  <div>
+    <p class="question" id="prep-label">How long will the food take?</p>
+    <div class="times" role="group" aria-labelledby="prep-label">
+      @for (m of choices; track m) {
+        <button
+          type="button"
+          class="time"
+          [attr.aria-pressed]="minutes() === m"
+          (click)="minutes.set(m)"
+        >
+          {{ m }}<small>min</small>
+        </button>
+      }
+    </div>
+  </div>
+
+  <p class="bb-alert success ready" aria-live="polite">
+    <np-icon name="chef-hat" class="mat-icon" matButtonIcon />
+    <span
+      >Ready by <strong>{{ readyAt() | date: 'h:mm a' }}</strong> · the customer sees this
+      time</span
+    >
+  </p>
 </div>
 <div class="bb-dialog__actions">
-  <np-button variant="soft" severity="secondary" label="Cancel" (clicked)="ref.close()" />
+  <np-button variant="outlined" severity="secondary" label="Cancel" (clicked)="ref.close()" />
   <np-button
     severity="success"
     icon="check"
-    [label]="'Accept · ready in ' + minutes() + ' min'"
+    [label]="'Accept · ' + minutes() + ' min'"
     (clicked)="ref.close(minutes())"
   />
 </div>

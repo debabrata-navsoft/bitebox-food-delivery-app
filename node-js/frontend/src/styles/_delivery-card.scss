@@ -68,13 +68,18 @@
   color: var(--bb-ink-muted);
 }
 
-// Buttons share the row equally (np-button renders its own <button> inside the host).
+// Buttons share the row equally (np-button renders its own <button> inside the host). When the
+// labels don't fit side by side (narrow phones), each takes a full row; wrap-reverse keeps the
+// main action (last in the markup) on top.
 .work-actions {
   display: flex;
+  flex-wrap: wrap-reverse;
   gap: var(--bb-space-2);
 
+  // Equal widths from a zero basis, but never narrower than the label: that is what wraps.
   > * {
-    flex: 1;
+    flex: 1 1 0;
+    min-width: min(max-content, 100%);
   }
 
   ::ng-deep .np-button {

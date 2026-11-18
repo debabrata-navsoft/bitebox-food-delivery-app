@@ -96,11 +96,10 @@ export class CurrentDelivery {
     if (o.status === 'arrived_at_restaurant') {
       step.hint = 'Collect the order from the counter, then tap Picked up.';
     } else if (action === 'delivered') {
-      const paid = o.paymentMethod === 'online' || o.paymentStatus === 'paid';
       const code = o.deliveryOtpRequired ? " and ask for the customer's 4-digit code" : '';
-      step.hint = paid
-        ? `Hand over the order${code} (already paid online).`
-        : `Hand over the order, collect the cash${code}.`;
+      step.hint = collectsCash(o)
+        ? `Hand over the order, collect the cash${code}.`
+        : `Hand over the order${code} (already paid online).`;
     }
     return step;
   });
