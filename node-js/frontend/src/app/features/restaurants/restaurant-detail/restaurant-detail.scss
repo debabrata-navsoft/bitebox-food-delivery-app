@@ -100,6 +100,9 @@
 
 .menu-layout {
   display: grid;
+  // One column on phones and tablets, capped to the screen: without minmax(0, …) the column
+  // grows to its widest content (the sideways offers row) and the whole page scrolls sideways.
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--bb-space-5);
   padding-block: var(--bb-space-5) var(--bb-space-7);
 

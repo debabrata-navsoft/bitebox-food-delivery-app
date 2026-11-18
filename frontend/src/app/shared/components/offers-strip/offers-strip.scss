@@ -1,5 +1,8 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
+  min-width: 0;
 }
 .head {
   display: flex;
@@ -26,14 +29,18 @@ h2 {
     text-decoration: underline;
   }
 }
-// One row that scrolls sideways, each offer snapping into place.
+// One row that scrolls sideways, each offer snapping into place: one card per view on phones,
+// two side by side on tablets and desktops.
 ul {
   list-style: none;
   margin: 0;
   padding: 0 0 var(--bb-space-2);
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(280px, 340px);
+  grid-auto-columns: 100%;
+  @include bp.tablet-up {
+    grid-auto-columns: calc((100% - var(--bb-space-3)) / 2);
+  }
   align-items: start;
   gap: var(--bb-space-3);
   overflow-x: auto;
