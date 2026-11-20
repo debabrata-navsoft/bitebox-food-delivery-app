@@ -4,6 +4,11 @@
   display: block;
 }
 
+// Nothing to show (already on, or dismissed): take no gap in the parent's flex column.
+:host:empty {
+  display: none;
+}
+
 .icon {
   flex: none;
   display: grid;
