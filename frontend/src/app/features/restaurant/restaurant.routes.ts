@@ -16,7 +16,7 @@ export const RESTAURANT_ROUTES: Routes = [
   {
     path: 'details',
     title: 'Restaurant details | BiteBox Restaurant',
-    loadComponent: () => import('./details/restaurant-details').then((m) => m.RestaurantDetails),
+    loadComponent: () => import('../../shared/components/restaurant-details/restaurant-details').then((m) => m.RestaurantDetails),
   },
   {
     path: 'verification',

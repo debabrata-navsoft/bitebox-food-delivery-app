@@ -13,7 +13,7 @@ import {
   BbDialog,
   BbDialogRef,
   BbDialogTitle,
-} from '../../../shared/dialog/bb-dialog';
+} from '../../dialog/bb-dialog';
 import { RiderGps } from '../../../core/services/rider-gps.service';
 import {
   RoadRoute,
@@ -21,11 +21,11 @@ import {
   etaMinutes,
   fromCoordinates,
 } from '../../../core/services/routing.service';
-import { rerouteWhileMoving } from '../../../shared/components/tracking-map/delivery-tracking';
-import { TrackingMap } from '../../../shared/components/tracking-map/tracking-map';
+import { rerouteWhileMoving } from '../tracking-map/delivery-tracking';
+import { TrackingMap } from '../tracking-map/tracking-map';
 import { RiderOrder, collectsCash } from '../../../core/models/order-management.models';
-import { ItemCountPipe } from '../../../shared/pipes/item-count.pipe';
-import { InrPipe } from '../../../shared/pipes/money.pipes';
+import { ItemCountPipe } from '../../pipes/item-count.pipe';
+import { InrPipe } from '../../pipes/money.pipes';
 
 export type OfferDecision = 'accept' | 'decline';
 

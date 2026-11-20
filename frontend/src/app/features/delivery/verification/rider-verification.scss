@@ -1,15 +1,10 @@
-@use 'breakpoints' as bp;
-
 :host {
   display: grid;
   gap: var(--bb-space-4);
 }
 
-h3 {
-  margin: 0 0 var(--bb-space-3);
-}
-
 .state {
+  margin: 0; // the layout's gap spaces it (.bb-alert has its own bottom margin)
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -24,14 +19,4 @@ h3 {
 .reason {
   display: block;
   margin-top: 4px;
-}
-
-.grid {
-  display: grid;
-  gap: var(--bb-space-4);
-
-  @include bp.desktop-up {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: start;
-  }
 }

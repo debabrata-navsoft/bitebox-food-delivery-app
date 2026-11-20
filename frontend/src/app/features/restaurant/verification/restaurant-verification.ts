@@ -4,20 +4,17 @@ import {
   computed,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { errorMessage } from '../../../shared/utils/api-error';
-import { KycService } from '../../../core/services/kyc.service';
+import { Restaurant } from '../../../core/models/catalog.models';
 import { MyRestaurantService } from '../../../core/services/my-restaurant.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { KycDocuments } from '../../../shared/components/kyc/kyc-documents/kyc-documents';
-import { PayoutAccountForm } from '../../../shared/components/kyc/payout-account-form/payout-account-form';
+import { KycVerification } from '../../../shared/components/kyc/kyc-verification/kyc-verification';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { Restaurant } from '../../../core/models/catalog.models';
-import { KycSummary } from '../../../core/models/kyc.models';
+import { RestaurantLegalForm } from '../../../shared/components/restaurant-legal-form/restaurant-legal-form';
+import { errorMessage } from '../../../shared/utils/api-error';
 import { StatusBanner } from '../status-banner/status-banner';
-import { RestaurantLegalForm } from './legal-form/restaurant-legal-form';
 
 /**
  * What BiteBox needs before a restaurant goes live: legal and tax details (FSSAI, GST),
@@ -25,32 +22,22 @@ import { RestaurantLegalForm } from './legal-form/restaurant-legal-form';
  */
 @Component({
   selector: 'bb-restaurant-verification',
-  imports: [
-    RouterLink,
-    RestaurantLegalForm,
-    PageHeader,
-    StatusBanner,
-    KycDocuments,
-    PayoutAccountForm,
-  ],
+  imports: [RouterLink, RestaurantLegalForm, PageHeader, StatusBanner, KycVerification],
   templateUrl: './restaurant-verification.html',
   styleUrl: './restaurant-verification.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RestaurantVerification {
   private readonly restaurants = inject(MyRestaurantService);
-  private readonly kyc = inject(KycService);
   private readonly notify = inject(NotificationService);
+  private readonly verification = viewChild(KycVerification);
 
+  /** undefined while loading, null when the partner has no restaurant yet. */
   protected readonly restaurant = signal<Restaurant | null | undefined>(undefined);
-  protected readonly kycData = rxResource({ stream: () => this.kyc.summary() });
-  protected readonly summary = computed<KycSummary | null>(() =>
-    this.kycData.hasValue() ? this.kycData.value() : null,
-  );
   protected readonly canResubmit = computed(() =>
     ['rejected', 'resubmission_requested'].includes(this.restaurant()?.status ?? ''),
   );
-  protected readonly resubmitting = signal(false);
+  protected readonly resubmit = () => this.restaurants.resubmit();
 
   constructor() {
     this.restaurants.get().subscribe({
@@ -65,25 +52,6 @@ export class RestaurantVerification {
   /** The legal details changed: GST decides which documents are needed. */
   protected legalSaved(restaurant: Restaurant): void {
     this.restaurant.set(restaurant);
-    this.kycData.reload();
-  }
-
-  protected resubmit(): void {
-    this.resubmitting.set(true);
-    this.restaurants.resubmit().subscribe({
-      next: (restaurant) => {
-        this.resubmitting.set(false);
-        this.restaurant.set(restaurant);
-        this.notify.success('Sent for review. We will let you know soon.');
-      },
-      error: (err: unknown) => {
-        this.resubmitting.set(false);
-        this.notify.error(errorMessage(err));
-      },
-    });
-  }
-
-  protected bankSaved(summary: KycSummary): void {
-    this.kycData.set(summary);
+    this.verification()?.reloadDocuments();
   }
 }

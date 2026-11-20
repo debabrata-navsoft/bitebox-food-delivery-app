@@ -27,36 +27,36 @@ import {
   SpinnerComponent,
   ToggleComponent,
 } from 'nexprime';
-import { errorMessage, fieldErrors } from '../../../shared/utils/api-error';
+import { errorMessage, fieldErrors } from '../../utils/api-error';
 import {
   DeliveryLocationService,
   Place,
   extractAddressFromPlace,
 } from '../../../core/services/delivery-location.service';
-import { PlaceSearch } from '../../../shared/components/place-search/place-search';
+import { PlaceSearch } from '../place-search/place-search';
 import {
   GeolocationService,
   ImpreciseLocationError,
 } from '../../../core/services/geolocation.service';
 import { MyRestaurantService } from '../../../core/services/my-restaurant.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { ImageUpload } from '../../../shared/components/image-upload/image-upload';
-import { LatLng, MapPicker } from '../../../shared/components/map-picker/map-picker';
-import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { serverErrors, shownError } from '../../../shared/forms/form-errors';
+import { ImageUpload } from '../image-upload/image-upload';
+import { LatLng, MapPicker } from '../map-picker/map-picker';
+import { PageHeader } from '../page-header/page-header';
+import { serverErrors, shownError } from '../../forms/form-errors';
 import {
   POSTAL_CODE_PATTERN,
   emailRules,
   numberRange,
   phoneRules,
   requiredText,
-} from '../../../shared/validators/form-rules';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
+} from '../../validators/form-rules';
+import { NP_FORM_FIELDS } from '../../forms/np-form-fields';
 import { Restaurant, RestaurantInput, WeeklyHours } from '../../../core/models/catalog.models';
-import { rupeesToPaise } from '../../../shared/pipes/money.pipes';
-import { StatusBanner } from '../status-banner/status-banner';
-import { PhoneInput } from '../../../shared/components/phone-input/phone-input';
-import { dateToTime, timeToDate } from '../../../shared/utils/time-of-day';
+import { rupeesToPaise } from '../../pipes/money.pipes';
+import { StatusBanner } from '../../../features/restaurant/status-banner/status-banner';
+import { PhoneInput } from '../phone-input/phone-input';
+import { dateToTime, timeToDate } from '../../utils/time-of-day';
 import { PhotoGallery } from './photo-gallery/photo-gallery';
 import { WeeklyHoursEditor } from './weekly-hours/weekly-hours';
 

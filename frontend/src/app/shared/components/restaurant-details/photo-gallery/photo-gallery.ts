@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, model } from '@angular/core';
-import { ImageUpload } from '../../../../shared/components/image-upload/image-upload';
+import { ImageUpload } from '../../image-upload/image-upload';
 
 const MAX_PHOTOS = 8;
 

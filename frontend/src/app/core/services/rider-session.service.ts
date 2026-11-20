@@ -7,7 +7,7 @@ import {
   OfferDialog,
   offerProgress,
   openOfferDialog,
-} from '../../features/delivery/offer-dialog/offer-dialog';
+} from '../../shared/components/offer-dialog/offer-dialog';
 import { BbDialog, BbDialogRef } from '../../shared/dialog/bb-dialog';
 import { RiderDashboard, RiderOrder } from '../models/order-management.models';
 import { errorMessage } from '../../shared/utils/api-error';

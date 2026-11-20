@@ -5,8 +5,8 @@ import { IconComponent } from 'nexprime';
 import { AdminRestaurantStore } from '../../../../core/services/admin/admin-restaurant-accounts.service';
 import { MyRestaurantService } from '../../../../core/services/my-restaurant.service';
 import { loaded } from '../../../../shared/coupons/coupon-list';
-import { RestaurantDetails } from '../../../restaurant/details/restaurant-details';
-import { RestaurantLegalForm } from '../../../restaurant/verification/legal-form/restaurant-legal-form';
+import { RestaurantDetails } from '../../../../shared/components/restaurant-details/restaurant-details';
+import { RestaurantLegalForm } from '../../../../shared/components/restaurant-legal-form/restaurant-legal-form';
 
 /**
  * Edit a restaurant account: the partner's own details and legal forms, saving through the admin

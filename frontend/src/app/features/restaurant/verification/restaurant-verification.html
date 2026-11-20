@@ -9,46 +9,15 @@
     <a routerLink="/restaurant/details" class="bb-btn">Add restaurant details</a>
   </div>
 } @else if (restaurant(); as r) {
-  <bb-status-banner [restaurant]="r" [showFixLink]="false" />
-  @if (canResubmit()) {
-    <div class="resubmit">
-      <span class="bb-muted">Fixed everything that was asked?</span>
-      <button type="button" class="bb-btn" [disabled]="resubmitting()" (click)="resubmit()">
-        {{ resubmitting() ? 'Sending…' : 'Send for review' }}
-      </button>
-    </div>
-  }
-
-  <div class="grid">
-    <section class="bb-card" aria-labelledby="legal-title">
-      <h3 id="legal-title">Legal and tax details</h3>
-      <bb-restaurant-legal-form [restaurant]="r" (saved)="legalSaved($event)" />
-    </section>
-
-    <section class="bb-card" aria-labelledby="bank-title">
-      <h3 id="bank-title">Bank account</h3>
-      <bb-payout-account-form
-        [account]="summary()?.payoutAccount ?? null"
-        (saved)="bankSaved($event)"
-      />
-    </section>
-  </div>
-
-  <section class="bb-card" aria-labelledby="docs-title">
-    <header class="docs-head">
-      <h3 id="docs-title">Documents</h3>
-      @if (summary(); as s) {
-        <span class="bb-badge {{ s.complete ? 'tone-good' : 'tone-warn' }}">
-          {{ s.complete ? 'All approved' : 'In progress' }}
-        </span>
-      }
-    </header>
-    @if (summary(); as s) {
-      <bb-kyc-documents [summary]="s" (changed)="kycData.reload()" />
-    } @else {
-      <span class="bb-skeleton" style="height: 160px"></span>
-    }
-  </section>
+  <bb-kyc-verification
+    detailsTitle="Legal and tax details"
+    [canResubmit]="canResubmit()"
+    [resubmit]="resubmit"
+    (resubmitted)="restaurant.set($event)"
+  >
+    <bb-status-banner status [restaurant]="r" [showFixLink]="false" />
+    <bb-restaurant-legal-form [restaurant]="r" (saved)="legalSaved($event)" />
+  </bb-kyc-verification>
 } @else {
   <span class="bb-skeleton" style="height: 240px"></span>
 }

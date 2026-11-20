@@ -7,21 +7,17 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
 import { FormRoot, TreeValidationResult, form, pattern, required } from '@angular/forms/signals';
 import { IconComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
 import { errorMessage, fieldErrors } from '../../../shared/utils/api-error';
-import { KycService } from '../../../core/services/kyc.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { RiderService } from '../../../core/services/order-management.service';
-import { KycDocuments } from '../../../shared/components/kyc/kyc-documents/kyc-documents';
-import { PayoutAccountForm } from '../../../shared/components/kyc/payout-account-form/payout-account-form';
+import { KycVerification } from '../../../shared/components/kyc/kyc-verification/kyc-verification';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { serverErrors, shownError } from '../../../shared/forms/form-errors';
 import { POSTAL_CODE_PATTERN, requiredText } from '../../../shared/validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { KycSummary } from '../../../core/models/kyc.models';
 import {
   RIDER_VERIFICATION_COPY,
   RIDER_VERIFICATION_LABEL,
@@ -37,21 +33,16 @@ import {
  */
 @Component({
   selector: 'bb-rider-verification',
-  imports: [FormRoot, NP_FORM_FIELDS, IconComponent, PageHeader, KycDocuments, PayoutAccountForm],
+  imports: [FormRoot, NP_FORM_FIELDS, IconComponent, PageHeader, KycVerification],
   templateUrl: './rider-verification.html',
   styleUrl: './rider-verification.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RiderVerification {
   private readonly riders = inject(RiderService);
-  private readonly kyc = inject(KycService);
   private readonly notify = inject(NotificationService);
 
   protected readonly profile = signal<RiderProfile | null>(null);
-  protected readonly kycData = rxResource({ stream: () => this.kyc.summary() });
-  protected readonly summary = computed<KycSummary | null>(() =>
-    this.kycData.hasValue() ? this.kycData.value() : null,
-  );
   protected readonly status = computed(() => this.profile()?.verification?.status ?? 'pending');
   /** What the rider sees: "Not submitted" until everything is sent, then "In review". */
   protected readonly state = computed(() =>
@@ -63,7 +54,7 @@ export class RiderVerification {
   protected readonly label = RIDER_VERIFICATION_LABEL;
   protected readonly tone = RIDER_VERIFICATION_TONE;
   protected readonly copy = RIDER_VERIFICATION_COPY;
-  protected readonly resubmitting = signal(false);
+  protected readonly resubmit = () => this.riders.resubmit();
   protected readonly shownError = shownError;
 
   protected readonly model = signal({ line1: '', area: '', city: '', state: '', postalCode: '' });
@@ -108,20 +99,5 @@ export class RiderVerification {
       if (!fields.length) this.notify.error(errorMessage(err));
       return serverErrors(this.form, fields);
     }
-  }
-
-  protected resubmit(): void {
-    this.resubmitting.set(true);
-    this.riders.resubmit().subscribe({
-      next: (profile) => {
-        this.resubmitting.set(false);
-        this.profile.set(profile);
-        this.notify.success('Sent for review. We will let you know soon.');
-      },
-      error: (err: unknown) => {
-        this.resubmitting.set(false);
-        this.notify.error(errorMessage(err));
-      },
-    });
   }
 }
