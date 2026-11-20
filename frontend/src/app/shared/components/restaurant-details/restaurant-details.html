@@ -57,11 +57,7 @@
         </div>
 
         <div class="bb-form-row">
-          <bb-phone-input
-            [formField]="form.phone"
-            label="Phone"
-            [error]="shownError(form.phone)"
-          />
+          <bb-phone-input [formField]="form.phone" label="Phone" [error]="shownError(form.phone)" />
           <np-text-input
             [formField]="form.email"
             label="Email (optional)"
@@ -125,7 +121,8 @@
           </p>
           <bb-place-search (picked)="pickPlace($event)">
             @if (geo.supported) {
-              <np-button severity="primary"
+              <np-button
+                severity="primary"
                 variant="outlined"
                 icon="locate-fixed"
                 [label]="locating() ? 'Locating…' : 'Current location'"
@@ -191,9 +188,13 @@
     <aside class="side">
       <section class="bb-card" aria-labelledby="photo-title">
         <h2 class="bb-h3" id="photo-title">Cover photo</h2>
-        <bb-image-upload [(url)]="imageUrl" label="Add a cover photo" />
+        <bb-image-upload
+          [url]="imageUrl()"
+          (urlChange)="photosChanged({ imageUrl: $event })"
+          label="Add a cover photo"
+        />
         <h3 class="gallery-title">More photos</h3>
-        <bb-photo-gallery [(photos)]="photos" />
+        <bb-photo-gallery [photos]="photos()" (photosChange)="photosChanged({ photos: $event })" />
       </section>
 
       <section class="bb-card" aria-labelledby="hours-title">

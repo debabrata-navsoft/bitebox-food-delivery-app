@@ -1,6 +1,7 @@
 .tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  // Small thumbnails, three or more per row; the "Add a photo" box is one of them.
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
   gap: var(--bb-space-3);
 }
 

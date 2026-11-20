@@ -602,3 +602,19 @@ def test_absent_boolean_filters_are_not_false() -> None:
     total = owner.get("/api/v1/my/restaurant/foods").json()["data"]["pagination"]["total"]
     assert total == 8
     assert owner.get("/api/v1/my/restaurant/foods?available=false").json()["data"]["items"] == []
+
+
+def test_gallery_photos_are_saved_and_come_back_on_reload() -> None:
+    owner = as_(partner())
+    owner.post("/api/v1/my/restaurant", payload(), format="json")
+    photos = [
+        "http://localhost:8000/uploads/images/gallery-one.webp",
+        "https://res.cloudinary.example/bitebox/gallery-two.jpg",
+    ]
+
+    saved = owner.patch("/api/v1/my/restaurant", {**payload(), "photos": photos}, format="json")
+    assert saved.status_code == 200, saved.json()
+    assert saved.json()["data"]["restaurant"]["photos"] == photos
+
+    reloaded = owner.get("/api/v1/my/restaurant").json()["data"]["restaurant"]
+    assert reloaded["photos"] == photos

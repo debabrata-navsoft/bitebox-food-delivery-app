@@ -4,13 +4,23 @@
       [url]="photo"
       (urlChange)="set(i, $event)"
       aspectRatio="4 / 3"
+      variant="minimal"
       label="Replace photo"
     />
   }
   @if (canAdd()) {
-    <bb-image-upload url="" (urlChange)="add($event)" aspectRatio="4 / 3" label="Add a photo" />
+    <!-- Keyed: after each upload a fresh, empty box replaces the one that held the photo. -->
+    @for (key of [addBox()]; track key) {
+      <bb-image-upload
+        url=""
+        (urlChange)="add($event)"
+        aspectRatio="4 / 3"
+        variant="minimal"
+        label="Add photo"
+      />
+    }
   }
 </div>
 <p class="bb-muted small">
-  {{ photos().length }} of {{ max }} photos. Customers see them on your page.
+  {{ photos().length }} of {{ max }} photos (JPEG, PNG or WebP up to 2 MB each). Customers see them on your page.
 </p>

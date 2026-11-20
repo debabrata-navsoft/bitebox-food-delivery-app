@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, model } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, model, signal } from '@angular/core';
 import { ImageUpload } from '../../image-upload/image-upload';
 
 const MAX_PHOTOS = 8;
@@ -15,6 +15,8 @@ export class PhotoGallery {
   readonly photos = model<string[]>([]);
   protected readonly canAdd = computed(() => this.photos().length < MAX_PHOTOS);
   protected readonly max = MAX_PHOTOS;
+  /** Key of the "Add a photo" box: a new one after each upload, so the box starts empty again. */
+  protected readonly addBox = signal(0);
 
   /** A tile changed: a new URL replaces the photo, an empty one removes it. */
   protected set(index: number, url: string): void {
@@ -24,6 +26,8 @@ export class PhotoGallery {
   }
 
   protected add(url: string): void {
-    if (url) this.photos.update((list) => [...list, url]);
+    if (!url) return;
+    this.photos.update((list) => [...list, url]);
+    this.addBox.update((key) => key + 1); // the photo now has its own tile
   }
 }

@@ -34,6 +34,8 @@ export class ImageUpload {
   readonly label = input('Upload image');
   readonly aspectRatio = input<string | number>('16 / 9');
   readonly endpoint = input<UploadEndpoint>('images');
+  /** NexPrime's look: `minimal` is a compact "+" tile for small thumbnails (photo galleries). */
+  readonly variant = input<'default' | 'minimal'>('default');
 
   protected readonly maxBytes = MAX_IMAGE_BYTES;
   protected readonly preview = signal('');

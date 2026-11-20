@@ -60,7 +60,6 @@ import { dateToTime, timeToDate } from '../../utils/time-of-day';
 import { PhotoGallery } from './photo-gallery/photo-gallery';
 import { WeeklyHoursEditor } from './weekly-hours/weekly-hours';
 
-
 function emptyModel() {
   return {
     name: '',
@@ -228,6 +227,28 @@ export class RestaurantDetails {
         .join(', ') || null,
     );
     this.saved.set(this.snapshot());
+  }
+
+  /**
+   * The cover or gallery changed. On an existing restaurant the photos save straight away (an
+   * upload looks finished, so waiting for "Save changes" lost them on a refresh); a new
+   * restaurant sends them with "Submit for approval". Other unsaved edits stay unsaved.
+   */
+  protected photosChanged(change: { imageUrl?: string; photos?: string[] }): void {
+    if (change.imageUrl !== undefined) this.imageUrl.set(change.imageUrl);
+    if (change.photos) this.photos.set(change.photos);
+    if (!this.restaurant()) return;
+    this.service.update(change).subscribe({
+      next: (restaurant) => {
+        this.restaurant.set(restaurant);
+        this.saved.set(JSON.stringify({ ...JSON.parse(this.saved()), ...change }));
+        this.notify.success('Photos saved');
+      },
+      error: (err: unknown) =>
+        this.notify.error(
+          errorMessage(err, 'Could not save the photos. Press Save changes to try again.'),
+        ),
+    });
   }
 
   protected onCuisineKey(event: KeyboardEvent): void {
