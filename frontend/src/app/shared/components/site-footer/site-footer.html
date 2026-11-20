@@ -2,7 +2,9 @@
   @if (link.href) {
     <a [href]="link.href" target="_blank" rel="noopener noreferrer">{{ link.label }}</a>
   } @else {
-    <a [routerLink]="link.route" [queryParams]="link.queryParams" [fragment]="link.fragment">{{ link.label }}</a>
+    <a [routerLink]="link.route" [queryParams]="link.queryParams" [fragment]="link.fragment">{{
+      link.label
+    }}</a>
   }
 </ng-template>
 
@@ -31,16 +33,23 @@
       <div class="main">
         <!-- Brand -->
         <section class="brand" aria-label="About BiteBox">
-          <a routerLink="/" class="logo" aria-label="BiteBox home"><bb-brand-logo variant="light" [height]="34" /></a>
+          <a routerLink="/" class="logo" aria-label="BiteBox home"
+            ><bb-brand-logo variant="light" [height]="34"
+          /></a>
           <p>
-            Discover your favourite meals and get delicious food delivered straight to your doorstep. Fresh food, great
-            restaurants, and fast delivery — all in one place.
+            Discover your favourite meals and get delicious food delivered straight to your
+            doorstep. Fresh food, great restaurants, and fast delivery — all in one place.
           </p>
           @if (social.length) {
             <ul class="social" aria-label="Follow us">
               @for (s of social; track s.label) {
                 <li>
-                  <a [href]="s.href" target="_blank" rel="noopener noreferrer" [attr.aria-label]="s.label + ' (opens in a new tab)'">
+                  <a
+                    [href]="s.href"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    [attr.aria-label]="s.label + ' (opens in a new tab)'"
+                  >
                     <np-icon [name]="s.icon!" class="mat-icon" matButtonIcon />
                   </a>
                 </li>
@@ -70,9 +79,15 @@
               } @else {
                 <h2 class="group-title" [id]="'footer-group-' + i">{{ g.title }}</h2>
               }
-              <ul class="links" [id]="'footer-links-' + i" [hidden]="phone() && openGroup() !== g.title">
+              <ul
+                class="links"
+                [id]="'footer-links-' + i"
+                [hidden]="phone() && openGroup() !== g.title"
+              >
                 @for (link of g.links; track link.label) {
-                  <li><ng-container *ngTemplateOutlet="linkTpl; context: { $implicit: link }" /></li>
+                  <li>
+                    <ng-container *ngTemplateOutlet="linkTpl; context: { $implicit: link }" />
+                  </li>
                 }
               </ul>
             </nav>
@@ -85,7 +100,9 @@
         <section class="partners" aria-label="Partner with BiteBox">
           @for (p of partners; track p.title) {
             <article class="partner">
-              <span class="partner-icon"><np-icon [name]="p.icon" class="mat-icon" matButtonIcon /></span>
+              <span class="partner-icon"
+                ><np-icon [name]="p.icon" class="mat-icon" matButtonIcon
+              /></span>
               <div>
                 <h2>{{ p.title }}</h2>
                 <p>{{ p.text }}</p>
@@ -106,7 +123,7 @@
           <h2 id="payments-title">We accept</h2>
           <ul>
             @for (p of payments(); track p.label) {
-              <li><np-icon [name]="p.icon" class="mat-icon" matButtonIcon />{{ p.label }}</li>
+              <li><img [src]="p.image" alt="" width="20" height="20" />{{ p.label }}</li>
             }
           </ul>
         </section>

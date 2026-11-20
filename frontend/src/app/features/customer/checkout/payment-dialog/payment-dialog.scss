@@ -1,0 +1,89 @@
+@use 'breakpoints' as bp;
+
+.total {
+  margin: 0 0 var(--bb-space-3);
+}
+
+.options {
+  display: grid;
+  gap: var(--bb-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-space-3);
+  width: 100%;
+  padding: var(--bb-space-3);
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius-sm);
+  background: var(--bb-surface);
+  color: var(--bb-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--bb-plum);
+    box-shadow: var(--bb-shadow-sm);
+  }
+
+  > img {
+    flex: none;
+    border-radius: 14px;
+  }
+}
+
+.text {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+
+  strong {
+    font-size: 1rem;
+  }
+}
+
+// The brands each method covers; tablets and up only.
+.brands {
+  display: none;
+  flex: none;
+  align-items: center;
+  gap: var(--bb-space-3);
+
+  @include bp.tablet-up {
+    display: flex;
+  }
+}
+
+.brand {
+  padding: 3px 9px;
+  border: 1px solid color-mix(in srgb, var(--brand) 25%, transparent);
+  border-radius: 6px;
+  background: var(--bb-logo-tile);
+  color: var(--brand);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.offer {
+  color: var(--bb-success);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.chevron {
+  flex: none;
+  color: var(--bb-ink-muted);
+}

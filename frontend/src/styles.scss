@@ -22,6 +22,7 @@
   --bb-ink-muted: #6b6372;
   --bb-border: #e9e4ee;
   --bb-surface: #ffffff;
+  --bb-logo-tile: #ffffff; // payment brand marks sit on white in both themes
   --bb-surface-alt: #faf8fc;
   --bb-bg: #f6f3f9;
 
@@ -894,6 +895,11 @@ np-input-otp .otp.otp {
     flex: 1 1 auto;
     min-height: 0;
   }
+}
+
+// The checkout payment popup: less rounded corners.
+.bb-payment-dialog .cdk-dialog-container {
+  border-radius: var(--bb-radius);
 }
 
 .bb-location-detected-panel .cdk-dialog-container {

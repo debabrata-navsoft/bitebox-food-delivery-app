@@ -2,26 +2,56 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { Router, provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { EMPTY, Observable, of, throwError } from 'rxjs';
 import { CartService } from '../../../core/services/cart.service';
 import { AddressService, OrderService } from '../../../core/services/checkout-api.service';
 import { PaymentService } from '../../../core/services/payment.service';
 import { CartQuote } from '../../../core/models/checkout.models';
+import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { Checkout } from './checkout';
 
 const quote = (overrides: Partial<CartQuote> = {}): CartQuote => ({
   cart: {
     id: 'c1',
-    restaurant: { id: 'r1', name: 'Spice Route Kitchen', slug: 'spice-route-kitchen', isOpenNow: true, minOrderPaise: 0, avgPrepTimeMinutes: 25 },
-    items: [{ foodItemId: 'f1', name: 'Butter Chicken', isVeg: false, unitPricePaise: 34900, quantity: 2, lineTotalPaise: 69800, isAvailable: true }],
+    restaurant: {
+      id: 'r1',
+      name: 'Spice Route Kitchen',
+      slug: 'spice-route-kitchen',
+      isOpenNow: true,
+      minOrderPaise: 0,
+      avgPrepTimeMinutes: 25,
+    },
+    items: [
+      {
+        foodItemId: 'f1',
+        name: 'Butter Chicken',
+        isVeg: false,
+        unitPricePaise: 34900,
+        quantity: 2,
+        lineTotalPaise: 69800,
+        isAvailable: true,
+      },
+    ],
     itemCount: 2,
   },
   coupon: null,
   couponError: null,
   coins: null,
   address: { id: 'a1' } as CartQuote['address'],
-  delivery: { distanceMeters: 4000, distanceKind: 'straight_line', freeDelivery: true, freeDeliveryThresholdPaise: 49900 },
-  pricing: { subtotalPaise: 69800, discountPaise: 0, deliveryFeePaise: 0, platformFeePaise: 500, taxPaise: 3490, totalPaise: 73790 },
+  delivery: {
+    distanceMeters: 4000,
+    distanceKind: 'straight_line',
+    freeDelivery: true,
+    freeDeliveryThresholdPaise: 49900,
+  },
+  pricing: {
+    subtotalPaise: 69800,
+    discountPaise: 0,
+    deliveryFeePaise: 0,
+    platformFeePaise: 500,
+    taxPaise: 3490,
+    totalPaise: 73790,
+  },
   issues: [],
   canCheckout: true,
   ...overrides,
@@ -45,13 +75,24 @@ describe('Checkout', () => {
   const payments = {
     methods$: of([
       { method: 'cod', label: 'Cash on delivery', provider: 'cash_on_delivery', simulated: false },
-      { method: 'online', label: 'Test payment (simulated, no real money)', provider: 'mock', simulated: true },
+      {
+        method: 'online',
+        label: 'Test payment (simulated, no real money)',
+        provider: 'mock',
+        simulated: true,
+      },
     ]),
     pay: vi.fn(),
     abandon: vi.fn(() => of({ restored: true })),
   };
 
+  /** The payment popup: closes with `chosen` (EMPTY: dismissed). */
+  let chosen: Observable<string> = of('cod');
+  const dialog = { result: vi.fn(() => chosen) };
+
   beforeEach(async () => {
+    chosen = of('cod');
+    dialog.result.mockClear();
     quoteSignal.set(quote());
     cart.refresh.mockReset().mockImplementation(() => of(quoteSignal()));
     cart.reset.mockReset();
@@ -66,19 +107,18 @@ describe('Checkout', () => {
         { provide: OrderService, useValue: orders },
         { provide: AddressService, useValue: { list: () => of([]) } },
         { provide: PaymentService, useValue: payments },
+        { provide: BbDialog, useValue: dialog },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(Checkout);
     await fixture.whenStable();
   });
 
-  const placeButton = () => (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('button.place')!;
-  /** The UPI payment option's radio input. */
-  const upiOption = () =>
-    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('mat-radio-button'))
-      .find((b) => b.textContent?.includes('UPI'))
-      ?.querySelector<HTMLInputElement>('input') as HTMLInputElement;
-  const coinQuote = (overrides: Partial<NonNullable<CartQuote['coins']>> = {}): CartQuote['coins'] => ({
+  const placeButton = () =>
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('button.place')!;
+  const coinQuote = (
+    overrides: Partial<NonNullable<CartQuote['coins']>> = {},
+  ): CartQuote['coins'] => ({
     enabled: true,
     available: 500,
     requested: 0,
@@ -103,7 +143,9 @@ describe('Checkout', () => {
     await fixture.whenStable();
     const card = (fixture.nativeElement as HTMLElement).querySelector('bb-checkout-coins')!;
     expect(card.textContent).toContain('500 available');
-    const useMax = Array.from(card.querySelectorAll('button')).find((b) => b.textContent?.includes('Use max'))!;
+    const useMax = Array.from(card.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Use max'),
+    )!;
     useMax.click();
     expect(cart.setCoins).toHaveBeenCalledWith(500);
   });
@@ -113,7 +155,15 @@ describe('Checkout', () => {
     quoteSignal.set(
       quote({
         coins: coinQuote({ applied: 200, requested: 200, discountPaise: 2000 }),
-        pricing: { subtotalPaise: 69800, discountPaise: 0, deliveryFeePaise: 0, platformFeePaise: 500, taxPaise: 3490, coinDiscountPaise: 2000, totalPaise: 71790 },
+        pricing: {
+          subtotalPaise: 69800,
+          discountPaise: 0,
+          deliveryFeePaise: 0,
+          platformFeePaise: 500,
+          taxPaise: 3490,
+          coinDiscountPaise: 2000,
+          totalPaise: 71790,
+        },
       }),
     );
     await fixture.whenStable();
@@ -121,15 +171,23 @@ describe('Checkout', () => {
     expect(el.textContent).toContain('200 coins applied');
     expect(el.textContent).toContain('Paid with coins (200 coins)');
     expect(placeButton().textContent).toContain('₹717.90');
-    const remove = Array.from(el.querySelectorAll('bb-checkout-coins button')).find((b) => b.textContent?.includes('Remove')) as HTMLButtonElement;
+    const remove = Array.from(el.querySelectorAll('bb-checkout-coins button')).find((b) =>
+      b.textContent?.includes('Remove'),
+    ) as HTMLButtonElement;
     remove.click();
     expect(cart.removeCoins).toHaveBeenCalled();
   });
 
   it('warns when the chosen payment method cannot be used with coins', async () => {
-    quoteSignal.set(quote({ coins: coinQuote({ applied: 200, discountPaise: 2000, paymentMethods: ['online'] }) }));
+    quoteSignal.set(
+      quote({
+        coins: coinQuote({ applied: 200, discountPaise: 2000, paymentMethods: ['online'] }),
+      }),
+    );
     await fixture.whenStable();
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain("Coins can't be used with this payment method");
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      "Coins can't be used with this payment method",
+    );
   });
 
   it('shows the server total on the place-order button', () => {
@@ -138,7 +196,9 @@ describe('Checkout', () => {
   });
 
   it('disables ordering while the server reports blocking issues', async () => {
-    quoteSignal.set(quote({ canCheckout: false, issues: [{ code: 'RESTAURANT_CLOSED', message: 'Closed now' }] }));
+    quoteSignal.set(
+      quote({ canCheckout: false, issues: [{ code: 'RESTAURANT_CLOSED', message: 'Closed now' }] }),
+    );
     await fixture.whenStable();
     expect(placeButton().disabled).toBe(true);
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Closed now');
@@ -148,6 +208,7 @@ describe('Checkout', () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     orders.place.mockReturnValue(of({ order: { id: 'o1' }, checkout: null }));
     placeButton().click();
+    await fixture.whenStable();
     expect(orders.place).toHaveBeenCalledWith(
       expect.objectContaining({ addressId: 'a1', paymentMethod: 'cod', expectedTotalPaise: 73790 }),
       expect.any(String),
@@ -157,24 +218,43 @@ describe('Checkout', () => {
     expect(navigate).toHaveBeenCalledWith(['/orders', 'o1'], { queryParams: { placed: 1 } });
   });
 
-  it('re-prices the cart for the payment channel the customer picks', async () => {
+  it('asks how to pay, then re-prices the cart for that channel before placing', async () => {
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    orders.place.mockReturnValue(of({ order: { id: 'o1' }, checkout: null }));
+    payments.pay.mockResolvedValue({ status: 'paid' });
+    chosen = of('upi');
     cart.refresh.mockClear();
-    upiOption().click();
+    placeButton().click();
     await fixture.whenStable();
+    expect(dialog.result).toHaveBeenCalled();
     expect(cart.paymentChannel()).toBe('upi');
     expect(cart.refresh).toHaveBeenCalled();
+    expect(orders.place).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentMethod: 'online', paymentChannel: 'upi' }),
+      expect.any(String),
+    );
+  });
+
+  it('places nothing when the payment popup is closed', async () => {
+    chosen = EMPTY;
+    placeButton().click();
+    await fixture.whenStable();
+    expect(orders.place).not.toHaveBeenCalled();
   });
 
   it('pays online with the checkout session, then opens the order', async () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    const checkout = { provider: 'mock', simulated: true, providerOrderId: 'mock_order_1', amountPaise: 73790, currency: 'INR', orderNumber: 'BB-1' };
+    const checkout = {
+      provider: 'mock',
+      simulated: true,
+      providerOrderId: 'mock_order_1',
+      amountPaise: 73790,
+      currency: 'INR',
+      orderNumber: 'BB-1',
+    };
     orders.place.mockReturnValue(of({ order: { id: 'o1' }, checkout }));
     payments.pay.mockResolvedValue({ status: 'paid' });
-    const online = upiOption();
-    expect(online).toBeTruthy();
-    online.click();
-    await fixture.whenStable();
-    expect(placeButton().textContent).toContain('Place order & pay');
+    chosen = of('upi');
     placeButton().click();
     await fixture.whenStable();
     expect(orders.place).toHaveBeenCalledWith(
@@ -190,36 +270,52 @@ describe('Checkout', () => {
     placeButton().click();
     await fixture.whenStable();
     placeButton().click();
+    await fixture.whenStable();
     const [first, second] = orders.place.mock.calls.map((call) => call[1]);
     expect(first).toBe(second);
   });
 
   it('refreshes prices and uses a new key when prices changed', async () => {
     orders.place.mockReturnValue(
-      throwError(() => new HttpErrorResponse({ status: 409, error: { message: 'Prices changed', error: { code: 'PRICE_CHANGED' } } })),
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 409,
+            error: { message: 'Prices changed', error: { code: 'PRICE_CHANGED' } },
+          }),
+      ),
     );
     placeButton().click();
     await fixture.whenStable();
     expect(cart.refresh).toHaveBeenCalledTimes(2); // initial load + refresh after the conflict
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Prices changed');
     placeButton().click();
+    await fixture.whenStable();
     const [first, second] = orders.place.mock.calls.map((call) => call[1]);
     expect(first).not.toBe(second);
   });
 
   it('closing the payment page cancels the attempt and stays on checkout', async () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    const checkout = { provider: 'mock', simulated: true, providerOrderId: 'mock_order_1', amountPaise: 73790, currency: 'INR', orderNumber: 'BB-1' };
+    const checkout = {
+      provider: 'mock',
+      simulated: true,
+      providerOrderId: 'mock_order_1',
+      amountPaise: 73790,
+      currency: 'INR',
+      orderNumber: 'BB-1',
+    };
     orders.place.mockReturnValue(of({ order: { id: 'o1' }, checkout }));
     payments.pay.mockResolvedValue(null);
-    upiOption().click();
-    await fixture.whenStable();
+    chosen = of('upi');
     placeButton().click();
     await fixture.whenStable();
     expect(payments.abandon).toHaveBeenCalledWith('o1');
     expect(navigate).not.toHaveBeenCalled();
     expect(cart.reset).not.toHaveBeenCalled();
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('your order was not placed');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'your order was not placed',
+    );
     expect(placeButton().disabled).toBe(false);
   });
 });

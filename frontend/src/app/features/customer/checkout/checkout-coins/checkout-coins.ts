@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { FormRoot, form, validate } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { IconComponent } from 'nexprime';
@@ -25,7 +33,9 @@ export class CheckoutCoins {
   readonly remove = output<void>();
 
   protected readonly applied = computed(() => this.coins().applied > 0);
-  protected readonly redeemable = computed(() => this.coins().maxRedeemable >= this.coins().minCoins);
+  protected readonly redeemable = computed(
+    () => this.coins().maxRedeemable >= this.coins().minCoins,
+  );
   /** Rupee value of the most coins usable on this order. */
   protected readonly maxValuePaise = computed(() => {
     const c = this.coins();
@@ -42,10 +52,12 @@ export class CheckoutCoins {
       validate(path.coins, ({ value }) => {
         const c = this.coins();
         const v = value();
-        if (v === null || v === undefined) return { kind: 'required', message: 'Enter the coins to use' };
+        if (v === null || v === undefined)
+          return { kind: 'required', message: 'Enter the coins to use' };
         if (!Number.isInteger(v)) return { kind: 'integer', message: 'Use whole coins' };
         if (v < c.minCoins) return { kind: 'min', message: `Use at least ${c.minCoins} coins` };
-        if (v > c.maxRedeemable) return { kind: 'max', message: `Up to ${c.maxRedeemable} coins on this order` };
+        if (v > c.maxRedeemable)
+          return { kind: 'max', message: `Up to ${c.maxRedeemable} coins on this order` };
         return undefined;
       });
     },

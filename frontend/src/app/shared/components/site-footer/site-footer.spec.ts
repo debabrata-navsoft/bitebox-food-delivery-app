@@ -13,7 +13,12 @@ describe('SiteFooter', () => {
   let fixture: ComponentFixture<SiteFooter>;
   const phone = new BehaviorSubject({ matches: false, breakpoints: {} });
   const displayUser = signal<{ name: string } | null>(null);
-  const cod = { method: 'cod', label: 'Cash on delivery', provider: 'cash_on_delivery', simulated: false };
+  const cod = {
+    method: 'cod',
+    label: 'Cash on delivery',
+    provider: 'cash_on_delivery',
+    simulated: false,
+  };
 
   async function render(methods = [cod], compact = false) {
     await TestBed.configureTestingModule({
@@ -64,11 +69,17 @@ describe('SiteFooter', () => {
   });
 
   it('lists only payment methods checkout really accepts', async () => {
-    await render([cod, { method: 'online', label: 'Test payment', provider: 'mock', simulated: true }]);
+    await render([
+      cod,
+      { method: 'online', label: 'Test payment', provider: 'mock', simulated: true },
+    ]);
     expect(text()).toContain('Cash on delivery');
     expect(text()).not.toContain('UPI');
     TestBed.resetTestingModule();
-    await render([cod, { method: 'online', label: 'Pay online', provider: 'razorpay', simulated: false }]);
+    await render([
+      cod,
+      { method: 'online', label: 'Pay online', provider: 'razorpay', simulated: false },
+    ]);
     expect(text()).toContain('UPI');
     expect(text()).toContain('Net banking');
   });
@@ -77,7 +88,12 @@ describe('SiteFooter', () => {
     await render();
     expect(text()).not.toContain('Enjoy BiteBox on the go');
     expect(fixture.nativeElement.querySelector('.social')).toBeNull();
-    expect(available([{ label: 'X', href: '' }, { label: 'Y', href: 'https://example.com' }])).toHaveLength(1);
+    expect(
+      available([
+        { label: 'X', href: '' },
+        { label: 'Y', href: 'https://example.com' },
+      ]),
+    ).toHaveLength(1);
   });
 
   it('turns link groups into an accordion on phones', async () => {

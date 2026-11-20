@@ -16,7 +16,10 @@
     @if (methodBlocked()) {
       <div class="bb-alert error" role="alert">
         <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
-        <span>Coins can't be used with this payment method. Choose another method or remove the coins.</span>
+        <span
+          >Coins can't be used with this payment method. Choose another method or remove the
+          coins.</span
+        >
       </div>
     }
   } @else if (redeemable()) {
@@ -25,13 +28,23 @@
         Use up to <strong>{{ c.maxRedeemable }} coins</strong> · save {{ maxValuePaise() | inr }}
         <small>{{ c.coinValueCoins }} coins = {{ c.coinValuePaise | inr }}</small>
       </span>
-      <button class="bb-btn bb-btn--text bb-btn--small" type="button" (click)="useMax()" [disabled]="busy()">
+      <button
+        class="bb-btn bb-btn--text bb-btn--small"
+        type="button"
+        (click)="useMax()"
+        [disabled]="busy()"
+      >
         Use max
       </button>
     </div>
     <form class="coins-form" [formRoot]="form">
       <div class="bb-field">
-        <np-input-number [formField]="form.coins" ariaLabel="Coins to use" [maxFractionDigits]="0" suffix=" coins" />
+        <np-input-number
+          [formField]="form.coins"
+          ariaLabel="Coins to use"
+          [maxFractionDigits]="0"
+          suffix=" coins"
+        />
         <bb-field-error [field]="form.coins" />
       </div>
       <button class="bb-btn bb-btn--outlined" type="submit" [disabled]="busy()">Apply</button>

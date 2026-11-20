@@ -25,7 +25,16 @@ import { forQuote } from '../../../../shared/coupons/cart-offers';
  */
 @Component({
   selector: 'bb-coupon-dialog',
-  imports: [FormRoot, NP_FORM_FIELDS, MatButtonModule, ButtonComponent, IconComponent, InrPipe, BbDialogTitle, CouponTicket],
+  imports: [
+    FormRoot,
+    NP_FORM_FIELDS,
+    MatButtonModule,
+    ButtonComponent,
+    IconComponent,
+    InrPipe,
+    BbDialogTitle,
+    CouponTicket,
+  ],
   templateUrl: './coupon-dialog.html',
   styleUrl: './coupon-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,7 +56,10 @@ export class CouponDialog {
       this.offers.find((o) => this.minOrderLeft(o) === 0);
     return [
       { title: 'Best coupon', items: best ? [best] : [] },
-      { title: best ? 'More coupons' : 'Available coupons', items: this.offers.filter((o) => o !== best) },
+      {
+        title: best ? 'More coupons' : 'Available coupons',
+        items: this.offers.filter((o) => o !== best),
+      },
     ].filter((s) => s.items.length);
   });
   protected readonly appliedCode = computed(() => this.cart.quote()?.coupon?.code ?? null);
@@ -86,4 +98,7 @@ export class CouponDialog {
 
 /** Opens the coupons dialog; emits the quote once a coupon is applied (nothing when closed). */
 export const openCoupons = (dialog: BbDialog, offers: CouponOffer[]) =>
-  dialog.result<CouponDialog, CouponOffer[], CartQuote>(CouponDialog, { data: offers, width: '480px' });
+  dialog.result<CouponDialog, CouponOffer[], CartQuote>(CouponDialog, {
+    data: offers,
+    width: '480px',
+  });

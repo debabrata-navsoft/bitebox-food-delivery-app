@@ -305,7 +305,9 @@ ul {
     border: 1px solid $line;
     border-radius: 999px;
     font-size: 0.85rem;
-    --bb-icon-size: 16px;
+  }
+  img {
+    border-radius: 6px;
   }
 
   // Phones: pills stretch to fill each row, so every row is full width with no ragged gaps.

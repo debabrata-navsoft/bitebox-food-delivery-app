@@ -51,7 +51,10 @@ describe('NewsletterSignup', () => {
 
   it('shows the error when the API fails', async () => {
     api.subscribe.mockReturnValue(
-      throwError(() => new HttpErrorResponse({ status: 429, error: { message: 'Too many sign-up attempts.' } })),
+      throwError(
+        () =>
+          new HttpErrorResponse({ status: 429, error: { message: 'Too many sign-up attempts.' } }),
+      ),
     );
     await submit('riya@example.com');
     expect(el().querySelector('[role=alert]')?.textContent).toContain('Too many sign-up attempts.');

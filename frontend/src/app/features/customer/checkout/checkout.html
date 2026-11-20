@@ -9,7 +9,11 @@
   } @else if (loadError()) {
     <bb-empty-state icon="cloud_off" title="Something went wrong" [message]="loadError()!" />
   } @else if (!quote()?.cart) {
-    <bb-empty-state icon="shopping_bag" title="Your cart is empty" message="Add dishes from a restaurant to get started.">
+    <bb-empty-state
+      icon="shopping_bag"
+      title="Your cart is empty"
+      message="Add dishes from a restaurant to get started."
+    >
       <a mat-flat-button routerLink="/restaurants">Browse restaurants</a>
     </bb-empty-state>
   } @else {
@@ -22,11 +26,15 @@
           <div class="section-head">
             @if (c.restaurant; as r) {
               <div class="restaurant">
-                <h2 id="items-title"><a [routerLink]="['/restaurants', r.slug]">{{ r.name }}</a></h2>
+                <h2 id="items-title">
+                  <a [routerLink]="['/restaurants', r.slug]">{{ r.name }}</a>
+                </h2>
                 <span class="bb-muted">~{{ r.avgPrepTimeMinutes }} min prep</span>
               </div>
             }
-            <button mat-button type="button" (click)="clearCart()" [disabled]="cart.busy()">Clear</button>
+            <button mat-button type="button" (click)="clearCart()" [disabled]="cart.busy()">
+              Clear
+            </button>
           </div>
           <ul class="items">
             @for (line of c.items; track line.foodItemId) {
@@ -49,7 +57,13 @@
                   />
                   <span class="line-total">{{ line.lineTotalPaise | inr }}</span>
                 } @else {
-                  <button mat-button type="button" (click)="cartActions.setQuantity(line.foodItemId, 0)">Remove</button>
+                  <button
+                    mat-button
+                    type="button"
+                    (click)="cartActions.setQuantity(line.foodItemId, 0)"
+                  >
+                    Remove
+                  </button>
                 }
               </li>
             }
@@ -69,17 +83,35 @@
         <section class="bb-card" aria-labelledby="address-title">
           <div class="section-head">
             <h2 id="address-title">Delivery address</h2>
-            <button mat-stroked-button type="button" (click)="addAddress()"><np-icon name="plus" class="mat-icon" matButtonIcon />Add new</button>
+            <button mat-stroked-button type="button" (click)="addAddress()">
+              <np-icon name="plus" class="mat-icon" matButtonIcon />Add new
+            </button>
           </div>
           @if (savedAddresses().length === 0) {
             <p class="bb-muted">Add an address so we know where to deliver.</p>
           } @else {
-            <mat-radio-group class="addresses" [value]="selectedAddressId()" (change)="selectAddress($event.value)" aria-labelledby="address-title">
+            <mat-radio-group
+              class="addresses"
+              [value]="selectedAddressId()"
+              (change)="selectAddress($event.value)"
+              aria-labelledby="address-title"
+            >
               @for (a of savedAddresses(); track a.id) {
-                <mat-radio-button [value]="a.id" class="address-option" [class.selected]="a.id === selectedAddressId()">
+                <mat-radio-button
+                  [value]="a.id"
+                  class="address-option"
+                  [class.selected]="a.id === selectedAddressId()"
+                >
                   <span class="address-body">
                     <span class="address-label">
-                      <np-icon [name]="(a.label === 'home' ? 'home' : a.label === 'work' ? 'work' : 'place') | npIcon" class="mat-icon" matButtonIcon />
+                      <np-icon
+                        [name]="
+                          (a.label === 'home' ? 'home' : a.label === 'work' ? 'work' : 'place')
+                            | npIcon
+                        "
+                        class="mat-icon"
+                        matButtonIcon
+                      />
                       {{ a.label | titlecase }}
                       @if (a.isDefault) {
                         <span class="default">Default</span>
@@ -93,37 +125,6 @@
             </mat-radio-group>
           }
         </section>
-
-        <!-- Payment -->
-        <section class="bb-card" aria-labelledby="payment-title">
-          <h2 id="payment-title">Payment</h2>
-          <mat-radio-group class="pay-methods" [value]="payWith()" (change)="choosePay($event.value)" aria-labelledby="payment-title">
-            <mat-radio-button value="cod" [disabled]="cart.busy()">
-              <span class="pay-option"><np-icon name="banknote" class="mat-icon" matButtonIcon /> Cash on delivery</span>
-            </mat-radio-button>
-            @if (onlineAvailable()) {
-              @for (ch of channels; track ch.value) {
-                @let offer = paymentOffers().get(ch.value);
-                <mat-radio-button [value]="ch.value" [disabled]="cart.busy()">
-                  <span class="pay-option">
-                    <np-icon [name]="ch.icon" class="mat-icon" matButtonIcon />
-                    <span class="pay-text">
-                      <span>{{ ch.label }}</span>
-                      @if (offer) {
-                        <span class="pay-offer">Save {{ offer.savingPaise | inr }} · {{ offer.name || 'Payment offer' }}</span>
-                      }
-                    </span>
-                  </span>
-                </mat-radio-button>
-              }
-            }
-          </mat-radio-group>
-          @if (paymentMethod() === 'online') {
-            <p class="bb-muted small">You'll pay securely on the next screen. The restaurant receives your order once payment succeeds.</p>
-          } @else {
-            <p class="bb-muted small">Pay the rider in cash or by UPI at your door.</p>
-          }
-        </section>
       </div>
 
       <aside class="side">
@@ -135,7 +136,9 @@
               <np-icon name="store" class="mat-icon" matButtonIcon />
               <div>
                 <strong>{{ ro.name || 'Restaurant offer' }}</strong> applied
-                <span class="bb-muted small">Restaurant offer · you save {{ ro.savingPaise | inr }}</span>
+                <span class="bb-muted small"
+                  >Restaurant offer · you save {{ ro.savingPaise | inr }}</span
+                >
               </div>
               @if ((q.restaurantOffers?.length ?? 0) > 1) {
                 <button mat-button type="button" (click)="showCoupons()">Change</button>
@@ -170,7 +173,10 @@
             @if (q.couponError; as ce) {
               <div class="bb-alert info" role="status">
                 <np-icon name="info" class="mat-icon" matButtonIcon />
-                <span>{{ ce.code }}: {{ ce.message }} <button class="bb-link-button" (click)="removeCoupon()">Remove</button></span>
+                <span
+                  >{{ ce.code }}: {{ ce.message }}
+                  <button class="bb-link-button" (click)="removeCoupon()">Remove</button></span
+                >
               </div>
             }
             <button type="button" class="coupon-row" (click)="showCoupons()">
@@ -178,7 +184,10 @@
               <span>
                 <strong>Apply coupon</strong>
                 @if (offers().length) {
-                  <small>{{ offers().length }} {{ offers().length === 1 ? 'offer' : 'offers' }} available</small>
+                  <small
+                    >{{ offers().length }}
+                    {{ offers().length === 1 ? 'offer' : 'offers' }} available</small
+                  >
                 }
               </span>
               <np-icon name="chevron-right" class="mat-icon chevron" matButtonIcon />
@@ -209,9 +218,20 @@
             [distanceMeters]="q.delivery?.distanceMeters ?? null"
             [coinsRedeemed]="q.coins?.applied"
           />
-          @if (q.delivery && !q.delivery.freeDelivery && !q.pricing.deliveryDiscountPaise && q.pricing.subtotalPaise - q.pricing.discountPaise < q.delivery.freeDeliveryThresholdPaise) {
+          @if (
+            q.delivery &&
+            !q.delivery.freeDelivery &&
+            !q.pricing.deliveryDiscountPaise &&
+            q.pricing.subtotalPaise - q.pricing.discountPaise <
+              q.delivery.freeDeliveryThresholdPaise
+          ) {
             <p class="hint small">
-              Add {{ q.delivery.freeDeliveryThresholdPaise - (q.pricing.subtotalPaise - q.pricing.discountPaise) | inr }} more for free delivery
+              Add
+              {{
+                q.delivery.freeDeliveryThresholdPaise -
+                  (q.pricing.subtotalPaise - q.pricing.discountPaise) | inr
+              }}
+              more for free delivery
             </p>
           }
         </section>
@@ -232,14 +252,23 @@
         @if (!connection.online()) {
           <div class="bb-alert info" role="status">
             <np-icon name="wifi-off" class="mat-icon" matButtonIcon />
-            <span>You're offline. Placing an order and paying need an internet connection; your cart is kept.</span>
+            <span
+              >You're offline. Placing an order and paying need an internet connection; your cart is
+              kept.</span
+            >
           </div>
         }
-        <button mat-flat-button class="place bb-btn-accent" type="button" (click)="placeOrder()" [disabled]="!q.canCheckout || placing() || cart.busy() || !connection.online()">
+        <button
+          mat-flat-button
+          class="place bb-btn-accent"
+          type="button"
+          (click)="placeOrder()"
+          [disabled]="!q.canCheckout || placing() || cart.busy() || !connection.online()"
+        >
           @if (placing()) {
             <mat-progress-spinner mode="indeterminate" diameter="20" aria-label="Placing order" />
           } @else {
-            {{ paymentMethod() === 'online' ? 'Place order & pay' : 'Place order' }} {{ q.pricing.totalPaise | inr }}
+            Place order {{ q.pricing.totalPaise | inr }}
           }
         </button>
         @if (!selectedAddressId()) {

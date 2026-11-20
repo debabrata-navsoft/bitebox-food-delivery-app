@@ -31,9 +31,18 @@
             <span class="bb-muted">Saves {{ o.savingPaise | inr }} on this cart</span>
           </div>
           @if (o.applied) {
-            <span class="tag"><np-icon name="circle-check" class="mat-icon" matButtonIcon />Applied</span>
+            <span class="tag"
+              ><np-icon name="circle-check" class="mat-icon" matButtonIcon />Applied</span
+            >
           } @else {
-            <button mat-stroked-button type="button" [disabled]="applying()" (click)="apply(o.code)">Apply</button>
+            <button
+              mat-stroked-button
+              type="button"
+              [disabled]="applying()"
+              (click)="apply(o.code)"
+            >
+              Apply
+            </button>
           }
         </li>
       }

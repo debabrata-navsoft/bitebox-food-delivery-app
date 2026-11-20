@@ -26,13 +26,14 @@ import { CheckoutCoins } from './checkout-coins/checkout-coins';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { QtyStepper } from '../../../shared/components/qty-stepper/qty-stepper';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
-import { CouponOffer, DeliveryAddress, PaymentChannel } from '../../../core/models/checkout.models';
+import { CouponOffer, DeliveryAddress } from '../../../core/models/checkout.models';
 import { InrPipe, formatPaise } from '../../../shared/pipes/money.pipes';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { openCoupons } from './coupon-dialog/coupon-dialog';
+import { choosePayment } from './payment-dialog/payment-dialog';
+import { CASH_OPTION, ONLINE_OPTIONS, PayWith } from '../../../shared/utils/payment-options';
 import { codeApplier } from '../../../shared/coupons/cart-offers';
 import { CouponTicket } from '../../../shared/components/coupon-ticket/coupon-ticket';
-
 
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 
@@ -88,24 +89,14 @@ export class Checkout {
   );
   /** Cash, or the online channel (UPI, card, ...): the bill is priced with its payment offer. */
   protected readonly payWith = computed(() => this.cart.paymentChannel() ?? 'cod');
-  protected readonly paymentMethod = computed<PaymentMethod>(() => (this.payWith() === 'cod' ? 'cod' : 'online'));
-  protected readonly channels: { value: PaymentChannel; label: string; icon: string }[] = [
-    { value: 'upi', label: 'UPI', icon: 'smartphone' },
-    { value: 'card', label: 'Credit or debit card', icon: 'credit-card' },
-    { value: 'netbanking', label: 'Net banking', icon: 'landmark' },
-    { value: 'wallet', label: 'Wallet', icon: 'wallet' },
-  ];
-
-  /** The best payment offer for each channel on this cart (the server's figures). */
-  protected readonly paymentOffers = computed(
-    () => new Map((this.cart.quote()?.paymentOffers ?? []).map((o) => [o.channel, o])),
+  protected readonly paymentMethod = computed<PaymentMethod>(() =>
+    this.payWith() === 'cod' ? 'cod' : 'online',
   );
 
-  /** Re-prices the cart for the chosen way to pay (a channel's payment offer joins the bill). */
-  protected choosePay(value: 'cod' | PaymentChannel): void {
-    this.cart.paymentChannel.set(value === 'cod' ? null : value);
-    this.cart.refresh().subscribe({ error: (err: unknown) => this.notify.error(errorMessage(err)) });
-  }
+  /** The best payment offer for each channel on this cart (the server's figures). */
+  private readonly paymentOffers = computed(
+    () => new Map((this.cart.quote()?.paymentOffers ?? []).map((o) => [o.channel, o])),
+  );
   protected readonly placing = signal(false);
   protected readonly placeError = signal<string | null>(null);
 
@@ -154,7 +145,11 @@ export class Checkout {
     if (!best || best.code === q?.coupon?.code || extra <= 0) return null;
     const switching = !!q?.coupon;
     const offer: CouponOffer = { kind: 'coupon', minOrderPaise: 0, validUntil: '', ...best };
-    return { offer, switching, line: `Save ${formatPaise(extra)}${switching ? ' more' : ''} on this order!` };
+    return {
+      offer,
+      switching,
+      line: `Save ${formatPaise(extra)}${switching ? ' more' : ''} on this order!`,
+    };
   });
 
   /** One tap on the suggested coupon (the server's pick for this cart). */
@@ -167,19 +162,22 @@ export class Checkout {
     openCoupons(this.bbDialog, this.offers()).subscribe();
   }
 
-
   protected applyCoins(coins: number): void {
     this.cart.setCoins(coins).subscribe({
       next: (quote) => {
         if (quote.coins?.applied)
-          this.notify.success(`${quote.coins.applied} coins applied — you save ${formatPaise(quote.coins.discountPaise)}`);
+          this.notify.success(
+            `${quote.coins.applied} coins applied — you save ${formatPaise(quote.coins.discountPaise)}`,
+          );
       },
       error: (err: unknown) => this.notify.error(errorMessage(err)),
     });
   }
 
   protected removeCoins(): void {
-    this.cart.removeCoins().subscribe({ error: (err: unknown) => this.notify.error(errorMessage(err)) });
+    this.cart
+      .removeCoins()
+      .subscribe({ error: (err: unknown) => this.notify.error(errorMessage(err)) });
   }
 
   protected removeCoupon(): void {
@@ -217,10 +215,43 @@ export class Checkout {
     this.cart.clear().subscribe();
   }
 
-  protected placeOrder(): void {
+  /** "Place order": pick how to pay (cash only skips the popup), re-price for it, then place. */
+  protected async placeOrder(): Promise<void> {
+    if (!this.ready()) return;
+    const options = [...(this.onlineAvailable() ? ONLINE_OPTIONS : []), CASH_OPTION];
+    const choice: PayWith | undefined =
+      options.length === 1
+        ? 'cod'
+        : await firstValueFrom(
+            choosePayment(this.bbDialog, {
+              options,
+              offers: this.paymentOffers(),
+              totalPaise: this.quote()!.pricing.totalPaise,
+            }),
+            { defaultValue: undefined },
+          );
+    if (!choice) return;
+    if (choice !== this.payWith()) {
+      // A channel's payment offer changes the bill: place the order at the new price.
+      this.cart.paymentChannel.set(choice === 'cod' ? null : choice);
+      try {
+        await firstValueFrom(this.cart.refresh());
+      } catch (err: unknown) {
+        this.notify.error(errorMessage(err));
+        return;
+      }
+    }
+    this.submit();
+  }
+
+  private ready(): boolean {
+    return !!this.quote()?.canCheckout && !!this.selectedAddressId() && !this.noteForm().invalid();
+  }
+
+  private submit(): void {
     const quote = this.quote();
     const addressId = this.selectedAddressId();
-    if (!quote?.canCheckout || !addressId || this.noteForm().invalid()) return;
+    if (!quote || !addressId || !this.ready()) return;
 
     this.placing.set(true);
     this.placeError.set(null);
@@ -289,5 +320,4 @@ export class Checkout {
   protected addressLine(a: DeliveryAddress): string {
     return [a.line1, a.line2, a.area, a.city].filter(Boolean).join(', ');
   }
-
 }

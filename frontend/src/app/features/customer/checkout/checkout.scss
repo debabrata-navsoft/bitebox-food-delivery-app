@@ -184,15 +184,6 @@ h2 {
   font-size: 0.82rem;
 }
 
-.pay-option {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-}
-
-
-
 // "Apply coupon ›": opens every coupon in a dialog.
 .coupon-row {
   width: 100%;
@@ -267,7 +258,6 @@ h2 {
   }
 }
 
-
 .hint {
   margin: var(--bb-space-3) 0 0;
   color: var(--bb-success);
@@ -284,26 +274,4 @@ h2 {
   text-align: center;
 }
 
-.pay-methods {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.pay-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.pay-hint {
-  font-size: 0.8rem;
-  font-weight: 400;
-  color: var(--bb-ink-muted);
-}
-
 // A channel's payment offer under its name in the payment list.
-.pay-offer {
-  color: var(--bb-success);
-  font-size: 0.8rem;
-  font-weight: 600;
-}

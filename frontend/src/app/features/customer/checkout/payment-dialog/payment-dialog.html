@@ -1,0 +1,36 @@
+<h2 bbDialogTitle>Choose how to pay</h2>
+<div class="bb-dialog__content">
+  <p class="bb-muted total">
+    To pay: <strong>{{ data.totalPaise | inr }}</strong>
+  </p>
+  <ul class="options">
+    @for (o of data.options; track o.value) {
+      @let offer = data.offers.get(o.value);
+      <li>
+        <button type="button" class="option" (click)="ref.close(o.value)">
+          <img [src]="o.image" alt="" width="48" height="48" />
+          <span class="text">
+            <strong>{{ o.label }}</strong>
+            <span class="bb-muted">{{ o.detail }}</span>
+            @if (offer) {
+              <span class="offer"
+                >Save {{ offer.savingPaise | inr }} · {{ offer.name || 'Payment offer' }}</span
+              >
+            }
+          </span>
+          @if (o.brands.length) {
+            <span class="brands" aria-hidden="true">
+              @for (b of o.brands; track b.name) {
+                <span class="brand" [style.--brand]="b.color">{{ b.name }}</span>
+              }
+            </span>
+          }
+          <np-icon name="chevron-right" class="mat-icon chevron" aria-hidden="true" />
+        </button>
+      </li>
+    }
+  </ul>
+</div>
+<div class="bb-dialog__actions">
+  <np-button variant="outlined" severity="secondary" label="Cancel" (clicked)="ref.close()" />
+</div>

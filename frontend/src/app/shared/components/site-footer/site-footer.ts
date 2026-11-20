@@ -17,6 +17,7 @@ import {
   available,
 } from './footer-links';
 import { NewsletterSignup } from './newsletter-signup/newsletter-signup';
+import { CASH_OPTION, ONLINE_OPTIONS } from '../../utils/payment-options';
 
 /**
  * The customer site footer. Links come from footer-links.ts and only those leading to a real page
@@ -60,22 +61,18 @@ export class SiteFooter {
   }
 
   /** What checkout really accepts (cached app-wide); online methods only with a live gateway. */
-  private readonly methods = toSignal(inject(PaymentService).methods$.pipe(catchError(() => of([]))), {
-    initialValue: [],
-  });
+  private readonly methods = toSignal(
+    inject(PaymentService).methods$.pipe(catchError(() => of([]))),
+    {
+      initialValue: [],
+    },
+  );
   protected readonly payments = computed(() => {
     const methods = this.methods();
     const online = methods.some((m) => m.method === 'online' && !m.simulated);
     return [
-      ...(online
-        ? [
-            { label: 'UPI', icon: 'smartphone' },
-            { label: 'Credit & debit cards', icon: 'credit-card' },
-            { label: 'Net banking', icon: 'landmark' },
-            { label: 'Wallets', icon: 'wallet' },
-          ]
-        : []),
-      ...(methods.some((m) => m.method === 'cod') ? [{ label: 'Cash on delivery', icon: 'banknote' }] : []),
+      ...(online ? ONLINE_OPTIONS : []),
+      ...(methods.some((m) => m.method === 'cod') ? [CASH_OPTION] : []),
     ];
   });
 }
