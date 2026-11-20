@@ -1,7 +1,9 @@
+import { DOCUMENT } from '@angular/common';
 import { DestroyRef, Signal, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { EMPTY, distinctUntilChanged, filter, interval, merge, switchMap } from 'rxjs';
+import { EMPTY, distinctUntilChanged, interval, merge, switchMap } from 'rxjs';
 import { OrderTrackingService } from '../../../core/services/order-tracking.service';
+import { pollWhileVisible } from '../../../core/services/poll';
 import { RealtimeService, RiderLocation } from '../../../core/services/realtime.service';
 import {
   Point,
@@ -11,7 +13,13 @@ import {
   fromCoordinates,
 } from '../../../core/services/routing.service';
 import { Order, OrderStatus } from '../../../core/models/checkout.models';
-import { AT_OR_TO_RESTAURANT, TRACKED_STATUSES } from '../../../core/models/order-management.models';
+import {
+  AT_OR_TO_RESTAURANT,
+  TRACKED_STATUSES,
+} from '../../../core/models/order-management.models';
+
+/** Without a live connection, the customer's map re-reads the rider's position this often. */
+const FALLBACK_POLL_MS = 10_000;
 
 /** A position older than this is shown as stale ("last seen 3 min ago"). */
 export const STALE_AFTER_MS = 90_000;
@@ -82,6 +90,7 @@ export function deliveryTracking(order: Signal<TrackableOrder | null>) {
   const realtime = inject(RealtimeService);
   const routing = inject(RoutingService);
   const destroyRef = inject(DestroyRef);
+  const document = inject(DOCUMENT); // for the polling fallback, which runs later
 
   const restaurant = computed(() =>
     fromCoordinates(order()?.restaurantSnapshot.location?.coordinates),
@@ -110,8 +119,9 @@ export function deliveryTracking(order: Signal<TrackableOrder | null>) {
     );
   };
 
-  // While the order can have a rider: live positions, plus the stored trail and last position as
-  // soon as watching starts (even with the socket down) and again after every reconnect.
+  // While the order can have a rider: live positions, plus the stored trail and last position,
+  // read at the start and after every reconnect, and polled while the socket is down (a host
+  // without WebSockets, or a weak network).
   const tracking = inject(OrderTrackingService);
   const connected = toObservable(realtime.connected);
   toObservable(
@@ -124,8 +134,11 @@ export function deliveryTracking(order: Signal<TrackableOrder | null>) {
           ? merge(
               realtime.track(id),
               connected.pipe(
-                filter((up, i) => i === 0 || up),
-                switchMap(() => tracking.get(id)),
+                switchMap((up) =>
+                  up
+                    ? tracking.get(id)
+                    : pollWhileVisible(() => tracking.get(id), FALLBACK_POLL_MS, document),
+                ),
               ),
             )
           : EMPTY,

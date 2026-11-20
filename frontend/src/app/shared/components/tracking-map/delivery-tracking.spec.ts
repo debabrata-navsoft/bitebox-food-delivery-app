@@ -21,10 +21,10 @@ describe('deliveryTracking', () => {
   const at = (offsetSeconds: number) => new Date(Date.now() + offsetSeconds * 1000).toISOString();
   const flush = () => new Promise((r) => setTimeout(r));
 
-  function create() {
+  function create(connected = true) {
     TestBed.configureTestingModule({
       providers: [
-        { provide: RealtimeService, useValue: { connected: signal(true), track: () => live } },
+        { provide: RealtimeService, useValue: { connected: signal(connected), track: () => live } },
         { provide: OrderTrackingService, useValue: { get } },
         { provide: RoutingService, useValue: { route: () => EMPTY } },
       ],
@@ -80,5 +80,41 @@ describe('deliveryTracking', () => {
     live.next({ orderId: 'o1', latitude: 12.955, longitude: 77.632, accuracy: 8, at: at(0) });
     expect(t.rider()).toEqual({ latitude: 12.955, longitude: 77.632 });
     expect(t.trail().length).toBe(1);
+  });
+
+  it('keeps re-reading the rider position while the live connection is down', async () => {
+    vi.useFakeTimers();
+    try {
+      let reads = 0;
+      get.mockImplementation(() =>
+        of({
+          orderId: 'o1',
+          status: 'on_the_way',
+          tracking: true,
+          // The rider moves ~550 m between reads.
+          lastPoint: {
+            latitude: 12.96 - reads++ * 0.005,
+            longitude: 77.635,
+            accuracy: 10,
+            at: at(reads),
+          },
+          ageSeconds: 0,
+          stale: false,
+          recentPath: [],
+        }),
+      );
+      const t = create(false);
+      TestBed.tick();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(get).toHaveBeenCalledTimes(1);
+      expect(t.rider()).toEqual({ latitude: 12.96, longitude: 77.635 });
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      TestBed.tick();
+      expect(get).toHaveBeenCalledTimes(2);
+      expect(t.rider()).toEqual({ latitude: 12.955, longitude: 77.635 });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

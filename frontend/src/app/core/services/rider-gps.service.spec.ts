@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { RiderService } from './order-management.service';
 import { RealtimeService } from './realtime.service';
 import { RiderGps } from './rider-gps.service';
@@ -80,6 +80,24 @@ describe('RiderGps', () => {
     await flush();
     expect(send).toHaveBeenCalledTimes(3);
     expect(gps.lastSharedAt()).toBe(now);
+  });
+
+  it('during a delivery without a live connection, sends the position over HTTP', async () => {
+    const rider = TestBed.inject(RiderService);
+    const report = vi.spyOn(rider, 'reportLocation');
+    send.mockResolvedValue({ ok: false, error: 'NOT_CONNECTED' });
+    gps.update(true, true);
+    fix(12.97);
+    await flush();
+    expect(report).toHaveBeenCalledWith(12.97, 77.64);
+    expect(gps.lastSharedAt()).toBe(now);
+    expect(gps.problem()).toBeNull(); // shared: no "Reconnecting"
+
+    report.mockReturnValue(throwError(() => new Error('offline')));
+    now += 16_000;
+    fix(12.971);
+    await flush();
+    expect(gps.problem()).toContain('Reconnecting');
   });
 
   it('shares rarely when idle', async () => {

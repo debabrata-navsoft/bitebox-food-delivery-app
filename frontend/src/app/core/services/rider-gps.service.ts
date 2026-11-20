@@ -112,7 +112,9 @@ export class RiderGps {
         accuracy: Math.round(fix.accuracy),
       };
       let ack: LocationAck = await this.realtime.sendRiderLocation(point);
-      if (!ack.ok && ack.error === 'NOT_CONNECTED' && !this.delivering) {
+      // No live connection (a host without WebSockets, or a weak network): send it over HTTP,
+      // which also updates the customer's tracking; only both failing is "Reconnecting".
+      if (ack.error === 'NOT_CONNECTED') {
         ack = await firstValueFrom(this.rider.reportLocation(point.latitude, point.longitude)).then(
           () => ({ ok: true }),
           () => ({ ok: false, error: 'NOT_CONNECTED' as const }),
@@ -121,6 +123,7 @@ export class RiderGps {
       if (ack.ok) {
         this.lastSent = fix;
         this.lastSharedAt.set(Date.now());
+        this.problem.set(null);
       } else if (ack.error === 'NOT_CONNECTED' && this.delivering) {
         this.problem.set('Reconnecting… your position will be shared again in a moment.');
       }
