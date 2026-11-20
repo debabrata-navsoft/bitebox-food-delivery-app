@@ -257,6 +257,12 @@
   height: auto;
   min-height: 48px;
   padding-block: 6px;
+  cursor: pointer;
+
+  // The icon, label and badge too (Material gives its slots their own cursor).
+  ::ng-deep * {
+    cursor: inherit;
+  }
 
   ::ng-deep .mdc-list-item__primary-text {
     white-space: normal;
