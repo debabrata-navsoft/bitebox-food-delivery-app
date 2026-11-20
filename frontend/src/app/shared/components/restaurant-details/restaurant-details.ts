@@ -38,6 +38,7 @@ import {
   GeolocationService,
   ImpreciseLocationError,
 } from '../../../core/services/geolocation.service';
+import { AuthService } from '../../../core/auth/auth.service';
 import { MyRestaurantService } from '../../../core/services/my-restaurant.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { ImageUpload } from '../image-upload/image-upload';
@@ -107,6 +108,7 @@ export class RestaurantDetails {
   private readonly router = inject(Router);
   protected readonly geo = inject(GeolocationService);
   private readonly places = inject(DeliveryLocationService);
+  private readonly auth = inject(AuthService);
 
   protected readonly shownError = shownError;
   /** Inside another page (the admin's restaurant edit): no page title or status banner. */
@@ -184,7 +186,11 @@ export class RestaurantDetails {
   constructor() {
     this.service.get().subscribe({
       next: ({ restaurant }) => {
+        // A new restaurant starts with the phone and email the owner signed up with.
+        const user = this.auth.user();
         if (restaurant) this.fill(restaurant);
+        else if (user)
+          this.model.update((m) => ({ ...m, phone: user.phone ?? '', email: user.email }));
         this.loading.set(false);
       },
       error: (err: unknown) => {

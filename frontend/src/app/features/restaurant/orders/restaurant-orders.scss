@@ -189,22 +189,19 @@
   li {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: var(--bb-space-1) var(--bb-space-3);
+    gap: var(--bb-space-3);
     align-items: center;
     padding: var(--bb-space-3) var(--bb-space-4);
     border-bottom: 1px solid var(--bb-border);
-
-    @include bp.tablet-up {
-      grid-template-columns: minmax(0, 1fr) auto auto;
-    }
   }
+}
 
-  bb-order-status-chip {
-    justify-self: start;
-    @include bp.tablet-up {
-      justify-self: end;
-    }
-  }
+// The status on top, the total under it, both on the right.
+.h-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--bb-space-2);
 }
 
 .h-main {
@@ -220,11 +217,6 @@
 
 .reason {
   color: var(--bb-danger);
-}
-
-.h-total {
-  font-weight: 700;
-  text-align: right;
 }
 
 .pickup-by {
