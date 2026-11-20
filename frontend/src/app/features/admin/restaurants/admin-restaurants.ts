@@ -9,8 +9,8 @@ import { FilterSection } from '../../../shared/components/filter-panel/filter-pa
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { filterOptions, filteredList } from '../../../shared/list/filtered-list';
 import { JOINED_SECTION } from '../filter-sections';
-import { RestaurantStatus } from '../../../shared/models/catalog.models';
-import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
+import { RestaurantStatus } from '../../../core/models/catalog.models';
+import { ImageFallback, UsableImagePipe } from '../../../shared/directives/broken-images';
 
 const TABS: { status: RestaurantStatus; label: string }[] = [
   { status: 'pending', label: 'Pending' },

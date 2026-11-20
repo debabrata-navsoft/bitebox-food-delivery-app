@@ -4,7 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { User } from '../../../shared/models/user.models';
+import { User } from '../../../core/models/user.models';
 import { Login, landingFor, safeReturnUrl } from './login';
 
 const admin: User = {

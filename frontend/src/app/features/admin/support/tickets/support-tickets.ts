@@ -1,4 +1,4 @@
-import { TableLabels } from '../../../../shared/list/table-labels';
+import { TableLabels } from '../../../../shared/directives/table-labels';
 import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -26,7 +26,7 @@ import {
   TICKET_STATUS_TONE,
   TICKET_TYPE_LABEL,
   TicketQuery,
-} from '../../../../shared/models/admin-roles.models';
+} from '../../../../core/models/admin-roles.models';
 
 type View = 'all' | 'customer' | 'restaurant' | 'delivery' | 'refunds' | 'mine' | 'unassigned';
 

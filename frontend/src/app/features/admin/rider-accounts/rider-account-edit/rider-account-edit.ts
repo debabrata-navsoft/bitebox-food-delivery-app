@@ -9,17 +9,17 @@ import {
   RiderAccount,
   RiderAccountPatch,
 } from '../../../../core/services/admin/admin-rider-accounts.service';
-import { errorMessage, fieldErrors } from '../../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../../shared/utils/api-error';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { ImageUpload } from '../../../../shared/components/image-upload/image-upload';
 import { PhoneInput } from '../../../../shared/components/phone-input/phone-input';
 import { loaded } from '../../../../shared/coupons/coupon-list';
-import { birthDateRange, fromIsoDay, isoDay } from '../../../../shared/forms/dates';
+import { birthDateRange, fromIsoDay, isoDay } from '../../../../shared/utils/dates';
 import { serverErrors, shownError } from '../../../../shared/forms/form-errors';
-import { POSTAL_CODE_PATTERN, phoneRules, requiredText } from '../../../../shared/forms/form-rules';
+import { POSTAL_CODE_PATTERN, phoneRules, requiredText } from '../../../../shared/validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
-import { VEHICLE_LABEL, VehicleType } from '../../../../shared/models/checkout.models';
-import { GENDER_LABEL, Gender } from '../../../../shared/models/user.models';
+import { VEHICLE_LABEL, VehicleType } from '../../../../core/models/checkout.models';
+import { GENDER_LABEL, Gender } from '../../../../core/models/user.models';
 
 const modelOf = (a: RiderAccount | undefined) => ({
   name: a?.user.name ?? '',

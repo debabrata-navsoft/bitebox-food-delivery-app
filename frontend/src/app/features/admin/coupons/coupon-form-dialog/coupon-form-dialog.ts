@@ -10,7 +10,7 @@ import {
 } from 'nexprime';
 import { firstValueFrom, map } from 'rxjs';
 import { AdminCatalogService } from '../../../../core/services/admin/admin-catalog.service';
-import { errorMessage, fieldErrors } from '../../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../../shared/utils/api-error';
 import { AdminCouponService } from '../../../../core/services/checkout-api.service';
 import { CouponFields } from '../../../../shared/coupons/coupon-fields/coupon-fields';
 import {
@@ -32,7 +32,7 @@ import {
   CouponKind,
   PAYMENT_CHANNEL_LABEL,
   PaymentChannel,
-} from '../../../../shared/models/checkout.models';
+} from '../../../../core/models/checkout.models';
 
 /** Create or edit a coupon: the discount, who and where it applies, limits and dates. */
 @Component({

@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { ConnectionStatus } from '../../../core/services/connection-status.service';
-import { safeReturnUrl } from '../../../core/services/safe-url';
+import { ConnectionStatus } from '../../../../core/services/connection-status.service';
+import { safeReturnUrl } from '../../../utils/safe-url';
 
 /**
  * Shown when a page could not be opened because the device is offline and that page's code

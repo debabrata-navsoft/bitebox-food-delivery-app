@@ -6,12 +6,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { IconComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
 import { AdminRewardsService } from '../../../../core/services/admin/admin-rewards.service';
-import { errorMessage, fieldErrors } from '../../../../core/services/api-error';
-import { newIdempotencyKey } from '../../../../core/services/idempotency';
+import { errorMessage, fieldErrors } from '../../../../shared/utils/api-error';
+import { newIdempotencyKey } from '../../../../shared/utils/idempotency';
 import { serverErrors, shownError } from '../../../../shared/forms/form-errors';
-import { numberRange, requiredText } from '../../../../shared/forms/form-rules';
+import { numberRange, requiredText } from '../../../../shared/validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
-import { AdminCoinTransaction, SOURCE_LABEL } from '../../../../shared/models/rewards.models';
+import { AdminCoinTransaction, SOURCE_LABEL } from '../../../../core/models/rewards.models';
 
 /**
  * Claw back an earned reward, fully or partly (refund, fraud). Coins already spent become a

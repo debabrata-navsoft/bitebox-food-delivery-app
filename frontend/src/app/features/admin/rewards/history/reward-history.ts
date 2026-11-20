@@ -1,4 +1,4 @@
-import { TableLabels } from '../../../../shared/list/table-labels';
+import { TableLabels } from '../../../../shared/directives/table-labels';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatPaginatorModule } from '@angular/material/paginator';
@@ -8,7 +8,7 @@ import { ListEmpty } from '../../../../shared/components/list-empty/list-empty';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
 import { ListToolbar } from '../../../../shared/components/list-toolbar/list-toolbar';
 import { datesSection, filteredList, optionsSection } from '../../../../shared/list/filtered-list';
-import { REWARD_TYPE_LABEL } from '../../../../shared/models/rewards.models';
+import { REWARD_TYPE_LABEL } from '../../../../core/models/rewards.models';
 
 /** Reward distribution history: every welcome, birthday and campaign reward given. */
 @Component({

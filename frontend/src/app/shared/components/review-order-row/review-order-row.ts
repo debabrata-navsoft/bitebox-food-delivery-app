@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { ReviewTarget, subjectLabel } from '../../models/review.models';
+import { ReviewTarget, subjectLabel } from '../../../core/models/review.models';
 import { Stars } from '../stars/stars';
 
 export interface RowReview {

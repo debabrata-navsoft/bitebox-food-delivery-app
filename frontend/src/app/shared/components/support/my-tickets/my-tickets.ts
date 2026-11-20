@@ -11,16 +11,16 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { Router, RouterLink } from '@angular/router';
 import { IconComponent } from 'nexprime';
-import { SupportService } from '../../../core/services/support.service';
-import { ListEmpty } from '../../../shared/components/list-empty/list-empty';
-import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
-import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { datesSection, filteredList, optionsSection } from '../../../shared/list/filtered-list';
+import { SupportService } from '../../../../core/services/support.service';
+import { ListEmpty } from '../../list-empty/list-empty';
+import { ListToolbar } from '../../list-toolbar/list-toolbar';
+import { PageHeader } from '../../page-header/page-header';
+import { datesSection, filteredList, optionsSection } from '../../../list/filtered-list';
 import {
   TICKET_STATUS_LABEL,
   TICKET_STATUS_TONE,
   TICKET_TYPE_LABEL,
-} from '../../../shared/models/admin-roles.models';
+} from '../../../../core/models/admin-roles.models';
 import { openNewTicket } from '../new-ticket-dialog/new-ticket-dialog';
 import { supportBase } from '../support-base';
 

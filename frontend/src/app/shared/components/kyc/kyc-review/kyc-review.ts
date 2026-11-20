@@ -10,11 +10,11 @@ import {
 } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { ButtonComponent, IconComponent } from 'nexprime';
-import { errorMessage } from '../../../../core/services/api-error';
+import { errorMessage } from '../../../utils/api-error';
 import { KycService } from '../../../../core/services/kyc.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { BbDialog } from '../../../dialog/bb-dialog';
-import { DOCUMENT_LABEL, DOCUMENT_TONE, KycDocument } from '../../../models/kyc.models';
+import { DOCUMENT_LABEL, DOCUMENT_TONE, KycDocument } from '../../../../core/models/kyc.models';
 import { confirmed } from '../../confirm-dialog/confirm-dialog';
 
 /**

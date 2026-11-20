@@ -3,16 +3,16 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ButtonComponent, IconComponent, PaginationComponent } from 'nexprime';
 import { AdminStaffService } from '../../../../core/services/admin/admin-staff.service';
-import { errorMessage } from '../../../../core/services/api-error';
+import { errorMessage } from '../../../../shared/utils/api-error';
 import {
   BB_DIALOG_DATA,
   BbDialog,
   BbDialogRef,
   BbDialogTitle,
 } from '../../../../shared/dialog/bb-dialog';
-import { LoginEntry } from '../../../../shared/models/admin-roles.models';
-import { Pagination } from '../../../../shared/models/api.models';
-import { User } from '../../../../shared/models/user.models';
+import { LoginEntry } from '../../../../core/models/admin-roles.models';
+import { Pagination } from '../../../../core/models/api.models';
+import { User } from '../../../../core/models/user.models';
 
 const ENDED: Record<string, string> = {
   logout: 'Signed out',

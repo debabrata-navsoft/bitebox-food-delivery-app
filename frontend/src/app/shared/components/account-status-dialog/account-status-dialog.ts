@@ -3,11 +3,11 @@ import { FormRoot, TreeValidationResult, form, maxLength, minLength, required } 
 import { ButtonComponent, IconComponent, SelectOption } from 'nexprime';
 import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../utils/api-error';
 import { BB_DIALOG_DATA, BbDialog, BbDialogRef, BbDialogTitle } from '../../dialog/bb-dialog';
 import { serverErrors } from '../../forms/form-errors';
 import { NP_FORM_FIELDS } from '../../forms/np-form-fields';
-import { Permission, USER_STATUS_META, User, UserStatus } from '../../models/user.models';
+import { Permission, USER_STATUS_META, User, UserStatus } from '../../../core/models/user.models';
 
 /** Which permission family covers the account (customers:status, riders:status...). */
 export type AccountKind = 'customers' | 'restaurants' | 'riders' | 'admins';

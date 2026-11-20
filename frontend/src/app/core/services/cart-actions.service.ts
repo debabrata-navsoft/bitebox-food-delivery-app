@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { Observable, catchError, filter, switchMap, throwError } from 'rxjs';
 import { confirmed } from '../../shared/components/confirm-dialog/confirm-dialog';
 import { AuthService } from '../auth/auth.service';
-import { errorCode, errorMessage } from './api-error';
+import { errorCode, errorMessage } from '../../shared/utils/api-error';
 import { CartService } from './cart.service';
 import { NotificationService } from './notification.service';
 import { BbDialog } from '../../shared/dialog/bb-dialog';

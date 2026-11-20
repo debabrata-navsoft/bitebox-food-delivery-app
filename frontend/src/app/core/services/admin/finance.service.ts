@@ -12,11 +12,11 @@ import {
   PayoutType,
   RefundRow,
   Transaction,
-} from '../../../shared/models/admin-roles.models';
+} from '../../models/admin-roles.models';
 import { Faceted, ListQuery } from '../../../shared/list/filtered-list';
-import { ApiResponse } from '../../../shared/models/api.models';
+import { ApiResponse } from '../../models/api.models';
 import { FileDownloadService } from '../file-download.service';
-import { toParams } from '../http-params';
+import { toParams } from '../../../shared/utils/http-params';
 
 @Injectable({ providedIn: 'root' })
 export class FinanceService {

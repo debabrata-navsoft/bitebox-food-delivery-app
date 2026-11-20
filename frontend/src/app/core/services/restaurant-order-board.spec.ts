@@ -1,7 +1,7 @@
 import { DestroyRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
-import { RestaurantActiveOrders, RestaurantOrder } from '../../shared/models/order-management.models';
+import { RestaurantActiveOrders, RestaurantOrder } from '../models/order-management.models';
 import { NotificationService } from './notification.service';
 import { OrderEvent, RealtimeService } from './realtime.service';
 import { RestaurantOrdersService } from './order-management.service';

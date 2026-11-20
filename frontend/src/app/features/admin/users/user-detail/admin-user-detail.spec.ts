@@ -7,7 +7,7 @@ import { of } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AdminUserDetail as Detail, AdminUsersService } from '../../../../core/services/admin/admin-users.service';
 import { AdminOrdersService } from '../../../../core/services/order-management.service';
-import { User } from '../../../../shared/models/user.models';
+import { User } from '../../../../core/models/user.models';
 import { AdminUserDetail } from './admin-user-detail';
 
 const user: User = {

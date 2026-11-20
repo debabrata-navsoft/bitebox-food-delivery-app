@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { IconComponent, PaginationComponent } from 'nexprime';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../../shared/utils/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AdminOrdersService } from '../../../core/services/order-management.service';
 import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
@@ -11,14 +11,14 @@ import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { filterOptions, filteredList } from '../../../shared/list/filtered-list';
 import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
 import { FilterSection } from '../../../shared/components/filter-panel/filter-panel.models';
-import { OrderStatus, VEHICLE_LABEL } from '../../../shared/models/checkout.models';
+import { OrderStatus, VEHICLE_LABEL } from '../../../core/models/checkout.models';
 import {
   AdminRider,
   RIDER_VERIFICATION_LABEL,
   RIDER_VERIFICATION_TONE,
   RiderReviewState,
   riderReviewState,
-} from '../../../shared/models/order-management.models';
+} from '../../../core/models/order-management.models';
 import { RouterLink } from '@angular/router';
 import { openAdminOrder } from '../orders/admin-order-dialog/admin-order-dialog';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';

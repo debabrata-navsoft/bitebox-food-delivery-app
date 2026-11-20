@@ -11,13 +11,13 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 import { FileUploadComponent, IconComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../utils/api-error';
 import {
   ACCEPTED_IMAGE_TYPES,
   MAX_IMAGE_BYTES,
   UploadService,
 } from '../../../core/services/upload.service';
-import { REVIEW_LIMITS } from '../../models/review.models';
+import { REVIEW_LIMITS } from '../../../core/models/review.models';
 
 /**
  * Several review photos: NexPrime's uploader for new files (each uploaded as soon as it is chosen),

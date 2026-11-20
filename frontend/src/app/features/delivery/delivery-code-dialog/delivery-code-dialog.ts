@@ -9,7 +9,7 @@ import {
 } from '@angular/forms/signals';
 import { ButtonComponent, IconComponent, InputOtpComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../shared/utils/api-error';
 import { RiderService } from '../../../core/services/order-management.service';
 import { FieldError } from '../../../shared/forms/field-error/field-error';
 import { serverErrors, shownError } from '../../../shared/forms/form-errors';
@@ -19,7 +19,7 @@ import {
   BbDialogRef,
   BbDialogTitle,
 } from '../../../shared/dialog/bb-dialog';
-import { RiderDashboard, RiderOrder } from '../../../shared/models/order-management.models';
+import { RiderDashboard, RiderOrder } from '../../../core/models/order-management.models';
 
 /**
  * "Delivered" with the customer's 4-digit code (master prompt §6 step 23). The dialog sends the

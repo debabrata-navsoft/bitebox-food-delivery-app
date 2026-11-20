@@ -3,7 +3,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { IconComponent } from 'nexprime';
-import { resourceError } from '../../../../core/services/api-error';
+import { resourceError } from '../../../../shared/utils/api-error';
 import { SupportDeskService } from '../../../../core/services/support.service';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
 import { StatTile } from '../../../../shared/components/stat-tile/stat-tile';

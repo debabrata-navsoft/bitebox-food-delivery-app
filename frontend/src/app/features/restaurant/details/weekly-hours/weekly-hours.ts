@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, model } from '@angular/core';
 import { TimePickerComponent, ToggleComponent } from 'nexprime';
-import { WEEK_DAYS, WeekDay, WeeklyHours } from '../../../../shared/models/catalog.models';
-import { dateToTime, timeToDate } from '../../../../shared/forms/time-of-day';
+import { WEEK_DAYS, WeekDay, WeeklyHours } from '../../../../core/models/catalog.models';
+import { dateToTime, timeToDate } from '../../../../shared/utils/time-of-day';
 
 const NAMES: Record<WeekDay, string> = {
   mon: 'Monday',

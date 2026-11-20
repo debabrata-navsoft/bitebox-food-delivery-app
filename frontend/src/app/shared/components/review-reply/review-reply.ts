@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { IconComponent } from 'nexprime';
-import { ReviewResponse } from '../../models/review.models';
+import { ReviewResponse } from '../../../core/models/review.models';
 
 /**
  * A restaurant's public reply under a review: "<responder> replied [to <about>] · date" and the text.

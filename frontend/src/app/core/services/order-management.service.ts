@@ -2,9 +2,9 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse } from '../../shared/models/api.models';
+import { ApiResponse } from '../models/api.models';
 import { Faceted, ListQuery } from '../../shared/list/filtered-list';
-import { Order, VehicleType } from '../../shared/models/checkout.models';
+import { Order, VehicleType } from '../models/checkout.models';
 import {
   AdminOrder,
   AdminOrderList,
@@ -22,8 +22,8 @@ import {
   RiderReviewState,
   RiderVerificationStatus,
   RiderStats,
-} from '../../shared/models/order-management.models';
-import { toParams } from './http-params';
+} from '../models/order-management.models';
+import { toParams } from '../../shared/utils/http-params';
 
 @Injectable({ providedIn: 'root' })
 export class RestaurantOrdersService {

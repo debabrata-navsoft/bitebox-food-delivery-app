@@ -7,7 +7,7 @@ import { inBackground } from '../page-loader';
 import { pollWhileVisible } from '../poll';
 import { AdminOrdersService } from '../order-management.service';
 import { AdminCatalogService } from './admin-catalog.service';
-import { RestaurantStatus } from '../../../shared/models/catalog.models';
+import { RestaurantStatus } from '../../models/catalog.models';
 
 const POLL_MS = 60_000;
 

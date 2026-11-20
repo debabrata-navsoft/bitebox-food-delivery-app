@@ -10,7 +10,7 @@ import {
   REPORT_REASON_LABEL,
   STATUS_LABEL,
   TARGET_LABEL,
-} from '../../../../shared/models/review.models';
+} from '../../../../core/models/review.models';
 
 const ACTION_LABEL: Record<string, string> = {
   hide: 'Hidden',

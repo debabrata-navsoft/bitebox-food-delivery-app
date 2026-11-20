@@ -1,4 +1,4 @@
-import { TableLabels } from '../../../../shared/list/table-labels';
+import { TableLabels } from '../../../../shared/directives/table-labels';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { IconComponent } from 'nexprime';
 import { OperationsService } from '../../../../core/services/admin/operations.service';

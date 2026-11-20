@@ -2,13 +2,13 @@ import { ChangeDetectionStrategy, Component, effect, inject, input, output, sign
 import { FormRoot, TreeValidationResult, form, pattern, validate } from '@angular/forms/signals';
 import { ToggleComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
-import { errorMessage, fieldErrors } from '../../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../../shared/utils/api-error';
 import { MyRestaurantService } from '../../../../core/services/my-restaurant.service';
 import { NotificationService } from '../../../../core/services/notification.service';
-import { fromIsoDay, isoDay } from '../../../../shared/forms/dates';
+import { fromIsoDay, isoDay } from '../../../../shared/utils/dates';
 import { serverErrors, shownError } from '../../../../shared/forms/form-errors';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
-import { Restaurant } from '../../../../shared/models/catalog.models';
+import { Restaurant } from '../../../../core/models/catalog.models';
 
 const GSTIN = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 

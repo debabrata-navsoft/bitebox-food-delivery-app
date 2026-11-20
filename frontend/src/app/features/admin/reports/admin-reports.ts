@@ -7,7 +7,7 @@ import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { periodReport } from '../../../shared/list/period-report';
-import { ORDER_STATUS_LABEL, OrderStatus } from '../../../shared/models/checkout.models';
+import { ORDER_STATUS_LABEL, OrderStatus } from '../../../core/models/checkout.models';
 import { InrPipe, formatPaise } from '../../../shared/pipes/money.pipes';
 
 const METHOD_LABEL: Record<string, string> = { cod: 'Cash on delivery', online: 'Online' };

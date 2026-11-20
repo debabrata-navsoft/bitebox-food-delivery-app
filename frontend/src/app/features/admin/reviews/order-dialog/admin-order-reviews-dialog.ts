@@ -3,7 +3,7 @@ import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/d
 import { MatButtonModule } from '@angular/material/button';
 import { IconComponent } from 'nexprime';
 import { Observable, filter } from 'rxjs';
-import { errorMessage } from '../../../../core/services/api-error';
+import { errorMessage } from '../../../../shared/utils/api-error';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { ReviewService } from '../../../../core/services/review.service';
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
@@ -17,7 +17,7 @@ import {
   REVIEW_LIMITS,
   STATUS_LABEL,
   subjectLabel,
-} from '../../../../shared/models/review.models';
+} from '../../../../core/models/review.models';
 import { openAdminOrder } from '../../orders/admin-order-dialog/admin-order-dialog';
 import { openReviewHistory } from '../admin-review-dialog/admin-review-dialog';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';

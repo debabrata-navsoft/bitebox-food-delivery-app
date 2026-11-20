@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { of } from 'rxjs';
-import { ReviewService } from '../../../core/services/review.service';
-import { UploadService } from '../../../core/services/upload.service';
-import { MyReview, OrderReviewState } from '../../../shared/models/review.models';
+import { ReviewService } from '../../../../core/services/review.service';
+import { UploadService } from '../../../../core/services/upload.service';
+import { MyReview, OrderReviewState } from '../../../../core/models/review.models';
 import { RateOrderDialog } from './rate-order-dialog';
 
 const future = () => new Date(Date.now() + 86_400_000).toISOString();

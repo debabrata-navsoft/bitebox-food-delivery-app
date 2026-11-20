@@ -2,7 +2,7 @@ import { DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { PageEvent } from '@angular/material/paginator';
 import { EMPTY, Observable, catchError, debounceTime, finalize, skip, tap } from 'rxjs';
-import { errorMessage } from '../../core/services/api-error';
+import { errorMessage } from '../utils/api-error';
 import { liveRefresh } from '../../core/services/poll';
 import { OrderEvent } from '../../core/services/realtime.service';
 

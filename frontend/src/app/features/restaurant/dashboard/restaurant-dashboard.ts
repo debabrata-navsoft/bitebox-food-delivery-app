@@ -5,7 +5,7 @@ import { filter } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { IconComponent, ToggleComponent } from 'nexprime';
 import { AuthService } from '../../../core/auth/auth.service';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../../shared/utils/api-error';
 import {
   MyRestaurantService,
   MyRestaurantState,
@@ -17,7 +17,7 @@ import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { ClockTimePipe } from '../../../shared/pipes/clock-time.pipe';
 import { StatusBanner } from '../status-banner/status-banner';
 import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
-import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
+import { ImageFallback, UsableImagePipe } from '../../../shared/directives/broken-images';
 
 @Component({
   selector: 'bb-restaurant-dashboard',

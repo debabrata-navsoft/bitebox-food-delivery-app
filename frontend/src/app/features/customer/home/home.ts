@@ -1,4 +1,4 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../../shared/pipes/np-icon-name';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -22,7 +22,7 @@ import { DeliveryLocationService } from '../../../core/services/delivery-locatio
 import { LocationPickerDialog } from '../../../shared/components/location-picker/location-picker-dialog';
 import { RestaurantCard } from '../../../shared/components/restaurant-card/restaurant-card';
 import { AppQr } from '../../../shared/components/app-qr/app-qr';
-import { FoodCategory, Restaurant } from '../../../shared/models/catalog.models';
+import { FoodCategory, Restaurant } from '../../../core/models/catalog.models';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { InstallPromptService } from '../../../core/services/install-prompt.service';
 

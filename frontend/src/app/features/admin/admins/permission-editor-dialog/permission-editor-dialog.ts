@@ -3,11 +3,11 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { ButtonComponent, CheckboxComponent, IconComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
 import { AdminStaffService } from '../../../../core/services/admin/admin-staff.service';
-import { errorMessage } from '../../../../core/services/api-error';
+import { errorMessage } from '../../../../shared/utils/api-error';
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
 import { loaded } from '../../../../shared/coupons/coupon-list';
 import { BB_DIALOG_DATA, BbDialog, BbDialogRef, BbDialogTitle } from '../../../../shared/dialog/bb-dialog';
-import { Permission, ROLE_META, User } from '../../../../shared/models/user.models';
+import { Permission, ROLE_META, User } from '../../../../core/models/user.models';
 
 /**
  * The super admin picks what one admin or operator may do: permissions in groups, ready-made sets

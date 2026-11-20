@@ -2,8 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse, Pagination } from '../../shared/models/api.models';
-import { toParams } from './http-params';
+import { ApiResponse, Pagination } from '../models/api.models';
+import { toParams } from '../../shared/utils/http-params';
 
 export type NotificationCategory = 'orders' | 'account' | 'promotions';
 export type NotificationChannel = 'push' | 'email' | 'sms';

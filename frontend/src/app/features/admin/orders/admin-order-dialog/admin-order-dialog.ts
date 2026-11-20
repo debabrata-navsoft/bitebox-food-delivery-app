@@ -4,7 +4,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Observable, filter } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { errorMessage } from '../../../../core/services/api-error';
+import { errorMessage } from '../../../../shared/utils/api-error';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { AdminOrdersService } from '../../../../core/services/order-management.service';
 import { BillSummary } from '../../../../shared/components/bill-summary/bill-summary';
@@ -21,10 +21,10 @@ import {
   OrderStatus,
   VEHICLE_LABEL,
   customerStatusLabel,
-} from '../../../../shared/models/checkout.models';
-import { AdminOrder, TRACKED_STATUSES } from '../../../../shared/models/order-management.models';
+} from '../../../../core/models/checkout.models';
+import { AdminOrder, TRACKED_STATUSES } from '../../../../core/models/order-management.models';
 import { DistancePipe, InrPipe } from '../../../../shared/pipes/money.pipes';
-import { PAYMENT_STATUS_LABEL, PROVIDER_LABEL } from '../../../../shared/models/payment.models';
+import { PAYMENT_STATUS_LABEL, PROVIDER_LABEL } from '../../../../core/models/payment.models';
 import {
   BB_DIALOG_DATA,
   BbDialog,

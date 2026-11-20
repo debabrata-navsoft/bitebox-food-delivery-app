@@ -6,13 +6,13 @@ import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../../core/auth/auth.service';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../shared/utils/api-error';
 import { serverErrors, shownError } from '../../../shared/forms/form-errors';
-import { emailRules } from '../../../shared/forms/form-rules';
+import { emailRules } from '../../../shared/validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { ROLE_META, Role, User } from '../../../shared/models/user.models';
+import { ROLE_META, Role, User } from '../../../core/models/user.models';
 import { PhoneLogin } from './phone-login/phone-login';
-import { safeReturnUrl } from '../../../core/services/safe-url';
+import { safeReturnUrl } from '../../../shared/utils/safe-url';
 
 export { safeReturnUrl };
 

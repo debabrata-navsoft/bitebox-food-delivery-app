@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core
 import { MatDialog } from '@angular/material/dialog';
 import { DatePipe } from '@angular/common';
 import { IconComponent } from 'nexprime';
-import { RATING_WORDS, ReviewResponse } from '../../models/review.models';
+import { RATING_WORDS, ReviewResponse } from '../../../core/models/review.models';
 import { Stars } from '../stars/stars';
 import { ReviewReply } from '../review-reply/review-reply';
 import { openPhotoViewer } from '../photo-viewer/photo-viewer';

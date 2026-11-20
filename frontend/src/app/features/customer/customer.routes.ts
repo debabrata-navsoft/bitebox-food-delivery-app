@@ -6,18 +6,18 @@ export const CUSTOMER_ROUTES: Routes = [
     path: 'restaurants',
     title: 'Restaurants | BiteBox',
     loadComponent: () =>
-      import('../restaurants/restaurant-list/restaurant-list').then((m) => m.RestaurantList),
+      import('./restaurants/restaurant-list/restaurant-list').then((m) => m.RestaurantList),
   },
   {
     path: 'restaurants/:slug',
     title: 'Restaurant | BiteBox',
     loadComponent: () =>
-      import('../restaurants/restaurant-detail/restaurant-detail').then((m) => m.RestaurantDetail),
+      import('./restaurants/restaurant-detail/restaurant-detail').then((m) => m.RestaurantDetail),
   },
   {
     path: 'dishes',
     title: 'Dishes | BiteBox',
-    loadComponent: () => import('../food/food-search/food-search').then((m) => m.FoodSearch),
+    loadComponent: () => import('./food/food-search/food-search').then((m) => m.FoodSearch),
   },
   {
     path: 'offers',
@@ -35,26 +35,26 @@ export const CUSTOMER_ROUTES: Routes = [
     path: 'notifications',
     title: 'Notifications | BiteBox',
     canActivate: [roleGuard('customer')],
-    loadComponent: () => import('../notifications/notifications-page').then((m) => m.NotificationsPage),
+    loadComponent: () => import('../../shared/components/notifications/notifications-page').then((m) => m.NotificationsPage),
   },
   {
     path: 'checkout',
     title: 'Checkout | BiteBox',
     canActivate: [roleGuard('customer')],
-    loadComponent: () => import('../checkout/checkout').then((m) => m.Checkout),
+    loadComponent: () => import('./checkout/checkout').then((m) => m.Checkout),
   },
   { path: 'cart', redirectTo: 'checkout' },
   {
     path: 'orders',
     title: 'My orders | BiteBox',
     canActivate: [roleGuard('customer')],
-    loadComponent: () => import('../orders/order-list/order-list').then((m) => m.OrderList),
+    loadComponent: () => import('./orders/order-list/order-list').then((m) => m.OrderList),
   },
   {
     path: 'orders/:id',
     title: 'Order | BiteBox',
     canActivate: [roleGuard('customer')],
-    loadComponent: () => import('../orders/order-detail/order-detail').then((m) => m.OrderDetail),
+    loadComponent: () => import('./orders/order-detail/order-detail').then((m) => m.OrderDetail),
   },
   {
     path: 'account/addresses',
@@ -72,41 +72,41 @@ export const CUSTOMER_ROUTES: Routes = [
     path: 'account/coins',
     title: 'My coins | BiteBox',
     canActivate: [roleGuard('customer')],
-    loadComponent: () => import('../rewards/coins-wallet/coins-wallet').then((m) => m.CoinsWallet),
+    loadComponent: () => import('./rewards/coins-wallet/coins-wallet').then((m) => m.CoinsWallet),
   },
   {
     path: 'account/refer',
     title: 'Refer & earn | BiteBox',
     canActivate: [roleGuard('customer')],
-    loadComponent: () => import('../rewards/refer-earn/refer-earn').then((m) => m.ReferEarn),
+    loadComponent: () => import('./rewards/refer-earn/refer-earn').then((m) => m.ReferEarn),
   },
   {
     path: 'account/rewards',
     title: 'Rewards | BiteBox',
     canActivate: [roleGuard('customer')],
     loadComponent: () =>
-      import('../rewards/special-rewards/special-rewards').then((m) => m.SpecialRewards),
+      import('./rewards/special-rewards/special-rewards').then((m) => m.SpecialRewards),
   },
   {
     path: 'support',
     title: 'Help & support | BiteBox',
     canActivate: [roleGuard('customer')],
-    loadComponent: () => import('../support/my-tickets/my-tickets').then((m) => m.MyTickets),
+    loadComponent: () => import('../../shared/components/support/my-tickets/my-tickets').then((m) => m.MyTickets),
   },
   {
     path: 'support/:id',
     title: 'Support ticket | BiteBox',
     canActivate: [roleGuard('customer')],
-    loadComponent: () => import('../support/my-ticket/my-ticket').then((m) => m.MyTicket),
+    loadComponent: () => import('../../shared/components/support/my-ticket/my-ticket').then((m) => m.MyTicket),
   },
   {
     path: 'forbidden',
     title: 'Access denied | BiteBox',
-    loadComponent: () => import('../errors/forbidden/forbidden').then((m) => m.Forbidden),
+    loadComponent: () => import('../../shared/components/errors/forbidden/forbidden').then((m) => m.Forbidden),
   },
   {
     path: '**',
     title: 'Page not found | BiteBox',
-    loadComponent: () => import('../errors/not-found/not-found').then((m) => m.NotFound),
+    loadComponent: () => import('../../shared/components/errors/not-found/not-found').then((m) => m.NotFound),
   },
 ];

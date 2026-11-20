@@ -1,4 +1,4 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../../shared/pipes/np-icon-name';
 import { askPrepTime } from './accept-dialog/accept-dialog';
 import {
   ButtonComponent,
@@ -18,7 +18,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { interval } from 'rxjs';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../../shared/utils/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { RestaurantOrdersService } from '../../../core/services/order-management.service';
 import { RestaurantOrderBoard } from '../../../core/services/restaurant-order-board';
@@ -30,12 +30,12 @@ import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
 import { datesSection, filteredList, optionsSection } from '../../../shared/list/filtered-list';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
-import { OrderStatus } from '../../../shared/models/checkout.models';
+import { OrderStatus } from '../../../core/models/checkout.models';
 import {
   RestaurantAction,
   RestaurantOrder,
   collectsCash,
-} from '../../../shared/models/order-management.models';
+} from '../../../core/models/order-management.models';
 import { ItemCountPipe } from '../../../shared/pipes/item-count.pipe';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';

@@ -3,11 +3,11 @@ import { FormRoot, TreeValidationResult, form, maxLength, required } from '@angu
 import { ButtonComponent, IconComponent, SelectOption } from 'nexprime';
 import { BB_DIALOG_DATA, BbDialog, BbDialogRef, BbDialogTitle } from '../../dialog/bb-dialog';
 import { Observable, filter, firstValueFrom } from 'rxjs';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../utils/api-error';
 import { ReviewService } from '../../../core/services/review.service';
 import { serverErrors, shownError } from '../../forms/form-errors';
 import { NP_FORM_FIELDS } from '../../forms/np-form-fields';
-import { REPORT_REASON_LABEL, REVIEW_LIMITS, ReportReason } from '../../models/review.models';
+import { REPORT_REASON_LABEL, REVIEW_LIMITS, ReportReason } from '../../../core/models/review.models';
 
 export interface ReportReviewData {
   reviewId: string;

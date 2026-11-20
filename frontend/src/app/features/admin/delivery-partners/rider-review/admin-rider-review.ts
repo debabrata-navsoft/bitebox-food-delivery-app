@@ -3,20 +3,20 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from 'nexprime';
-import { errorMessage } from '../../../../core/services/api-error';
+import { errorMessage } from '../../../../shared/utils/api-error';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { AdminOrdersService } from '../../../../core/services/order-management.service';
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
 import { DECISIONS, Decision } from '../../rider-accounts/rider-status';
 import { KycReview } from '../../../../shared/components/kyc/kyc-review/kyc-review';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
-import { VEHICLE_LABEL } from '../../../../shared/models/checkout.models';
+import { VEHICLE_LABEL } from '../../../../core/models/checkout.models';
 import {
   RIDER_VERIFICATION_LABEL,
   RIDER_VERIFICATION_TONE,
   RiderVerificationStatus,
   riderReviewState,
-} from '../../../../shared/models/order-management.models';
+} from '../../../../core/models/order-management.models';
 
 /** One rider: details, verification documents and bank account, and the verification decision. */
 @Component({

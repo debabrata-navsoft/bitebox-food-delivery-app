@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { ORDER_STATUS_LABEL, OrderStatus } from '../../models/checkout.models';
+import { ORDER_STATUS_LABEL, OrderStatus } from '../../../core/models/checkout.models';
 
 const TONE: Record<OrderStatus, string> = {
   pending: 'waiting',

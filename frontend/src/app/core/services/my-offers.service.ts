@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
-import { AdminCouponInput } from '../../shared/models/checkout.models';
+import { AdminCouponInput } from '../models/checkout.models';
 import { CouponApi } from './coupon-api';
 
 /** A partner's offer: the admin fields minus other restaurants, plus "save as a draft". */

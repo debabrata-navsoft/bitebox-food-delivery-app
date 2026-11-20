@@ -322,11 +322,11 @@ export const ADMIN_ROUTES: Routes = [
   {
     path: 'notifications',
     title: 'Notifications | BiteBox Admin',
-    loadComponent: () => import('../notifications/notifications-page').then((m) => m.NotificationsPage),
+    loadComponent: () => import('../../shared/components/notifications/notifications-page').then((m) => m.NotificationsPage),
   },
   {
     path: 'profile',
     title: 'Profile | BiteBox Admin',
-    loadComponent: () => import('../profile/profile').then((m) => m.Profile),
+    loadComponent: () => import('../../shared/components/profile/profile').then((m) => m.Profile),
   },
 ];

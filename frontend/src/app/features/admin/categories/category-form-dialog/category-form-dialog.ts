@@ -1,4 +1,4 @@
-import { NpIconPipe } from '../../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../../../shared/pipes/np-icon-name';
 import {
   BB_DIALOG_DATA,
   BbDialog,
@@ -10,12 +10,12 @@ import { FormRoot, TreeValidationResult, form, maxLength, pattern } from '@angul
 import { firstValueFrom } from 'rxjs';
 import { ButtonComponent, IconComponent, ToggleComponent } from 'nexprime';
 import { AdminCatalogService } from '../../../../core/services/admin/admin-catalog.service';
-import { errorMessage, fieldErrors } from '../../../../core/services/api-error';
-import { FoodCategory } from '../../../../shared/models/catalog.models';
+import { errorMessage, fieldErrors } from '../../../../shared/utils/api-error';
+import { FoodCategory } from '../../../../core/models/catalog.models';
 import { serverErrors, shownError } from '../../../../shared/forms/form-errors';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
 import { ImageUpload } from '../../../../shared/components/image-upload/image-upload';
-import { numberRange, requiredText } from '../../../../shared/forms/form-rules';
+import { numberRange, requiredText } from '../../../../shared/validators/form-rules';
 
 const ICON_SUGGESTIONS = [
   'restaurant',

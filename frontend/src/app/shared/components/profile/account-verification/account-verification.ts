@@ -2,14 +2,14 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormRoot, TreeValidationResult, form } from '@angular/forms/signals';
 import { ButtonComponent, IconComponent } from 'nexprime';
 import { Observable, finalize, firstValueFrom } from 'rxjs';
-import { AuthService } from '../../../core/auth/auth.service';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
-import { NotificationService } from '../../../core/services/notification.service';
-import { serverErrors } from '../../../shared/forms/form-errors';
-import { codeRules } from '../../../shared/forms/code-rules';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { countdown } from '../../../shared/forms/countdown';
-import { CodeSent, User } from '../../../shared/models/user.models';
+import { AuthService } from '../../../../core/auth/auth.service';
+import { errorMessage, fieldErrors } from '../../../utils/api-error';
+import { NotificationService } from '../../../../core/services/notification.service';
+import { serverErrors } from '../../../forms/form-errors';
+import { codeRules } from '../../../validators/code-rules';
+import { NP_FORM_FIELDS } from '../../../forms/np-form-fields';
+import { countdown } from '../../../utils/countdown';
+import { CodeSent, User } from '../../../../core/models/user.models';
 
 type Channel = 'email' | 'phone';
 

@@ -6,7 +6,7 @@ import {
   MEMBER_VIEW_PERMISSION,
   Permission,
   ROLE_META,
-} from '../../shared/models/user.models';
+} from '../../core/models/user.models';
 import { NavItem, PanelShell } from '../panel-shell/panel-shell';
 
 const PROFILE: NavItem[] = [{ label: 'Profile', icon: 'manage_accounts', link: '/admin/profile' }];

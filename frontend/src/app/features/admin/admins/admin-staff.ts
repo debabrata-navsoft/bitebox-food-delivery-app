@@ -1,4 +1,4 @@
-import { TableLabels } from '../../../shared/list/table-labels';
+import { TableLabels } from '../../../shared/directives/table-labels';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { ButtonComponent, IconComponent, PaginationComponent } from 'nexprime';
@@ -12,7 +12,7 @@ import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolba
 import { FilterSection } from '../../../shared/components/filter-panel/filter-panel.models';
 import { filteredList } from '../../../shared/list/filtered-list';
 import { accountStatusSection, adminRoleSection } from '../filter-sections';
-import { AdminRole, ROLE_META, STAFF_ADMIN_ROLES, USER_STATUS_META, User } from '../../../shared/models/user.models';
+import { AdminRole, ROLE_META, STAFF_ADMIN_ROLES, USER_STATUS_META, User } from '../../../core/models/user.models';
 import { openStaffForm } from './staff-form-dialog/staff-form-dialog';
 import { openLoginHistory } from './login-history-dialog/login-history-dialog';
 import { openPermissionEditor } from './permission-editor-dialog/permission-editor-dialog';

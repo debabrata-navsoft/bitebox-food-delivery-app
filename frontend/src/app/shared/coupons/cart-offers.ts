@@ -1,8 +1,8 @@
 import { inject, signal } from '@angular/core';
-import { errorMessage } from '../../core/services/api-error';
+import { errorMessage } from '../utils/api-error';
 import { CartService } from '../../core/services/cart.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { CartQuote, CouponOffer } from '../models/checkout.models';
+import { CartQuote, CouponOffer } from '../../core/models/checkout.models';
 import { appliedMessage, discountLabel } from './coupon-labels';
 import { formatPaise } from '../pipes/money.pipes';
 

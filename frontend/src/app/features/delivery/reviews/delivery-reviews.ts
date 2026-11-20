@@ -11,7 +11,7 @@ import { RatingSummary } from '../../../shared/components/rating-summary/rating-
 import { reportReview } from '../../../shared/components/report-review-dialog/report-review-dialog';
 import { ReviewCard } from '../../../shared/components/review-card/review-card';
 import { datesSection, filteredList, optionsSection } from '../../../shared/list/filtered-list';
-import { RATING_SECTION, RiderReview, SORT_OPTIONS } from '../../../shared/models/review.models';
+import { RATING_SECTION, RiderReview, SORT_OPTIONS } from '../../../core/models/review.models';
 
 /** The rider's delivery ratings. Read-only: riders can report a review but never change it. */
 @Component({

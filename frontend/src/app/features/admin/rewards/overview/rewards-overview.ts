@@ -1,4 +1,4 @@
-import { TableLabels } from '../../../../shared/list/table-labels';
+import { TableLabels } from '../../../../shared/directives/table-labels';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
@@ -9,7 +9,7 @@ import { PageHeader } from '../../../../shared/components/page-header/page-heade
 import { StatTile } from '../../../../shared/components/stat-tile/stat-tile';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
 import { periodReport } from '../../../../shared/list/period-report';
-import { CAMPAIGN_STATUS_LABEL } from '../../../../shared/models/rewards.models';
+import { CAMPAIGN_STATUS_LABEL } from '../../../../core/models/rewards.models';
 import { formatPaise } from '../../../../shared/pipes/money.pipes';
 
 /** Coins & Rewards reports: issued, redeemed, liability, programmes and suspicious activity. */

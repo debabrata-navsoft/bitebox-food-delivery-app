@@ -43,26 +43,26 @@ export const RESTAURANT_ROUTES: Routes = [
     path: 'earnings',
     title: 'Earnings | BiteBox Restaurant',
     data: { scope: 'restaurant' },
-    loadComponent: () => import('../earnings/earnings-page').then((m) => m.EarningsPage),
+    loadComponent: () => import('../../shared/components/earnings/earnings-page').then((m) => m.EarningsPage),
   },
   {
     path: 'notifications',
     title: 'Notifications | BiteBox Restaurant',
-    loadComponent: () => import('../notifications/notifications-page').then((m) => m.NotificationsPage),
+    loadComponent: () => import('../../shared/components/notifications/notifications-page').then((m) => m.NotificationsPage),
   },
   {
     path: 'profile',
     title: 'Profile | BiteBox Restaurant',
-    loadComponent: () => import('../profile/profile').then((m) => m.Profile),
+    loadComponent: () => import('../../shared/components/profile/profile').then((m) => m.Profile),
   },
   {
     path: 'support',
     title: 'Help & support | BiteBox Restaurant',
-    loadComponent: () => import('../support/my-tickets/my-tickets').then((m) => m.MyTickets),
+    loadComponent: () => import('../../shared/components/support/my-tickets/my-tickets').then((m) => m.MyTickets),
   },
   {
     path: 'support/:id',
     title: 'Support ticket | BiteBox Restaurant',
-    loadComponent: () => import('../support/my-ticket/my-ticket').then((m) => m.MyTicket),
+    loadComponent: () => import('../../shared/components/support/my-ticket/my-ticket').then((m) => m.MyTicket),
   },
 ];

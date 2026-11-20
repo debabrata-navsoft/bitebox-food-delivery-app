@@ -11,8 +11,8 @@ import { RouterLink } from '@angular/router';
 import { IconComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { errorMessage } from '../../../core/services/api-error';
-import { ADMIN_ROLES, Role } from '../../../shared/models/user.models';
+import { errorMessage } from '../../../shared/utils/api-error';
+import { ADMIN_ROLES, Role } from '../../../core/models/user.models';
 
 /** Where each role edits its profile (and asks for a new link). */
 export const profileUrl = (role: Role): string =>

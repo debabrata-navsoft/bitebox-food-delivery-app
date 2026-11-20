@@ -4,12 +4,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { IconComponent, SelectOption } from 'nexprime';
 import { Observable, firstValueFrom } from 'rxjs';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
-import { SupportService } from '../../../core/services/support.service';
-import { serverErrors, shownError } from '../../../shared/forms/form-errors';
-import { requiredText } from '../../../shared/forms/form-rules';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { MyTicket, TICKET_TYPE_LABEL, TicketType } from '../../../shared/models/admin-roles.models';
+import { errorMessage, fieldErrors } from '../../../utils/api-error';
+import { SupportService } from '../../../../core/services/support.service';
+import { serverErrors, shownError } from '../../../forms/form-errors';
+import { requiredText } from '../../../validators/form-rules';
+import { NP_FORM_FIELDS } from '../../../forms/np-form-fields';
+import { MyTicket, TICKET_TYPE_LABEL, TicketType } from '../../../../core/models/admin-roles.models';
 
 export interface NewTicketData {
   orderNumber?: string;

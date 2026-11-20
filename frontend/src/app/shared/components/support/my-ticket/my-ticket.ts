@@ -6,16 +6,16 @@ import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
-import { errorMessage, resourceError } from '../../../core/services/api-error';
-import { NotificationService } from '../../../core/services/notification.service';
-import { SupportService } from '../../../core/services/support.service';
-import { requiredText } from '../../../shared/forms/form-rules';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
+import { errorMessage, resourceError } from '../../../utils/api-error';
+import { NotificationService } from '../../../../core/services/notification.service';
+import { SupportService } from '../../../../core/services/support.service';
+import { requiredText } from '../../../validators/form-rules';
+import { NP_FORM_FIELDS } from '../../../forms/np-form-fields';
 import {
   TICKET_STATUS_LABEL,
   TICKET_STATUS_TONE,
   TICKET_TYPE_LABEL,
-} from '../../../shared/models/admin-roles.models';
+} from '../../../../core/models/admin-roles.models';
 import { supportBase } from '../support-base';
 
 @Component({

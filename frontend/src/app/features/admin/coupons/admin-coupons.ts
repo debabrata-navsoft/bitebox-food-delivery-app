@@ -26,15 +26,15 @@ import {
 } from '../../../shared/coupons/coupon-list';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
-import { COMPACT_MENU_WIDTH, toggleEndAligned } from '../../../shared/menu/end-aligned-menu';
+import { COMPACT_MENU_WIDTH, toggleEndAligned } from '../../../shared/utils/end-aligned-menu';
 import { datesSection, filteredList, optionsSection } from '../../../shared/list/filtered-list';
-import { TableLabels } from '../../../shared/list/table-labels';
+import { TableLabels } from '../../../shared/directives/table-labels';
 import {
   AdminCoupon,
   COUPON_KIND_LABEL,
   COUPON_STATUS_LABEL,
   COUPON_STATUS_TONE,
-} from '../../../shared/models/checkout.models';
+} from '../../../core/models/checkout.models';
 import { InrPipe, formatPaise } from '../../../shared/pipes/money.pipes';
 import { CouponFormDialog } from './coupon-form-dialog/coupon-form-dialog';
 

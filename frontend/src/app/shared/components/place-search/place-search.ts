@@ -10,7 +10,7 @@ import {
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { IconComponent, SearchInputComponent } from 'nexprime';
 import { EMPTY, catchError, debounceTime, distinctUntilChanged, switchMap, tap } from 'rxjs';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../utils/api-error';
 import { DeliveryLocationService, Place } from '../../../core/services/delivery-location.service';
 
 @Component({

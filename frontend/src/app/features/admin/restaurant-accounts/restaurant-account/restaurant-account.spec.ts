@@ -10,8 +10,8 @@ import {
   AdminRestaurantStore,
   RestaurantAccount as Account,
 } from '../../../../core/services/admin/admin-restaurant-accounts.service';
-import { Restaurant } from '../../../../shared/models/catalog.models';
-import { Permission, User } from '../../../../shared/models/user.models';
+import { Restaurant } from '../../../../core/models/catalog.models';
+import { Permission, User } from '../../../../core/models/user.models';
 import { RestaurantAccount } from './restaurant-account';
 
 const restaurant = {

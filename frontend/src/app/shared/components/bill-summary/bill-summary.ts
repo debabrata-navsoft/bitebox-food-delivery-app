@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { billLabel } from '../../coupons/coupon-labels';
-import { DiscountLine, Pricing } from '../../models/checkout.models';
+import { DiscountLine, Pricing } from '../../../core/models/checkout.models';
 import { DistancePipe, InrPipe } from '../../pipes/money.pipes';
 
 @Component({

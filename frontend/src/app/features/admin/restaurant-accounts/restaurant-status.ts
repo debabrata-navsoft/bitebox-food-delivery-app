@@ -1,5 +1,5 @@
 import { KycState } from '../../../core/services/admin/admin-restaurant-accounts.service';
-import { RestaurantStatus } from '../../../shared/models/catalog.models';
+import { RestaurantStatus } from '../../../core/models/catalog.models';
 
 /** What an admin can do to a restaurant in each status (review page and Restaurant accounts). */
 export interface StatusAction {

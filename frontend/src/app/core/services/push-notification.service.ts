@@ -5,9 +5,9 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { SwPush } from '@angular/service-worker';
 import { Observable, firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse } from '../../shared/models/api.models';
+import { ApiResponse } from '../models/api.models';
 import { AuthService } from '../auth/auth.service';
-import { isStandaloneApp, storageGet, storageSet } from './browser-storage';
+import { isStandaloneApp, storageGet, storageSet } from '../../shared/utils/browser-storage';
 import { inBackground } from './page-loader';
 
 export type PushCategory = 'orders' | 'account' | 'promotions';

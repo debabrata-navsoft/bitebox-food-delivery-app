@@ -17,7 +17,7 @@ import {
   fieldErrors,
   resourceError,
   resourceValue,
-} from '../../../../core/services/api-error';
+} from '../../../../shared/utils/api-error';
 import { ReportsService } from '../../../../core/services/reports.service';
 import {
   BB_DIALOG_DATA,
@@ -26,7 +26,7 @@ import {
   BbDialogTitle,
 } from '../../../../shared/dialog/bb-dialog';
 import { serverErrors, shownError } from '../../../../shared/forms/form-errors';
-import { requiredText } from '../../../../shared/forms/form-rules';
+import { requiredText } from '../../../../shared/validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
 import {
   AdminPayment,
@@ -34,7 +34,7 @@ import {
   REFUND_STATUS_LABEL,
   RefundInfo,
   paymentTone,
-} from '../../../../shared/models/payment.models';
+} from '../../../../core/models/payment.models';
 import { InrPipe, formatPaise, rupeesToPaise } from '../../../../shared/pipes/money.pipes';
 
 /**

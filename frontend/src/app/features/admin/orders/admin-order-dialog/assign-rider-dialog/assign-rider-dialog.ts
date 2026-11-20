@@ -8,8 +8,8 @@ import {
   BbDialogRef,
   BbDialogTitle,
 } from '../../../../../shared/dialog/bb-dialog';
-import { VEHICLE_LABEL } from '../../../../../shared/models/checkout.models';
-import { AdminOrder } from '../../../../../shared/models/order-management.models';
+import { VEHICLE_LABEL } from '../../../../../core/models/checkout.models';
+import { AdminOrder } from '../../../../../core/models/order-management.models';
 
 /** Choose an online, free rider for a waiting order (manual assignment); closes with the id. */
 @Component({

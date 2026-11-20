@@ -1,4 +1,4 @@
-import { CouponOffer } from '../models/checkout.models';
+import { CouponOffer } from '../../core/models/checkout.models';
 import {
   badgeLabel,
   billLabel,

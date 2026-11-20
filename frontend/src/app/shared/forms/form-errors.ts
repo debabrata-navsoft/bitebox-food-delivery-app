@@ -1,5 +1,5 @@
 import { FieldTree, TreeValidationResult, ValidationError } from '@angular/forms/signals';
-import { ApiFieldError } from '../models/api.models';
+import { ApiFieldError } from '../../core/models/api.models';
 
 export type AnyField = () => { errors: () => readonly ValidationError[]; touched: () => boolean };
 

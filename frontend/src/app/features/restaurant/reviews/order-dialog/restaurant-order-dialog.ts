@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { DatePipe } from '@angular/common';
 import { ButtonComponent, IconComponent } from 'nexprime';
 import { Observable, filter } from 'rxjs';
-import { errorMessage } from '../../../../core/services/api-error';
+import { errorMessage } from '../../../../shared/utils/api-error';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { ReviewService } from '../../../../core/services/review.service';
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
@@ -12,7 +12,7 @@ import {
   RestaurantOrderReviews,
   RestaurantReview,
   subjectLabel,
-} from '../../../../shared/models/review.models';
+} from '../../../../core/models/review.models';
 import { ReplyForm } from '../reply-form/reply-form';
 import {
   BB_DIALOG_DATA,

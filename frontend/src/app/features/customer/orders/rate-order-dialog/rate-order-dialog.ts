@@ -5,13 +5,13 @@ import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angu
 import { MatButtonModule } from '@angular/material/button';
 import { IconComponent } from 'nexprime';
 import { Observable, filter, firstValueFrom } from 'rxjs';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
-import { ReviewService } from '../../../core/services/review.service';
-import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
-import { PhotoUpload } from '../../../shared/components/photo-upload/photo-upload';
-import { Stars } from '../../../shared/components/stars/stars';
-import { serverErrors } from '../../../shared/forms/form-errors';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
+import { errorMessage, fieldErrors } from '../../../../shared/utils/api-error';
+import { ReviewService } from '../../../../core/services/review.service';
+import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
+import { PhotoUpload } from '../../../../shared/components/photo-upload/photo-upload';
+import { Stars } from '../../../../shared/components/stars/stars';
+import { serverErrors } from '../../../../shared/forms/form-errors';
+import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
 import {
   MyReview,
   OrderRatingInput,
@@ -19,8 +19,8 @@ import {
   RATING_WORDS,
   REVIEW_LIMITS,
   isEditable,
-} from '../../../shared/models/review.models';
-import { BbDialog } from '../../../shared/dialog/bb-dialog';
+} from '../../../../core/models/review.models';
+import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 
 export interface RateOrderData {
   state: OrderReviewState;

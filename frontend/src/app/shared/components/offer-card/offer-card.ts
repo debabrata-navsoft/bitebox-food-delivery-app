@@ -7,7 +7,7 @@ import {
   itemsLabel,
 } from '../../coupons/coupon-labels';
 import { IconComponent } from 'nexprime';
-import { CouponOffer } from '../../models/checkout.models';
+import { CouponOffer } from '../../../core/models/checkout.models';
 import { InrPipe } from '../../pipes/money.pipes';
 
 /**

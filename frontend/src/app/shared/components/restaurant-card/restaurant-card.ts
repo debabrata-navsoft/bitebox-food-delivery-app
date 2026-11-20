@@ -1,9 +1,9 @@
 import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Restaurant } from '../../models/catalog.models';
+import { Restaurant } from '../../../core/models/catalog.models';
 import { DistancePipe, InrPipe } from '../../pipes/money.pipes';
-import { ImageFallback, UsableImagePipe } from '../../images/broken-images';
+import { ImageFallback, UsableImagePipe } from '../../directives/broken-images';
 import { badgeLabel } from '../../coupons/coupon-labels';
 
 @Component({

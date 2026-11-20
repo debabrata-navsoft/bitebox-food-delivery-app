@@ -22,7 +22,7 @@ import {
   parsePhoneNumberFromString,
 } from 'libphonenumber-js/mobile';
 import metadata from 'libphonenumber-js/metadata.mobile.json';
-import { NpInputAttrs } from '../../forms/np-input-attrs';
+import { NpInputAttrs } from '../../directives/np-input-attrs';
 
 export const DEFAULT_COUNTRY: CountryCode = 'IN';
 

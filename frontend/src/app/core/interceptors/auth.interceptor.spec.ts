@@ -9,7 +9,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ROLE_META } from '../../shared/models/user.models';
+import { ROLE_META } from '../models/user.models';
 import { AuthService } from '../auth/auth.service';
 import { authInterceptor, publicRequest } from './auth.interceptor';
 

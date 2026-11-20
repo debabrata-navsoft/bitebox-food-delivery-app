@@ -10,7 +10,7 @@ import { FormRoot, TreeValidationResult, form, required } from '@angular/forms/s
 import { ButtonComponent, IconComponent, SelectOption } from 'nexprime';
 import { Observable, firstValueFrom } from 'rxjs';
 import { AdminStaffService } from '../../../../core/services/admin/admin-staff.service';
-import { errorMessage, fieldErrors } from '../../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../../shared/utils/api-error';
 import { PhoneInput } from '../../../../shared/components/phone-input/phone-input';
 import { serverErrors, shownError } from '../../../../shared/forms/form-errors';
 import {
@@ -18,15 +18,15 @@ import {
   passwordRules,
   phoneRules,
   requiredText,
-} from '../../../../shared/forms/form-rules';
+} from '../../../../shared/validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
-import { STAFF_ROLE_SUMMARY } from '../../../../shared/models/admin-roles.models';
+import { STAFF_ROLE_SUMMARY } from '../../../../core/models/admin-roles.models';
 import {
   ROLE_META,
   STAFF_ADMIN_ROLES,
   StaffAdminRole,
   User,
-} from '../../../../shared/models/user.models';
+} from '../../../../core/models/user.models';
 
 /** Create a staff admin (no data) or edit one (their user). Closes with the saved user. */
 @Component({

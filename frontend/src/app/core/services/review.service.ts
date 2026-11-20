@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Faceted, ListQuery } from '../../shared/list/filtered-list';
-import { ApiResponse } from '../../shared/models/api.models';
+import { ApiResponse } from '../models/api.models';
 import {
   AdminOrderReviewPage,
   AdminOrderReviews,
@@ -23,9 +23,9 @@ import {
   ReviewStatus,
   ReviewTarget,
   RiderReview,
-} from '../../shared/models/review.models';
+} from '../models/review.models';
 import { publicRequest } from '../interceptors/auth.interceptor';
-import { toParams } from './http-params';
+import { toParams } from '../../shared/utils/http-params';
 
 export interface ReviewListQuery {
   rating?: number;

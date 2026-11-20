@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
 import { FormRoot, TreeValidationResult, form, pattern, required } from '@angular/forms/signals';
 import { firstValueFrom } from 'rxjs';
-import { errorMessage, fieldErrors } from '../../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../utils/api-error';
 import { KycService } from '../../../../core/services/kyc.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { serverErrors, shownError } from '../../../forms/form-errors';
-import { matchesField, requiredText } from '../../../forms/form-rules';
+import { matchesField, requiredText } from '../../../validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../forms/np-form-fields';
-import { KycSummary, PayoutAccount } from '../../../models/kyc.models';
+import { KycSummary, PayoutAccount } from '../../../../core/models/kyc.models';
 
 /**
  * The bank account BiteBox pays a partner into. The number goes to the API once and is stored

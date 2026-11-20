@@ -2,9 +2,9 @@ import { ChangeDetectionStrategy, Component, OnInit, input } from '@angular/core
 import { IconComponent, PaginationComponent } from 'nexprime';
 import { Observable } from 'rxjs';
 import { pagedList } from '../../list/paged-list';
-import { TableLabels } from '../../list/table-labels';
-import { Paginated } from '../../models/api.models';
-import { Permission } from '../../models/user.models';
+import { TableLabels } from '../../directives/table-labels';
+import { Paginated } from '../../../core/models/api.models';
+import { Permission } from '../../../core/models/user.models';
 
 /** One column: its text (and an optional second line), or a coloured badge. */
 export interface RecordColumn<T> {

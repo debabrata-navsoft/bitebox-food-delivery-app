@@ -3,10 +3,10 @@ import { FormRoot, TreeValidationResult, form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { IconComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
-import { errorMessage, fieldErrors } from '../../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../utils/api-error';
 import { NewsletterService } from '../../../../core/services/newsletter.service';
 import { serverErrors, shownError } from '../../../forms/form-errors';
-import { emailRules } from '../../../forms/form-rules';
+import { emailRules } from '../../../validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../forms/np-form-fields';
 
 /** Footer newsletter sign-up. Messages come from the API's answer, never assumed. */

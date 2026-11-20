@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, inject, input } from '@
 import { FieldTree, FormField } from '@angular/forms/signals';
 import { InputOtpComponent } from 'nexprime';
 import { FieldError } from '../field-error/field-error';
-import { NpUntouched } from '../np-field-touch';
+import { NpUntouched } from '../../directives/np-field-touch';
 
 /**
  * A 6-digit one-time code (email or SMS): one box per digit, with its error underneath. Filling the

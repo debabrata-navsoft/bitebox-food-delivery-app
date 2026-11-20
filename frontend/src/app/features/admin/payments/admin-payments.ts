@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ButtonComponent, IconComponent, PaginationComponent } from 'nexprime';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../../shared/utils/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { ReportsService } from '../../../core/services/reports.service';
 import { ListEmpty } from '../../../shared/components/list-empty/list-empty';
@@ -9,7 +9,7 @@ import { OrderStatusChip } from '../../../shared/components/order-status-chip/or
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
 import { datesSection, filteredList, optionsSection } from '../../../shared/list/filtered-list';
-import { AdminPayment, PAYMENT_STATUS_LABEL, PROVIDER_LABEL } from '../../../shared/models/payment.models';
+import { AdminPayment, PAYMENT_STATUS_LABEL, PROVIDER_LABEL } from '../../../core/models/payment.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { AuthService } from '../../../core/auth/auth.service';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';

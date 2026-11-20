@@ -2,9 +2,9 @@ import { HttpClient } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { Faceted, ListQuery } from '../../shared/list/filtered-list';
-import { ApiResponse } from '../../shared/models/api.models';
-import { AdminCoupon, CouponAnalytics, CouponQuery } from '../../shared/models/checkout.models';
-import { toParams } from './http-params';
+import { ApiResponse } from '../models/api.models';
+import { AdminCoupon, CouponAnalytics, CouponQuery } from '../models/checkout.models';
+import { toParams } from '../../shared/utils/http-params';
 
 export type One = ApiResponse<{ coupon: AdminCoupon }>;
 

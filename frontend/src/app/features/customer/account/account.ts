@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { Profile } from '../../profile/profile';
-import { RewardsNav } from '../../rewards/rewards-nav/rewards-nav';
+import { Profile } from '../../../shared/components/profile/profile';
+import { RewardsNav } from '../rewards/rewards-nav/rewards-nav';
 
 @Component({
   selector: 'bb-account',

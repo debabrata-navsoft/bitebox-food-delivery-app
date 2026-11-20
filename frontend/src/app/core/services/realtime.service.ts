@@ -3,8 +3,8 @@ import { isPlatformBrowser } from '@angular/common';
 import { BehaviorSubject, Observable, Subject, switchMap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../auth/auth.service';
-import { OrderStatus } from '../../shared/models/checkout.models';
-import { AppNotification } from '../../shared/models/payment.models';
+import { OrderStatus } from '../models/checkout.models';
+import { AppNotification } from '../models/payment.models';
 import {
   DjangoSocketTransport,
   RealtimeTransport,

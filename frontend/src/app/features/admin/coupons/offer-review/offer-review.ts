@@ -10,8 +10,8 @@ import { conditionsLabel, discountLabel, scopeLabel } from '../../../../shared/c
 import { rowActions } from '../../../../shared/coupons/coupon-list';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 import { pagedList } from '../../../../shared/list/paged-list';
-import { TableLabels } from '../../../../shared/list/table-labels';
-import { AdminCoupon } from '../../../../shared/models/checkout.models';
+import { TableLabels } from '../../../../shared/directives/table-labels';
+import { AdminCoupon } from '../../../../core/models/checkout.models';
 
 /** The approval queue: offers restaurants submitted, approved or rejected with a reason. */
 @Component({

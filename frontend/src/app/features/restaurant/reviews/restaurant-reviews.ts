@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { DecimalPipe } from '@angular/common';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { IconComponent, PaginationComponent } from 'nexprime';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../../shared/utils/api-error';
 import { ReviewService } from '../../../core/services/review.service';
 import { ListEmpty } from '../../../shared/components/list-empty/list-empty';
 import { FilterValue, onlyValue } from '../../../shared/components/filter-panel/filter-panel.models';
@@ -17,7 +17,7 @@ import {
   RATING_SECTION,
   RestaurantReviewSummary,
   SORT_OPTIONS,
-} from '../../../shared/models/review.models';
+} from '../../../core/models/review.models';
 import { openRestaurantOrderReviews } from './order-dialog/restaurant-order-dialog';
 
 

@@ -15,8 +15,8 @@ import { Router } from '@angular/router';
 import { Observable, Subscription, map, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../auth/auth.service';
-import { ApiResponse, Paginated } from '../../shared/models/api.models';
-import { AppNotification, NotificationPage } from '../../shared/models/payment.models';
+import { ApiResponse, Paginated } from '../models/api.models';
+import { AppNotification, NotificationPage } from '../models/payment.models';
 import { RealtimeService } from './realtime.service';
 
 const PAGE_SIZE = 20;

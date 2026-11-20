@@ -8,7 +8,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { IconComponent, ScrollTopComponent } from 'nexprime';
 import { AuthService } from '../../core/auth/auth.service';
 import { CartService } from '../../core/services/cart.service';
-import { currentUrl } from '../../core/services/current-url';
+import { currentUrl } from '../../shared/utils/current-url';
 import { DeliveryLocationService } from '../../core/services/delivery-location.service';
 import { LocationPickerDialog } from '../../shared/components/location-picker/location-picker-dialog';
 import { NotificationBell } from '../../shared/components/notification-bell/notification-bell';
@@ -17,9 +17,9 @@ import { SiteFooter } from '../../shared/components/site-footer/site-footer';
 import { InstallBanner } from '../../shared/components/install-banner/install-banner';
 import { InstallPromptService } from '../../core/services/install-prompt.service';
 import { ThemeService } from '../../core/services/theme.service';
-import { ROLE_META } from '../../shared/models/user.models';
+import { ROLE_META } from '../../core/models/user.models';
 
-import { initialsOf } from '../../shared/models/user.models';
+import { initialsOf } from '../../core/models/user.models';
 
 @Component({
   selector: 'bb-customer-layout',

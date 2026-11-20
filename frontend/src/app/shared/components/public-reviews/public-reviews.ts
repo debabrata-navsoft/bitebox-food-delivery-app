@@ -4,7 +4,7 @@ import { BbDialog } from '../../dialog/bb-dialog';
 import { IconComponent, SelectComponent } from 'nexprime';
 import { Observable } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../utils/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { ReviewListQuery, ReviewService } from '../../../core/services/review.service';
 import {
@@ -13,7 +13,7 @@ import {
   ReviewPage,
   ReviewSort,
   SORT_OPTIONS,
-} from '../../models/review.models';
+} from '../../../core/models/review.models';
 import { RatingSummary } from '../rating-summary/rating-summary';
 import { reportReview } from '../report-review-dialog/report-review-dialog';
 import { ReviewCard } from '../review-card/review-card';

@@ -3,7 +3,7 @@ import { isPlatformServer } from '@angular/common';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { CanActivateFn, Router } from '@angular/router';
 import { filter, map, take } from 'rxjs';
-import { Permission, ROLE_META, Role } from '../../shared/models/user.models';
+import { Permission, ROLE_META, Role } from '../models/user.models';
 import { AuthService } from '../auth/auth.service';
 
 function whenReady<T>(decide: () => T) {

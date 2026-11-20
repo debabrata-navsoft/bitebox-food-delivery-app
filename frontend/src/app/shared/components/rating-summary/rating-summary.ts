@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { RatingSummary as Summary } from '../../models/review.models';
+import { RatingSummary as Summary } from '../../../core/models/review.models';
 import { Stars } from '../stars/stars';
 
 /**

@@ -13,13 +13,13 @@ import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { rerouteWhileMoving } from '../../../shared/components/tracking-map/delivery-tracking';
 import { TrackingMap } from '../../../shared/components/tracking-map/tracking-map';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../../shared/pipes/np-icon-name';
 import {
   AT_OR_TO_RESTAURANT,
   RiderAction,
   RiderOrder,
   collectsCash,
-} from '../../../shared/models/order-management.models';
+} from '../../../core/models/order-management.models';
 import { ItemCountPipe } from '../../../shared/pipes/item-count.pipe';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { openDeliveryCode } from '../delivery-code-dialog/delivery-code-dialog';

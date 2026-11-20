@@ -4,9 +4,9 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { ButtonComponent, IconComponent } from 'nexprime';
 import { Observable } from 'rxjs';
 import { FinanceService } from '../../../../core/services/admin/finance.service';
-import { resourceError } from '../../../../core/services/api-error';
-import { ORDER_STATUS_LABEL } from '../../../../shared/models/checkout.models';
-import { PAYMENT_STATUS_LABEL, PROVIDER_LABEL } from '../../../../shared/models/payment.models';
+import { resourceError } from '../../../../shared/utils/api-error';
+import { ORDER_STATUS_LABEL } from '../../../../core/models/checkout.models';
+import { PAYMENT_STATUS_LABEL, PROVIDER_LABEL } from '../../../../core/models/payment.models';
 import {
   BB_DIALOG_DATA,
   BbDialog,

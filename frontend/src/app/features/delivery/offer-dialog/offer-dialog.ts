@@ -23,7 +23,7 @@ import {
 } from '../../../core/services/routing.service';
 import { rerouteWhileMoving } from '../../../shared/components/tracking-map/delivery-tracking';
 import { TrackingMap } from '../../../shared/components/tracking-map/tracking-map';
-import { RiderOrder, collectsCash } from '../../../shared/models/order-management.models';
+import { RiderOrder, collectsCash } from '../../../core/models/order-management.models';
 import { ItemCountPipe } from '../../../shared/pipes/item-count.pipe';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 

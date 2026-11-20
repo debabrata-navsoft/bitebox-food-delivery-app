@@ -6,10 +6,10 @@ import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../../core/auth/auth.service';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../../shared/utils/api-error';
 import { shownError } from '../../../shared/forms/form-errors';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { emailRules } from '../../../shared/forms/form-rules';
+import { emailRules } from '../../../shared/validators/form-rules';
 
 @Component({
   selector: 'bb-forgot-password',

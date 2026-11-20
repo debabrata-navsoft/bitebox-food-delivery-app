@@ -2,8 +2,8 @@ import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { AuthService } from '../../../core/auth/auth.service';
-import { ROLE_META } from '../../../shared/models/user.models';
+import { AuthService } from '../../../../core/auth/auth.service';
+import { ROLE_META } from '../../../../core/models/user.models';
 
 @Component({
   selector: 'bb-forbidden',

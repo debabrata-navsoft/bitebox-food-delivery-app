@@ -1,9 +1,9 @@
 import { Resource, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
-import { errorMessage } from '../../core/services/api-error';
+import { errorMessage } from '../utils/api-error';
 import { NotificationService } from '../../core/services/notification.service';
 import { optionsSection } from '../list/filtered-list';
-import { COUPON_STATUS_LABEL } from '../models/checkout.models';
+import { COUPON_STATUS_LABEL } from '../../core/models/checkout.models';
 
 // Helpers shared by the admin coupon list, the review queue and the restaurant's offers.
 

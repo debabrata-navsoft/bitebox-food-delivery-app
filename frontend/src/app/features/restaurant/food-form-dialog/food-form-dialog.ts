@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormRoot, TreeValidationResult, form, maxLength, required } from '@angular/forms/signals';
 import { firstValueFrom } from 'rxjs';
 import { BB_DIALOG_DATA, BbDialogRef, BbDialogTitle } from '../../../shared/dialog/bb-dialog';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../shared/utils/api-error';
 import { MyRestaurantService } from '../../../core/services/my-restaurant.service';
 import { ImageUpload } from '../../../shared/components/image-upload/image-upload';
 import {
@@ -10,7 +10,7 @@ import {
   FoodItem,
   FoodItemInput,
   categoryIdOf,
-} from '../../../shared/models/catalog.models';
+} from '../../../core/models/catalog.models';
 import { rupeesToPaise } from '../../../shared/pipes/money.pipes';
 import { serverErrors, shownError } from '../../../shared/forms/form-errors';
 import {
@@ -22,7 +22,7 @@ import {
   ToggleComponent,
 } from 'nexprime';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { numberRange, requiredText } from '../../../shared/forms/form-rules';
+import { numberRange, requiredText } from '../../../shared/validators/form-rules';
 
 export interface FoodFormData {
   item?: FoodItem;

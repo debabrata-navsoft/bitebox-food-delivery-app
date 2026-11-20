@@ -334,6 +334,8 @@ All are idempotent and safe to run on several API instances at once. Tests call 
 
 ### Core services (`core/`)
 
+API data types (`Order`, `User`, `Restaurant`, …) live in `core/models/*.models.ts`, next to the services that load them.
+
 | Service | Role |
 |---|---|
 | `auth/auth.service` | Restores the session at startup via `/auth/refresh`. Holds the access token in memory and exposes `user`, `initialised` and `displayUser`. `displayUser` is a display-only hint and is never used for access decisions. |
@@ -352,15 +354,16 @@ All are idempotent and safe to run on several API instances at once. Tests call 
 | `cart.service`, `cart-actions.service`, `checkout-api.service`, `catalog.service`, `review.service`, `rewards.service`, `support.service`, `upload.service`, `newsletter.service`, `my-restaurant.service`, `order-management.service`, `reports.service` | API wrappers |
 | `admin/*` | Admin API wrappers: catalogue, users, staff, finance, operations, rewards, push |
 | `connection-status`, `app-update`, `install-prompt`, `push-notification` | PWA (see §13) |
-| `browser-storage`, `safe-url`, `idempotency`, `http-params`, `api-error`, `current-url` | Small shared helpers |
 
 ### Shared UI (`shared/`)
 
 - **Components:** maps (`map-picker`, `tracking-map` with `deliveryTracking(order)`), `daily-chart` (chart with a "Show as table" view), `stat-tile`, `notification-bell`, `confirm-dialog` (`confirmed(dialog, data)`), reviews (`review-card`, `review-form-dialog`, `public-reviews`, `rating-summary`, `stars`, `review-reply`, `report-review-dialog`), uploads (`image-upload`, `photo-upload`, `photo-viewer`), `phone-input`, `place-search`, `location-picker`, `address-form-dialog`, `bill-summary`, `qty-stepper`, `order-status-chip`, `restaurant-card`, `veg-badge`, `page-header`, `empty-state`, `site-footer`, `brand-logo`, `mock-payment-dialog`, and PWA (`app-status`, `install-banner`, `push-settings`).
 - **Forms:** Signal Forms (`@angular/forms/signals`):
   - Build forms with `form(model, schema, { submission: { action } })`, `<form [formRoot]>` and `[formField]`.
-  - Shared rules are in `shared/forms/form-rules.ts`. `shownError()` shows an error once the field is touched, and `serverErrors()` maps API 422 errors onto fields.
+  - Shared rules are in `shared/validators/form-rules.ts`. `shownError()` shows an error once the field is touched, and `serverErrors()` maps API 422 errors onto fields.
   - `NP_FORM_FIELDS` bundles the NexPrime inputs and helpers.
+- **Folders by kind:** `shared/directives/` (`ImageFallback`, `TableLabels`, the NexPrime field directives), `shared/pipes/` (money, clock time, item count, `npIcon`), `shared/validators/` (Signal Forms rules: `form-rules.ts`, `code-rules.ts`) and `shared/utils/`.
+- **Utilities (`shared/utils/`):** small helpers used across the app: `api-error` (API error messages and field errors), `http-params`, `browser-storage`, `safe-url`, `idempotency`, `current-url`, `media-query`, `platform-detector`, `countdown`, `end-aligned-menu`, `dates` (`isoDay`, `fromIsoDay`, `birthDateRange`) and `time-of-day` (`timeToDate`, `dateToTime`).
 - **Lists:** `shared/list/paged-list.ts#pagedList(fetch, opts)` handles paging, filters, loading and errors, and live refresh.
 - **List filters:** searchable lists use `shared/list/filtered-list.ts#filteredList(fetch, opts)` with `<bb-list-toolbar>`:
   - The toolbar has the search box, a **Filters** button and an optional sort select, all on the right. Applied filters show as removable chips below.
@@ -425,7 +428,7 @@ The super admin has every permission. The API checks permissions with `can(PERMI
 | `rewards:view` | Rewards reports and lists | | | |
 | `promotions:send` | Push offers to opted-in customers | | | |
 
-To add a permission, add it in `config/permissions.js` and to the frontend `Permission` type (`shared/models/user.models.ts`). Use `can(...)` on the route rather than checking roles. Admin routes that change data also get `audited(action, resourceType, describe)`, which writes the audit log after a successful response.
+To add a permission, add it in `config/permissions.js` and to the frontend `Permission` type (`core/models/user.models.ts`). Use `can(...)` on the route rather than checking roles. Admin routes that change data also get `audited(action, resourceType, describe)`, which writes the audit log after a successful response.
 
 **Admin management rules:**
 - Super admins cannot be created or edited through the API.

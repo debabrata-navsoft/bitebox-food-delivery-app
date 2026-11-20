@@ -14,12 +14,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { IconComponent, SelectOption, ToggleComponent } from 'nexprime';
 import { Observable, firstValueFrom } from 'rxjs';
-import { errorMessage, resourceError } from '../../../../core/services/api-error';
+import { errorMessage, resourceError } from '../../../../shared/utils/api-error';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { SupportDeskService } from '../../../../core/services/support.service';
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
 import { shownError } from '../../../../shared/forms/form-errors';
-import { requiredText } from '../../../../shared/forms/form-rules';
+import { requiredText } from '../../../../shared/validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
 import {
   REQUESTER_LABEL,
@@ -32,8 +32,8 @@ import {
   TicketPriority,
   TicketStatus,
   TicketUpdate,
-} from '../../../../shared/models/admin-roles.models';
-import { ORDER_STATUS_LABEL } from '../../../../shared/models/checkout.models';
+} from '../../../../core/models/admin-roles.models';
+import { ORDER_STATUS_LABEL } from '../../../../core/models/checkout.models';
 import { InrPipe } from '../../../../shared/pipes/money.pipes';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 

@@ -5,10 +5,10 @@ import { IconComponent, PaginationComponent } from 'nexprime';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AdminRiderAccountsService } from '../../../core/services/admin/admin-rider-accounts.service';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { TableLabels } from '../../../shared/list/table-labels';
-import { VEHICLE_LABEL } from '../../../shared/models/checkout.models';
-import { RIDER_VERIFICATION_LABEL, RIDER_VERIFICATION_TONE } from '../../../shared/models/order-management.models';
-import { USER_STATUS_META, initialsOf } from '../../../shared/models/user.models';
+import { TableLabels } from '../../../shared/directives/table-labels';
+import { VEHICLE_LABEL } from '../../../core/models/checkout.models';
+import { RIDER_VERIFICATION_LABEL, RIDER_VERIFICATION_TONE } from '../../../core/models/order-management.models';
+import { USER_STATUS_META, initialsOf } from '../../../core/models/user.models';
 import { shortId } from '../account-list';
 import {
   JOINED_SECTION,

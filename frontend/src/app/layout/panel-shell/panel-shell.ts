@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { NpIconPipe } from '../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../shared/pipes/np-icon-name';
 import { IconComponent } from 'nexprime';
 import {
   ChangeDetectionStrategy,
@@ -32,12 +32,12 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { filter } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
-import { currentUrl } from '../../core/services/current-url';
+import { currentUrl } from '../../shared/utils/current-url';
 import { NotificationBell } from '../../shared/components/notification-bell/notification-bell';
 import { BrandLogo } from '../../shared/components/brand-logo/brand-logo';
 import { InstallPromptService } from '../../core/services/install-prompt.service';
 import { ThemeService } from '../../core/services/theme.service';
-import { DESKTOP_UP, mediaQuery } from '../../core/services/media-query';
+import { DESKTOP_UP, mediaQuery } from '../../shared/utils/media-query';
 
 export interface NavItem {
   label: string;
@@ -52,7 +52,7 @@ export interface NavItem {
   children?: NavItem[];
 }
 
-import { initialsOf } from '../../shared/models/user.models';
+import { initialsOf } from '../../core/models/user.models';
 
 const SIDEBAR_KEY = 'bb-sidebar-hidden';
 

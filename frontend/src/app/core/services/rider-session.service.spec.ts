@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { Subject, of } from 'rxjs';
 import { BbDialog } from '../../shared/dialog/bb-dialog';
-import { RiderDashboard, RiderOrder } from '../../shared/models/order-management.models';
+import { RiderDashboard, RiderOrder } from '../models/order-management.models';
 import { NotificationService } from './notification.service';
 import { RiderService } from './order-management.service';
 import { RealtimeService } from './realtime.service';

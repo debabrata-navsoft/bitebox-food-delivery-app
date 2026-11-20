@@ -1,4 +1,4 @@
-import { TableLabels } from '../../../../shared/list/table-labels';
+import { TableLabels } from '../../../../shared/directives/table-labels';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
@@ -9,11 +9,11 @@ import {
   PaginationComponent,
   type MenuItem,
 } from 'nexprime';
-import { COMPACT_MENU_WIDTH, toggleEndAligned } from '../../../../shared/menu/end-aligned-menu';
+import { COMPACT_MENU_WIDTH, toggleEndAligned } from '../../../../shared/utils/end-aligned-menu';
 import { filter, switchMap } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AdminRewardsService } from '../../../../core/services/admin/admin-rewards.service';
-import { errorMessage } from '../../../../core/services/api-error';
+import { errorMessage } from '../../../../shared/utils/api-error';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
 import { ListEmpty } from '../../../../shared/components/list-empty/list-empty';
@@ -27,7 +27,7 @@ import {
   CAMPAIGN_TYPE_LABEL,
   CUSTOMER_GROUP_LABEL,
   CampaignStatus,
-} from '../../../../shared/models/rewards.models';
+} from '../../../../core/models/rewards.models';
 import { CampaignDetailDialog } from '../campaign-detail-dialog/campaign-detail-dialog';
 import { CampaignFormDialog } from '../campaign-form-dialog/campaign-form-dialog';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';

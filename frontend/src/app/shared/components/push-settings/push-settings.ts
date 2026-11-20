@@ -10,8 +10,8 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 import { IconComponent, ToggleComponent } from 'nexprime';
 import { AuthService } from '../../../core/auth/auth.service';
-import { errorMessage } from '../../../core/services/api-error';
-import { storageGet, storageSet } from '../../../core/services/browser-storage';
+import { errorMessage } from '../../utils/api-error';
+import { storageGet, storageSet } from '../../utils/browser-storage';
 import { NotificationService } from '../../../core/services/notification.service';
 import {
   PushCategory,

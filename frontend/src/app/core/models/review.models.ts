@@ -1,4 +1,4 @@
-import { FilterSection } from '../components/filter-panel/filter-panel.models';
+import { FilterSection } from '../../shared/components/filter-panel/filter-panel.models';
 import { Paginated } from './api.models';
 
 export type ReviewTarget = 'restaurant' | 'food' | 'rider';

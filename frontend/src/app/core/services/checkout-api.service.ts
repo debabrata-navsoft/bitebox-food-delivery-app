@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { FileDownloadService } from './file-download.service';
 import { environment } from '../../../environments/environment';
-import { ApiResponse, Paginated } from '../../shared/models/api.models';
+import { ApiResponse, Paginated } from '../models/api.models';
 import {
   AddressInput,
   AdminCoupon,
@@ -13,9 +13,9 @@ import {
   CouponOffer,
   DeliveryAddress,
   Order,
-} from '../../shared/models/checkout.models';
-import { CheckoutSession, PaymentMethod } from '../../shared/models/payment.models';
-import { toParams } from './http-params';
+} from '../models/checkout.models';
+import { CheckoutSession, PaymentMethod } from '../models/payment.models';
+import { toParams } from '../../shared/utils/http-params';
 import { CouponApi, One } from './coupon-api';
 
 @Injectable({ providedIn: 'root' })

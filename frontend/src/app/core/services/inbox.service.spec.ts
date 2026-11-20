@@ -4,7 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { signal } from '@angular/core';
 import { Subject } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
-import { AppNotification } from '../../shared/models/payment.models';
+import { AppNotification } from '../models/payment.models';
 import { InboxService } from './inbox.service';
 import { RealtimeService } from './realtime.service';
 

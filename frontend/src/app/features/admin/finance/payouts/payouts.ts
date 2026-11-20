@@ -1,4 +1,4 @@
-import { TableLabels } from '../../../../shared/list/table-labels';
+import { TableLabels } from '../../../../shared/directives/table-labels';
 import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -15,7 +15,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { ButtonComponent, IconComponent, PaginationComponent } from 'nexprime';
 import { Observable } from 'rxjs';
 import { FinanceService } from '../../../../core/services/admin/finance.service';
-import { errorMessage, resourceError } from '../../../../core/services/api-error';
+import { errorMessage, resourceError } from '../../../../shared/utils/api-error';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
@@ -29,7 +29,7 @@ import {
   Payout,
   PayoutDue,
   PayoutType,
-} from '../../../../shared/models/admin-roles.models';
+} from '../../../../core/models/admin-roles.models';
 import { InrPipe, formatPaise } from '../../../../shared/pipes/money.pipes';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 

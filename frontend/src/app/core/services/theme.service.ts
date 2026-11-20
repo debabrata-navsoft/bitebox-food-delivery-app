@@ -9,7 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { storageGet, storageSet } from './browser-storage';
+import { storageGet, storageSet } from '../../shared/utils/browser-storage';
 
 export type Theme = 'light' | 'dark';
 /** What the user picked; `system` follows the device setting. */

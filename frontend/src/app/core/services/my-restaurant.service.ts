@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse } from '../../shared/models/api.models';
+import { ApiResponse } from '../models/api.models';
 import {
   FoodItem,
   FoodItemInput,
@@ -10,9 +10,9 @@ import {
   Restaurant,
   RestaurantInput,
   RestaurantUpdate,
-} from '../../shared/models/catalog.models';
+} from '../models/catalog.models';
 import { Faceted, ListQuery } from '../../shared/list/filtered-list';
-import { toParams } from './http-params';
+import { toParams } from '../../shared/utils/http-params';
 
 export interface MyRestaurantState {
   restaurant: Restaurant | null;

@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Signal, computed } from '@angular/core';
-import { ApiErrorBody, ApiFieldError } from '../../shared/models/api.models';
+import { ApiErrorBody, ApiFieldError } from '../../core/models/api.models';
 
 /** Human-readable message for any HTTP error. */
 export function errorMessage(

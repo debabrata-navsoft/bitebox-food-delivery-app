@@ -15,7 +15,7 @@ import {
   RATING_SECTION,
   STATUS_LABEL,
   TARGET_PLURAL,
-} from '../../../shared/models/review.models';
+} from '../../../core/models/review.models';
 import { openAdminOrderReviews } from './order-dialog/admin-order-reviews-dialog';
 import { ReviewAnalyticsPanel } from './review-analytics/review-analytics';
 

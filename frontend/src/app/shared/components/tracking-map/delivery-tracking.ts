@@ -10,8 +10,8 @@ import {
   distanceMeters,
   fromCoordinates,
 } from '../../../core/services/routing.service';
-import { Order, OrderStatus } from '../../models/checkout.models';
-import { AT_OR_TO_RESTAURANT, TRACKED_STATUSES } from '../../models/order-management.models';
+import { Order, OrderStatus } from '../../../core/models/checkout.models';
+import { AT_OR_TO_RESTAURANT, TRACKED_STATUSES } from '../../../core/models/order-management.models';
 
 /** A position older than this is shown as stale ("last seen 3 min ago"). */
 export const STALE_AFTER_MS = 90_000;

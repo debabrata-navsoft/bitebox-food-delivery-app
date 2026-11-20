@@ -6,14 +6,14 @@ import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../../core/auth/auth.service';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../shared/utils/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
-import { ROLE_META, SelfRegisterRole } from '../../../shared/models/user.models';
+import { ROLE_META, SelfRegisterRole } from '../../../core/models/user.models';
 import { serverErrors, shownError } from '../../../shared/forms/form-errors';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { emailRules, matchesField, passwordRules, phoneRules, requiredText } from '../../../shared/forms/form-rules';
-import { codeRules } from '../../../shared/forms/code-rules';
-import { countdown } from '../../../shared/forms/countdown';
+import { emailRules, matchesField, passwordRules, phoneRules, requiredText } from '../../../shared/validators/form-rules';
+import { codeRules } from '../../../shared/validators/code-rules';
+import { countdown } from '../../../shared/utils/countdown';
 import { PhoneInput } from '../../../shared/components/phone-input/phone-input';
 
 const INTRO: Record<SelfRegisterRole, string> = {

@@ -3,10 +3,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
-import { CartService } from '../../core/services/cart.service';
-import { AddressService, OrderService } from '../../core/services/checkout-api.service';
-import { PaymentService } from '../../core/services/payment.service';
-import { CartQuote } from '../../shared/models/checkout.models';
+import { CartService } from '../../../core/services/cart.service';
+import { AddressService, OrderService } from '../../../core/services/checkout-api.service';
+import { PaymentService } from '../../../core/services/payment.service';
+import { CartQuote } from '../../../core/models/checkout.models';
 import { Checkout } from './checkout';
 
 const quote = (overrides: Partial<CartQuote> = {}): CartQuote => ({

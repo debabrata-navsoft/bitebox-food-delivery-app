@@ -1,4 +1,4 @@
-import { TableLabels } from '../../../../shared/list/table-labels';
+import { TableLabels } from '../../../../shared/directives/table-labels';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -17,7 +17,7 @@ import {
   AdminCoinTransaction,
   SOURCE_LABEL,
   TXN_TYPE_LABEL,
-} from '../../../../shared/models/rewards.models';
+} from '../../../../core/models/rewards.models';
 import { ReverseDialog } from '../reverse-dialog/reverse-dialog';
 import { WalletDialog } from '../wallet-dialog/wallet-dialog';
 

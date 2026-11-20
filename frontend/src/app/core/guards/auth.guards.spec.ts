@@ -8,7 +8,7 @@ import {
   UrlTree,
 } from '@angular/router';
 import { firstValueFrom, isObservable, Observable } from 'rxjs';
-import { ADMIN_ROLES, Permission, Role } from '../../shared/models/user.models';
+import { ADMIN_ROLES, Permission, Role } from '../models/user.models';
 import { AuthService } from '../auth/auth.service';
 import { customerSiteGuard, guestGuard, permissionGuard, roleGuard } from './auth.guards';
 

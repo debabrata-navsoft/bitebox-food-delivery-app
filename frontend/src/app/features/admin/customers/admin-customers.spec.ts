@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AdminUsersService, CustomerRow } from '../../../core/services/admin/admin-users.service';
-import { Permission } from '../../../shared/models/user.models';
+import { Permission } from '../../../core/models/user.models';
 import { AdminCustomers } from './admin-customers';
 
 const row = (id: string, name: string, extra: Partial<CustomerRow> = {}): CustomerRow => ({

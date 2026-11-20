@@ -1,4 +1,4 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../../../shared/pipes/np-icon-name';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -15,15 +15,15 @@ import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-i
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { Subscription, catchError, debounceTime, distinctUntilChanged, of } from 'rxjs';
-import { CatalogService } from '../../../core/services/catalog.service';
-import { errorMessage } from '../../../core/services/api-error';
+import { CatalogService } from '../../../../core/services/catalog.service';
+import { errorMessage } from '../../../../shared/utils/api-error';
 import { MatDialog } from '@angular/material/dialog';
-import { DeliveryLocationService } from '../../../core/services/delivery-location.service';
-import { LocationPickerDialog } from '../../../shared/components/location-picker/location-picker-dialog';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
-import { RestaurantCard } from '../../../shared/components/restaurant-card/restaurant-card';
-import { Pagination } from '../../../shared/models/api.models';
-import { Restaurant, RestaurantQuery, RestaurantSort } from '../../../shared/models/catalog.models';
+import { DeliveryLocationService } from '../../../../core/services/delivery-location.service';
+import { LocationPickerDialog } from '../../../../shared/components/location-picker/location-picker-dialog';
+import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
+import { RestaurantCard } from '../../../../shared/components/restaurant-card/restaurant-card';
+import { Pagination } from '../../../../core/models/api.models';
+import { Restaurant, RestaurantQuery, RestaurantSort } from '../../../../core/models/catalog.models';
 
 const SORT_LABELS: Record<RestaurantSort, string> = {
   rating: 'Top rated',
@@ -35,7 +35,7 @@ const SORT_LABELS: Record<RestaurantSort, string> = {
 };
 
 import { IconComponent, SelectOption, ToggleComponent } from 'nexprime';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
+import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
 
 @Component({
   selector: 'bb-restaurant-list',

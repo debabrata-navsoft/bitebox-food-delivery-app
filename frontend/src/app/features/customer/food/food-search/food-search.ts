@@ -1,5 +1,5 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
-import { BbDialog } from '../../../shared/dialog/bb-dialog';
+import { NpIconPipe } from '../../../../shared/pipes/np-icon-name';
+import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -17,17 +17,17 @@ import { MatButtonModule } from '@angular/material/button';
 import { IconComponent, ToggleComponent } from 'nexprime';
 import { MatChipsModule } from '@angular/material/chips';
 import { Subscription, catchError, debounceTime, distinctUntilChanged, of } from 'rxjs';
-import { CatalogService } from '../../../core/services/catalog.service';
-import { errorMessage } from '../../../core/services/api-error';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
-import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
-import { Pagination } from '../../../shared/models/api.models';
-import { DishSearchResult } from '../../../shared/models/catalog.models';
-import { InrPipe } from '../../../shared/pipes/money.pipes';
+import { CatalogService } from '../../../../core/services/catalog.service';
+import { errorMessage } from '../../../../shared/utils/api-error';
+import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
+import { VegBadge } from '../../../../shared/components/veg-badge/veg-badge';
+import { Pagination } from '../../../../core/models/api.models';
+import { DishSearchResult } from '../../../../core/models/catalog.models';
+import { InrPipe } from '../../../../shared/pipes/money.pipes';
 import { FoodDetailDialog, FoodDetailData } from '../food-detail-dialog/food-detail-dialog';
 
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
+import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
+import { ImageFallback, UsableImagePipe } from '../../../../shared/directives/broken-images';
 
 @Component({
   selector: 'bb-food-search',

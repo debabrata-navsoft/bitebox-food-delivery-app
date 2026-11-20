@@ -11,7 +11,7 @@ import {
 import { FormRoot, TreeValidationResult, form } from '@angular/forms/signals';
 import { ButtonComponent, IconComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
-import { errorMessage, fieldErrors } from '../../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../utils/api-error';
 import { KycService } from '../../../../core/services/kyc.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { serverErrors, shownError } from '../../../forms/form-errors';
@@ -22,7 +22,7 @@ import {
   KycDocument,
   KycSummary,
   NUMBER_HINTS,
-} from '../../../models/kyc.models';
+} from '../../../../core/models/kyc.models';
 
 const ACCEPT = 'application/pdf,image/jpeg,image/png,image/webp';
 const MAX_BYTES = 5 * 1024 * 1024;

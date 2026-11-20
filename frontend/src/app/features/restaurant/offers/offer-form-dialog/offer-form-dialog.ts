@@ -3,7 +3,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { FormRoot, TreeValidationResult, form } from '@angular/forms/signals';
 import { ButtonComponent, IconComponent, SelectComponent } from 'nexprime';
 import { firstValueFrom, map } from 'rxjs';
-import { errorMessage, fieldErrors } from '../../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../../shared/utils/api-error';
 import { CatalogService } from '../../../../core/services/catalog.service';
 import { MyOffersService } from '../../../../core/services/my-offers.service';
 import { MyRestaurantService } from '../../../../core/services/my-restaurant.service';
@@ -21,7 +21,7 @@ import {
 import { loaded } from '../../../../shared/coupons/coupon-list';
 import { BB_DIALOG_DATA, BbDialogRef, BbDialogTitle } from '../../../../shared/dialog/bb-dialog';
 import { serverErrors } from '../../../../shared/forms/form-errors';
-import { AdminCoupon, NamedRef } from '../../../../shared/models/checkout.models';
+import { AdminCoupon, NamedRef } from '../../../../core/models/checkout.models';
 
 /** Create or edit one of the restaurant's offers, with a preview of how customers see it. */
 @Component({

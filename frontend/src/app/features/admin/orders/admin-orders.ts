@@ -10,8 +10,8 @@ import { FilterSection } from '../../../shared/components/filter-panel/filter-pa
 import { OrderStatusChip } from '../../../shared/components/order-status-chip/order-status-chip';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { filterOptions, filteredList } from '../../../shared/list/filtered-list';
-import { ORDER_STATUS_LABEL, PaymentStatus, customerStatusLabel } from '../../../shared/models/checkout.models';
-import { PAYMENT_STATUS_LABEL } from '../../../shared/models/payment.models';
+import { ORDER_STATUS_LABEL, PaymentStatus, customerStatusLabel } from '../../../core/models/checkout.models';
+import { PAYMENT_STATUS_LABEL } from '../../../core/models/payment.models';
 import { ItemCountPipe } from '../../../shared/pipes/item-count.pipe';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { openAdminOrder } from './admin-order-dialog/admin-order-dialog';

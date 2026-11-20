@@ -1,8 +1,8 @@
 import { isPlatformBrowser } from '@angular/common';
 import { DestroyRef, Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import { isStandaloneApp, storageGet, storageSet } from './browser-storage';
-import { DevicePlatformInfo, detectPlatform } from './platform-detector';
+import { isStandaloneApp, storageGet, storageSet } from '../../shared/utils/browser-storage';
+import { DevicePlatformInfo, detectPlatform } from '../../shared/utils/platform-detector';
 import { InstallDialog } from '../../shared/components/install-dialog/install-dialog';
 
 export interface BeforeInstallPromptEvent extends Event {

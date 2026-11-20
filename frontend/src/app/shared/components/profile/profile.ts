@@ -13,24 +13,24 @@ import { FormRoot, TreeValidationResult, form, required } from '@angular/forms/s
 import { firstValueFrom } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { AuthService } from '../../core/auth/auth.service';
-import { errorMessage, fieldErrors } from '../../core/services/api-error';
-import { NotificationService } from '../../core/services/notification.service';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { GENDER_LABEL, Gender, ROLE_META, User } from '../../shared/models/user.models';
-import { RewardsService } from '../../core/services/rewards.service';
-import { birthDateRange, fromIsoDay, isoDay } from '../../shared/forms/dates';
-import { serverErrors, shownError } from '../../shared/forms/form-errors';
-import { NP_FORM_FIELDS } from '../../shared/forms/np-form-fields';
+import { AuthService } from '../../../core/auth/auth.service';
+import { errorMessage, fieldErrors } from '../../utils/api-error';
+import { NotificationService } from '../../../core/services/notification.service';
+import { PageHeader } from '../page-header/page-header';
+import { GENDER_LABEL, Gender, ROLE_META, User } from '../../../core/models/user.models';
+import { RewardsService } from '../../../core/services/rewards.service';
+import { birthDateRange, fromIsoDay, isoDay } from '../../utils/dates';
+import { serverErrors, shownError } from '../../forms/form-errors';
+import { NP_FORM_FIELDS } from '../../forms/np-form-fields';
 import {
   differsFrom,
   matchesField,
   passwordRules,
   phoneRules,
   requiredText,
-} from '../../shared/forms/form-rules';
-import { PhoneInput } from '../../shared/components/phone-input/phone-input';
-import { ImageUpload } from '../../shared/components/image-upload/image-upload';
+} from '../../validators/form-rules';
+import { PhoneInput } from '../phone-input/phone-input';
+import { ImageUpload } from '../image-upload/image-upload';
 import { AccountVerification } from './account-verification/account-verification';
 
 const detailsOf = (u: User | null) => ({

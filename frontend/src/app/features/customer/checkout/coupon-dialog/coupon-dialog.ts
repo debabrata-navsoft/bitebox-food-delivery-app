@@ -2,22 +2,22 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormRoot, form, pattern } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { ButtonComponent, IconComponent } from 'nexprime';
-import { CartService } from '../../../core/services/cart.service';
-import { errorMessage } from '../../../core/services/api-error';
-import { NotificationService } from '../../../core/services/notification.service';
+import { CartService } from '../../../../core/services/cart.service';
+import { errorMessage } from '../../../../shared/utils/api-error';
+import { NotificationService } from '../../../../core/services/notification.service';
 import {
   BB_DIALOG_DATA,
   BbDialog,
   BbDialogRef,
   BbDialogTitle,
-} from '../../../shared/dialog/bb-dialog';
-import { shownError } from '../../../shared/forms/form-errors';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { CartQuote, CouponOffer } from '../../../shared/models/checkout.models';
-import { InrPipe } from '../../../shared/pipes/money.pipes';
-import { CouponTicket } from '../../../shared/components/coupon-ticket/coupon-ticket';
-import { appliedMessage } from '../../../shared/coupons/coupon-labels';
-import { forQuote } from '../../../shared/coupons/cart-offers';
+} from '../../../../shared/dialog/bb-dialog';
+import { shownError } from '../../../../shared/forms/form-errors';
+import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
+import { CartQuote, CouponOffer } from '../../../../core/models/checkout.models';
+import { InrPipe } from '../../../../shared/pipes/money.pipes';
+import { CouponTicket } from '../../../../shared/components/coupon-ticket/coupon-ticket';
+import { appliedMessage } from '../../../../shared/coupons/coupon-labels';
+import { forQuote } from '../../../../shared/coupons/cart-offers';
 
 /**
  * Every coupon for this cart: a code box and the available offers. An offer below its minimum order

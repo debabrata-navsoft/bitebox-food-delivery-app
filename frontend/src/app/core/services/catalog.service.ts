@@ -2,16 +2,16 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, shareReplay } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse, Paginated } from '../../shared/models/api.models';
+import { ApiResponse, Paginated } from '../models/api.models';
 import {
   DishSearchResult,
   FoodCategory,
   MenuSection,
   Restaurant,
   RestaurantQuery,
-} from '../../shared/models/catalog.models';
-import { CouponOffer } from '../../shared/models/checkout.models';
-import { toParams } from './http-params';
+} from '../models/catalog.models';
+import { CouponOffer } from '../models/checkout.models';
+import { toParams } from '../../shared/utils/http-params';
 import { publicRequest } from '../interceptors/auth.interceptor';
 
 @Injectable({ providedIn: 'root' })

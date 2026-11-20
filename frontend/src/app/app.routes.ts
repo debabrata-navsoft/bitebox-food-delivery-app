@@ -1,8 +1,8 @@
 import { inject } from '@angular/core';
 import { RedirectFunction, Route, Router, Routes } from '@angular/router';
 import { customerSiteGuard, guestGuard, roleGuard } from './core/guards/auth.guards';
-import { ADMIN_ROLES, SelfRegisterRole } from './shared/models/user.models';
-import { OfflinePage } from './features/errors/offline/offline-page';
+import { ADMIN_ROLES, SelfRegisterRole } from './core/models/user.models';
+import { OfflinePage } from './shared/components/errors/offline/offline-page';
 
 const authPage = (
   path: string,
@@ -99,7 +99,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./layout/restaurant-layout/restaurant-layout').then((m) => m.RestaurantLayout),
     loadChildren: () =>
-      import('./features/restaurant-panel/restaurant-panel.routes').then(
+      import('./features/restaurant/restaurant.routes').then(
         (m) => m.RESTAURANT_ROUTES,
       ),
   },
@@ -111,7 +111,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./layout/delivery-layout/delivery-layout').then((m) => m.DeliveryLayout),
     loadChildren: () =>
-      import('./features/delivery-panel/delivery-panel.routes').then((m) => m.DELIVERY_ROUTES),
+      import('./features/delivery/delivery.routes').then((m) => m.DELIVERY_ROUTES),
   },
 
   // Customer-facing pages, plus /forbidden and the 404 fallback

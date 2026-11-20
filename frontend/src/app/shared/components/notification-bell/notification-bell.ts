@@ -1,4 +1,4 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../pipes/np-icon-name';
 import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
@@ -8,8 +8,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { AuthService } from '../../../core/auth/auth.service';
 import { InboxService } from '../../../core/services/inbox.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { notificationIcon } from '../../models/payment.models';
-import { ROLE_META } from '../../models/user.models';
+import { notificationIcon } from '../../../core/models/payment.models';
+import { ROLE_META } from '../../../core/models/user.models';
 import { confirmed } from '../confirm-dialog/confirm-dialog';
 import { BbDialog } from '../../dialog/bb-dialog';
 

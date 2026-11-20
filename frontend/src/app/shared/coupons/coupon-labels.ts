@@ -6,7 +6,7 @@ import {
   DiscountLine,
   NamedRef,
   PAYMENT_CHANNEL_LABEL,
-} from '../models/checkout.models';
+} from '../../core/models/checkout.models';
 import { formatPaise } from '../pipes/money.pipes';
 
 /** "20% off up to ₹100", "₹50 off" or "Free delivery". */

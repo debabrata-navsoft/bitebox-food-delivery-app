@@ -7,10 +7,10 @@ import {
   OfferDialog,
   offerProgress,
   openOfferDialog,
-} from '../../features/delivery-panel/offer-dialog/offer-dialog';
+} from '../../features/delivery/offer-dialog/offer-dialog';
 import { BbDialog, BbDialogRef } from '../../shared/dialog/bb-dialog';
-import { RiderDashboard, RiderOrder } from '../../shared/models/order-management.models';
-import { errorMessage } from './api-error';
+import { RiderDashboard, RiderOrder } from '../models/order-management.models';
+import { errorMessage } from '../../shared/utils/api-error';
 import { NotificationService } from './notification.service';
 import { RiderService } from './order-management.service';
 import { liveRefresh } from './poll';

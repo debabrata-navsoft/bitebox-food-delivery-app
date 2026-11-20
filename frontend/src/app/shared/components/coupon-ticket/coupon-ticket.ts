@@ -1,6 +1,6 @@
 import { booleanAttribute, ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { describe, discountParts } from '../../coupons/coupon-labels';
-import { CouponOffer } from '../../models/checkout.models';
+import { CouponOffer } from '../../../core/models/checkout.models';
 
 /**
  * A coupon as a ticket (the Offers page): the discount down a coloured side strip, the code or

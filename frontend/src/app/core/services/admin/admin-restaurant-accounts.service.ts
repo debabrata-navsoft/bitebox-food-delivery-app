@@ -3,10 +3,10 @@ import { Injectable, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { ApiResponse } from '../../../shared/models/api.models';
-import { Restaurant, RestaurantStatus, RestaurantUpdate } from '../../../shared/models/catalog.models';
-import { User } from '../../../shared/models/user.models';
-import { toParams } from '../http-params';
+import { ApiResponse } from '../../models/api.models';
+import { Restaurant, RestaurantStatus, RestaurantUpdate } from '../../models/catalog.models';
+import { User } from '../../models/user.models';
+import { toParams } from '../../../shared/utils/http-params';
 import { Faceted, ListQuery } from '../../../shared/list/filtered-list';
 import { MyRestaurantService, MyRestaurantState } from '../my-restaurant.service';
 

@@ -4,7 +4,7 @@ import { of } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AdminStaffService } from '../../../../core/services/admin/admin-staff.service';
 import { BB_DIALOG_DATA, BbDialog, BbDialogRef } from '../../../../shared/dialog/bb-dialog';
-import { User } from '../../../../shared/models/user.models';
+import { User } from '../../../../core/models/user.models';
 import { changeLines } from '../../audit-log/audit-log';
 import { PermissionEditorDialog } from './permission-editor-dialog';
 

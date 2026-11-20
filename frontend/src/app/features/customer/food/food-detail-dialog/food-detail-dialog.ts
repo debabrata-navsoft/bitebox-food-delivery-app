@@ -1,14 +1,14 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../../../shared/pipes/np-icon-name';
 import { ButtonComponent, IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { BB_DIALOG_DATA, BbDialogRef, BbDialogTitle } from '../../../shared/dialog/bb-dialog';
-import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
-import { FoodItem } from '../../../shared/models/catalog.models';
-import { RatingSummary } from '../../../shared/models/review.models';
-import { PublicReviews } from '../../../shared/components/public-reviews/public-reviews';
-import { InrPipe } from '../../../shared/pipes/money.pipes';
-import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
+import { BB_DIALOG_DATA, BbDialogRef, BbDialogTitle } from '../../../../shared/dialog/bb-dialog';
+import { VegBadge } from '../../../../shared/components/veg-badge/veg-badge';
+import { FoodItem } from '../../../../core/models/catalog.models';
+import { RatingSummary } from '../../../../core/models/review.models';
+import { PublicReviews } from '../../../../shared/components/public-reviews/public-reviews';
+import { InrPipe } from '../../../../shared/pipes/money.pipes';
+import { ImageFallback, UsableImagePipe } from '../../../../shared/directives/broken-images';
 
 export interface FoodDetailData {
   item: Pick<

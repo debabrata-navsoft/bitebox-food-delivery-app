@@ -5,7 +5,7 @@ import {
   AdminCatalogService,
   AdminFoodItem,
 } from '../../../core/services/admin/admin-catalog.service';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../../shared/utils/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';

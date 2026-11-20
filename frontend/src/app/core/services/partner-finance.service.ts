@@ -2,12 +2,12 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Payout } from '../../shared/models/admin-roles.models';
+import { Payout } from '../models/admin-roles.models';
 import { Faceted, ListQuery } from '../../shared/list/filtered-list';
-import { ApiResponse } from '../../shared/models/api.models';
+import { ApiResponse } from '../models/api.models';
 import { EarningsScope } from './reports.service';
 import { FileDownloadService } from './file-download.service';
-import { toParams } from './http-params';
+import { toParams } from '../../shared/utils/http-params';
 
 /** One delivered order's money for this partner, and whether it has been paid out. */
 export interface SettlementRow {

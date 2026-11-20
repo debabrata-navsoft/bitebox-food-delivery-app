@@ -6,7 +6,7 @@ import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AdminRiderAccountsService, RiderAccount as Account } from '../../../../core/services/admin/admin-rider-accounts.service';
-import { Permission, User } from '../../../../shared/models/user.models';
+import { Permission, User } from '../../../../core/models/user.models';
 import { RiderAccountEdit } from '../rider-account-edit/rider-account-edit';
 import { RiderAccount } from './rider-account';
 

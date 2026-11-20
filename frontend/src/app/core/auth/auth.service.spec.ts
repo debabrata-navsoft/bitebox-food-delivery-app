@@ -3,7 +3,7 @@ import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { User } from '../../shared/models/user.models';
+import { User } from '../models/user.models';
 import { authInterceptor } from '../interceptors/auth.interceptor';
 import { AuthService } from './auth.service';
 

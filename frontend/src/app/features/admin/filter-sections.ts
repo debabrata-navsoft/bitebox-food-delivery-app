@@ -1,8 +1,8 @@
 import { SelectOption } from 'nexprime';
 import { FilterSection } from '../../shared/components/filter-panel/filter-panel.models';
 import { filterOptions } from '../../shared/list/filtered-list';
-import { VEHICLE_LABEL } from '../../shared/models/checkout.models';
-import { ADMIN_ROLES, ROLE_META, USER_STATUS_META } from '../../shared/models/user.models';
+import { VEHICLE_LABEL } from '../../core/models/checkout.models';
+import { ADMIN_ROLES, ROLE_META, USER_STATUS_META } from '../../core/models/user.models';
 import { KYC_META } from './restaurant-accounts/restaurant-status';
 
 // Filters panel sections and sort orders that several admin lists share.

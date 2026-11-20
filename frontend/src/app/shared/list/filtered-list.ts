@@ -8,8 +8,8 @@ import {
   FilterValue,
   countSelected,
 } from '../components/filter-panel/filter-panel.models';
-import { isoDay } from '../forms/dates';
-import { Paginated } from '../models/api.models';
+import { isoDay } from '../utils/dates';
+import { Paginated } from '../../core/models/api.models';
 import { OrderEvent } from '../../core/services/realtime.service';
 import { pagedList } from './paged-list';
 

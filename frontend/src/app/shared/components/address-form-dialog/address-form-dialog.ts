@@ -22,7 +22,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ButtonToggleComponent, CheckboxComponent, IconComponent } from 'nexprime';
 import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../utils/api-error';
 import { AddressService } from '../../../core/services/checkout-api.service';
 import {
   DeliveryLocationService,
@@ -35,9 +35,9 @@ import {
   ImpreciseLocationError,
 } from '../../../core/services/geolocation.service';
 import { LatLng, MapPicker } from '../map-picker/map-picker';
-import { AddressInput, AddressLabel, DeliveryAddress } from '../../models/checkout.models';
+import { AddressInput, AddressLabel, DeliveryAddress } from '../../../core/models/checkout.models';
 import { serverErrors, shownError } from '../../forms/form-errors';
-import { POSTAL_CODE_PATTERN, numberRange, phoneRules, requiredText } from '../../forms/form-rules';
+import { POSTAL_CODE_PATTERN, numberRange, phoneRules, requiredText } from '../../validators/form-rules';
 import { NP_FORM_FIELDS } from '../../forms/np-form-fields';
 import { PhoneInput } from '../phone-input/phone-input';
 

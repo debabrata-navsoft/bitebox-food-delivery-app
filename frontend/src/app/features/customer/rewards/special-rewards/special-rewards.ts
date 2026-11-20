@@ -6,22 +6,22 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { IconComponent, SelectOption } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
-import { errorMessage, fieldErrors, resourceError, resourceValue } from '../../../core/services/api-error';
-import { NotificationService } from '../../../core/services/notification.service';
-import { RewardsService } from '../../../core/services/rewards.service';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
-import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
-import { serverErrors } from '../../../shared/forms/form-errors';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { pagedList } from '../../../shared/list/paged-list';
+import { errorMessage, fieldErrors, resourceError, resourceValue } from '../../../../shared/utils/api-error';
+import { NotificationService } from '../../../../core/services/notification.service';
+import { RewardsService } from '../../../../core/services/rewards.service';
+import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
+import { PageHeader } from '../../../../shared/components/page-header/page-header';
+import { StatTile } from '../../../../shared/components/stat-tile/stat-tile';
+import { serverErrors } from '../../../../shared/forms/form-errors';
+import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
+import { pagedList } from '../../../../shared/list/paged-list';
 import {
   CustomerCampaign,
   REWARD_TYPE_LABEL,
   RewardType,
-} from '../../../shared/models/rewards.models';
-import { InrPipe } from '../../../shared/pipes/money.pipes';
-import { birthDateRange, isoDay } from '../../../shared/forms/dates';
+} from '../../../../core/models/rewards.models';
+import { InrPipe } from '../../../../shared/pipes/money.pipes';
+import { birthDateRange, isoDay } from '../../../../shared/utils/dates';
 import { RewardsNav } from '../rewards-nav/rewards-nav';
 
 

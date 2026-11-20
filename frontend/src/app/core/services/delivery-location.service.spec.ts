@@ -3,7 +3,7 @@ import { ApplicationRef } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { environment } from '../../../environments/environment';
-import { DeliveryAddress } from '../../shared/models/checkout.models';
+import { DeliveryAddress } from '../models/checkout.models';
 import { DeliveryLocationService, extractAddressFromPlace } from './delivery-location.service';
 import { GeolocationService } from './geolocation.service';
 

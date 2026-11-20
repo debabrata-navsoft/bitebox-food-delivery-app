@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { IconComponent } from 'nexprime';
-import { detectPlatform } from '../../../core/services/platform-detector';
+import { detectPlatform } from '../../utils/platform-detector';
 import { InstallPromptService } from '../../../core/services/install-prompt.service';
 
 export type InstallTab = 'ios' | 'android' | 'desktop';

@@ -11,10 +11,10 @@ import {
   TicketQuery,
   TicketSummary,
   TicketUpdate,
-} from '../../shared/models/admin-roles.models';
+} from '../models/admin-roles.models';
 import { Faceted, ListQuery } from '../../shared/list/filtered-list';
-import { ApiResponse } from '../../shared/models/api.models';
-import { toParams } from './http-params';
+import { ApiResponse } from '../models/api.models';
+import { toParams } from '../../shared/utils/http-params';
 
 const data = <T>() => map((r: ApiResponse<T>) => r.data);
 const ticket = <T>() => map((r: ApiResponse<{ ticket: T }>) => r.data.ticket);

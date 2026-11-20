@@ -26,17 +26,17 @@ import {
   TICKET_STATUS_TONE,
   TICKET_TYPE_LABEL,
   TicketSummary,
-} from '../../shared/models/admin-roles.models';
+} from '../../core/models/admin-roles.models';
 import {
   AdminCoupon,
   COUPON_KIND_LABEL,
   COUPON_STATUS_LABEL,
   ORDER_STATUS_LABEL,
   Order,
-} from '../../shared/models/checkout.models';
-import { AdminPayment, PAYMENT_STATUS_LABEL, PROVIDER_LABEL, paymentTone } from '../../shared/models/payment.models';
-import { AdminOrderReviews } from '../../shared/models/review.models';
-import { AdminCoinTransaction, SOURCE_LABEL, TXN_TYPE_LABEL } from '../../shared/models/rewards.models';
+} from '../../core/models/checkout.models';
+import { AdminPayment, PAYMENT_STATUS_LABEL, PROVIDER_LABEL, paymentTone } from '../../core/models/payment.models';
+import { AdminOrderReviews } from '../../core/models/review.models';
+import { AdminCoinTransaction, SOURCE_LABEL, TXN_TYPE_LABEL } from '../../core/models/rewards.models';
 import { formatPaise } from '../../shared/pipes/money.pipes';
 import { openAdminOrder } from './orders/admin-order-dialog/admin-order-dialog';
 import { changeLines } from './audit-log/audit-log';

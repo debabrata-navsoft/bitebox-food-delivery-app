@@ -1,14 +1,14 @@
 import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { EarningsScope, ReportsService } from '../../core/services/reports.service';
-import { DailyChart } from '../../shared/components/daily-chart/daily-chart';
-import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { StatTile } from '../../shared/components/stat-tile/stat-tile';
-import { NP_FORM_FIELDS } from '../../shared/forms/np-form-fields';
-import { periodReport } from '../../shared/list/period-report';
-import { InrPipe, formatDistance, formatPaise } from '../../shared/pipes/money.pipes';
+import { EarningsScope, ReportsService } from '../../../core/services/reports.service';
+import { DailyChart } from '../daily-chart/daily-chart';
+import { EmptyState } from '../empty-state/empty-state';
+import { PageHeader } from '../page-header/page-header';
+import { StatTile } from '../stat-tile/stat-tile';
+import { NP_FORM_FIELDS } from '../../forms/np-form-fields';
+import { periodReport } from '../../list/period-report';
+import { InrPipe, formatDistance, formatPaise } from '../../pipes/money.pipes';
 import { SettlementHistory } from './settlement-history/settlement-history';
 
 @Component({

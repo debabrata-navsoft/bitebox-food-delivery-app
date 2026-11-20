@@ -27,7 +27,7 @@ import {
   SpinnerComponent,
   ToggleComponent,
 } from 'nexprime';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../shared/utils/api-error';
 import {
   DeliveryLocationService,
   Place,
@@ -50,13 +50,13 @@ import {
   numberRange,
   phoneRules,
   requiredText,
-} from '../../../shared/forms/form-rules';
+} from '../../../shared/validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { Restaurant, RestaurantInput, WeeklyHours } from '../../../shared/models/catalog.models';
+import { Restaurant, RestaurantInput, WeeklyHours } from '../../../core/models/catalog.models';
 import { rupeesToPaise } from '../../../shared/pipes/money.pipes';
 import { StatusBanner } from '../status-banner/status-banner';
 import { PhoneInput } from '../../../shared/components/phone-input/phone-input';
-import { dateToTime, timeToDate } from '../../../shared/forms/time-of-day';
+import { dateToTime, timeToDate } from '../../../shared/utils/time-of-day';
 import { PhotoGallery } from './photo-gallery/photo-gallery';
 import { WeeklyHoursEditor } from './weekly-hours/weekly-hours';
 

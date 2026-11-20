@@ -12,9 +12,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { IconComponent, SelectOption, ToggleComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
 import { AdminRewardsService } from '../../../../core/services/admin/admin-rewards.service';
-import { errorMessage, fieldErrors } from '../../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../../shared/utils/api-error';
 import { serverErrors, shownError } from '../../../../shared/forms/form-errors';
-import { numberRange, requiredText } from '../../../../shared/forms/form-rules';
+import { numberRange, requiredText } from '../../../../shared/validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
 import {
   AdminCampaign,
@@ -23,7 +23,7 @@ import {
   CampaignTrigger,
   CampaignType,
   CustomerGroup,
-} from '../../../../shared/models/rewards.models';
+} from '../../../../core/models/rewards.models';
 import { rupeesToPaise } from '../../../../shared/pipes/money.pipes';
 
 const DAY = 86_400_000;

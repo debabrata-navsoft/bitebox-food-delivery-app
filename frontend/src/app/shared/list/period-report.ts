@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { form } from '@angular/forms/signals';
 import { Observable } from 'rxjs';
-import { resourceError, resourceValue } from '../../core/services/api-error';
+import { resourceError, resourceValue } from '../utils/api-error';
 
 export const PERIOD_OPTIONS = [
   { value: '7', label: 'Last 7 days' },

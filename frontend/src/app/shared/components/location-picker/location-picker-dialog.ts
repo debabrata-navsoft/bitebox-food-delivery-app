@@ -1,4 +1,4 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../pipes/np-icon-name';
 import { IconComponent } from 'nexprime';
 import {
   ChangeDetectionStrategy,
@@ -24,7 +24,7 @@ import {
   GeolocationService,
   ImpreciseLocationError,
 } from '../../../core/services/geolocation.service';
-import { DeliveryAddress } from '../../models/checkout.models';
+import { DeliveryAddress } from '../../../core/models/checkout.models';
 import { LatLng, MapPicker } from '../map-picker/map-picker';
 import { PlaceSearch } from '../place-search/place-search';
 

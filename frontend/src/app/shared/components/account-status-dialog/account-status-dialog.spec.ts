@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { BB_DIALOG_DATA, BbDialogRef } from '../../dialog/bb-dialog';
-import { Permission, User } from '../../models/user.models';
+import { Permission, User } from '../../../core/models/user.models';
 import { AccountStatusData, AccountStatusDialog } from './account-status-dialog';
 
 const user = {

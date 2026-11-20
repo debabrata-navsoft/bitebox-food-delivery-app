@@ -7,7 +7,7 @@ import {
   BbDialogRef,
   BbDialogTitle,
 } from '../../../../shared/dialog/bb-dialog';
-import { RestaurantOrder } from '../../../../shared/models/order-management.models';
+import { RestaurantOrder } from '../../../../core/models/order-management.models';
 import { ItemCountPipe } from '../../../../shared/pipes/item-count.pipe';
 import { InrPipe } from '../../../../shared/pipes/money.pipes';
 

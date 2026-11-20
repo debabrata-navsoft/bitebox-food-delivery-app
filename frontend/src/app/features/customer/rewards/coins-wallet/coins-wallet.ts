@@ -5,20 +5,20 @@ import { form } from '@angular/forms/signals';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { RouterLink } from '@angular/router';
 import { IconComponent, SelectOption } from 'nexprime';
-import { resourceError, resourceValue } from '../../../core/services/api-error';
-import { RewardsService } from '../../../core/services/rewards.service';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
-import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { pagedList } from '../../../shared/list/paged-list';
+import { resourceError, resourceValue } from '../../../../shared/utils/api-error';
+import { RewardsService } from '../../../../core/services/rewards.service';
+import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
+import { PageHeader } from '../../../../shared/components/page-header/page-header';
+import { StatTile } from '../../../../shared/components/stat-tile/stat-tile';
+import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
+import { pagedList } from '../../../../shared/list/paged-list';
 import {
   CoinTransaction,
   CoinTxnType,
   SOURCE_LABEL,
   TXN_TYPE_LABEL,
-} from '../../../shared/models/rewards.models';
-import { InrPipe } from '../../../shared/pipes/money.pipes';
+} from '../../../../core/models/rewards.models';
+import { InrPipe } from '../../../../shared/pipes/money.pipes';
 import { RewardsNav } from '../rewards-nav/rewards-nav';
 
 /** My Coins & Wallet: balances, upcoming expiry, how to earn, and the full history. */

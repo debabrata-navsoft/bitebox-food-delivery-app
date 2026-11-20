@@ -5,11 +5,11 @@ import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angu
 import { MatButtonModule } from '@angular/material/button';
 import { IconComponent } from 'nexprime';
 import { Observable, filter, firstValueFrom } from 'rxjs';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../utils/api-error';
 import { ReviewService } from '../../../core/services/review.service';
 import { serverErrors } from '../../forms/form-errors';
 import { NP_FORM_FIELDS } from '../../forms/np-form-fields';
-import { MyReview, RATING_WORDS, REVIEW_LIMITS, ReviewTarget } from '../../models/review.models';
+import { MyReview, RATING_WORDS, REVIEW_LIMITS, ReviewTarget } from '../../../core/models/review.models';
 import { PhotoUpload } from '../photo-upload/photo-upload';
 
 export interface ReviewFormData {

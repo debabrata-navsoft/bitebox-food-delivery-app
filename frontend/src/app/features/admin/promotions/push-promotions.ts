@@ -4,12 +4,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { IconComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
 import { AdminPushService } from '../../../core/services/admin/admin-push.service';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../shared/utils/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { serverErrors, shownError } from '../../../shared/forms/form-errors';
-import { requiredText } from '../../../shared/forms/form-rules';
+import { requiredText } from '../../../shared/validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 

@@ -1,4 +1,4 @@
-import { TableLabels } from '../../../../shared/list/table-labels';
+import { TableLabels } from '../../../../shared/directives/table-labels';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
@@ -7,13 +7,13 @@ import { form } from '@angular/forms/signals';
 import { IconComponent, SelectOption, TabsComponent, ToggleComponent } from 'nexprime';
 import { catchError, map, of } from 'rxjs';
 import { OperationsService } from '../../../../core/services/admin/operations.service';
-import { errorMessage } from '../../../../core/services/api-error';
+import { errorMessage } from '../../../../shared/utils/api-error';
 import { liveRefresh } from '../../../../core/services/poll';
 import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
-import { Monitoring, RestaurantAvailability } from '../../../../shared/models/admin-roles.models';
-import { ORDER_STATUS_LABEL, OrderStatus } from '../../../../shared/models/checkout.models';
+import { Monitoring, RestaurantAvailability } from '../../../../core/models/admin-roles.models';
+import { ORDER_STATUS_LABEL, OrderStatus } from '../../../../core/models/checkout.models';
 import { InrPipe } from '../../../../shared/pipes/money.pipes';
 import { openAdminOrder } from '../../orders/admin-order-dialog/admin-order-dialog';
 

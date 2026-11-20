@@ -1,4 +1,4 @@
-import { NpIconPipe } from '../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../shared/pipes/np-icon-name';
 import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';

@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { ApiResponse } from '../../../shared/models/api.models';
+import { ApiResponse } from '../../models/api.models';
 import { Faceted, ListQuery } from '../../../shared/list/filtered-list';
 import {
   AdminRestaurant,
@@ -11,8 +11,8 @@ import {
   FoodItem,
   MenuStats,
   RestaurantStatus,
-} from '../../../shared/models/catalog.models';
-import { toParams } from '../http-params';
+} from '../../models/catalog.models';
+import { toParams } from '../../../shared/utils/http-params';
 
 export type AdminFoodItem = Omit<FoodItem, 'restaurant'> & {
   restaurant: { _id?: string; id?: string; name: string; slug: string; status: RestaurantStatus };

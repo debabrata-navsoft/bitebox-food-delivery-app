@@ -3,15 +3,15 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Faceted, ListQuery } from '../../shared/list/filtered-list';
-import { ApiResponse } from '../../shared/models/api.models';
+import { ApiResponse } from '../models/api.models';
 import {
   AdminPayment,
   AdminPaymentDetail,
   AdminReport,
   Earnings,
   PaymentInfo,
-} from '../../shared/models/payment.models';
-import { toParams } from './http-params';
+} from '../models/payment.models';
+import { toParams } from '../../shared/utils/http-params';
 
 export type EarningsScope = 'restaurant' | 'rider';
 

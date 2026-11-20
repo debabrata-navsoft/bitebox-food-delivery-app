@@ -1,15 +1,15 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../../shared/pipes/np-icon-name';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ButtonComponent, IconComponent, ToggleComponent } from 'nexprime';
 import { filter } from 'rxjs';
 import { AdminCatalogService } from '../../../core/services/admin/admin-catalog.service';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../../shared/utils/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { FoodCategory } from '../../../shared/models/catalog.models';
-import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
+import { FoodCategory } from '../../../core/models/catalog.models';
+import { ImageFallback, UsableImagePipe } from '../../../shared/directives/broken-images';
 import { CategoryFormDialog } from './category-form-dialog/category-form-dialog';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 

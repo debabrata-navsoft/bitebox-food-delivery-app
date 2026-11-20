@@ -1,5 +1,5 @@
 import { computed, inject } from '@angular/core';
-import { AuthService } from '../../core/auth/auth.service';
+import { AuthService } from '../../../core/auth/auth.service';
 
 /** Where "Help & support" lives for the signed-in user: /support, /restaurant/support or /delivery/support. */
 export function supportBase() {

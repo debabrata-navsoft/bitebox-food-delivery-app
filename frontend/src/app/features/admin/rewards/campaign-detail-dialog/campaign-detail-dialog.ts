@@ -1,4 +1,4 @@
-import { TableLabels } from '../../../../shared/list/table-labels';
+import { TableLabels } from '../../../../shared/directives/table-labels';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -6,9 +6,9 @@ import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { IconComponent } from 'nexprime';
 import { AdminRewardsService } from '../../../../core/services/admin/admin-rewards.service';
-import { resourceError, resourceValue } from '../../../../core/services/api-error';
+import { resourceError, resourceValue } from '../../../../shared/utils/api-error';
 import { StatTile } from '../../../../shared/components/stat-tile/stat-tile';
-import { CAMPAIGN_STATUS_LABEL, CAMPAIGN_STATUS_TONE, CUSTOMER_GROUP_LABEL } from '../../../../shared/models/rewards.models';
+import { CAMPAIGN_STATUS_LABEL, CAMPAIGN_STATUS_TONE, CUSTOMER_GROUP_LABEL } from '../../../../core/models/rewards.models';
 import { InrPipe } from '../../../../shared/pipes/money.pipes';
 
 /** A campaign's settings, performance and latest claims. */

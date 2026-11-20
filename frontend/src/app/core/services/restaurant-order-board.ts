@@ -5,8 +5,8 @@ import { Subscription, catchError, debounceTime, of, tap } from 'rxjs';
 import {
   RestaurantActiveOrders,
   RestaurantOrder,
-} from '../../shared/models/order-management.models';
-import { errorMessage } from './api-error';
+} from '../models/order-management.models';
+import { errorMessage } from '../../shared/utils/api-error';
 import { NotificationService } from './notification.service';
 import { RestaurantOrdersService } from './order-management.service';
 import { pollWhileVisible } from './poll';

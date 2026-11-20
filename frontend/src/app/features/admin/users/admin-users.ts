@@ -15,12 +15,12 @@ import { IconComponent, PaginationComponent, SelectOption } from 'nexprime';
 import { debounceTime, distinctUntilChanged, skip } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AdminUsersService } from '../../../core/services/admin/admin-users.service';
-import { errorMessage } from '../../../core/services/api-error';
-import { mediaQuery } from '../../../core/services/media-query';
+import { errorMessage } from '../../../shared/utils/api-error';
+import { mediaQuery } from '../../../shared/utils/media-query';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { Pagination } from '../../../shared/models/api.models';
+import { Pagination } from '../../../core/models/api.models';
 import {
   MEMBER_KIND,
   ROLE_META,
@@ -28,7 +28,7 @@ import {
   USER_STATUS_META,
   User,
   UserStatus,
-} from '../../../shared/models/user.models';
+} from '../../../core/models/user.models';
 import { openAccountStatus, statusChanged } from '../../../shared/components/account-status-dialog/account-status-dialog';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { selectOptions } from '../account-list';

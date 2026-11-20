@@ -11,11 +11,11 @@ import {
 import { isPlatformBrowser } from '@angular/common';
 import { Observable, catchError, finalize, map, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse } from '../../shared/models/api.models';
-import { CartQuote, PaymentChannel } from '../../shared/models/checkout.models';
+import { ApiResponse } from '../models/api.models';
+import { CartQuote, PaymentChannel } from '../models/checkout.models';
 import { AuthService } from '../auth/auth.service';
 import { DeliveryLocationService } from './delivery-location.service';
-import { toParams } from './http-params';
+import { toParams } from '../../shared/utils/http-params';
 
 @Injectable({ providedIn: 'root' })
 export class CartService {

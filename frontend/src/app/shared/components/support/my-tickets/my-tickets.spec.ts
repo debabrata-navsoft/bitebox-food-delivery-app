@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
-import { AuthService } from '../../../core/auth/auth.service';
-import { ListHandle, listPage, page, verifyHttp } from '../../../shared/list/list-page.testing';
+import { AuthService } from '../../../../core/auth/auth.service';
+import { ListHandle, listPage, page, verifyHttp } from '../../../list/list-page.testing';
 import { MyTickets } from './my-tickets';
 
 type Cmp = { ticketList: ListHandle & { filtered(): boolean }; filterSections: { key: string }[] };

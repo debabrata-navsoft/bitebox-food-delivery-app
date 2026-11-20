@@ -1,4 +1,4 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../../shared/pipes/np-icon-name';
 import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
@@ -8,13 +8,13 @@ import { catchError, forkJoin, map, of } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AdminStaffService } from '../../../core/services/admin/admin-staff.service';
 import { AdminUsersService } from '../../../core/services/admin/admin-users.service';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../../shared/utils/api-error';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
 import { ReviewShortcuts } from '../review-shortcuts/review-shortcuts';
 import { ReportsService } from '../../../core/services/reports.service';
 import { formatPaise } from '../../../shared/pipes/money.pipes';
-import { ROLE_META, Role, User } from '../../../shared/models/user.models';
+import { ROLE_META, Role, User } from '../../../core/models/user.models';
 
 interface StatCard {
   role: Role;

@@ -23,7 +23,7 @@ import {
   retry,
 } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse } from '../../shared/models/api.models';
+import { ApiResponse } from '../models/api.models';
 import {
   AuthSession,
   CodeSent,
@@ -35,8 +35,8 @@ import {
   Role,
   UpdateProfileRequest,
   User,
-} from '../../shared/models/user.models';
-import { errorCode } from '../services/api-error';
+} from '../models/user.models';
+import { errorCode } from '../../shared/utils/api-error';
 import { inBackground } from '../services/page-loader';
 
 export interface SessionHint {

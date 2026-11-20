@@ -1,4 +1,4 @@
-import { NpIconPipe } from '../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../../shared/pipes/np-icon-name';
 import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { form, maxLength } from '@angular/forms/signals';
@@ -10,31 +10,31 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, filter, firstValueFrom, of } from 'rxjs';
-import { errorCode, errorMessage } from '../../core/services/api-error';
-import { ConnectionStatus } from '../../core/services/connection-status.service';
-import { CartActions } from '../../core/services/cart-actions.service';
-import { newIdempotencyKey } from '../../core/services/idempotency';
-import { CartService } from '../../core/services/cart.service';
-import { DeliveryLocationService } from '../../core/services/delivery-location.service';
-import { AddressService, OrderService } from '../../core/services/checkout-api.service';
-import { NotificationService } from '../../core/services/notification.service';
-import { PaymentService } from '../../core/services/payment.service';
-import { CheckoutSession, PaymentMethod } from '../../shared/models/payment.models';
-import { AddressFormDialog } from '../../shared/components/address-form-dialog/address-form-dialog';
-import { BillSummary } from '../../shared/components/bill-summary/bill-summary';
+import { errorCode, errorMessage } from '../../../shared/utils/api-error';
+import { ConnectionStatus } from '../../../core/services/connection-status.service';
+import { CartActions } from '../../../core/services/cart-actions.service';
+import { newIdempotencyKey } from '../../../shared/utils/idempotency';
+import { CartService } from '../../../core/services/cart.service';
+import { DeliveryLocationService } from '../../../core/services/delivery-location.service';
+import { AddressService, OrderService } from '../../../core/services/checkout-api.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { PaymentService } from '../../../core/services/payment.service';
+import { CheckoutSession, PaymentMethod } from '../../../core/models/payment.models';
+import { AddressFormDialog } from '../../../shared/components/address-form-dialog/address-form-dialog';
+import { BillSummary } from '../../../shared/components/bill-summary/bill-summary';
 import { CheckoutCoins } from './checkout-coins/checkout-coins';
-import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { QtyStepper } from '../../shared/components/qty-stepper/qty-stepper';
-import { VegBadge } from '../../shared/components/veg-badge/veg-badge';
-import { CouponOffer, DeliveryAddress, PaymentChannel } from '../../shared/models/checkout.models';
-import { InrPipe, formatPaise } from '../../shared/pipes/money.pipes';
-import { BbDialog } from '../../shared/dialog/bb-dialog';
+import { EmptyState } from '../../../shared/components/empty-state/empty-state';
+import { QtyStepper } from '../../../shared/components/qty-stepper/qty-stepper';
+import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
+import { CouponOffer, DeliveryAddress, PaymentChannel } from '../../../core/models/checkout.models';
+import { InrPipe, formatPaise } from '../../../shared/pipes/money.pipes';
+import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { openCoupons } from './coupon-dialog/coupon-dialog';
-import { codeApplier } from '../../shared/coupons/cart-offers';
-import { CouponTicket } from '../../shared/components/coupon-ticket/coupon-ticket';
+import { codeApplier } from '../../../shared/coupons/cart-offers';
+import { CouponTicket } from '../../../shared/components/coupon-ticket/coupon-ticket';
 
 
-import { NP_FORM_FIELDS } from '../../shared/forms/np-form-fields';
+import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
 
 @Component({
   selector: 'bb-checkout',

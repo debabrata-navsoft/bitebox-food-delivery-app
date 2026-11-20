@@ -11,7 +11,7 @@ import {
   PROVIDER_LABEL,
   REFUND_STATUS_LABEL,
   paymentTone,
-} from '../../../shared/models/payment.models';
+} from '../../../core/models/payment.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 
 /** The customer's payments and refunds (`GET /payments/mine`, Django API). */

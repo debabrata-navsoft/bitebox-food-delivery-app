@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse, Paginated } from '../../shared/models/api.models';
+import { ApiResponse, Paginated } from '../models/api.models';
 import {
   CoinRules,
   CoinSource,
@@ -15,8 +15,8 @@ import {
   RewardClaim,
   RewardType,
   RewardsOverview,
-} from '../../shared/models/rewards.models';
-import { toParams } from './http-params';
+} from '../models/rewards.models';
+import { toParams } from '../../shared/utils/http-params';
 
 /** The signed-in customer's coins, referrals and special rewards (read-only except claims). */
 @Injectable({ providedIn: 'root' })

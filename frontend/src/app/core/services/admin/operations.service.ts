@@ -7,9 +7,9 @@ import {
   Monitoring,
   OperationsDashboard,
   RestaurantAvailability,
-} from '../../../shared/models/admin-roles.models';
-import { ApiResponse } from '../../../shared/models/api.models';
-import { toParams } from '../http-params';
+} from '../../models/admin-roles.models';
+import { ApiResponse } from '../../models/api.models';
+import { toParams } from '../../../shared/utils/http-params';
 
 @Injectable({ providedIn: 'root' })
 export class OperationsService {

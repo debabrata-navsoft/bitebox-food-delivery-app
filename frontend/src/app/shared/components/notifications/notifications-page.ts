@@ -1,18 +1,18 @@
-import { NpIconPipe } from '../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../pipes/np-icon-name';
 import { ButtonToggleComponent, IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatPaginatorModule } from '@angular/material/paginator';
-import { InboxService } from '../../core/services/inbox.service';
-import { RealtimeService } from '../../core/services/realtime.service';
-import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { ChannelSettings } from '../../shared/components/channel-settings/channel-settings';
-import { PushSettings } from '../../shared/components/push-settings/push-settings';
-import { pagedList } from '../../shared/list/paged-list';
-import { AppNotification, notificationIcon } from '../../shared/models/payment.models';
+import { InboxService } from '../../../core/services/inbox.service';
+import { RealtimeService } from '../../../core/services/realtime.service';
+import { EmptyState } from '../empty-state/empty-state';
+import { PageHeader } from '../page-header/page-header';
+import { ChannelSettings } from '../channel-settings/channel-settings';
+import { PushSettings } from '../push-settings/push-settings';
+import { pagedList } from '../../list/paged-list';
+import { AppNotification, notificationIcon } from '../../../core/models/payment.models';
 
 @Component({
   selector: 'bb-notifications-page',

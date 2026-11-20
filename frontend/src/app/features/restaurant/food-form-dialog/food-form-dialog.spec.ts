@@ -3,7 +3,7 @@ import { BB_DIALOG_DATA, BbDialogRef } from '../../../shared/dialog/bb-dialog';
 import { of } from 'rxjs';
 import { MyRestaurantService } from '../../../core/services/my-restaurant.service';
 import { UploadService } from '../../../core/services/upload.service';
-import { FoodItem } from '../../../shared/models/catalog.models';
+import { FoodItem } from '../../../core/models/catalog.models';
 import { FoodFormDialog } from './food-form-dialog';
 
 describe('FoodFormDialog', () => {

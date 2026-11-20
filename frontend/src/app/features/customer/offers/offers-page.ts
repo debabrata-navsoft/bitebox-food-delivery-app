@@ -12,7 +12,7 @@ import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { codeApplier, forQuote, savingOnCart } from '../../../shared/coupons/cart-offers';
 import { placeOf } from '../../../shared/coupons/coupon-labels';
 import { loaded } from '../../../shared/coupons/coupon-list';
-import { CouponOffer, OfferKind } from '../../../shared/models/checkout.models';
+import { CouponOffer, OfferKind } from '../../../core/models/checkout.models';
 
 type Action = { label: 'APPLY' | 'APPLIED' | 'COPY' | 'VIEW'; slug?: string } | null;
 

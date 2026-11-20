@@ -1,4 +1,4 @@
-import { RiderVerificationStatus } from '../../../shared/models/order-management.models';
+import { RiderVerificationStatus } from '../../../core/models/order-management.models';
 
 /** Verification decisions an admin can make for a rider in each status (review page and Delivery partner accounts). */
 /** Anything but approving needs a reason, which the rider sees. */

@@ -8,7 +8,7 @@ import { Observable } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AdminRiderAccountsService, RiderAccount as Account } from '../../../../core/services/admin/admin-rider-accounts.service';
 import { AdminUsersService } from '../../../../core/services/admin/admin-users.service';
-import { errorMessage } from '../../../../core/services/api-error';
+import { errorMessage } from '../../../../shared/utils/api-error';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { openAccountStatus, statusChanged } from '../../../../shared/components/account-status-dialog/account-status-dialog';
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
@@ -17,15 +17,15 @@ import { RecordTable } from '../../../../shared/components/record-table/record-t
 import { StatTile } from '../../../../shared/components/stat-tile/stat-tile';
 import { loaded } from '../../../../shared/coupons/coupon-list';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
-import { fromIsoDay } from '../../../../shared/forms/dates';
-import { VEHICLE_LABEL } from '../../../../shared/models/checkout.models';
-import { kindLabel } from '../../../../shared/models/kyc.models';
+import { fromIsoDay } from '../../../../shared/utils/dates';
+import { VEHICLE_LABEL } from '../../../../core/models/checkout.models';
+import { kindLabel } from '../../../../core/models/kyc.models';
 import {
   RIDER_VERIFICATION_LABEL,
   RIDER_VERIFICATION_TONE,
   riderReviewState,
-} from '../../../../shared/models/order-management.models';
-import { GENDER_LABEL, USER_STATUS_META } from '../../../../shared/models/user.models';
+} from '../../../../core/models/order-management.models';
+import { GENDER_LABEL, USER_STATUS_META } from '../../../../core/models/user.models';
 import { InrPipe } from '../../../../shared/pipes/money.pipes';
 import { shortId } from '../../account-list';
 import { recordTabs } from '../../account-tabs';

@@ -1,6 +1,6 @@
 import { SchemaPathTree, maxLength, pattern, required, validate } from '@angular/forms/signals';
 import { SelectOption } from 'nexprime';
-import { numberRange } from '../forms/form-rules';
+import { numberRange } from '../validators/form-rules';
 import {
   AdminCoupon,
   AdminCouponInput,
@@ -8,7 +8,7 @@ import {
   CouponOffer,
   DiscountType,
   NamedRef,
-} from '../models/checkout.models';
+} from '../../core/models/checkout.models';
 import { rupeesToPaise } from '../pipes/money.pipes';
 
 /** The form shared by the admin coupon dialog and the restaurant offer dialog. */

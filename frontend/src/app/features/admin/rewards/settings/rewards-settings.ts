@@ -5,18 +5,18 @@ import { ButtonComponent, IconComponent, SelectOption, ToggleComponent } from 'n
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AdminRewardsService } from '../../../../core/services/admin/admin-rewards.service';
-import { errorCode, errorMessage, fieldErrors } from '../../../../core/services/api-error';
+import { errorCode, errorMessage, fieldErrors } from '../../../../shared/utils/api-error';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
 import { serverErrors } from '../../../../shared/forms/form-errors';
-import { numberRange } from '../../../../shared/forms/form-rules';
+import { numberRange } from '../../../../shared/validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
 import {
   EARN_SOURCES,
   RewardConfiguration,
   RewardConfigurationPatch,
   SOURCE_LABEL,
-} from '../../../../shared/models/rewards.models';
+} from '../../../../core/models/rewards.models';
 import { rupeesToPaise } from '../../../../shared/pipes/money.pipes';
 
 /** Number inputs can be empty while editing. */

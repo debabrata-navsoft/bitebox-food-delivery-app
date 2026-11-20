@@ -5,7 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { User } from '../../../shared/models/user.models';
+import { User } from '../../../core/models/user.models';
 import { Register } from './register';
 
 const created: User = {

@@ -2,11 +2,11 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { ApiResponse, Paginated } from '../../../shared/models/api.models';
-import { VehicleType } from '../../../shared/models/checkout.models';
-import { RiderAddress, RiderProfile, RiderVerificationStatus } from '../../../shared/models/order-management.models';
-import { Gender, User, UserStatus } from '../../../shared/models/user.models';
-import { toParams } from '../http-params';
+import { ApiResponse, Paginated } from '../../models/api.models';
+import { VehicleType } from '../../models/checkout.models';
+import { RiderAddress, RiderProfile, RiderVerificationStatus } from '../../models/order-management.models';
+import { Gender, User, UserStatus } from '../../models/user.models';
+import { toParams } from '../../../shared/utils/http-params';
 import { Faceted, ListQuery } from '../../../shared/list/filtered-list';
 import { KycState } from './admin-restaurant-accounts.service';
 

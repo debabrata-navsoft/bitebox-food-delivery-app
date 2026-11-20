@@ -1,8 +1,8 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../../shared/pipes/np-icon-name';
 import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Restaurant } from '../../../shared/models/catalog.models';
+import { Restaurant } from '../../../core/models/catalog.models';
 
 const COPY = {
   pending: {

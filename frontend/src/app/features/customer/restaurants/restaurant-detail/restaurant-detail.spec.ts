@@ -2,9 +2,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
-import { CatalogService } from '../../../core/services/catalog.service';
-import { ReviewService } from '../../../core/services/review.service';
-import { FoodItem, MenuSection, Restaurant } from '../../../shared/models/catalog.models';
+import { CatalogService } from '../../../../core/services/catalog.service';
+import { ReviewService } from '../../../../core/services/review.service';
+import { FoodItem, MenuSection, Restaurant } from '../../../../core/models/catalog.models';
 import { RestaurantDetail } from './restaurant-detail';
 
 const restaurant = {

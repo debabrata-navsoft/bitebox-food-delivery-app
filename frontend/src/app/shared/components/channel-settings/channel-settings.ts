@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IconComponent, ToggleComponent } from 'nexprime';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../utils/api-error';
 import {
   ChannelPreferences,
   NotificationCategory,

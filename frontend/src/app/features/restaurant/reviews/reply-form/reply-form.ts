@@ -10,11 +10,11 @@ import {
 import { FormRoot, TreeValidationResult, form, maxLength, minLength, required } from '@angular/forms/signals';
 import { ButtonComponent, IconComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
-import { errorMessage, fieldErrors } from '../../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../../shared/utils/api-error';
 import { ReviewService } from '../../../../core/services/review.service';
 import { serverErrors } from '../../../../shared/forms/form-errors';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
-import { REVIEW_LIMITS, RestaurantReview } from '../../../../shared/models/review.models';
+import { REVIEW_LIMITS, RestaurantReview } from '../../../../core/models/review.models';
 
 
 /** Inline public reply to one review. The review itself is never changed. */

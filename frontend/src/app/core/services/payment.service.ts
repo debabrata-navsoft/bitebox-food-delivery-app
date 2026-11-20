@@ -3,13 +3,13 @@ import { DOCUMENT } from '@angular/common';
 import { Injectable, inject } from '@angular/core';
 import { Observable, firstValueFrom, map, shareReplay } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse, Paginated } from '../../shared/models/api.models';
+import { ApiResponse, Paginated } from '../models/api.models';
 import {
   CheckoutSession,
   PaymentHistoryItem,
   PaymentInfo,
   PaymentMethodOption,
-} from '../../shared/models/payment.models';
+} from '../models/payment.models';
 import { openMockPayment } from '../../shared/components/mock-payment-dialog/mock-payment-dialog';
 import { BbDialog } from '../../shared/dialog/bb-dialog';
 import { publicRequest } from '../interceptors/auth.interceptor';

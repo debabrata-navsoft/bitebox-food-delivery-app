@@ -1,4 +1,4 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../../shared/pipes/np-icon-name';
 import { IconComponent } from 'nexprime';
 import {
   ChangeDetectionStrategy,
@@ -14,7 +14,7 @@ import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AdminCatalogService } from '../../../core/services/admin/admin-catalog.service';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../../shared/utils/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
@@ -22,10 +22,10 @@ import {
   AdminRestaurant,
   MenuStats,
   RestaurantStatus,
-} from '../../../shared/models/catalog.models';
+} from '../../../core/models/catalog.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { ClockTimePipe } from '../../../shared/pipes/clock-time.pipe';
-import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
+import { ImageFallback, UsableImagePipe } from '../../../shared/directives/broken-images';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { KycReview } from '../../../shared/components/kyc/kyc-review/kyc-review';
 import {

@@ -1,4 +1,4 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../../shared/pipes/np-icon-name';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -14,7 +14,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, filter, of, tap } from 'rxjs';
 import { CatalogService } from '../../../core/services/catalog.service';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../../shared/utils/api-error';
 import { MyRestaurantService } from '../../../core/services/my-restaurant.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
@@ -23,7 +23,7 @@ import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolba
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
 import { filteredList, optionsSection } from '../../../shared/list/filtered-list';
-import { FoodItem } from '../../../shared/models/catalog.models';
+import { FoodItem } from '../../../core/models/catalog.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { FoodFormDialog, FoodFormData } from '../food-form-dialog/food-form-dialog';
 import {
@@ -34,12 +34,12 @@ import {
   PaginationComponent,
   ToggleComponent,
 } from 'nexprime';
-import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
+import { ImageFallback, UsableImagePipe } from '../../../shared/directives/broken-images';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import {
   COMPACT_MENU_WIDTH,
   toggleEndAligned,
-} from '../../../shared/menu/end-aligned-menu';
+} from '../../../shared/utils/end-aligned-menu';
 
 /**
  * The partner's menu: a paged list filtered on the server (search plus the Filters panel's

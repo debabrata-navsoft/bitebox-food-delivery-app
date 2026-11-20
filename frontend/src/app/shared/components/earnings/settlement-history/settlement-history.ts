@@ -1,14 +1,14 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
 import { ButtonComponent, ButtonToggleComponent, PaginationComponent } from 'nexprime';
-import { NotificationService } from '../../../core/services/notification.service';
-import { PartnerFinanceService } from '../../../core/services/partner-finance.service';
-import { EarningsScope } from '../../../core/services/reports.service';
-import { ListEmpty } from '../../../shared/components/list-empty/list-empty';
-import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
-import { datesSection, filteredList, optionsSection } from '../../../shared/list/filtered-list';
-import { PAYOUT_STATUS_TONE, Payout } from '../../../shared/models/admin-roles.models';
-import { InrPipe } from '../../../shared/pipes/money.pipes';
+import { NotificationService } from '../../../../core/services/notification.service';
+import { PartnerFinanceService } from '../../../../core/services/partner-finance.service';
+import { EarningsScope } from '../../../../core/services/reports.service';
+import { ListEmpty } from '../../list-empty/list-empty';
+import { ListToolbar } from '../../list-toolbar/list-toolbar';
+import { datesSection, filteredList, optionsSection } from '../../../list/filtered-list';
+import { PAYOUT_STATUS_TONE, Payout } from '../../../../core/models/admin-roles.models';
+import { InrPipe } from '../../../pipes/money.pipes';
 
 type View = 'settlements' | 'payouts';
 // Partner wording; the tones match the admin payouts screen.

@@ -3,9 +3,9 @@ import { Injectable, PLATFORM_ID, afterNextRender, effect, inject, signal } from
 import { isPlatformBrowser } from '@angular/common';
 import { Observable, firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse } from '../../shared/models/api.models';
-import { DeliveryAddress } from '../../shared/models/checkout.models';
-import { toParams } from './http-params';
+import { ApiResponse } from '../models/api.models';
+import { DeliveryAddress } from '../models/checkout.models';
+import { toParams } from '../../shared/utils/http-params';
 import { GeolocationService } from './geolocation.service';
 
 export interface Place {

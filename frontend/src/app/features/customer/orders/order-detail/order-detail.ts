@@ -1,5 +1,5 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
-import { AT_OR_TO_RESTAURANT } from '../../../shared/models/order-management.models';
+import { NpIconPipe } from '../../../../shared/pipes/np-icon-name';
+import { AT_OR_TO_RESTAURANT } from '../../../../core/models/order-management.models';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -20,21 +20,21 @@ import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { EMPTY, catchError, firstValueFrom, map } from 'rxjs';
-import { errorMessage } from '../../../core/services/api-error';
-import { OrderService } from '../../../core/services/checkout-api.service';
-import { PaymentService } from '../../../core/services/payment.service';
-import { ConnectionStatus } from '../../../core/services/connection-status.service';
-import { PushSettings } from '../../../shared/components/push-settings/push-settings';
-import { NotificationService } from '../../../core/services/notification.service';
-import { etaMinutes } from '../../../core/services/routing.service';
-import { liveRefresh } from '../../../core/services/poll';
-import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
-import { BillSummary } from '../../../shared/components/bill-summary/bill-summary';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
-import { deliveryTracking } from '../../../shared/components/tracking-map/delivery-tracking';
-import { TrackingMap } from '../../../shared/components/tracking-map/tracking-map';
-import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
-import { Stars } from '../../../shared/components/stars/stars';
+import { errorMessage } from '../../../../shared/utils/api-error';
+import { OrderService } from '../../../../core/services/checkout-api.service';
+import { PaymentService } from '../../../../core/services/payment.service';
+import { ConnectionStatus } from '../../../../core/services/connection-status.service';
+import { PushSettings } from '../../../../shared/components/push-settings/push-settings';
+import { NotificationService } from '../../../../core/services/notification.service';
+import { etaMinutes } from '../../../../core/services/routing.service';
+import { liveRefresh } from '../../../../core/services/poll';
+import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
+import { BillSummary } from '../../../../shared/components/bill-summary/bill-summary';
+import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
+import { deliveryTracking } from '../../../../shared/components/tracking-map/delivery-tracking';
+import { TrackingMap } from '../../../../shared/components/tracking-map/tracking-map';
+import { VegBadge } from '../../../../shared/components/veg-badge/veg-badge';
+import { Stars } from '../../../../shared/components/stars/stars';
 import { OrderReviews } from '../order-reviews/order-reviews';
 import {
   ORDER_STATUS_LABEL,
@@ -43,15 +43,15 @@ import {
   VEHICLE_LABEL,
   awaitingPayment,
   customerStatusLabel,
-} from '../../../shared/models/checkout.models';
+} from '../../../../core/models/checkout.models';
 import {
   PAYMENT_STATUS_LABEL,
   PROVIDER_LABEL,
   REFUND_STATUS_LABEL,
   paymentTone,
-} from '../../../shared/models/payment.models';
-import { InrPipe } from '../../../shared/pipes/money.pipes';
-import { BbDialog } from '../../../shared/dialog/bb-dialog';
+} from '../../../../core/models/payment.models';
+import { InrPipe } from '../../../../shared/pipes/money.pipes';
+import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 
 const JOURNEY: { status: OrderStatus; icon: string }[] = [
   { status: 'pending', icon: 'receipt' },

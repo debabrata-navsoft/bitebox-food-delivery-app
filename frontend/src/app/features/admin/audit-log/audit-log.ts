@@ -1,4 +1,4 @@
-import { TableLabels } from '../../../shared/list/table-labels';
+import { TableLabels } from '../../../shared/directives/table-labels';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -10,8 +10,8 @@ import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolba
 import { FilterSection } from '../../../shared/components/filter-panel/filter-panel.models';
 import { filterOptions, filteredList } from '../../../shared/list/filtered-list';
 import { adminRoleSection } from '../filter-sections';
-import { AuditEntry } from '../../../shared/models/admin-roles.models';
-import { AdminRole, ROLE_META } from '../../../shared/models/user.models';
+import { AuditEntry } from '../../../core/models/admin-roles.models';
+import { AdminRole, ROLE_META } from '../../../core/models/user.models';
 
 /** Labels for the actions the API records (the `audited(...)` routes of both backends). */
 const ACTIONS: Record<string, string> = {

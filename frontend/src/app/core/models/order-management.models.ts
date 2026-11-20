@@ -1,5 +1,5 @@
 import { RatingSummary } from './review.models';
-import { FilterPreview } from '../components/filter-panel/filter-panel.models';
+import { FilterPreview } from '../../shared/components/filter-panel/filter-panel.models';
 import { Pagination } from './api.models';
 import { Order, OrderStatus, RiderCard, VehicleType } from './checkout.models';
 

@@ -9,7 +9,7 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ROLE_META } from '../../shared/models/user.models';
+import { ROLE_META } from '../models/user.models';
 import { AuthService, isTransient } from '../auth/auth.service';
 
 const NO_RETRY = [

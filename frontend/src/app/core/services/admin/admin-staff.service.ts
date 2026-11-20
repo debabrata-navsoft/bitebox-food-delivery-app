@@ -9,10 +9,10 @@ import {
   PlatformSummary,
   StaffAdminInput,
   StaffAdminUpdate,
-} from '../../../shared/models/admin-roles.models';
-import { ApiResponse, Paginated } from '../../../shared/models/api.models';
-import { User, UserStatus } from '../../../shared/models/user.models';
-import { toParams } from '../http-params';
+} from '../../models/admin-roles.models';
+import { ApiResponse, Paginated } from '../../models/api.models';
+import { User, UserStatus } from '../../models/user.models';
+import { toParams } from '../../../shared/utils/http-params';
 import { Faceted, ListQuery } from '../../../shared/list/filtered-list';
 
 /** Super admin: operations, finance and support admin accounts, and the audit log. */

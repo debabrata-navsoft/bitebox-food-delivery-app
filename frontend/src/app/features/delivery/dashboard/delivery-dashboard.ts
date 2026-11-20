@@ -13,7 +13,7 @@ import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { IconComponent, ProgressBarComponent, ToggleComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../../shared/utils/api-error';
 import {
   GeolocationService,
   ImpreciseLocationError,
@@ -32,12 +32,12 @@ import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { openLocationDetectedDialog } from '../location-dialog/location-detected-dialog';
 import { openVehicleDialog } from '../vehicle-dialog/vehicle-dialog';
-import { VEHICLE_LABEL } from '../../../shared/models/checkout.models';
+import { VEHICLE_LABEL } from '../../../core/models/checkout.models';
 import {
   RiderStats,
   RIDER_VERIFICATION_COPY,
   riderReviewState,
-} from '../../../shared/models/order-management.models';
+} from '../../../core/models/order-management.models';
 import { ItemCountPipe } from '../../../shared/pipes/item-count.pipe';
 import { InrPipe, formatDistance } from '../../../shared/pipes/money.pipes';
 

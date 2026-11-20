@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { form } from '@angular/forms/signals';
 import { finalize } from 'rxjs';
 import { ButtonComponent, IconComponent, PaginationComponent, SelectOption } from 'nexprime';
-import { errorMessage } from '../../../../core/services/api-error';
+import { errorMessage } from '../../../../shared/utils/api-error';
 import {
   DeliveryChannel,
   DeliveryStatus,

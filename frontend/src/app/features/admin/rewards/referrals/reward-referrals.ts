@@ -1,4 +1,4 @@
-import { TableLabels } from '../../../../shared/list/table-labels';
+import { TableLabels } from '../../../../shared/directives/table-labels';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,7 +8,7 @@ import { IconComponent } from 'nexprime';
 import { switchMap } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AdminRewardsService } from '../../../../core/services/admin/admin-rewards.service';
-import { errorMessage } from '../../../../core/services/api-error';
+import { errorMessage } from '../../../../shared/utils/api-error';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
 import { ListEmpty } from '../../../../shared/components/list-empty/list-empty';
@@ -20,7 +20,7 @@ import {
   REFERRAL_REWARD_LABEL,
   REFERRAL_STATUS_LABEL,
   RISK_LABEL,
-} from '../../../../shared/models/rewards.models';
+} from '../../../../core/models/rewards.models';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 
 /** Referral management: every referral, its risk signals, and approving or rejecting held ones. */

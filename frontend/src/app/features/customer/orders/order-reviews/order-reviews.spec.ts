@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-import { ReviewService } from '../../../core/services/review.service';
-import { MyReview, OrderReviewState } from '../../../shared/models/review.models';
+import { ReviewService } from '../../../../core/services/review.service';
+import { MyReview, OrderReviewState } from '../../../../core/models/review.models';
 import { OrderReviews } from './order-reviews';
 
 const mine = (id: string, rating: number, extra: Partial<MyReview> = {}) =>

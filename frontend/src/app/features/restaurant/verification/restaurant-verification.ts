@@ -7,15 +7,15 @@ import {
 } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../../shared/utils/api-error';
 import { KycService } from '../../../core/services/kyc.service';
 import { MyRestaurantService } from '../../../core/services/my-restaurant.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { KycDocuments } from '../../../shared/components/kyc/kyc-documents/kyc-documents';
 import { PayoutAccountForm } from '../../../shared/components/kyc/payout-account-form/payout-account-form';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { Restaurant } from '../../../shared/models/catalog.models';
-import { KycSummary } from '../../../shared/models/kyc.models';
+import { Restaurant } from '../../../core/models/catalog.models';
+import { KycSummary } from '../../../core/models/kyc.models';
 import { StatusBanner } from '../status-banner/status-banner';
 import { RestaurantLegalForm } from './legal-form/restaurant-legal-form';
 

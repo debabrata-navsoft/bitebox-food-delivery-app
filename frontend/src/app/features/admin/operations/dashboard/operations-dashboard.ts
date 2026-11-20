@@ -7,7 +7,7 @@ import { StatTile } from '../../../../shared/components/stat-tile/stat-tile';
 import { ReviewShortcuts } from '../../review-shortcuts/review-shortcuts';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
 import { periodReport } from '../../../../shared/list/period-report';
-import { ORDER_STATUS_LABEL, OrderStatus } from '../../../../shared/models/checkout.models';
+import { ORDER_STATUS_LABEL, OrderStatus } from '../../../../core/models/checkout.models';
 
 const LIVE_ORDER: OrderStatus[] = [
   'pending',

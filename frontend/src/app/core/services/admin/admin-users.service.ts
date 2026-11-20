@@ -2,12 +2,12 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { ApiResponse, Paginated } from '../../../shared/models/api.models';
-import { LoginEntry } from '../../../shared/models/admin-roles.models';
-import { toParams } from '../http-params';
+import { ApiResponse, Paginated } from '../../models/api.models';
+import { LoginEntry } from '../../models/admin-roles.models';
+import { toParams } from '../../../shared/utils/http-params';
 import { Faceted, ListQuery } from '../../../shared/list/filtered-list';
-import { AddressInput, DeliveryAddress } from '../../../shared/models/checkout.models';
-import { Gender, Role, User, UserStatus } from '../../../shared/models/user.models';
+import { AddressInput, DeliveryAddress } from '../../models/checkout.models';
+import { Gender, Role, User, UserStatus } from '../../models/user.models';
 
 export interface UserQuery {
   role?: Role;

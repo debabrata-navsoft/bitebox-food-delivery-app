@@ -2,8 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse } from '../../shared/models/api.models';
-import { OrderStatus } from '../../shared/models/checkout.models';
+import { ApiResponse } from '../models/api.models';
+import { OrderStatus } from '../models/checkout.models';
 import { inBackground } from './page-loader';
 
 /** `GET /tracking/orders/:id`: where the delivery is, for restoring the map after a reconnect. */

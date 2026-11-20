@@ -1,4 +1,4 @@
-import { ListHandle, listPage, page, verifyHttp } from '../../../shared/list/list-page.testing';
+import { ListHandle, listPage, page, verifyHttp } from '../../../list/list-page.testing';
 import { SettlementHistory } from './settlement-history';
 
 type Cmp = {

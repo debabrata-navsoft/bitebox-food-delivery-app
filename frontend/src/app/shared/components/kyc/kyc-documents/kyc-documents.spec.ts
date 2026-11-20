@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { KycService } from '../../../../core/services/kyc.service';
 import { NotificationService } from '../../../../core/services/notification.service';
-import { KycSummary } from '../../../models/kyc.models';
+import { KycSummary } from '../../../../core/models/kyc.models';
 import { KycDocuments } from './kyc-documents';
 
 const summary: KycSummary = {

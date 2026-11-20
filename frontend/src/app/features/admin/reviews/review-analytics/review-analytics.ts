@@ -12,7 +12,7 @@ import {
   ReviewTarget,
   TARGET_PLURAL,
   formatAverage,
-} from '../../../../shared/models/review.models';
+} from '../../../../core/models/review.models';
 
 /** Rating analytics: per-subject averages, daily trend, reports, moderation and rankings. */
 @Component({

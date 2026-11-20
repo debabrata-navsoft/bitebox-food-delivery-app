@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormRoot, TreeValidationResult, form, required } from '@angular/forms/signals';
 import { ButtonComponent, SelectOption } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../shared/utils/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { RiderService } from '../../../core/services/order-management.service';
 import {
@@ -13,8 +13,8 @@ import {
 } from '../../../shared/dialog/bb-dialog';
 import { serverErrors, shownError } from '../../../shared/forms/form-errors';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { VEHICLE_LABEL, VehicleType } from '../../../shared/models/checkout.models';
-import { RiderProfile } from '../../../shared/models/order-management.models';
+import { VEHICLE_LABEL, VehicleType } from '../../../core/models/checkout.models';
+import { RiderProfile } from '../../../core/models/order-management.models';
 
 const VEHICLE_OPTIONS: SelectOption[] = Object.entries(VEHICLE_LABEL).map(([value, label]) => ({
   value,

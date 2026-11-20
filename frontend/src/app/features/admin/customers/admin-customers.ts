@@ -11,8 +11,8 @@ import { NotificationService } from '../../../core/services/notification.service
 import { openAccountStatus, statusChanged } from '../../../shared/components/account-status-dialog/account-status-dialog';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
-import { TableLabels } from '../../../shared/list/table-labels';
-import { USER_STATUS_META, initialsOf } from '../../../shared/models/user.models';
+import { TableLabels } from '../../../shared/directives/table-labels';
+import { USER_STATUS_META, initialsOf } from '../../../core/models/user.models';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { shortId } from '../account-list';
 import { JOINED_SECTION, accountSorts, accountStatusSection } from '../filter-sections';

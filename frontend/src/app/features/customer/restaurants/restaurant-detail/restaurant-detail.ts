@@ -1,5 +1,5 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
-import { BbDialog } from '../../../shared/dialog/bb-dialog';
+import { NpIconPipe } from '../../../../shared/pipes/np-icon-name';
+import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -17,24 +17,24 @@ import { MatButtonModule } from '@angular/material/button';
 import { IconComponent, ToggleComponent } from 'nexprime';
 import { HttpErrorResponse } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
-import { CartActions } from '../../../core/services/cart-actions.service';
-import { CartService } from '../../../core/services/cart.service';
-import { CatalogService } from '../../../core/services/catalog.service';
-import { errorMessage } from '../../../core/services/api-error';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
-import { QtyStepper } from '../../../shared/components/qty-stepper/qty-stepper';
-import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
-import { PublicReviews } from '../../../shared/components/public-reviews/public-reviews';
-import { Stars } from '../../../shared/components/stars/stars';
-import { OffersStrip } from '../../../shared/components/offers-strip/offers-strip';
-import { FoodItem, MenuSection, Restaurant } from '../../../shared/models/catalog.models';
-import { InrPipe } from '../../../shared/pipes/money.pipes';
-import { ClockTimePipe } from '../../../shared/pipes/clock-time.pipe';
+import { CartActions } from '../../../../core/services/cart-actions.service';
+import { CartService } from '../../../../core/services/cart.service';
+import { CatalogService } from '../../../../core/services/catalog.service';
+import { errorMessage } from '../../../../shared/utils/api-error';
+import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
+import { QtyStepper } from '../../../../shared/components/qty-stepper/qty-stepper';
+import { VegBadge } from '../../../../shared/components/veg-badge/veg-badge';
+import { PublicReviews } from '../../../../shared/components/public-reviews/public-reviews';
+import { Stars } from '../../../../shared/components/stars/stars';
+import { OffersStrip } from '../../../../shared/components/offers-strip/offers-strip';
+import { FoodItem, MenuSection, Restaurant } from '../../../../core/models/catalog.models';
+import { InrPipe } from '../../../../shared/pipes/money.pipes';
+import { ClockTimePipe } from '../../../../shared/pipes/clock-time.pipe';
 import { FoodDetailDialog, FoodDetailData } from '../../food/food-detail-dialog/food-detail-dialog';
 
 import { form } from '@angular/forms/signals';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { ImageFallback, UsableImagePipe } from '../../../shared/images/broken-images';
+import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
+import { ImageFallback, UsableImagePipe } from '../../../../shared/directives/broken-images';
 
 @Component({
   selector: 'bb-restaurant-detail',

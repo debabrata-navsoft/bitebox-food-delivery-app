@@ -4,7 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
 import { ReviewService } from '../../../core/services/review.service';
 import { UploadService } from '../../../core/services/upload.service';
-import { MyReview } from '../../models/review.models';
+import { MyReview } from '../../../core/models/review.models';
 import { ReviewFormDialog } from './review-form-dialog';
 
 const review = (extra: Partial<MyReview> = {}) =>

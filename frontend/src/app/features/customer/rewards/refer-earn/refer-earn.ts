@@ -5,20 +5,20 @@ import { form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { IconComponent, SelectOption } from 'nexprime';
-import { resourceError, resourceValue } from '../../../core/services/api-error';
-import { NotificationService } from '../../../core/services/notification.service';
-import { RewardsService } from '../../../core/services/rewards.service';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
-import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { pagedList } from '../../../shared/list/paged-list';
+import { resourceError, resourceValue } from '../../../../shared/utils/api-error';
+import { NotificationService } from '../../../../core/services/notification.service';
+import { RewardsService } from '../../../../core/services/rewards.service';
+import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
+import { PageHeader } from '../../../../shared/components/page-header/page-header';
+import { StatTile } from '../../../../shared/components/stat-tile/stat-tile';
+import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
+import { pagedList } from '../../../../shared/list/paged-list';
 import {
   CustomerReferralStatus,
   REFERRAL_STATUS_LABEL,
   REFERRAL_STEPS,
-} from '../../../shared/models/rewards.models';
-import { InrPipe } from '../../../shared/pipes/money.pipes';
+} from '../../../../core/models/rewards.models';
+import { InrPipe } from '../../../../shared/pipes/money.pipes';
 import { RewardsNav } from '../rewards-nav/rewards-nav';
 
 /** Refer & earn: the customer's code, sharing, statistics and invited friends. */

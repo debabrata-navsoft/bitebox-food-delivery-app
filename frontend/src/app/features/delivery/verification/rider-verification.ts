@@ -11,7 +11,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { FormRoot, TreeValidationResult, form, pattern, required } from '@angular/forms/signals';
 import { IconComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
-import { errorMessage, fieldErrors } from '../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../shared/utils/api-error';
 import { KycService } from '../../../core/services/kyc.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { RiderService } from '../../../core/services/order-management.service';
@@ -19,9 +19,9 @@ import { KycDocuments } from '../../../shared/components/kyc/kyc-documents/kyc-d
 import { PayoutAccountForm } from '../../../shared/components/kyc/payout-account-form/payout-account-form';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { serverErrors, shownError } from '../../../shared/forms/form-errors';
-import { POSTAL_CODE_PATTERN, requiredText } from '../../../shared/forms/form-rules';
+import { POSTAL_CODE_PATTERN, requiredText } from '../../../shared/validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { KycSummary } from '../../../shared/models/kyc.models';
+import { KycSummary } from '../../../core/models/kyc.models';
 import {
   RIDER_VERIFICATION_COPY,
   RIDER_VERIFICATION_LABEL,
@@ -29,7 +29,7 @@ import {
   RiderAddress,
   RiderProfile,
   riderReviewState,
-} from '../../../shared/models/order-management.models';
+} from '../../../core/models/order-management.models';
 
 /**
  * What BiteBox needs before a rider goes online: home address, driving licence, vehicle

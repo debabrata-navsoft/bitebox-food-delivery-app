@@ -7,7 +7,7 @@ import { ListEmpty } from '../../../../shared/components/list-empty/list-empty';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
 import { ListToolbar } from '../../../../shared/components/list-toolbar/list-toolbar';
 import { datesSection, filteredList, optionsSection } from '../../../../shared/list/filtered-list';
-import { LedgerAccount } from '../../../../shared/models/admin-roles.models';
+import { LedgerAccount } from '../../../../core/models/admin-roles.models';
 import { InrPipe } from '../../../../shared/pipes/money.pipes';
 
 // `sign` turns a balance into its natural reading: the ledger stores money held for others (and

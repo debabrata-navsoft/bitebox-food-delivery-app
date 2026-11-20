@@ -1,8 +1,8 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../pipes/np-icon-name';
 import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { BB_DIALOG_DATA, BB_DIALOG_TITLE_ID, BbDialog, BbDialogRef } from '../../dialog/bb-dialog';
-import { CheckoutSession } from '../../models/payment.models';
+import { CheckoutSession } from '../../../core/models/payment.models';
 import { InrPipe } from '../../pipes/money.pipes';
 
 type GatewayMethod = 'upi' | 'card' | 'netbanking' | 'wallet';

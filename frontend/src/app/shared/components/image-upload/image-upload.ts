@@ -11,13 +11,13 @@ import {
 } from '@angular/core';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ImageUploadComponent } from 'nexprime';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../utils/api-error';
 import {
   MAX_IMAGE_BYTES,
   UploadEndpoint,
   UploadService,
 } from '../../../core/services/upload.service';
-import { BrokenImages } from '../../images/broken-images';
+import { BrokenImages } from '../../directives/broken-images';
 
 @Component({
   selector: 'bb-image-upload',

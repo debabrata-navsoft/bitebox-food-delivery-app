@@ -25,7 +25,7 @@ import {
   AdminUsersService,
   UserProfilePatch,
 } from '../../../../core/services/admin/admin-users.service';
-import { errorMessage, fieldErrors } from '../../../../core/services/api-error';
+import { errorMessage, fieldErrors } from '../../../../shared/utils/api-error';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { AdminOrdersService } from '../../../../core/services/order-management.service';
 import {
@@ -38,11 +38,11 @@ import { OrderStatusChip } from '../../../../shared/components/order-status-chip
 import { StatTile } from '../../../../shared/components/stat-tile/stat-tile';
 import { loaded } from '../../../../shared/coupons/coupon-list';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
-import { birthDateRange, fromIsoDay, isoDay } from '../../../../shared/forms/dates';
+import { birthDateRange, fromIsoDay, isoDay } from '../../../../shared/utils/dates';
 import { serverErrors, shownError } from '../../../../shared/forms/form-errors';
-import { requiredText } from '../../../../shared/forms/form-rules';
+import { requiredText } from '../../../../shared/validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
-import { DeliveryAddress, customerStatusLabel } from '../../../../shared/models/checkout.models';
+import { DeliveryAddress, customerStatusLabel } from '../../../../core/models/checkout.models';
 import {
   GENDER_LABEL,
   Gender,
@@ -50,7 +50,7 @@ import {
   ROLE_META,
   USER_STATUS_META,
   User,
-} from '../../../../shared/models/user.models';
+} from '../../../../core/models/user.models';
 import { openAccountStatus, statusChanged } from '../../../../shared/components/account-status-dialog/account-status-dialog';
 import { ImageUpload } from '../../../../shared/components/image-upload/image-upload';
 import { InrPipe } from '../../../../shared/pipes/money.pipes';

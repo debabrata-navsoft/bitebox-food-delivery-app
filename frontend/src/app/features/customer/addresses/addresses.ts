@@ -1,4 +1,4 @@
-import { NpIconPipe } from '../../../shared/icons/np-icon-name';
+import { NpIconPipe } from '../../../shared/pipes/np-icon-name';
 import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
@@ -6,14 +6,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { filter } from 'rxjs';
-import { errorMessage } from '../../../core/services/api-error';
+import { errorMessage } from '../../../shared/utils/api-error';
 import { AddressService } from '../../../core/services/checkout-api.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AddressFormDialog } from '../../../shared/components/address-form-dialog/address-form-dialog';
 import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { DeliveryAddress } from '../../../shared/models/checkout.models';
+import { DeliveryAddress } from '../../../core/models/checkout.models';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 
 @Component({

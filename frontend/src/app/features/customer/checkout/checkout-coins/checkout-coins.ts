@@ -2,9 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, effect, input, output, si
 import { FormRoot, form, validate } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { IconComponent } from 'nexprime';
-import { NP_FORM_FIELDS } from '../../../shared/forms/np-form-fields';
-import { CoinQuote } from '../../../shared/models/rewards.models';
-import { InrPipe } from '../../../shared/pipes/money.pipes';
+import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
+import { CoinQuote } from '../../../../core/models/rewards.models';
+import { InrPipe } from '../../../../shared/pipes/money.pipes';
 
 /**
  * The coins card on the checkout page. The amount shown and the discount come from the server's
