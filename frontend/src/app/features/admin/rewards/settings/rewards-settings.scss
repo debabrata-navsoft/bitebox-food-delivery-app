@@ -5,14 +5,21 @@
   gap: var(--bb-space-4);
   align-items: start;
 
-  // Desktop: the full page width, the setting cards two per row; alerts and the save bar span it.
+  // Desktop: the setting cards in two columns that stack on their own (no gaps under short
+  // cards); alerts and the save bar span both.
   @include bp.desktop-up {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 
-    > :not(section) {
+    > :not(.col) {
       grid-column: 1 / -1;
     }
   }
+}
+
+.col {
+  display: grid;
+  gap: var(--bb-space-4);
+  align-content: start;
 }
 h2 {
   margin: 0 0 var(--bb-space-3);
