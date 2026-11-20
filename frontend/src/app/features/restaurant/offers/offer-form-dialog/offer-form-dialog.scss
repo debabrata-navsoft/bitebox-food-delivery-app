@@ -20,16 +20,13 @@
   padding: var(--bb-space-3);
   border-radius: var(--bb-radius-sm);
   background: var(--bb-surface-alt);
+  --ticket-cut: var(--bb-surface-alt); // the ticket's notches match this panel
   .bb-form-section {
     margin: 0;
   }
 }
-.terms,
 .hint {
   margin: 0;
   font-size: 0.85rem;
   color: var(--bb-ink-muted);
-}
-.terms {
-  white-space: pre-line;
 }

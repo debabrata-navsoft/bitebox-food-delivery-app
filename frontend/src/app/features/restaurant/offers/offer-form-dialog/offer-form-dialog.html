@@ -3,14 +3,13 @@
   <div class="bb-dialog__content layout">
     <aside class="preview" aria-label="Preview">
       <h3 class="bb-form-section">How customers see it</h3>
-      <bb-offer-card [offer]="preview()" />
-      @if (model().terms.trim()) {
-        <p class="terms">{{ model().terms }}</p>
-      }
+      <bb-coupon-ticket [offer]="preview()" />
       <p class="hint">
-        {{ wasApproved
-          ? "Saving changes sends the offer for approval again. Until then customers don't see it."
-          : 'Once BiteBox approves it, your offer applies by itself to every eligible order. Customers don\'t enter a code.' }}
+        {{
+          wasApproved
+            ? "Saving changes sends the offer for approval again. Until then customers don't see it."
+            : 'Customers see it once BiteBox approves it.'
+        }}
       </p>
     </aside>
 
@@ -22,10 +21,17 @@
       }
       @if (rejection; as reason) {
         <div class="bb-alert info" role="note">
-          <np-icon name="info" class="mat-icon" matButtonIcon /><span>BiteBox rejected this offer: {{ reason }}</span>
+          <np-icon name="info" class="mat-icon" matButtonIcon /><span
+            >BiteBox rejected this offer: {{ reason }}</span
+          >
         </div>
       }
-      <bb-coupon-fields [form]="form" [editing]="!!data" [showCode]="false" namePlaceholder="Weekday lunch treat">
+      <bb-coupon-fields
+        [form]="form"
+        [editing]="!!data"
+        [showCode]="false"
+        namePlaceholder="Weekday lunch treat"
+      >
         <h3 class="bb-form-section">Dishes</h3>
         <np-select
           label="Categories"
@@ -51,10 +57,20 @@
   </div>
   <div class="bb-dialog__actions">
     <np-button variant="soft" severity="secondary" label="Cancel" (clicked)="ref.close()" />
-    <button class="bb-btn bb-btn--outlined" type="submit" [disabled]="form().submitting()" (click)="asDraft.set(true)">
+    <button
+      class="bb-btn bb-btn--outlined"
+      type="submit"
+      [disabled]="form().submitting()"
+      (click)="asDraft.set(true)"
+    >
       Save as draft
     </button>
-    <button class="bb-btn" type="submit" [disabled]="form().submitting()" (click)="asDraft.set(false)">
+    <button
+      class="bb-btn"
+      type="submit"
+      [disabled]="form().submitting()"
+      (click)="asDraft.set(false)"
+    >
       Send for approval
     </button>
   </div>

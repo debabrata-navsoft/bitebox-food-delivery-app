@@ -7,7 +7,7 @@ import { errorMessage, fieldErrors } from '../../../../shared/utils/api-error';
 import { CatalogService } from '../../../../core/services/catalog.service';
 import { MyOffersService } from '../../../../core/services/my-offers.service';
 import { MyRestaurantService } from '../../../../core/services/my-restaurant.service';
-import { OfferCard } from '../../../../shared/components/offer-card/offer-card';
+import { CouponTicket } from '../../../../shared/components/coupon-ticket/coupon-ticket';
 import { CouponFields } from '../../../../shared/coupons/coupon-fields/coupon-fields';
 import {
   asOptions,
@@ -26,7 +26,15 @@ import { AdminCoupon, NamedRef } from '../../../../core/models/checkout.models';
 /** Create or edit one of the restaurant's offers, with a preview of how customers see it. */
 @Component({
   selector: 'bb-offer-form-dialog',
-  imports: [FormRoot, SelectComponent, BbDialogTitle, ButtonComponent, IconComponent, OfferCard, CouponFields],
+  imports: [
+    FormRoot,
+    SelectComponent,
+    BbDialogTitle,
+    ButtonComponent,
+    IconComponent,
+    CouponTicket,
+    CouponFields,
+  ],
   templateUrl: './offer-form-dialog.html',
   styleUrl: './offer-form-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,14 +53,18 @@ export class OfferFormDialog {
   /** Set by the button that submits: keep it as a draft, or send it. */
   protected readonly asDraft = signal(false);
 
-  private readonly categoryList = rxResource({ stream: () => this.catalog.categories().pipe(map(asOptions)) });
+  private readonly categoryList = rxResource({
+    stream: () => this.catalog.categories().pipe(map(asOptions)),
+  });
   private readonly dishList = rxResource({
     stream: () => this.mine.foods({ limit: 100 }).pipe(map((page) => asOptions(page.items))),
   });
   protected readonly categoryOptions = computed(() =>
     withChosen(loaded(this.categoryList), this.data?.categories),
   );
-  protected readonly dishOptions = computed(() => withChosen(loaded(this.dishList), this.data?.foodItems));
+  protected readonly dishOptions = computed(() =>
+    withChosen(loaded(this.dishList), this.data?.foodItems),
+  );
   protected readonly categoryIds = signal(refIds(this.data?.categories));
   protected readonly dishIds = signal(refIds(this.data?.foodItems));
 
@@ -68,6 +80,7 @@ export class OfferFormDialog {
   protected readonly preview = computed(() =>
     previewOffer(this.model(), {
       kind: 'restaurant_offer',
+      terms: this.model().terms.trim() || null,
       categories: this.picked(this.categoryIds(), this.categoryOptions()),
       foodItems: this.picked(this.dishIds(), this.dishOptions()),
     }),
@@ -83,7 +96,9 @@ export class OfferFormDialog {
     this.error.set(null);
     try {
       this.ref.close(
-        await firstValueFrom(this.data ? this.offers.update(this.data.id, input) : this.offers.create(input)),
+        await firstValueFrom(
+          this.data ? this.offers.update(this.data.id, input) : this.offers.create(input),
+        ),
       );
       return undefined;
     } catch (err) {
