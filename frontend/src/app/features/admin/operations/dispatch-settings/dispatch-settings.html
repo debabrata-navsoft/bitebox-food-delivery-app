@@ -1,6 +1,6 @@
 <bb-page-header
   title="Dispatch settings"
-  subtitle="Decide how far a delivery partner can be from the restaurant to be offered its orders."
+  subtitle="Decide how far delivery partners and customers can be from a restaurant."
 />
 
 @if (loadError(); as message) {
@@ -8,58 +8,43 @@
     <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ message }}</span>
   </div>
 } @else if (data(); as d) {
-  <section class="bb-card" aria-labelledby="radius-title">
-    <header class="head">
-      <np-icon name="radius" class="mat-icon" matButtonIcon />
-      <div>
-        <h2 class="bb-h3" id="radius-title">Delivery partner search distance</h2>
-        <p class="bb-muted">
-          Now <strong>{{ d.maxPickupDistanceKm }} km</strong> from the restaurant
-          @if (d.maxPickupDistanceKm === d.defaultMaxPickupDistanceKm) {
-            (the default)
-          }
-        </p>
-      </div>
-    </header>
+  <form class="bb-card settings" [formRoot]="form" novalidate>
+    @for (r of rules; track r.key) {
+      <section class="rule" [attr.aria-labelledby]="r.key + '-title'">
+        <header class="head">
+          <np-icon [name]="r.icon" class="mat-icon" matButtonIcon />
+          <div>
+            <h2 class="bb-h3" [id]="r.key + '-title'">{{ r.title }}</h2>
+            <p class="bb-muted">
+              Now <strong>{{ d[r.key] }} km</strong>
+              @if (d[r.key] === d[r.defaultKey]) {
+                (the default)
+              }
+            </p>
+          </div>
+        </header>
+        <div class="bb-field">
+          <np-input-number [formField]="form[r.key]" label="Maximum distance" suffix=" km" />
+          <bb-field-error [field]="form[r.key]" />
+        </div>
+        <p class="bb-muted note">{{ r.note }}</p>
+      </section>
+    }
 
-    <form class="bb-form radius" [formRoot]="form" novalidate>
-      <div class="bb-field">
-        <np-input-number
-          [formField]="form.maxPickupDistanceKm"
-          label="Maximum distance"
-          suffix=" km"
-        />
-        <bb-field-error [field]="form.maxPickupDistanceKm" />
-      </div>
+    <footer class="actions">
+      <p class="bb-muted small">
+        Each between {{ d.minPickupDistanceKm }} and {{ d.maxAllowedPickupDistanceKm }} km, in a
+        straight line. Changes apply from now on.
+        @if (d.updatedAt) {
+          Last changed {{ d.updatedAt | date: 'd MMM y, h:mm a'
+          }}{{ d.updatedBy ? ' by ' + d.updatedBy : '' }}.
+        }
+      </p>
       <button type="submit" class="bb-btn" [disabled]="form().submitting() || !form().dirty()">
         {{ form().submitting() ? 'Saving…' : 'Save' }}
       </button>
-    </form>
-
-    <ul class="notes bb-muted">
-      <li>
-        Only delivery partners who are online and within this distance of the restaurant are offered
-        a new order. The nearest one is asked first.
-      </li>
-      <li>
-        A larger distance finds a delivery partner sooner, but pickups take longer. A smaller one
-        keeps pickups quick, but orders may wait longer in quiet areas.
-      </li>
-      <li>
-        Between {{ d.minPickupDistanceKm }} and {{ d.maxAllowedPickupDistanceKm }} km. It applies to
-        orders offered from now on; offers already sent are not changed.
-      </li>
-    </ul>
-
-    @if (d.updatedAt) {
-      <p class="bb-muted small">
-        Last changed {{ d.updatedAt | date: 'd MMM y, h:mm a' }}
-        @if (d.updatedBy) {
-          by {{ d.updatedBy }}
-        }
-      </p>
-    }
-  </section>
+    </footer>
+  </form>
 } @else {
-  <span class="bb-skeleton" style="height: 260px"></span>
+  <span class="bb-skeleton" style="height: 320px"></span>
 }

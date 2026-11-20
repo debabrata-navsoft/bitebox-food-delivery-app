@@ -45,7 +45,7 @@ BiteBox connects four groups of people, and each one has its own panel in one we
 
 How an order works, end to end:
 
-1. The customer picks a delivery point. The site lists approved restaurants within 15 km.
+1. The customer picks a delivery point. The site lists approved restaurants within the delivery range (15 km by default; admins change it at **Operations → Dispatch settings**).
 2. They build a cart. The server prices everything: items, coupon, coins, delivery fee, platform fee and GST.
 3. They place the order with **cash on delivery** or **online payment** (Razorpay, or a simulated test payment in development).
 4. The restaurant accepts it, prepares it and marks it ready. If it does not answer within 10 minutes, the order is rejected automatically.
@@ -511,7 +511,7 @@ The server prices everything; the browser never sends prices. Rules are in `conf
 | Coupon | Percentage (optionally capped) or a flat amount, never more than the item total |
 | Coins | 100 coins = ₹10, within the redemption limits (§10.9) |
 | Delivery fee | ₹25 for the first 2 km, then ₹8 per extra km (rounded up), capped at ₹99. Free when the item total after the coupon is ₹499 or more. |
-| Delivery range | Up to 15 km, straight line |
+| Delivery range | Up to 15 km by default, straight line. Admins set it (1–50 km) at **Operations → Dispatch settings** (`DispatchSettings.max_delivery_distance_km`, read by `apps/dispatch/tunables.py#max_delivery_km`); it limits both the restaurant list and checkout (`OUT_OF_RANGE`). |
 | Platform fee | ₹5 |
 | GST | 5% of the item total after the coupon |
 
@@ -885,7 +885,7 @@ The service worker only runs in **production builds** (`npm run build`, then `np
 
 | Method | Path | Access | Purpose |
 |---|---|---|---|
-| GET | `/restaurants` | public | Approved restaurants (search, cuisine, category, veg, sort, `lat`/`lng`/`radiusKm`, paging) |
+| GET | `/restaurants` | public | Approved restaurants (search, cuisine, category, veg, sort, `lat`/`lng`/`radiusKm` (at most the admin's delivery range), paging) |
 | GET | `/restaurants/cuisines` | public | Cuisines on offer |
 | GET | `/restaurants/{slugOrId}` | public | Restaurant details |
 | GET | `/restaurants/{slugOrId}/menu` | public | Menu grouped by category |
@@ -1003,7 +1003,7 @@ Customer screens: `/offers` (signed-in customers, filter by kind), the offer rib
 | GET | `/admin/dashboard` | any admin role | Platform figures (money with `finance:view`) |
 | GET | `/admin/users/{id}/logins`, `/admin/admins/{id}/logins` | `users:manage` / `admins:manage` | Sign-in history |
 | GET | `/admin/delivery-partners` | `riders:manage` | Riders with availability (`verification` filter) |
-| GET, PUT | `/admin/dispatch/settings` | `riders:manage` | The pickup distance riders are matched within (`maxPickupDistanceKm`, 1–50; PUT is audited as `dispatch.configure`) |
+| GET, PUT | `/admin/dispatch/settings` | `riders:manage` | The rider pickup distance (`maxPickupDistanceKm`) and the customer delivery range (`maxDeliveryDistanceKm`), 1–50 km each; PUT takes either or both and is audited as `dispatch.configure` |
 | GET | `/admin/delivery-partners/{id}` | `riders:manage` | Rider details, profile and verification |
 | PATCH | `/admin/delivery-partners/{id}/verification` | `riders:manage`, audited | `status` approved, rejected or resubmission_requested, with `reason` |
 | PATCH | `/admin/delivery-partners/{id}/status` | `riders:manage` | Suspend or reactivate (not while carrying an order) |
@@ -1189,7 +1189,7 @@ Not filtered (not paginated lists): dashboards and overviews, commission, financ
 | `/admin/promotions` | `promotions:send` | Push promotions |
 | `/admin/rewards`, `/settings`, `/campaigns`, `/referrals`, `/transactions`, `/history` | `rewards:view` | Coins and rewards |
 | `/admin/operations`, `/monitoring`, `/reports` | `operations:view` | Operations dashboard, live monitoring, delivery performance |
-| `/admin/operations/dispatch` | `riders:manage` | Dispatch settings: how far riders may be from the restaurant to be offered its orders |
+| `/admin/operations/dispatch` | `riders:manage` | Dispatch settings: how far riders may be from the restaurant to get its orders, and how far customers may be to see and order from it |
 | `/admin/orders` | `orders:view` | Orders |
 | `/admin/restaurants`, `/restaurants/:id`, `/admin/foods` | `restaurants:manage` | Restaurants, approval review, food items |
 | `/admin/delivery-partners`, `/delivery-partners/:id` | `riders:manage` | Riders, verification review |

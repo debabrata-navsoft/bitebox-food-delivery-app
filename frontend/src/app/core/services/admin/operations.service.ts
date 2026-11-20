@@ -5,6 +5,7 @@ import { environment } from '../../../../environments/environment';
 import {
   DeliveryPerformance,
   DispatchSettings,
+  DistanceSettings,
   Monitoring,
   OperationsDashboard,
   RestaurantAvailability,
@@ -35,8 +36,8 @@ export class OperationsService {
     this.http
       .get<ApiResponse<{ settings: DispatchSettings }>>(this.dispatchUrl)
       .pipe(map((r) => r.data.settings));
-  saveDispatchSettings = (maxPickupDistanceKm: number) =>
+  saveDispatchSettings = (changes: Partial<DistanceSettings>) =>
     this.http
-      .put<ApiResponse<{ settings: DispatchSettings }>>(this.dispatchUrl, { maxPickupDistanceKm })
+      .put<ApiResponse<{ settings: DispatchSettings }>>(this.dispatchUrl, changes)
       .pipe(map((r) => r.data.settings));
 }

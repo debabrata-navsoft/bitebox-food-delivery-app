@@ -1,18 +1,31 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
 }
 
-.bb-card {
+// Two rules side by side on desktops, the Save row under both.
+.settings {
   display: grid;
-  gap: var(--bb-space-4);
-  max-width: 720px;
+  gap: var(--bb-space-5);
+  max-width: 960px;
+
+  @include bp.desktop-up {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.rule {
+  display: grid;
+  gap: var(--bb-space-3);
+  align-content: start;
 }
 
 .head {
   display: flex;
   align-items: flex-start;
   gap: var(--bb-space-3);
-  --bb-icon-size: 28px;
+  --bb-icon-size: 26px;
 
   np-icon {
     color: var(--bb-plum);
@@ -24,33 +37,27 @@
   }
 }
 
-// The distance and its Save button on one row (.bb-form is a column by default).
-.radius {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: var(--bb-space-3);
+.bb-field {
+  max-width: 240px;
+}
 
-  .bb-field {
-    flex: 0 1 240px;
-  }
+.note,
+.small {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--bb-space-3);
+  padding-top: var(--bb-space-3);
+  border-top: 1px solid var(--bb-border);
 
   button[type='submit'] {
     width: auto;
-    margin-top: 22px; // in line with the input, below its label
   }
-}
-
-.notes {
-  margin: 0;
-  padding-left: 1.2em;
-  display: grid;
-  gap: var(--bb-space-1);
-  font-size: 0.9rem;
-}
-
-.small {
-  margin: 0;
-  font-size: 0.82rem;
 }

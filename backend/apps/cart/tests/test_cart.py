@@ -463,3 +463,17 @@ def test_admin_coupons_are_for_admins_only(admin: APIClient) -> None:
     owner.credentials(HTTP_AUTHORIZATION=f"Bearer {create_and_login('restaurant')['token']}")
     assert owner.post("/api/v1/admin/coupons", coupon_body(), format="json").status_code == 403
     assert APIClient().get("/api/v1/admin/coupons").status_code == 401
+
+
+def test_checkout_uses_the_admin_delivery_range(ctx: dict[str, Any]) -> None:
+    client = ctx["client"]
+    add(client, ctx["food"]["Butter Chicken"])
+    q = client.get("/api/v1/cart").json()["data"]
+    assert not any(i["code"] == "OUT_OF_RANGE" for i in q["issues"])  # ~4 km, within 15 km
+    admin = APIClient()
+    admin.credentials(HTTP_AUTHORIZATION=f"Bearer {create_and_login('admin')['token']}")
+    res = admin.put("/api/v1/admin/dispatch/settings", {"maxDeliveryDistanceKm": 2}, format="json")
+    assert res.status_code == 200
+    q = client.get("/api/v1/cart").json()["data"]
+    issue = next(i for i in q["issues"] if i["code"] == "OUT_OF_RANGE")
+    assert issue["message"].endswith("delivers within 2 km.")

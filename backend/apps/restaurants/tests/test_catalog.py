@@ -618,3 +618,17 @@ def test_gallery_photos_are_saved_and_come_back_on_reload() -> None:
 
     reloaded = owner.get("/api/v1/my/restaurant").json()["data"]["restaurant"]
     assert reloaded["photos"] == photos
+
+
+def test_customers_see_restaurants_within_the_admin_delivery_range() -> None:
+    seed_catalog()  # ~5 km from these coordinates
+    url = "/api/v1/restaurants?lat=12.9716&lng=77.5946"
+    assert _names(url) == ["Spice Route Kitchen"]  # within the 15 km default
+    admin = as_(create_and_login("admin")["token"])
+    settings = "/api/v1/admin/dispatch/settings"
+    assert admin.put(settings, {}, format="json").status_code == 422  # nothing to change
+    saved = admin.put(settings, {"maxDeliveryDistanceKm": 3}, format="json")
+    assert saved.json()["data"]["settings"]["maxDeliveryDistanceKm"] == 3
+    assert saved.json()["data"]["settings"]["maxPickupDistanceKm"] == 10  # unchanged
+    assert _names(url) == []
+    assert _names(url + "&radiusKm=10") == []  # a client cannot widen it

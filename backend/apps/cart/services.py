@@ -15,6 +15,7 @@ from apps.coupons.services import Line as CouponLine
 from apps.coupons.services import assert_eligible
 from apps.customers.models import Address
 from apps.customers.services import address_json
+from apps.dispatch.tunables import max_delivery_km
 from apps.menus.models import FoodItem
 from apps.restaurants.models import Restaurant, RestaurantStatus
 from apps.restaurants.presenters import is_open_now
@@ -310,7 +311,7 @@ def build_quote(
         issues.append({"code": "NO_ADDRESS", "message": "Add a delivery address."})
     elif restaurant is not None:
         distance_m = haversine_m(restaurant.location, address.location)
-        max_km = PRICING["max_delivery_distance_km"]
+        max_km = max_delivery_km()  # the admin's delivery range (default PRICING)
         if distance_m > max_km * 1000:
             issues.append(
                 {

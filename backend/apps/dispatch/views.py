@@ -1,4 +1,4 @@
-"""Admin: the dispatch rules (how far riders may be from the restaurant to get its orders)."""
+"""Admin: the distance rules (riders to the restaurant, restaurants to the customer)."""
 
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers
@@ -17,16 +17,29 @@ from common.validation import validated
 from . import tunables
 
 
-class DispatchSettingsInput(serializers.Serializer):
-    max_pickup_distance_km = serializers.IntegerField(
+def _km(label: str) -> serializers.IntegerField:
+    return serializers.IntegerField(
+        required=False,
         min_value=tunables.MIN_PICKUP_KM,
         max_value=tunables.MAX_PICKUP_KM,
         error_messages={
             "min_value": f"Enter at least {tunables.MIN_PICKUP_KM} km",
             "max_value": f"Enter at most {tunables.MAX_PICKUP_KM} km",
-            "invalid": "Enter a whole number of km",
+            "invalid": f"Enter the {label} in whole km",
         },
     )
+
+
+class DispatchSettingsInput(serializers.Serializer):
+    """Either distance or both (1-50 km)."""
+
+    max_pickup_distance_km = _km("pickup distance")
+    max_delivery_distance_km = _km("delivery range")
+
+    def validate(self, attrs: dict[str, int]) -> dict[str, int]:
+        if not attrs:
+            raise serializers.ValidationError("Give a distance to change")
+        return attrs
 
 
 SETTINGS_RESULT = envelope(
@@ -41,6 +54,8 @@ SETTINGS_RESULT = envelope(
                     "defaultMaxPickupDistanceKm": serializers.IntegerField(),
                     "minPickupDistanceKm": serializers.IntegerField(),
                     "maxAllowedPickupDistanceKm": serializers.IntegerField(),
+                    "maxDeliveryDistanceKm": serializers.IntegerField(),
+                    "defaultMaxDeliveryDistanceKm": serializers.IntegerField(),
                     "updatedAt": serializers.DateTimeField(allow_null=True),
                     "updatedBy": serializers.CharField(allow_null=True),
                 },
@@ -70,9 +85,16 @@ class DispatchSettingsView(APIView):
     @audited(
         "dispatch.configure",
         "dispatch_settings",
-        lambda r: f"Set the rider pickup distance to {r.data.get('maxPickupDistanceKm')} km",
+        lambda r: "; ".join(
+            f"{label} {r.data[key]} km"
+            for key, label in (
+                ("maxPickupDistanceKm", "Rider pickup distance"),
+                ("maxDeliveryDistanceKm", "Customer delivery range"),
+            )
+            if key in r.data
+        ),
     )
     def put(self, request: Request) -> Response:
         data = validated(DispatchSettingsInput, request.data)
-        saved = tunables.update(current_user(request), data["max_pickup_distance_km"])
+        saved = tunables.update(current_user(request), data)
         return ok({"settings": saved}, message="Dispatch settings saved")

@@ -4,6 +4,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { FormRoot, TreeValidationResult, form } from '@angular/forms/signals';
 import { IconComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
+import { DistanceSettings } from '../../../../core/models/admin-roles.models';
 import { OperationsService } from '../../../../core/services/admin/operations.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
@@ -17,9 +18,35 @@ import {
 } from '../../../../shared/utils/api-error';
 import { numberRange } from '../../../../shared/validators/form-rules';
 
+/** The two distances, each with its default, card text and validation label. */
+const RULES = [
+  {
+    key: 'maxPickupDistanceKm',
+    defaultKey: 'defaultMaxPickupDistanceKm',
+    label: 'Pickup distance',
+    title: 'Delivery partner pickup distance',
+    icon: 'bike',
+    note:
+      'Only online delivery partners within this distance of the restaurant are offered a new ' +
+      'order, nearest first. Larger finds a partner sooner; smaller keeps pickups quick.',
+  },
+  {
+    key: 'maxDeliveryDistanceKm',
+    defaultKey: 'defaultMaxDeliveryDistanceKm',
+    label: 'Delivery range',
+    title: 'Customer delivery range',
+    icon: 'house',
+    note:
+      'Customers see only restaurants within this distance of their location, and can order only ' +
+      'to addresses within it. Larger shows more restaurants; smaller keeps deliveries short.',
+  },
+] as const;
+
+type Distances = Record<keyof DistanceSettings, number | null>;
+
 /**
- * How far a rider may be from the restaurant to be offered its orders (dispatch radius). Riders
- * outside it are never offered the order; the nearest free rider inside it is offered first.
+ * The two distance rules admins set: how far a rider may be from the restaurant to be offered its
+ * orders, and how far a customer may be from a restaurant to see it and order from it.
  */
 @Component({
   selector: 'bb-dispatch-settings',
@@ -39,19 +66,29 @@ export class DispatchSettingsPage {
     'Could not load the dispatch settings.',
   );
 
-  /** The form starts from the saved radius. */
-  protected readonly model = linkedSignal(() => ({
-    maxPickupDistanceKm: (this.data()?.maxPickupDistanceKm ?? null) as number | null,
+  protected readonly rules = RULES;
+  /** The form starts from the saved distances. */
+  protected readonly model = linkedSignal<Distances>(() => ({
+    maxPickupDistanceKm: this.data()?.maxPickupDistanceKm ?? null,
+    maxDeliveryDistanceKm: this.data()?.maxDeliveryDistanceKm ?? null,
   }));
-  protected readonly form = form(this.model, (path) => numberRange(path.maxPickupDistanceKm, 'Distance', 1, 50), {
-    submission: { action: () => this.save() },
-  });
+  protected readonly form = form(
+    this.model,
+    (path) => RULES.forEach((r) => numberRange(path[r.key], r.label, 1, 50)),
+    { submission: { action: () => this.save() } },
+  );
 
   private async save(): Promise<TreeValidationResult> {
+    const { maxPickupDistanceKm, maxDeliveryDistanceKm } = this.model();
     try {
-      const saved = await firstValueFrom(this.api.saveDispatchSettings(Number(this.model().maxPickupDistanceKm)));
+      const saved = await firstValueFrom(
+        this.api.saveDispatchSettings({
+          maxPickupDistanceKm: Number(maxPickupDistanceKm),
+          maxDeliveryDistanceKm: Number(maxDeliveryDistanceKm),
+        }),
+      );
       this.settings.set(saved);
-      this.notify.success(`Riders within ${saved.maxPickupDistanceKm} km now get new orders`);
+      this.notify.success('Distance settings saved');
       return undefined;
     } catch (err) {
       const fields = fieldErrors(err);

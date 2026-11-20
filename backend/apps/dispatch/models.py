@@ -58,12 +58,14 @@ class DeliveryAssignment(BaseModel):
 class DispatchSettings(BaseModel):
     """
     Dispatch rules an admin can change (one row, key "global"; defaults in config.DISPATCH until
-    an admin saves). Read through `tunables.max_pickup_km()`.
+    an admin saves). Read through `tunables.max_pickup_km()` / `max_delivery_km()`.
     """
 
     key = models.CharField(max_length=20, unique=True, default="global")
     # Riders farther than this from the restaurant are not offered its orders.
     max_pickup_distance_km = models.PositiveSmallIntegerField()
+    # Customers see restaurants, and may order, within this distance (null: the pricing default).
+    max_delivery_distance_km = models.PositiveSmallIntegerField(null=True, blank=True)
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )

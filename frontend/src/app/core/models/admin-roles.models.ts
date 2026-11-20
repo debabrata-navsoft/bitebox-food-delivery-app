@@ -16,7 +16,9 @@ export interface StaffAdminInput {
   /** The person's own permissions; null (or absent) = the role's preset. */
   permissions?: Permission[] | null;
 }
-export type StaffAdminUpdate = Partial<Pick<StaffAdminInput, 'name' | 'phone' | 'role' | 'permissions'>>;
+export type StaffAdminUpdate = Partial<
+  Pick<StaffAdminInput, 'name' | 'phone' | 'role' | 'permissions'>
+>;
 
 /** GET /admin/admins/permissions: what a super admin can grant, and ready-made sets. */
 export interface PermissionCatalogue {
@@ -455,12 +457,20 @@ export interface LoginEntry {
   endedReason: string | null;
 }
 
-/** GET/PUT /admin/dispatch/settings: how far riders may be from the restaurant to get its orders. */
+/** GET/PUT /admin/dispatch/settings: how far riders and customers may be from a restaurant. */
 export interface DispatchSettings {
   maxPickupDistanceKm: number;
   defaultMaxPickupDistanceKm: number;
   minPickupDistanceKm: number;
   maxAllowedPickupDistanceKm: number;
+  /** Customers see restaurants, and can order, within this distance. */
+  maxDeliveryDistanceKm: number;
+  defaultMaxDeliveryDistanceKm: number;
   updatedAt: string | null;
   updatedBy: string | null;
 }
+
+export type DistanceSettings = Pick<
+  DispatchSettings,
+  'maxPickupDistanceKm' | 'maxDeliveryDistanceKm'
+>;

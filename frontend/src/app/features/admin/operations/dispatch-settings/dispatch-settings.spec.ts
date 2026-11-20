@@ -11,6 +11,8 @@ const settings = (km: number): DispatchSettings => ({
   defaultMaxPickupDistanceKm: 10,
   minPickupDistanceKm: 1,
   maxAllowedPickupDistanceKm: 50,
+  maxDeliveryDistanceKm: 15,
+  defaultMaxDeliveryDistanceKm: 15,
   updatedAt: null,
   updatedBy: null,
 });
@@ -21,7 +23,9 @@ describe('DispatchSettingsPage', () => {
 
   async function create() {
     api.dispatchSettings.mockReturnValue(of(settings(10)));
-    api.saveDispatchSettings.mockImplementation((km: number) => of(settings(km)));
+    api.saveDispatchSettings.mockImplementation((c: { maxPickupDistanceKm: number }) =>
+      of(settings(c.maxPickupDistanceKm)),
+    );
     await TestBed.configureTestingModule({
       imports: [DispatchSettingsPage],
       providers: [
@@ -34,11 +38,11 @@ describe('DispatchSettingsPage', () => {
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
     const page = fixture.componentInstance as unknown as {
-      model: { set(v: { maxPickupDistanceKm: number }): void };
+      model: { set(v: { maxPickupDistanceKm: number; maxDeliveryDistanceKm: number }): void };
       form: { maxPickupDistanceKm(): { markAsDirty(): void } };
     };
     const submit = async (km: number) => {
-      page.model.set({ maxPickupDistanceKm: km });
+      page.model.set({ maxPickupDistanceKm: km, maxDeliveryDistanceKm: 20 });
       page.form.maxPickupDistanceKm().markAsDirty(); // as typing would
       await fixture.whenStable();
       el.querySelector<HTMLButtonElement>('button[type=submit]')!.click();
@@ -52,13 +56,17 @@ describe('DispatchSettingsPage', () => {
     notify.success.mockReset();
   });
 
-  it('shows the saved distance and saves a new one', async () => {
+  it('shows both saved distances and saves new ones', async () => {
     const { el, submit } = await create();
     expect(el.textContent).toContain('10 km');
+    expect(el.textContent).toContain('15 km');
     expect(el.textContent).toContain('(the default)');
     await submit(25);
-    expect(api.saveDispatchSettings).toHaveBeenCalledWith(25);
-    expect(notify.success).toHaveBeenCalledWith('Riders within 25 km now get new orders');
+    expect(api.saveDispatchSettings).toHaveBeenCalledWith({
+      maxPickupDistanceKm: 25,
+      maxDeliveryDistanceKm: 20,
+    });
+    expect(notify.success).toHaveBeenCalledWith('Distance settings saved');
     expect(el.textContent).toContain('25 km');
   });
 

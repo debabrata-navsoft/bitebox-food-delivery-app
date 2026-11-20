@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from apps.accounts.admin_services import joined_between
 from apps.accounts.models import User
+from apps.dispatch.tunables import max_delivery_km
 from apps.kyc import services as kyc
 from apps.menus.models import FoodItem
 from apps.notifications.services import notify, notify_admins
@@ -343,7 +344,9 @@ def list_public(query: dict[str, Any], page: Page) -> dict[str, Any]:
         raise ApiError.bad_request("Sorting by distance needs lat and lng")
     if geo:
         near = point_sql(GeoPoint(lat=query["lat"], lng=query["lng"]))
-        radius_m = float(query.get("radius_km") or 15) * 1000
+        # The admin's delivery range: a client may ask for less, never more.
+        limit = max_delivery_km()
+        radius_m = min(float(query.get("radius_km") or limit), limit) * 1000
         qs = qs.filter(DWithin(F("location"), near, radius_m)).annotate(
             distance_m=Distance(F("location"), near)
         )
