@@ -1,0 +1,53 @@
+<h2 bbDialogTitle>Delivery partners nearby</h2>
+<div class="bb-dialog__content body">
+  @if (data(); as d) {
+    <p class="summary" role="status">
+      <np-icon name="bike" class="mat-icon" matButtonIcon />
+      @if (d.count) {
+        <span>
+          <strong
+            >{{ d.count }} {{ d.count === 1 ? 'delivery partner' : 'delivery partners' }}</strong
+          >
+          free within {{ d.radiusKm }} km
+          @if (nearest(); as m) {
+            · nearest about {{ m < 1000 ? m + ' m' : (m / 1000).toFixed(1) + ' km' }} away
+          }
+        </span>
+      } @else {
+        <span>
+          No free delivery partner within {{ d.radiusKm }} km right now. BiteBox keeps looking.
+        </span>
+      }
+    </p>
+
+    <bb-tracking-map
+      class="map"
+      [restaurant]="d.restaurant"
+      [nearby]="riders()"
+      [radiusKm]="d.radiusKm"
+      fitRadius
+      label="Delivery partners near your restaurant"
+    />
+
+    <ul class="legend">
+      <li><span class="dot restaurant"></span>Your restaurant</li>
+      <li><span class="dot rider"></span>Free delivery partner (approximate)</li>
+      <li><span class="ring"></span>Search distance: {{ d.radiusKm }} km</li>
+    </ul>
+    <p class="bb-muted note">
+      Order {{ order.orderNumber }} goes to
+      {{ order.deliveryAddress.area || order.deliveryAddress.city }}. BiteBox offers it to the
+      nearest free partner first. This updates every 15 seconds.
+    </p>
+  } @else if (data() === null) {
+    <div class="bb-alert error" role="alert">
+      <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
+      <span>Could not load nearby delivery partners. Please try again.</span>
+    </div>
+  } @else {
+    <span class="bb-skeleton" style="height: 320px"></span>
+  }
+</div>
+<div class="bb-dialog__actions">
+  <np-button variant="outlined" severity="secondary" label="Close" (clicked)="ref.close()" />
+</div>

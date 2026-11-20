@@ -140,6 +140,8 @@
           <bb-map-picker
             [latitude]="model().location.latitude"
             [longitude]="model().location.longitude"
+            [current]="gpsFix()"
+            rangeHint="Customers within {km} km can order from you"
             (moved)="setPin($event)"
           />
           @if (pinLabel()) {

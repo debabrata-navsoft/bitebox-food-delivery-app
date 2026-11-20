@@ -41,6 +41,7 @@ PUBLIC = {
     ("api/v1/auth/otp/request", "post"),
     ("api/v1/auth/otp/login", "post"),
     ("api/v1/auth/email/verify", "post"),
+    ("api/v1/delivery-range", "get"),
     ("api/v1/restaurants", "get"),
     ("api/v1/restaurants/cuisines", "get"),
     ("api/v1/restaurants/<str:slug_or_id>", "get"),

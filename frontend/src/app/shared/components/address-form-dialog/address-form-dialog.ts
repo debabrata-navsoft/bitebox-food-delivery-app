@@ -34,10 +34,15 @@ import {
   GeolocationService,
   ImpreciseLocationError,
 } from '../../../core/services/geolocation.service';
-import { LatLng, MapPicker } from '../map-picker/map-picker';
+import { LatLng, MapPicker, CurrentPosition } from '../map-picker/map-picker';
 import { AddressInput, AddressLabel, DeliveryAddress } from '../../../core/models/checkout.models';
 import { serverErrors, shownError } from '../../forms/form-errors';
-import { POSTAL_CODE_PATTERN, numberRange, phoneRules, requiredText } from '../../validators/form-rules';
+import {
+  POSTAL_CODE_PATTERN,
+  numberRange,
+  phoneRules,
+  requiredText,
+} from '../../validators/form-rules';
 import { NP_FORM_FIELDS } from '../../forms/np-form-fields';
 import { PhoneInput } from '../phone-input/phone-input';
 
@@ -147,12 +152,16 @@ export class AddressFormDialog {
   });
   protected readonly pinMissing = computed(() => this.triedSave() && !this.pinned());
 
+  /** The device's GPS fix after "Current location" (the map's blue dot). */
+  protected readonly gpsFix = signal<CurrentPosition | null>(null);
+
   protected async useCurrentLocation(): Promise<void> {
     this.locating.set(true);
     this.locationError.set(null);
     try {
-      const { latitude, longitude } = await this.geo.currentPrecise();
-      await this.setPin({ latitude, longitude });
+      const fix = await this.geo.currentPrecise();
+      this.gpsFix.set(fix);
+      await this.setPin({ latitude: fix.latitude, longitude: fix.longitude });
     } catch (err) {
       this.locationError.set(
         err instanceof ImpreciseLocationError

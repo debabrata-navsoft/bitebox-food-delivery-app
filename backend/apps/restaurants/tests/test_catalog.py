@@ -632,3 +632,5 @@ def test_customers_see_restaurants_within_the_admin_delivery_range() -> None:
     assert saved.json()["data"]["settings"]["maxPickupDistanceKm"] == 10  # unchanged
     assert _names(url) == []
     assert _names(url + "&radiusKm=10") == []  # a client cannot widen it
+    # Maps draw it as a circle: the value is public.
+    assert APIClient().get("/api/v1/delivery-range").json()["data"] == {"maxDeliveryDistanceKm": 3}

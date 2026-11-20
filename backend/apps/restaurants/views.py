@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.authentication import current_user
 from apps.audit.services import audited
+from apps.dispatch.services import nearby_free_riders
 from apps.menus import services as menus
 from apps.rbac.roles import Permission, Role
 from common.api import ok
@@ -113,6 +114,18 @@ class PublicMenuView(PublicCacheMixin, APIView):
 # --- partner --------------------------------------------------------------------------------------
 
 PARTNER = [role_required(Role.RESTAURANT)]
+
+
+class NearbyRidersView(APIView):
+    """While an order waits for a rider: the free riders within the pickup distance."""
+
+    permission_classes = PARTNER
+
+    @extend_schema(tags=["Partner"], responses={200: ANY, **errors(401, 403, 404)})
+    def get(self, request: Request) -> Response:
+        point = services.require_own_restaurant(current_user(request)).location
+        here = {"latitude": point.lat, "longitude": point.lng}
+        return ok({"restaurant": here, **nearby_free_riders(point)})
 
 
 class MyRestaurantView(APIView):

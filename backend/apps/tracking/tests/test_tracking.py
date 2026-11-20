@@ -10,7 +10,7 @@ import pytest
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from apps.accounts.tests.test_auth import create_and_login
+from apps.accounts.tests.test_auth import create_and_login, register, token_of
 from apps.orders.models import Order
 from apps.orders.tests.test_orders import FARTHER, NEAR, World, client_for
 from apps.realtime.tracking import persist_location
@@ -88,14 +88,19 @@ def test_the_tracking_view_restores_the_map(w: World) -> None:
     )
     assert later["stale"] is True
 
-    # Who may look: the customer, the rider, staff with orders:view; nobody else.
+    # Who may look: the customer, the rider, the order's restaurant, staff with orders:view.
     assert track(w.r, order_id).status_code == 200
+    restaurant_view = track(w.o, order_id).json()["data"]
+    assert restaurant_view["tracking"] is True
+    assert restaurant_view["lastPoint"]
+    assert "deliveryAddress" not in restaurant_view  # never the customer's address
     assert (
         track(client_for(create_and_login("operations_admin")["token"]), order_id).status_code
         == 200
     )
     assert track(w.new_customer(), order_id).status_code == 404
-    assert track(w.o, order_id).status_code == 404
+    other_restaurant, _ = register(APIClient(), role="restaurant", name="Other Owner")
+    assert track(client_for(token_of(other_restaurant)), order_id).status_code == 404
     assert APIClient().get(f"/api/v1/tracking/orders/{order_id}").status_code == 401
 
 

@@ -63,7 +63,8 @@
           <p class="ready-by">
             <np-icon name="chef-hat" class="mat-icon" matButtonIcon />
             {{ o.restaurantSnapshot.name }} expects your food to be ready by
-            <strong>{{ o.readyBy | date: 'h:mm a' }}</strong>.
+            <strong>{{ o.readyBy | date: 'h:mm a' }}</strong
+            >.
           </p>
         }
         @if (!ended() && o.status !== 'delivered' && !awaitingPayment()) {
@@ -74,8 +75,8 @@
             <h2 class="bb-h3" id="track-title">Live tracking</h2>
             <p class="track-status" aria-live="polite">
               @if (o.status === 'arrived_at_restaurant') {
-                <strong>{{ o.rider?.name ?? 'Your rider' }}</strong> is at the restaurant, collecting your
-                order.
+                <strong>{{ o.rider?.name ?? 'Your rider' }}</strong> is at the restaurant,
+                collecting your order.
               } @else if (o.status === 'assigned') {
                 @if (t.remaining(); as r) {
                   <strong>{{ o.rider?.name ?? 'Your rider' }}</strong> is heading to the restaurant,
@@ -111,6 +112,9 @@
               [destination]="t.destination()"
               [rider]="t.rider()"
               [riderStale]="t.riderStale()"
+              [riderAccuracy]="t.riderAccuracy()"
+              [radiusKm]="range.km()"
+              radiusAround="home"
               [route]="t.remaining()?.path ?? t.plannedRoute()?.path ?? null"
               [trail]="t.trail()"
               [lineFrom]="t.rider() ?? t.restaurant()"
@@ -177,7 +181,11 @@
             </div>
           } @else if (awaitingPayment()) {
             <div class="bb-alert info pay-due" role="status">
-              <np-icon [name]="(o.paymentStatus === 'failed' ? 'error' : 'schedule') | npIcon" class="mat-icon" matButtonIcon />
+              <np-icon
+                [name]="(o.paymentStatus === 'failed' ? 'error' : 'schedule') | npIcon"
+                class="mat-icon"
+                matButtonIcon
+              />
               <span>
                 @if (o.paymentStatus === 'failed') {
                   The payment did not go through{{
@@ -197,7 +205,11 @@
                 [disabled]="paying() || cancelling() || !connection.online()"
                 (click)="payNow(o)"
               >
-                <np-icon [name]="(o.payment?.simulated ? 'science' : 'lock') | npIcon" class="mat-icon" matButtonIcon />
+                <np-icon
+                  [name]="(o.payment?.simulated ? 'science' : 'lock') | npIcon"
+                  class="mat-icon"
+                  matButtonIcon
+                />
                 {{ paying() ? 'Opening payment…' : 'Pay ' + (o.pricing.totalPaise | inr) }}
               </button>
               <button
@@ -235,7 +247,11 @@
               <p class="bb-muted small">Status updates live.</p>
             }
           }
-          <a class="bb-link-button help-link" routerLink="/support" [queryParams]="{ order: o.orderNumber }">
+          <a
+            class="bb-link-button help-link"
+            routerLink="/support"
+            [queryParams]="{ order: o.orderNumber }"
+          >
             <np-icon name="life-buoy" class="mat-icon" />
             Get help with this order
           </a>
@@ -258,7 +274,12 @@
         </section>
 
         @if (o.status === 'delivered') {
-          <bb-order-reviews [orderId]="o.id" [orderNumber]="o.orderNumber" [riderName]="o.rider?.name ?? null" [autoOpen]="rate() === '1'" />
+          <bb-order-reviews
+            [orderId]="o.id"
+            [orderNumber]="o.orderNumber"
+            [riderName]="o.rider?.name ?? null"
+            [autoOpen]="rate() === '1'"
+          />
         }
       </div>
 
@@ -275,7 +296,8 @@
           @if (o.coins?.earned) {
             <p class="coins-earned">
               <np-icon name="coins" class="mat-icon" matButtonIcon />
-              You earned {{ o.coins!.earned }} coins on this order. <a routerLink="/account/coins">View wallet</a>
+              You earned {{ o.coins!.earned }} coins on this order.
+              <a routerLink="/account/coins">View wallet</a>
             </p>
           } @else if (o.coins?.state === 'released' || o.coins?.state === 'refunded') {
             <p class="coins-earned">
@@ -286,11 +308,19 @@
           @let status = o.payment?.status ?? o.paymentStatus;
           <p class="payment">
             <span class="method">
-              <np-icon [name]="o.paymentMethod === 'cod' ? 'banknote' : 'credit-card'" class="mat-icon" matButtonIcon />
+              <np-icon
+                [name]="o.paymentMethod === 'cod' ? 'banknote' : 'credit-card'"
+                class="mat-icon"
+                matButtonIcon
+              />
               {{ o.payment ? providerLabel[o.payment.provider] : 'Cash on delivery' }}
             </span>
             <span class="pay-chip pay-{{ status }}">
-              {{ o.paymentMethod === 'cod' && status === 'pending' ? 'Pay on delivery' : paymentLabel[status] }}
+              {{
+                o.paymentMethod === 'cod' && status === 'pending'
+                  ? 'Pay on delivery'
+                  : paymentLabel[status]
+              }}
             </span>
           </p>
           @if (o.payment?.simulated) {
@@ -302,7 +332,9 @@
                 <li>
                   <span>
                     Refund {{ r.amountPaise | inr }}
-                    <span class="bb-muted small">{{ r.reason }} · {{ r.createdAt | date: 'd MMM' }}</span>
+                    <span class="bb-muted small"
+                      >{{ r.reason }} · {{ r.createdAt | date: 'd MMM' }}</span
+                    >
                   </span>
                   <span class="bb-badge {{ tone(r.status) }}">{{ refundLabel[r.status] }}</span>
                 </li>
@@ -314,7 +346,12 @@
           <section class="bb-card invoice" aria-labelledby="invoice-title">
             <h2 class="bb-h3" id="invoice-title">Invoice</h2>
             <p class="bb-muted small">Your tax invoice for this order, as a PDF.</p>
-            <button type="button" class="bb-btn bb-btn--outlined bb-btn--small" [disabled]="downloading()" (click)="downloadInvoice(o.id)">
+            <button
+              type="button"
+              class="bb-btn bb-btn--outlined bb-btn--small"
+              [disabled]="downloading()"
+              (click)="downloadInvoice(o.id)"
+            >
               <np-icon name="file-down" class="mat-icon" matButtonIcon />
               {{ downloading() ? 'Preparing…' : 'Download invoice' }}
             </button>
@@ -340,8 +377,8 @@
               </div>
               @if (r.phone && o.status !== 'delivered') {
                 <a mat-icon-button [href]="'tel:' + r.phone" [attr.aria-label]="'Call ' + r.name"
-                  ><np-icon name="phone" class="mat-icon" matButtonIcon /></a
-                >
+                  ><np-icon name="phone" class="mat-icon" matButtonIcon
+                /></a>
               }
             </div>
           </section>

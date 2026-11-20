@@ -71,6 +71,7 @@
             [restaurant]="s.restaurant"
             [destination]="s.destination"
             [rider]="myPosition()"
+            [riderAccuracy]="myAccuracy()"
             [route]="routeToStop()?.path ?? null"
             [lineFrom]="myPosition() ?? s.restaurant"
             [label]="'Route to ' + (s.toRestaurant ? 'the restaurant' : 'the customer')"

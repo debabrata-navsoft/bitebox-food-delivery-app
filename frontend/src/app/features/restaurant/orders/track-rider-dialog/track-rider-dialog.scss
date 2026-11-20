@@ -1,0 +1,13 @@
+@use '../rider-dialog';
+
+.customer {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-space-2);
+  margin: 0;
+  --bb-icon-size: 18px;
+
+  np-icon {
+    color: var(--bb-ink-muted);
+  }
+}

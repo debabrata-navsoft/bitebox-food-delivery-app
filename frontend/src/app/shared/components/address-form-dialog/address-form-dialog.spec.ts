@@ -39,7 +39,16 @@ describe('AddressFormDialog', () => {
   it('pins GPS coordinates and fills only empty address fields', async () => {
     geo.currentPrecise.mockResolvedValue({ latitude: 10.5, longitude: 20.5, accuracy: 20 });
     places.reverse.mockReturnValue(
-      of({ label: 'Test Area, Test City', displayName: 'Test Area, Test City, Test State', area: 'Test Area', city: 'Test City', state: 'Test State', postalCode: '100001', latitude: 10.5, longitude: 20.5 }),
+      of({
+        label: 'Test Area, Test City',
+        displayName: 'Test Area, Test City, Test State',
+        area: 'Test Area',
+        city: 'Test City',
+        state: 'Test State',
+        postalCode: '100001',
+        latitude: 10.5,
+        longitude: 20.5,
+      }),
     );
     const fixture = await create();
     const component = fixture.componentInstance as unknown as Internals;
@@ -49,7 +58,12 @@ describe('AddressFormDialog', () => {
 
     expect(component.pinned()).toBe(true);
     expect(component.model()).toEqual(
-      expect.objectContaining({ latitude: 10.5, area: 'Test Area', city: 'Sample City', postalCode: '100001' }),
+      expect.objectContaining({
+        latitude: 10.5,
+        area: 'Test Area',
+        city: 'Sample City',
+        postalCode: '100001',
+      }),
     );
     await fixture.whenStable();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Delivering here');
@@ -62,6 +76,8 @@ describe('AddressFormDialog', () => {
     await fixture.whenStable();
     expect(service.create).not.toHaveBeenCalled();
     await fixture.whenStable();
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Pin your delivery location first');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Pin your delivery location first',
+    );
   });
 });

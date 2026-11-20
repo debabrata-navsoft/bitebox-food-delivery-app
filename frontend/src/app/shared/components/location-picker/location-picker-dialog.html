@@ -2,7 +2,12 @@
   <!-- Step 2: confirm on the map -->
   <h2 mat-dialog-title>Confirm delivery location</h2>
   <mat-dialog-content>
-    <bb-map-picker [latitude]="c.latitude" [longitude]="c.longitude" (moved)="onPinMoved($event)" />
+    <bb-map-picker
+      [latitude]="c.latitude"
+      [longitude]="c.longitude"
+      [current]="gpsFix()"
+      (moved)="onPinMoved($event)"
+    />
     <div class="chosen" role="status" aria-live="polite">
       <np-icon name="map-pin" class="mat-icon" matButtonIcon />
       <span>
@@ -21,7 +26,9 @@
     </p>
   </mat-dialog-content>
   <mat-dialog-actions align="end">
-    <button mat-button type="button" (click)="back()"><np-icon name="arrow-left" class="mat-icon" matButtonIcon />Back</button>
+    <button mat-button type="button" (click)="back()">
+      <np-icon name="arrow-left" class="mat-icon" matButtonIcon />Back
+    </button>
     <button mat-flat-button type="button" (click)="confirm()" [disabled]="naming()">
       Confirm location
     </button>
@@ -76,7 +83,13 @@
               [attr.aria-current]="selected ? 'true' : null"
               (click)="pickAddress(a)"
             >
-              <np-icon [name]="(a.label === 'home' ? 'home' : a.label === 'work' ? 'work' : 'place') | npIcon" class="mat-icon" matButtonIcon />
+              <np-icon
+                [name]="
+                  (a.label === 'home' ? 'home' : a.label === 'work' ? 'work' : 'place') | npIcon
+                "
+                class="mat-icon"
+                matButtonIcon
+              />
               <span>
                 <strong>{{
                   a.label === 'home' ? 'Home' : a.label === 'work' ? 'Work' : 'Other'

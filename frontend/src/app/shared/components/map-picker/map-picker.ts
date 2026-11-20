@@ -11,21 +11,29 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import type * as Leaflet from 'leaflet';
 import { environment } from '../../../../environments/environment';
 import { UNRELIABLE_ACCURACY_M } from '../../../core/services/geolocation.service';
+import { DeliveryRangeService } from '../../../core/services/delivery-range.service';
 import { MapFrame } from '../map-frame/map-frame';
+import { ctrlScrollZoom } from '../../utils/ctrl-scroll-zoom';
 
 export interface LatLng {
   latitude: number;
   longitude: number;
 }
 
+/** A GPS fix: where the device is and how exact that is (metres). */
+export interface CurrentPosition extends LatLng {
+  accuracy?: number | null;
+}
+
 const FALLBACK: LatLng = { latitude: 22.35, longitude: 78.67 };
 
 @Component({
   selector: 'bb-map-picker',
-  imports: [MapFrame],
+  imports: [DecimalPipe, MapFrame],
   templateUrl: './map-picker.html',
   styleUrl: './map-picker.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,7 +41,12 @@ const FALLBACK: LatLng = { latitude: 22.35, longitude: 78.67 };
 export class MapPicker {
   readonly latitude = input<number | null>(null);
   readonly longitude = input<number | null>(null);
-  readonly accuracyMeters = input<number | null>(null);
+  /** The device's GPS fix ("Current location"): a blue dot with a ring of its accuracy. */
+  readonly current = input<CurrentPosition | null>(null);
+  /** The legend text for the delivery-range circle around the pin ({km} is replaced). */
+  readonly rangeHint = input('Restaurants within {km} km can deliver here');
+  /** The admin's delivery range (km), drawn as a dashed circle around the pin. */
+  protected readonly rangeKm = inject(DeliveryRangeService).km;
   readonly moved = output<LatLng>();
 
   protected readonly loadError = signal<string | null>(null);
@@ -43,7 +56,8 @@ export class MapPicker {
   private L?: typeof Leaflet;
   private map?: Leaflet.Map;
   private marker?: Leaflet.Marker;
-  private circle?: Leaflet.Circle;
+  private range?: Leaflet.Circle;
+  private here?: Leaflet.LayerGroup;
   private resizeObserver?: ResizeObserver;
 
   constructor() {
@@ -56,9 +70,33 @@ export class MapPicker {
     effect(() => {
       const lat = this.latitude();
       const lng = this.longitude();
-      const accuracy = this.accuracyMeters();
       if (!this.ready() || lat === null || lng === null) return;
-      this.placePin({ latitude: lat, longitude: lng }, accuracy);
+      this.placePin({ latitude: lat, longitude: lng });
+    });
+
+    // The delivery range follows the pin.
+    effect(() => {
+      const lat = this.latitude();
+      const lng = this.longitude();
+      const km = this.rangeKm();
+      if (!this.ready()) return;
+      this.range?.remove();
+      this.range =
+        km && lat !== null && lng !== null
+          ? this.L!.circle([lat, lng], {
+              radius: km * 1000,
+              className: 'bb-map-range',
+              interactive: false,
+            }).addTo(this.map!)
+          : undefined;
+      this.range?.bringToBack();
+    });
+
+    // "You are here": stays where the device is, even when the pin is dragged elsewhere.
+    effect(() => {
+      const fix = this.current();
+      if (!this.ready()) return;
+      this.showCurrent(fix);
     });
   }
 
@@ -72,6 +110,7 @@ export class MapPicker {
       this.map = L.map(this.container().nativeElement, {
         zoomControl: true,
         attributionControl: true,
+        scrollWheelZoom: false, // Ctrl + wheel instead (below): a plain wheel scrolls the page
       }).setView([start.latitude, start.longitude], this.hasPoint() ? 17 : 5);
       L.tileLayer(environment.map.tileUrl, {
         maxZoom: environment.map.maxZoom,
@@ -80,10 +119,11 @@ export class MapPicker {
 
       this.map.on('click', (event: Leaflet.LeafletMouseEvent) => {
         const point = { latitude: event.latlng.lat, longitude: event.latlng.lng };
-        this.placePin(point, null, false);
+        this.placePin(point, false);
         this.moved.emit(point);
       });
-      if (this.hasPoint()) this.placePin(start, this.accuracyMeters());
+      if (this.hasPoint()) this.placePin(start);
+      ctrlScrollZoom(this.map, this.container().nativeElement);
       this.resizeObserver = new ResizeObserver(() => this.map?.invalidateSize());
       this.resizeObserver.observe(this.container().nativeElement);
       this.ready.set(true);
@@ -96,7 +136,7 @@ export class MapPicker {
     return this.latitude() !== null && this.longitude() !== null;
   }
 
-  private placePin(point: LatLng, accuracy: number | null, recenter = true): void {
+  private placePin(point: LatLng, recenter = true): void {
     const L = this.L;
     const map = this.map;
     if (!L || !map) return;
@@ -117,28 +157,28 @@ export class MapPicker {
       }).addTo(map);
       this.marker.on('dragend', () => {
         const p = this.marker!.getLatLng();
-        this.circle?.remove();
-        this.circle = undefined;
         this.moved.emit({ latitude: p.lat, longitude: p.lng });
       });
     } else if (!this.marker.getLatLng().equals(latLng, 1e-7)) {
       this.marker.setLatLng(latLng);
     }
+    if (recenter) map.setView(latLng, Math.max(map.getZoom(), 16));
+  }
 
-    const showCircle = !!accuracy && accuracy <= UNRELIABLE_ACCURACY_M;
-    this.circle?.remove();
-    this.circle = showCircle
-      ? L.circle(latLng, {
-          radius: accuracy!,
-          color: '#e89a0c',
-          weight: 1,
-          fillOpacity: 0.12,
-        }).addTo(map)
-      : undefined;
-
-    if (recenter) {
-      if (this.circle && accuracy! > 150) map.fitBounds(this.circle.getBounds(), { maxZoom: 17 });
-      else map.setView(latLng, Math.max(map.getZoom(), 16));
-    }
+  /** The blue dot and its accuracy ring (none when the fix is too vague to draw). */
+  private showCurrent(fix: CurrentPosition | null): void {
+    const L = this.L!;
+    this.here?.remove();
+    this.here = undefined;
+    if (!fix) return;
+    const at = L.latLng(fix.latitude, fix.longitude);
+    const ring =
+      fix.accuracy && fix.accuracy <= UNRELIABLE_ACCURACY_M
+        ? L.circle(at, { radius: fix.accuracy, className: 'bb-map-accuracy', interactive: false })
+        : null;
+    const dot = L.circleMarker(at, { radius: 7, className: 'bb-map-here', interactive: false });
+    this.here = L.layerGroup(ring ? [ring, dot] : [dot]).addTo(this.map!);
+    // A vague fix: show its whole ring, so it is clear the pin may need moving.
+    if (ring && fix.accuracy! > 150) this.map!.fitBounds(ring.getBounds(), { maxZoom: 17 });
   }
 }

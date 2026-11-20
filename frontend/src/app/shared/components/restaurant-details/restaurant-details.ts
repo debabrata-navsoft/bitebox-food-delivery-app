@@ -41,7 +41,7 @@ import {
 import { MyRestaurantService } from '../../../core/services/my-restaurant.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { ImageUpload } from '../image-upload/image-upload';
-import { LatLng, MapPicker } from '../map-picker/map-picker';
+import { LatLng, MapPicker, CurrentPosition } from '../map-picker/map-picker';
 import { PageHeader } from '../page-header/page-header';
 import { serverErrors, shownError } from '../../forms/form-errors';
 import {
@@ -282,11 +282,15 @@ export class RestaurantDetails {
     this.form.cuisines().markAsTouched();
   }
 
+  /** The device's GPS fix after "Use my location" (the map's blue dot). */
+  protected readonly gpsFix = signal<CurrentPosition | null>(null);
+
   protected async useCurrentLocation(): Promise<void> {
     this.locating.set(true);
     this.locationError.set(null);
     try {
       const point = await this.geo.currentPrecise();
+      this.gpsFix.set(point);
       await this.setPin(point);
     } catch (err) {
       this.locationError.set(

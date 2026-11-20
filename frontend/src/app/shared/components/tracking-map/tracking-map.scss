@@ -39,6 +39,19 @@
     background: var(--bb-brand);
   }
 
+  // Other free riders: smaller, quieter dots.
+  &.bb-track-nearby {
+    border-width: 2px;
+    background: var(--bb-success-solid);
+    opacity: 0.85;
+
+    .bb-track-icon,
+    .bb-track-icon svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
   &.bb-track-rider {
     background: var(--bb-success-solid);
     // A soft pulse so the moving rider stands out.
@@ -65,4 +78,21 @@
   stroke: var(--bb-teal-ink);
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+// The km circle (a Leaflet SVG path, outside this view): a soft brand-tinted area.
+:host ::ng-deep .bb-track-radius {
+  stroke: var(--bb-map-ring);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 6;
+  fill: var(--bb-map-ring);
+  fill-opacity: 0.08;
+}
+
+// The rider's GPS accuracy: a pale ring around the moving marker.
+:host ::ng-deep .bb-track-accuracy {
+  stroke: var(--bb-success);
+  stroke-width: 1;
+  fill: var(--bb-success);
+  fill-opacity: 0.12;
 }

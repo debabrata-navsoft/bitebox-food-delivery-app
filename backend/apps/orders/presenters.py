@@ -4,7 +4,8 @@ Orders in the Node API's JSON shape (Order.toJSON), and what each role may see
 
 - `order_json`: the order without internal finance (settlement, payouts, the offer).
 - `present_with_rider`: customer and admin; adds the rider's card and the payment's state.
-- `present_for_restaurant`: no customer phone or exact address; adds respondBy / pickupBy.
+- `present_for_restaurant`: no customer phone or exact address; adds respondBy / pickupBy and the
+  rider's first name.
 - `present_for_rider`: the full address only once they carry the order; no cancellation.
 """
 
@@ -28,7 +29,7 @@ S = OrderStatus
 
 def with_details(qs: QuerySet[Order]) -> QuerySet[Order]:
     """Everything the presenters read, in a fixed number of queries."""
-    return qs.select_related("cancellation", "payment").prefetch_related(
+    return qs.select_related("cancellation", "payment", "delivery_partner").prefetch_related(
         "items",
         "status_history",
         Prefetch(
@@ -276,6 +277,9 @@ def present_for_restaurant(order: Order) -> dict[str, Any]:
         "city": a.get("city"),
     }
     data["rider_assigned"] = bool(order.delivery_partner_id)
+    # Who will collect it: the first name only (no phone; the rider is not the restaurant's user).
+    rider = order.delivery_partner if order.delivery_partner_id else None
+    data["rider_name"] = rider.name.split()[0] if rider and rider.name else None
     if order.status == S.PENDING and order.submitted_at:
         data["respond_by"] = order.submitted_at + timedelta(
             minutes=DISPATCH["restaurant_response_minutes"]

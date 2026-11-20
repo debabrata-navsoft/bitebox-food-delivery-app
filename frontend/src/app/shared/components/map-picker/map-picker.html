@@ -10,4 +10,19 @@
   <p class="map-error" role="alert">{{ loadError() }}</p>
 } @else {
   <p class="map-hint">Drag the pin or tap the map to mark your exact building.</p>
+  @if (rangeKm() || current()) {
+    <ul class="legend">
+      @if (rangeKm(); as km) {
+        <li><span class="swatch range"></span>{{ rangeHint().replace('{km}', '' + km) }}</li>
+      }
+      @if (current(); as fix) {
+        <li>
+          <span class="swatch here"></span>You are here
+          @if (fix.accuracy) {
+            (accurate to about {{ fix.accuracy | number: '1.0-0' }} m)
+          }
+        </li>
+      }
+    </ul>
+  }
 }

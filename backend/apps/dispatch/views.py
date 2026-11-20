@@ -10,7 +10,8 @@ from apps.accounts.authentication import current_user
 from apps.audit.services import audited
 from apps.rbac.roles import Permission
 from common.api import ok
-from common.permissions import permission_required
+from common.http import PublicCacheMixin
+from common.permissions import PUBLIC, permission_required
 from common.schema import envelope, errors
 from common.validation import validated
 
@@ -98,3 +99,24 @@ class DispatchSettingsView(APIView):
         data = validated(DispatchSettingsInput, request.data)
         saved = tunables.update(current_user(request), data)
         return ok({"settings": saved}, message="Dispatch settings saved")
+
+
+class DeliveryRangeView(PublicCacheMixin, APIView):
+    """Public: how far restaurants deliver (maps draw it as a circle around a pin)."""
+
+    permission_classes = PUBLIC
+
+    @extend_schema(
+        tags=["Catalogue"],
+        operation_id="delivery_range",
+        responses={
+            200: envelope(
+                "DeliveryRangeResult",
+                inline_serializer(
+                    "DeliveryRange", {"maxDeliveryDistanceKm": serializers.IntegerField()}
+                ),
+            )
+        },
+    )
+    def get(self, request: Request) -> Response:
+        return ok({"max_delivery_distance_km": tunables.max_delivery_km()})

@@ -1,5 +1,7 @@
 import { NpIconPipe } from '../../../shared/pipes/np-icon-name';
 import { askPrepTime } from './accept-dialog/accept-dialog';
+import { openNearbyRiders } from './nearby-riders-dialog/nearby-riders-dialog';
+import { openTrackRider } from './track-rider-dialog/track-rider-dialog';
 import {
   ButtonComponent,
   ButtonToggleComponent,
@@ -100,7 +102,11 @@ export class RestaurantOrders {
 
   /** The History tab's Filters panel (the live stage tabs have none). */
   protected readonly historySections = [
-    optionsSection('status', 'Status', { delivered: 'Delivered', rejected: 'Rejected', cancelled: 'Cancelled' }),
+    optionsSection('status', 'Status', {
+      delivered: 'Delivered',
+      rejected: 'Rejected',
+      cancelled: 'Cancelled',
+    }),
     optionsSection('paymentMethod', 'Payment', { cod: 'Cash on delivery', online: 'Paid online' }),
     datesSection('placed', 'Order date'),
   ];
@@ -201,6 +207,27 @@ export class RestaurantOrders {
         this.board.refresh(); // show what actually happened (e.g. the customer cancelled)
       },
     });
+  }
+
+  /** Stages with a rider carrying (or coming for) the order: the restaurant can follow it. */
+  protected readonly tracked: OrderStatus[] = [
+    'assigned',
+    'arrived_at_restaurant',
+    'picked_up',
+    'on_the_way',
+  ];
+
+  /** Follow the rider of one order (the board's live copy, so its stage stays current). */
+  protected trackRider(order: RestaurantOrder): void {
+    openTrackRider(
+      this.dialog,
+      computed(() => this.board.board()?.items.find((o) => o.id === order.id) ?? null),
+    );
+  }
+
+  /** While an order waits for a rider: the free riders near the restaurant, on a map. */
+  protected showNearbyRiders(order: RestaurantOrder): void {
+    openNearbyRiders(this.dialog, order);
   }
 }
 

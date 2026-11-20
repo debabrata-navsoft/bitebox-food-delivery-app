@@ -1,0 +1,57 @@
+@if (order(); as o) {
+  <h2 bbDialogTitle>Tracking {{ o.orderNumber }}</h2>
+  <div class="bb-dialog__content body">
+    <p class="summary" role="status">
+      <np-icon name="bike" class="mat-icon" matButtonIcon />
+      <span>
+        <strong>{{ o.riderName || 'The rider' }}</strong>
+        {{ stage() || 'has this order' }}
+        @if (away(); as m) {
+          · about
+          {{ m < 1000 ? (m | number: '1.0-0') + ' m' : (m / 1000 | number: '1.1-1') + ' km' }}
+          away
+        }
+      </span>
+    </p>
+
+    <p class="customer">
+      <np-icon name="user" class="mat-icon" matButtonIcon />
+      <span
+        >Order for <strong>{{ o.deliveryAddress.recipientName }}</strong> ·
+        {{ o.deliveryAddress.area || o.deliveryAddress.city }}</span
+      >
+    </p>
+
+    <bb-tracking-map
+      class="map"
+      [restaurant]="t.restaurant()"
+      [rider]="t.rider()"
+      [riderStale]="t.riderStale()"
+      [riderAccuracy]="t.riderAccuracy()"
+      [trail]="t.trail()"
+      [label]="'Where the rider of order ' + o.orderNumber + ' is'"
+    />
+
+    <p class="bb-muted note">
+      @if (t.riderSeenSeconds(); as s) {
+        @if (t.riderStale()) {
+          Last position {{ s < 3600 ? (s / 60 | number: '1.0-0') + ' min' : 'over an hour' }} ago.
+          The rider may have a weak signal.
+        } @else {
+          Updated {{ s < 60 ? s + ' s' : (s / 60 | number: '1.0-0') + ' min' }} ago.
+        }
+      } @else if (!t.rider()) {
+        Waiting for the rider's position…
+      }
+      The customer's exact address is not shown.
+    </p>
+  </div>
+} @else {
+  <h2 bbDialogTitle>Order finished</h2>
+  <div class="bb-dialog__content">
+    <p class="bb-muted">This order is no longer out with a rider.</p>
+  </div>
+}
+<div class="bb-dialog__actions">
+  <np-button variant="outlined" severity="secondary" label="Close" (clicked)="ref.close()" />
+</div>

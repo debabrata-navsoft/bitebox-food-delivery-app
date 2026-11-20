@@ -11,6 +11,7 @@ import {
   RestaurantInput,
   RestaurantUpdate,
 } from '../models/catalog.models';
+import { NearbyRiders } from '../models/order-management.models';
 import { Faceted, ListQuery } from '../../shared/list/filtered-list';
 import { toParams } from '../../shared/utils/http-params';
 
@@ -35,6 +36,13 @@ export interface RestaurantStats {
 export class MyRestaurantService {
   private readonly http = inject(HttpClient);
   private readonly url = `${environment.baseUrl}/my/restaurant`;
+
+  /** Free riders near the restaurant (while an order waits for one). */
+  nearbyRiders(): Observable<NearbyRiders> {
+    return this.http
+      .get<ApiResponse<NearbyRiders>>(`${this.url}/nearby-riders`)
+      .pipe(map((r) => r.data));
+  }
 
   get(): Observable<MyRestaurantState> {
     return this.http.get<ApiResponse<MyRestaurantState>>(this.url).pipe(map((res) => res.data));

@@ -14,6 +14,7 @@ from apps.accounts.models import User
 from apps.delivery.models import DeliveryPartner
 from apps.orders.models import TRACKED_STATUSES, Order, OrderStatus
 from apps.rbac.roles import Permission, Role, has_permission
+from apps.restaurants.models import Restaurant
 from common.api import ApiError
 from common.geo import GeoPoint, haversine_m
 
@@ -94,6 +95,8 @@ def _can_view(user: User, order: Order) -> bool:
         return order.customer_id == user.pk
     if user.role == Role.DELIVERY:
         return order.delivery_partner_id == user.pk
+    if user.role == Role.RESTAURANT:  # its own orders: where the rider is (no customer address)
+        return Restaurant.objects.filter(pk=order.restaurant_id, owner=user).exists()
     return False
 
 

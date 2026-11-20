@@ -35,7 +35,10 @@ describe('RestaurantOrders', () => {
     expect(el.querySelector('bb-list-toolbar')).toBeNull();
     http.expectNone((r) => r.url.endsWith(path));
 
-    const cmp = fixture.componentInstance as unknown as { selectTab(tab: string): void; history: ListHandle };
+    const cmp = fixture.componentInstance as unknown as {
+      selectTab(tab: string): void;
+      history: ListHandle;
+    };
     cmp.selectTab('history');
     fixture.detectChanges();
     const first = list();

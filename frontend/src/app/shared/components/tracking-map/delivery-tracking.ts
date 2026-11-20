@@ -153,6 +153,8 @@ export function deliveryTracking(order: Signal<TrackableOrder | null>) {
       if (event.lastPoint) show({ orderId: event.orderId, ...event.lastPoint });
     });
 
+  /** How exact the rider's last position is (metres), when reported. */
+  const riderAccuracy = computed(() => location()?.accuracy ?? null);
   const rider = computed<Point | null>(() => {
     const l = location();
     return l && TRACKED_STATUSES.includes(status() as OrderStatus)
@@ -202,6 +204,7 @@ export function deliveryTracking(order: Signal<TrackableOrder | null>) {
     destination,
     target,
     rider,
+    riderAccuracy,
     riderStale,
     riderSeenSeconds,
     /** Where the rider has been on this delivery (empty until it is assigned). */

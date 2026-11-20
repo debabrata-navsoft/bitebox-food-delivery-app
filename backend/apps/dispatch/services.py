@@ -14,6 +14,7 @@ Finding a rider for ready orders (Node: services/dispatch.service.js).
 import logging
 import uuid
 from datetime import datetime, timedelta
+from typing import Any
 
 from django.db import IntegrityError, transaction
 from django.db.models import Exists, F, OuterRef, Q, QuerySet
@@ -29,6 +30,7 @@ from apps.orders.notifications import notify_offer
 from apps.orders.workflow import Actor, transition
 from apps.realtime.events import emit_order_updated
 from common.api import ApiError
+from common.geo import GeoPoint
 from common.geo_sql import Distance, DWithin, point_sql
 
 from .config import DISPATCH, DISTANCE_BAND_M
@@ -52,6 +54,33 @@ def free_riders(now: datetime) -> QuerySet[DeliveryPartner]:
         location_updated_at__gte=now - timedelta(minutes=DISPATCH["location_fresh_minutes"]),
         user__status=UserStatus.ACTIVE,
     )
+
+
+NEARBY_LIMIT = 50  # riders drawn on a restaurant's map (the count covers them all)
+
+
+def nearby_free_riders(point: GeoPoint, now: datetime | None = None) -> dict[str, Any]:
+    """
+    The free riders within the pickup distance of `point` (a restaurant), nearest first: what a
+    restaurant sees while it waits for a rider. Other people's live positions, so only rounded to
+    about 100 m, with no names.
+    """
+    km = max_pickup_km()
+    near = point_sql(point)
+    riders = free_riders(now or timezone.now()).filter(DWithin(F("location"), near, km * 1000))
+    shown = riders.annotate(distance=Distance(F("location"), near)).order_by("distance")
+    return {
+        "radius_km": km,
+        "count": riders.count(),
+        "riders": [
+            {
+                "latitude": round(r.location.lat, 3),
+                "longitude": round(r.location.lng, 3),
+                "distance_meters": round(r.distance),
+            }
+            for r in shown[:NEARBY_LIMIT]
+        ],
+    }
 
 
 def _has_open_offer() -> Exists:

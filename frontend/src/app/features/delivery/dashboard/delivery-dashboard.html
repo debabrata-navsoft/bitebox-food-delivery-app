@@ -280,6 +280,7 @@
               </div>
               <bb-tracking-map
                 [rider]="pos"
+                [riderAccuracy]="gps.fix()?.accuracy ?? null"
                 [label]="'Detected location map: ' + (detectedPlace() || 'Current location')"
               />
             </div>

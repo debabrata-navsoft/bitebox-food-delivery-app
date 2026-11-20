@@ -29,6 +29,8 @@ export type OrderCounts = Partial<Record<OrderStatus, number>>;
 export interface RestaurantOrder extends Omit<Order, 'deliveryAddress' | 'rider'> {
   deliveryAddress: { recipientName: string; area?: string; city: string };
   riderAssigned: boolean;
+  /** The assigned rider's first name (who collects it). */
+  riderName?: string | null;
   respondBy?: string;
   pickupBy?: string;
 }
@@ -188,4 +190,12 @@ export interface AdminRider {
 export interface AdminRiderDetail {
   user: { id: string; name: string; email: string; phone?: string; status: 'active' | 'suspended'; avatarUrl?: string; createdAt: string };
   profile: RiderProfile;
+}
+
+/** GET /my/restaurant/nearby-riders: free riders within the pickup distance (rounded ~100 m). */
+export interface NearbyRiders {
+  restaurant: { latitude: number; longitude: number };
+  radiusKm: number;
+  count: number;
+  riders: { latitude: number; longitude: number; distanceMeters: number }[];
 }

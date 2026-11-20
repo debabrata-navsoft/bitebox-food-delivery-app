@@ -44,6 +44,7 @@
       <bb-map-picker
         [latitude]="model().latitude"
         [longitude]="model().longitude"
+        [current]="gpsFix()"
         (moved)="onPinMoved($event)"
       />
 
@@ -159,11 +160,7 @@
           autocomplete="name"
           [error]="shownError(form.recipientName)"
         />
-        <bb-phone-input
-          [formField]="form.phone"
-          label="Phone"
-          [error]="shownError(form.phone)"
-        />
+        <bb-phone-input [formField]="form.phone" label="Phone" [error]="shownError(form.phone)" />
       </div>
 
       <span class="label-title" id="label-title">Save as</span>

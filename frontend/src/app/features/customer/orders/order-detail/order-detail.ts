@@ -52,6 +52,7 @@ import {
 } from '../../../../core/models/payment.models';
 import { InrPipe } from '../../../../shared/pipes/money.pipes';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
+import { DeliveryRangeService } from '../../../../core/services/delivery-range.service';
 
 const JOURNEY: { status: OrderStatus; icon: string }[] = [
   { status: 'pending', icon: 'receipt' },
@@ -93,6 +94,8 @@ export class OrderDetail {
   private readonly notify = inject(NotificationService);
   private readonly payments = inject(PaymentService);
   protected readonly connection = inject(ConnectionStatus);
+  /** The delivery range, as a circle around the delivery address. */
+  protected readonly range = inject(DeliveryRangeService);
 
   readonly id = input.required<string>();
   readonly placed = input<string>();

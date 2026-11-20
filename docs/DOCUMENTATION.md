@@ -581,7 +581,7 @@ A rider is offered at most one order and carries at most one. Both are guarded b
 - **Rider GPS:** shared about every 4 s while moving on a delivery, and at least every 15 s. When idle, about once a minute.
 - **Customer map:** shows "Arriving in about N min · X km by road", plus "last update … ago" when the position is older than 90 s.
 - **Trail:** while a rider carries an order (assigned → on the way), their position is stored as a tracking point at most every `TRACKING_SAMPLE_SECONDS` (15 s), never while they are just online. Points are deleted after `TRACKING_RETENTION_DAYS` (30; a TTL index in MongoDB, the `tracking.purge` Celery task in Django). The customer and admin maps draw the trail under the route.
-- **Restoring the map:** `GET /tracking/orders/{id}` (the order's customer, its rider, or `orders:view`) returns `{ tracking, lastPoint, ageSeconds, stale, recentPath }`. The map loads it when it opens and after every socket reconnect, so it shows the rider even if the socket is down.
+- **Restoring the map:** `GET /tracking/orders/{id}` (the order's customer, its rider, its restaurant, or `orders:view`) returns `{ tracking, lastPoint, ageSeconds, stale, recentPath }` (no customer address). The map loads it when it opens and after every socket reconnect, and polls it every 10 s while the socket is down. Restaurants follow their riders from the order card (**Track rider**), seeing the rider's first name and the customer's name and area only.
 - **Arrival check:** marking "arrived at restaurant" stores the straight-line distance from the rider's last fix (`arrivalDistanceMeters`, admins only). Arrivals further than `ARRIVAL_FAR_METERS` (200 m) are allowed but flagged in the admin order view.
 - **Navigation:** the rider app opens directions in the phone's map app (an external link); BiteBox never promises a delivery time from distance alone.
 - **Explained problems:** the app tells the user about these instead of failing silently:
@@ -886,6 +886,7 @@ The service worker only runs in **production builds** (`npm run build`, then `np
 | Method | Path | Access | Purpose |
 |---|---|---|---|
 | GET | `/restaurants` | public | Approved restaurants (search, cuisine, category, veg, sort, `lat`/`lng`/`radiusKm` (at most the admin's delivery range), paging) |
+| GET | `/delivery-range` | public | `maxDeliveryDistanceKm`: the admin's delivery range, drawn as a dashed circle on location maps (address picker, restaurant address, live tracking) |
 | GET | `/restaurants/cuisines` | public | Cuisines on offer |
 | GET | `/restaurants/{slugOrId}` | public | Restaurant details |
 | GET | `/restaurants/{slugOrId}/menu` | public | Menu grouped by category |
@@ -893,6 +894,7 @@ The service worker only runs in **production builds** (`npm run build`, then `np
 | GET | `/foods`, `/foods/{id}` | public | Dish search / dish details |
 | GET, POST, PATCH | `/my/restaurant` | restaurant | Own restaurant (create: pending; editing a rejected one resubmits it) |
 | PATCH | `/my/restaurant/accepting-orders` | restaurant | Pause or resume orders |
+| GET | `/my/restaurant/nearby-riders` | restaurant | Free riders within the pickup distance: `radiusKm`, `count`, and up to 50 positions rounded to ~100 m (no names), nearest first. Shown from a waiting order's "See nearby riders" map |
 | GET, POST | `/my/restaurant/foods` | restaurant | Menu items |
 | PATCH, DELETE | `/my/restaurant/foods/{id}` | restaurant | Edit / soft delete |
 | PATCH | `/my/restaurant/foods/{id}/availability` | restaurant | Available or not |

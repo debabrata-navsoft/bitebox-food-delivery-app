@@ -25,7 +25,7 @@ import {
   ImpreciseLocationError,
 } from '../../../core/services/geolocation.service';
 import { DeliveryAddress } from '../../../core/models/checkout.models';
-import { LatLng, MapPicker } from '../map-picker/map-picker';
+import { LatLng, MapPicker, CurrentPosition } from '../map-picker/map-picker';
 import { PlaceSearch } from '../place-search/place-search';
 
 interface Candidate {
@@ -94,14 +94,21 @@ export class LocationPickerDialog {
     }
   }
 
+  /** The device's GPS fix (the map's blue dot). */
+  protected readonly gpsFix = signal<CurrentPosition | null>(null);
+
   private async detect(asked: boolean): Promise<void> {
     if (this.locating()) return;
     this.locating.set(true);
     this.gpsError.set(null);
     try {
-      const { latitude, longitude } = await this.geo.currentPrecise();
+      const fix = await this.geo.currentPrecise();
+      this.gpsFix.set(fix);
+      const { latitude, longitude } = fix;
       // Without an address (lookup down), the coordinates stand in for it.
-      const place = await firstValueFrom(this.location.reverse(latitude, longitude)).catch(() => null);
+      const place = await firstValueFrom(this.location.reverse(latitude, longitude)).catch(
+        () => null,
+      );
       this.detected.set({
         latitude,
         longitude,

@@ -31,6 +31,7 @@ import {
   BbDialogRef,
   BbDialogTitle,
 } from '../../../../shared/dialog/bb-dialog';
+import { DeliveryRangeService } from '../../../../core/services/delivery-range.service';
 
 const CANCELLABLE: OrderStatus[] = [
   'pending',
@@ -79,6 +80,7 @@ export class AdminOrderDialog {
   protected readonly customerLabel = customerStatusLabel;
   protected readonly providerLabel = PROVIDER_LABEL;
   protected readonly tracking = deliveryTracking(this.order);
+  protected readonly range = inject(DeliveryRangeService);
   protected readonly onTheRoad = (o: AdminOrder) => TRACKED_STATUSES.includes(o.status);
 
   constructor() {

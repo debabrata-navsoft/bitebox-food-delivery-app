@@ -1,5 +1,6 @@
 import {
   ChangeDetectionStrategy,
+  booleanAttribute,
   Component,
   DestroyRef,
   ElementRef,
@@ -15,6 +16,7 @@ import type * as Leaflet from 'leaflet';
 import { environment } from '../../../../environments/environment';
 import { Point, isValidPoint } from '../../../core/services/routing.service';
 import { MapFrame } from '../map-frame/map-frame';
+import { ctrlScrollZoom } from '../../utils/ctrl-scroll-zoom';
 
 type MarkerKind = 'restaurant' | 'home' | 'rider';
 const ICON: Record<MarkerKind, string> = {
@@ -28,6 +30,8 @@ const LABEL: Record<MarkerKind, string> = {
   rider: 'Rider',
 };
 const GLIDE_MS = 900;
+/** A rider accuracy ring bigger than this would only hide the map. */
+const MAX_ACCURACY_RING_M = 1000;
 
 /** Road route, straight-line fallback (dashed) and the rider's trail (coloured in the SCSS). */
 const LINE: Record<'road' | 'straight' | 'trail', Leaflet.PolylineOptions> = {
@@ -53,6 +57,16 @@ export class TrackingMap {
   /** Where the rider has already been (drawn under the route). */
   readonly trail = input<Point[]>([]);
   readonly label = input('Delivery map');
+  /** Other riders to show as small dots (e.g. free riders near a restaurant). */
+  readonly nearby = input<Point[]>([]);
+  /** A dashed circle of this many km (the rider search distance, or the delivery range). */
+  readonly radiusKm = input<number | null>(null);
+  /** Where that circle is centred. */
+  readonly radiusAround = input<'restaurant' | 'home'>('restaurant');
+  /** Zoom out to show that whole circle (the nearby-riders view); otherwise it is only drawn. */
+  readonly fitRadius = input(false, { transform: booleanAttribute });
+  /** The rider's GPS accuracy (metres): a pale ring around the rider marker. */
+  readonly riderAccuracy = input<number | null>(null);
 
   protected readonly loadError = signal<string | null>(null);
   private readonly ready = signal(false);
@@ -64,7 +78,11 @@ export class TrackingMap {
   private svgs: Partial<Record<MarkerKind, string>> = {};
   private line?: Leaflet.Polyline;
   private trailLine?: Leaflet.Polyline;
+  private nearbyLayer?: Leaflet.LayerGroup;
+  private radiusCircle?: Leaflet.Circle;
+  private accuracyRing?: Leaflet.Circle;
   private fitted = false;
+  private circleFitted = false;
   private glide?: number;
   private resizeObserver?: ResizeObserver;
 
@@ -97,6 +115,64 @@ export class TrackingMap {
       if (this.ready()) this.trailLine = this.polyline(this.trailLine, trail, LINE.trail);
     });
 
+    // Nearby riders as small bike dots, redrawn as a group on every update.
+    effect(() => {
+      const riders = this.nearby().filter(isValidPoint);
+      if (!this.ready()) return;
+      const L = this.L!;
+      this.nearbyLayer?.remove();
+      this.nearbyLayer = L.layerGroup(
+        riders.map((p) =>
+          L.marker([p.latitude, p.longitude], {
+            icon: L.divIcon({
+              className: 'bb-track-marker bb-track-nearby',
+              html: `<span class="bb-track-icon" aria-hidden="true">${this.svgs.rider ?? ''}</span>`,
+              iconSize: [26, 26],
+              iconAnchor: [13, 13],
+            }),
+            keyboard: false,
+            title: 'Delivery partner',
+          }),
+        ),
+      ).addTo(this.map!);
+    });
+
+    // The rider's GPS accuracy, as a ring that follows the rider (none when unknown or vague).
+    effect(() => {
+      const at = this.riderPoint();
+      const metres = this.riderAccuracy();
+      if (!this.ready()) return;
+      this.accuracyRing?.remove();
+      this.accuracyRing =
+        at && metres && metres <= MAX_ACCURACY_RING_M
+          ? this.L!.circle([at.latitude, at.longitude], {
+              radius: metres,
+              className: 'bb-track-accuracy',
+              interactive: false,
+            }).addTo(this.map!)
+          : undefined;
+    });
+
+    // The km circle (around the restaurant or the delivery address), fitted once if asked.
+    effect(() => {
+      const center = this.stops()[this.radiusAround()];
+      const km = this.radiusKm();
+      if (!this.ready()) return;
+      this.radiusCircle?.remove();
+      this.radiusCircle = undefined;
+      if (!center || !km) return;
+      this.radiusCircle = this.L!.circle([center.latitude, center.longitude], {
+        radius: km * 1000,
+        className: 'bb-track-radius',
+        interactive: false,
+      }).addTo(this.map!);
+      this.radiusCircle.bringToBack();
+      if (this.fitRadius() && !this.circleFitted) {
+        this.circleFitted = true;
+        this.map!.fitBounds(this.radiusCircle.getBounds(), { padding: [12, 12] });
+      }
+    });
+
     effect(() => {
       if (!this.ready()) return;
       const route = (this.route() ?? []).filter(isValidPoint);
@@ -115,7 +191,7 @@ export class TrackingMap {
       this.map = L.map(this.container().nativeElement, {
         zoomControl: true,
         attributionControl: true,
-        scrollWheelZoom: false,
+        scrollWheelZoom: false, // Ctrl + wheel instead (below): a plain wheel scrolls the page
       });
       this.map.setView([22.35, 78.67], 5);
       L.tileLayer(environment.map.tileUrl, {
@@ -128,6 +204,7 @@ export class TrackingMap {
           ),
         )
         .addTo(this.map);
+      ctrlScrollZoom(this.map, this.container().nativeElement);
       this.resizeObserver = new ResizeObserver(() => this.map?.invalidateSize());
       this.resizeObserver.observe(this.container().nativeElement);
       this.ready.set(true);

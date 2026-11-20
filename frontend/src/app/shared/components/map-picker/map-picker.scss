@@ -20,6 +20,41 @@
   color: var(--bb-danger);
 }
 
+// What the circles on the map mean.
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bb-space-1) var(--bb-space-4);
+  margin: var(--bb-space-1) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+  color: var(--bb-ink-muted);
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+
+  &.range {
+    border: 2px dashed var(--bb-map-ring);
+    background: color-mix(in srgb, var(--bb-map-ring) 8%, transparent);
+  }
+
+  &.here {
+    border: 2px solid var(--bb-surface);
+    background: var(--bb-info);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--bb-info) 20%, transparent);
+  }
+}
+
 // The pin is created by Leaflet outside Angular's view, so its styles must not be encapsulated.
 ::ng-deep .bb-map-pin {
   span {
@@ -41,4 +76,28 @@
       background: var(--bb-amber);
     }
   }
+}
+
+// Leaflet SVG paths (outside Angular's view). The delivery range: a dashed, lightly filled area.
+::ng-deep .bb-map-range {
+  stroke: var(--bb-map-ring);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 6;
+  fill: var(--bb-map-ring);
+  fill-opacity: 0.06;
+}
+
+// "You are here": a blue dot with a white edge and a pale ring of the GPS accuracy.
+::ng-deep .bb-map-accuracy {
+  stroke: var(--bb-info);
+  stroke-width: 1;
+  fill: var(--bb-info);
+  fill-opacity: 0.15;
+}
+
+::ng-deep .bb-map-here {
+  stroke: var(--bb-surface);
+  stroke-width: 3;
+  fill: var(--bb-info);
+  fill-opacity: 1;
 }

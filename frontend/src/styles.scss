@@ -8,6 +8,8 @@
 :root {
   // Brand
   --bb-plum: #2e1a3d;
+  // Distance circles on maps (delivery range, rider search): plum here, amber on dark maps.
+  --bb-map-ring: #2e1a3d;
   --bb-plum-700: #43295a;
   --bb-plum-500: #6d557c;
   --bb-plum-100: #f2eaf7;
@@ -146,6 +148,7 @@ html {
   color-scheme: dark;
 
   --bb-plum: #d7c2ea;
+  --bb-map-ring: #ffb52e; // the lavender plum is too faint over dark map tiles
   --bb-plum-700: #e6d8f2;
   --bb-plum-500: #b39cc6;
   --bb-plum-100: #33243f;

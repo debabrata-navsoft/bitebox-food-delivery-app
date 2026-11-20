@@ -124,6 +124,7 @@ export class CurrentDelivery {
       : null;
   });
   protected readonly myPosition = this.gps.position;
+  protected readonly myAccuracy = computed(() => this.gps.fix()?.accuracy ?? null);
   protected readonly routeToStop = rerouteWhileMoving(
     this.myPosition,
     computed(() => this.stops()?.target ?? null),

@@ -238,3 +238,8 @@
     overflow: visible;
   }
 }
+
+// "See nearby riders" under a waiting order.
+.nearby {
+  align-self: flex-start;
+}
