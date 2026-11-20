@@ -86,6 +86,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # ?pageSize=… → page_size for views and serializers.
     "djangorestframework_camel_case.middleware.CamelCaseMiddleWare",
+    # The dispatch sweep without Celery Beat (apps/dispatch/middleware.py).
+    "apps.dispatch.middleware.DispatchSweepMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -286,6 +288,8 @@ TRACKING_STALE_SECONDS = env.int("TRACKING_STALE_SECONDS", default=90)
 ARRIVAL_FAR_METERS = env.int("ARRIVAL_FAR_METERS", default=200)
 # "Your rider is almost there" when the rider on the way comes this close to the customer.
 APPROACH_NOTIFY_METERS = env.int("APPROACH_NOTIFY_METERS", default=500)
+# Run the dispatch sweep from API requests (at most every 15 s) where Celery Beat isn't running.
+DISPATCH_SWEEP_ON_REQUESTS = env.bool("DISPATCH_SWEEP_ON_REQUESTS", default=True)
 
 # Notifications (apps/notifications). Web Push needs both VAPID keys (`npx web-push
 # generate-vapid-keys`; the same keys as the Node API, so browsers stay subscribed). Push

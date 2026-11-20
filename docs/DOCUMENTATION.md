@@ -304,7 +304,7 @@ request → helmet / cors / compression → json (100 kB) → cookie-parser → 
 | `payment.service#reconcile` | 5 min | Payments the browser and webhooks missed, refunds never sent or not yet confirmed |
 | `notification.service#retryDue` | 1 min | Notification deliveries whose retry time has come, and queued ones nobody picked up |
 
-The Django API runs the same work as Celery Beat tasks (`config/celery.py`): `dispatch.sweep` (15 s), `payments.reconcile` (5 min), `notifications.retry` (1 min), `notifications.purge` and `tracking.purge` (daily). MongoDB removes old notifications, deliveries and tracking points itself (TTL indexes).
+The Django API runs the same work as Celery Beat tasks (`config/celery.py`): `dispatch.sweep` (15 s), `payments.reconcile` (5 min), `notifications.retry` (1 min), `notifications.purge` and `tracking.purge` (daily). Where Beat isn't running (local `runserver`, Vercel), `apps/dispatch/middleware.py` runs `dispatch.sweep` from API traffic, at most every 15 s per process, so offers still expire and the order timeouts still apply (`DISPATCH_SWEEP_ON_REQUESTS`, on by default, off in tests). MongoDB removes old notifications, deliveries and tracking points itself (TTL indexes).
 
 All are idempotent and safe to run on several API instances at once. Tests call `sweep(now)` and `rewardsSweep(now)` directly.
 

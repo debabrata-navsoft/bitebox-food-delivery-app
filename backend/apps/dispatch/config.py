@@ -7,7 +7,7 @@ DISPATCH = {
     "payment_window_minutes": 15,  # unpaid online orders are cancelled after this
     "restaurant_response_minutes": 10,  # pending orders are auto-rejected after this
     "pickup_window_minutes": 30,  # ready orders nobody picked up are cancelled after this
-    "sweep_interval_seconds": 15,  # Celery Beat runs the sweep this often
+    "sweep_interval_seconds": 15,  # Celery Beat (or API traffic) runs the sweep this often
 }
 
 # Riders within the same 500 m band count as equally near; the one idle longest goes first.

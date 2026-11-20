@@ -67,3 +67,4 @@ CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_BROKER_URL = "memory://"
 REDIS_URL = "redis://redis.invalid:6379/0"  # tests replace the Redis client; never a real server
 LOGGING = {**LOGGING, "root": {"handlers": ["console"], "level": "WARNING"}}
+DISPATCH_SWEEP_ON_REQUESTS = False  # tests call sweep(now) directly
