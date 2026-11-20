@@ -454,3 +454,13 @@ export interface LoginEntry {
   active: boolean;
   endedReason: string | null;
 }
+
+/** GET/PUT /admin/dispatch/settings: how far riders may be from the restaurant to get its orders. */
+export interface DispatchSettings {
+  maxPickupDistanceKm: number;
+  defaultMaxPickupDistanceKm: number;
+  minPickupDistanceKm: number;
+  maxAllowedPickupDistanceKm: number;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}

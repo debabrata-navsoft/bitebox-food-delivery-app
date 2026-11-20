@@ -4,6 +4,7 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
   DeliveryPerformance,
+  DispatchSettings,
   Monitoring,
   OperationsDashboard,
   RestaurantAvailability,
@@ -27,4 +28,15 @@ export class OperationsService {
   restaurants = () =>
     this.get<{ items: RestaurantAvailability[] }>('restaurants').pipe(map((d) => d.items));
   performance = (days: number) => this.get<DeliveryPerformance>('performance', { days });
+
+  /** Dispatch rules (riders:manage). */
+  private readonly dispatchUrl = `${environment.baseUrl}/admin/dispatch/settings`;
+  dispatchSettings = () =>
+    this.http
+      .get<ApiResponse<{ settings: DispatchSettings }>>(this.dispatchUrl)
+      .pipe(map((r) => r.data.settings));
+  saveDispatchSettings = (maxPickupDistanceKm: number) =>
+    this.http
+      .put<ApiResponse<{ settings: DispatchSettings }>>(this.dispatchUrl, { maxPickupDistanceKm })
+      .pipe(map((r) => r.data.settings));
 }

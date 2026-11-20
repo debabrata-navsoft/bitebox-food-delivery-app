@@ -33,6 +33,7 @@ from common.geo_sql import Distance, DWithin, point_sql
 
 from .config import DISPATCH, DISTANCE_BAND_M
 from .models import AssignmentStatus, DeliveryAssignment
+from .tunables import max_pickup_km
 
 logger = logging.getLogger("bitebox.dispatch")
 
@@ -83,7 +84,7 @@ def dispatch(order_id: uuid.UUID, now: datetime | None = None) -> uuid.UUID | No
     candidates = list(
         free_riders(now)
         .exclude(user_id__in=tried)
-        .filter(DWithin(F("location"), near, DISPATCH["max_pickup_distance_km"] * 1000))
+        .filter(DWithin(F("location"), near, max_pickup_km() * 1000))
         .annotate(distance=Distance(F("location"), near))
         .annotate(band=Floor(F("distance") / DISTANCE_BAND_M))
         .order_by("band", F("last_assigned_at").asc(nulls_first=True), "distance")[:10]

@@ -941,3 +941,25 @@ def test_restaurant_stats_count_received_orders_and_sales(w: World) -> None:
         "rating": {"average": 0.0, "count": 0},
     }
     assert w.c.get("/api/v1/my/restaurant/stats").status_code == 403
+
+
+def test_admins_choose_how_far_riders_may_be_from_the_restaurant(w: World) -> None:
+    url = "/api/v1/admin/dispatch/settings"
+    ops = client_for(create_and_login("operations_admin")["token"])
+    finance = client_for(create_and_login("finance_admin")["token"])
+    assert finance.get(url).status_code == 403  # needs riders:manage
+    start = ops.get(url).json()["data"]["settings"]
+    assert (start["maxPickupDistanceKm"], start["updatedBy"]) == (10, None)  # the default
+
+    for bad in (0, 51, "far"):
+        res = ops.put(url, {"maxPickupDistanceKm": bad}, format="json")
+        assert res.status_code == 422, bad
+
+    far = w.new_rider(TOO_FAR, name="Far Rider")  # ~22 km from the restaurant
+    saved = ops.put(url, {"maxPickupDistanceKm": 25}, format="json")
+    assert saved.status_code == 200
+    assert saved.json()["data"]["settings"]["maxPickupDistanceKm"] == 25
+    assert saved.json()["data"]["settings"]["updatedBy"]
+
+    order_id = w.ready_order()
+    assert w.offer_id(far) == order_id  # now within reach

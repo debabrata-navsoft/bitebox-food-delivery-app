@@ -27,6 +27,7 @@ const NAV: Record<AdminRole, NavItem[]> = {
         { label: 'Order monitoring', icon: 'monitor', link: '/admin/operations/monitoring' },
         { label: 'Delivery reports', icon: 'insights', link: '/admin/operations/reports' },
         { label: 'Notification log', icon: 'bell', link: '/admin/operations/notifications' },
+        { label: 'Dispatch settings', icon: 'radius', link: '/admin/operations/dispatch' },
       ],
     },
     {
@@ -95,7 +96,11 @@ const NAV: Record<AdminRole, NavItem[]> = {
       children: [
         { label: 'Customers', icon: 'user', link: '/admin/customers' },
         { label: 'Restaurant accounts', icon: 'storefront', link: '/admin/restaurant-accounts' },
-        { label: 'Delivery partner accounts', icon: 'two_wheeler', link: '/admin/delivery-partner-accounts' },
+        {
+          label: 'Delivery partner accounts',
+          icon: 'two_wheeler',
+          link: '/admin/delivery-partner-accounts',
+        },
         { label: 'Admin & operators', icon: 'user-cog', link: '/admin/admins' },
       ],
     },
@@ -110,6 +115,7 @@ const NAV: Record<AdminRole, NavItem[]> = {
     { label: 'Order monitoring', icon: 'monitor', link: '/admin/operations/monitoring' },
     { label: 'Reports', icon: 'insights', link: '/admin/operations/reports' },
     { label: 'Notification log', icon: 'bell', link: '/admin/operations/notifications' },
+    { label: 'Dispatch settings', icon: 'radius', link: '/admin/operations/dispatch' },
     ...PROFILE,
   ],
   finance_admin: [
@@ -152,6 +158,7 @@ const PAGE_PERMISSION: [string, Permission][] = [
   ['/admin/finance', 'finance:view'],
   ['/admin/payments', 'finance:view'],
   ['/admin/reports', 'finance:view'],
+  ['/admin/operations/dispatch', 'riders:manage'],
   ['/admin/operations', 'operations:view'],
   ['/admin/orders', 'orders:view'],
   ['/admin/customers', 'customers:view'],

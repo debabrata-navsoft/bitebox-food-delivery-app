@@ -564,7 +564,7 @@ The cart page lists anything that blocks checkout: unavailable dishes, a closed 
 
 When an order is ready, the backend offers it to **one** rider at a time (`dispatch.service.js`, tunables in `config/dispatch.js`):
 
-1. **Eligible riders:** online, active account, not carrying or being offered another order, location reported within 15 minutes, within 10 km of the restaurant (straight line), and has not declined this order.
+1. **Eligible riders:** online, active account, not carrying or being offered another order, location reported within 15 minutes, within the **pickup distance** of the restaurant (straight line; 10 km by default, set by admins at **Operations → Dispatch settings**, 1–50 km, stored in `DispatchSettings` and read by `apps/dispatch/tunables.py#max_pickup_km`), and has not declined this order. A new distance applies to orders offered from then on.
 2. **Ranking:** nearest first in 500 m bands. Within a band, the rider assigned least recently goes first.
 3. **Offer:** the rider has 90 seconds. Declining passes the order on at once. Ignoring the offer also passes it on, and sets that rider offline.
 
@@ -1003,6 +1003,7 @@ Customer screens: `/offers` (signed-in customers, filter by kind), the offer rib
 | GET | `/admin/dashboard` | any admin role | Platform figures (money with `finance:view`) |
 | GET | `/admin/users/{id}/logins`, `/admin/admins/{id}/logins` | `users:manage` / `admins:manage` | Sign-in history |
 | GET | `/admin/delivery-partners` | `riders:manage` | Riders with availability (`verification` filter) |
+| GET, PUT | `/admin/dispatch/settings` | `riders:manage` | The pickup distance riders are matched within (`maxPickupDistanceKm`, 1–50; PUT is audited as `dispatch.configure`) |
 | GET | `/admin/delivery-partners/{id}` | `riders:manage` | Rider details, profile and verification |
 | PATCH | `/admin/delivery-partners/{id}/verification` | `riders:manage`, audited | `status` approved, rejected or resubmission_requested, with `reason` |
 | PATCH | `/admin/delivery-partners/{id}/status` | `riders:manage` | Suspend or reactivate (not while carrying an order) |
@@ -1188,6 +1189,7 @@ Not filtered (not paginated lists): dashboards and overviews, commission, financ
 | `/admin/promotions` | `promotions:send` | Push promotions |
 | `/admin/rewards`, `/settings`, `/campaigns`, `/referrals`, `/transactions`, `/history` | `rewards:view` | Coins and rewards |
 | `/admin/operations`, `/monitoring`, `/reports` | `operations:view` | Operations dashboard, live monitoring, delivery performance |
+| `/admin/operations/dispatch` | `riders:manage` | Dispatch settings: how far riders may be from the restaurant to be offered its orders |
 | `/admin/orders` | `orders:view` | Orders |
 | `/admin/restaurants`, `/restaurants/:id`, `/admin/foods` | `restaurants:manage` | Restaurants, approval review, food items |
 | `/admin/delivery-partners`, `/delivery-partners/:id` | `riders:manage` | Riders, verification review |
