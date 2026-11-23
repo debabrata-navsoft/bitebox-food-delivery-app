@@ -15,7 +15,7 @@
 @if (loading()) {
   <div class="grid">
     @for (i of [1, 2, 3, 4, 5, 6]; track i) {
-      <span class="bb-skeleton" style="height: 120px"></span>
+      <span class="bb-skeleton" style="height: 250px"></span>
     }
   </div>
 } @else if (categories().length === 0) {
@@ -30,21 +30,24 @@
   <div class="grid">
     @for (c of categories(); track c.id) {
       <article class="bb-card category" [class.inactive]="!c.isActive">
-        @if (c.imageUrl | usableImage) {
-          <img class="thumb" [bbSrc]="c.imageUrl" alt="" loading="lazy" />
-        } @else {
-          <span class="thumb icon"
-            ><np-icon [name]="c.icon | npIcon: 'utensils'" class="mat-icon" matButtonIcon
-          /></span>
-        }
-        <div class="text">
-          <h3>{{ c.name }}</h3>
+        <div class="media">
+          @if (c.imageUrl | usableImage) {
+            <img class="thumb" [bbSrc]="c.imageUrl" alt="" loading="lazy" />
+          } @else {
+            <span class="thumb icon"
+              ><np-icon [name]="c.icon | npIcon: 'utensils'" class="mat-icon" matButtonIcon
+            /></span>
+          }
+          <span class="status" [class.on]="c.isActive">{{ c.isActive ? 'Active' : 'Hidden' }}</span>
+          <span class="order" title="Position in the customer list">#{{ c.sortOrder }}</span>
+        </div>
+        <div class="body">
+          <h3 [title]="c.name">{{ c.name }}</h3>
           <span class="bb-muted"
-            >{{ c.itemCount }} {{ c.itemCount === 1 ? 'dish' : 'dishes' }} · order
-            {{ c.sortOrder }}</span
+            >{{ c.itemCount }} {{ c.itemCount === 1 ? 'dish' : 'dishes' }}</span
           >
         </div>
-        <div class="controls">
+        <footer class="foot">
           <np-toggle
             [checked]="c.isActive"
             (checkedChange)="toggle(c, $event)"
@@ -52,6 +55,7 @@
             [label]="'Active: ' + c.name"
           />
           <np-button
+            class="edit"
             variant="text"
             severity="primary"
             icon="pencil"
@@ -70,7 +74,7 @@
               [ariaLabel]="'Delete ' + c.name"
             />
           </span>
-        </div>
+        </footer>
       </article>
     }
   </div>
