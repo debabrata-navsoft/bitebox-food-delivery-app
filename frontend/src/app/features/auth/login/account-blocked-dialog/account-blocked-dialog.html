@@ -1,0 +1,30 @@
+<header class="head">
+  <span class="icon"><np-icon name="shield-alert" class="mat-icon" /></span>
+  <h2 bbDialogTitle>Account {{ data['status'] }}</h2>
+  <np-button
+    variant="text"
+    severity="secondary"
+    icon="x"
+    label=""
+    ariaLabel="Close"
+    (clicked)="ref.close()"
+  />
+</header>
+
+<div class="bb-dialog__content">
+  <p>You can't sign in to this account right now.</p>
+  @if (data['reason']) {
+    <div class="reason">
+      <span class="label">Reason</span>
+      <p>{{ data['reason'] }}</p>
+    </div>
+  }
+  <p class="help">
+    Think this is a mistake?
+    <a routerLink="/contact" (click)="ref.close()">Contact support</a>.
+  </p>
+</div>
+
+<div class="bb-dialog__actions">
+  <np-button severity="primary" label="Close" (clicked)="ref.close()" />
+</div>

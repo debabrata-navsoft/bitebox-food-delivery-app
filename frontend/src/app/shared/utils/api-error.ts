@@ -29,6 +29,13 @@ export function errorCode(error: unknown): string | undefined {
   return undefined;
 }
 
+/** An error's `details` as `{ field: message }` (any status). */
+export function errorDetails(error: unknown): Record<string, string> {
+  if (!(error instanceof HttpErrorResponse)) return {};
+  const details = (error.error as ApiErrorBody | null)?.error?.details ?? [];
+  return Object.fromEntries(details.map((d) => [d.field, d.message]));
+}
+
 /** A resource's value, or null until it has one (while loading the first time, or after an error). */
 export function resourceValue<T>(resource: { hasValue: () => boolean; value: () => T }): Signal<T | null> {
   return computed(() => (resource.hasValue() ? resource.value() : null));

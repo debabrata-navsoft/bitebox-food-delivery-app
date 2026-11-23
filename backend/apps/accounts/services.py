@@ -167,7 +167,7 @@ def _safe(hook: RegistrationHook, *args: Any) -> Callable[[], None]:
     return run
 
 
-# Why a non-active account cannot sign in (403 FORBIDDEN, as for a suspension before).
+# Why a non-active account cannot sign in (403 ACCOUNT_BLOCKED), followed by the admin's reason.
 BLOCKED_SIGN_IN: dict[str, str] = {
     UserStatus.INACTIVE: "This account is inactive",
     UserStatus.SUSPENDED: "This account has been suspended",
@@ -177,8 +177,17 @@ BLOCKED_SIGN_IN: dict[str, str] = {
 
 def _signed_in(user: User, portal: str | None, meta: RequestMeta, *fields: str) -> IssuedSession:
     if user.status != UserStatus.ACTIVE:
-        raise ApiError.forbidden(
-            BLOCKED_SIGN_IN.get(user.status, BLOCKED_SIGN_IN[UserStatus.SUSPENDED])
+        message = BLOCKED_SIGN_IN.get(user.status, BLOCKED_SIGN_IN[UserStatus.SUSPENDED])
+        reason = (user.status_reason or "").strip()
+        # The details let the sign-in page show the status and reason in a dialog.
+        raise ApiError(
+            403,
+            f"{message}. Reason: {reason}" if reason else message,
+            code="ACCOUNT_BLOCKED",
+            details=[
+                {"field": "status", "message": user.status},
+                {"field": "reason", "message": reason},
+            ],
         )
     # Each panel has its own sign-in page: a customer can't use the admin login, and so on.
     if portal and user.role != portal:

@@ -51,7 +51,7 @@ export type Permission =
 export type UserStatus = 'active' | 'inactive' | 'suspended' | 'blocked';
 export const USER_STATUS_META: Record<UserStatus, { label: string; tone: string; hint: string }> = {
   active: { label: 'Active', tone: 'tone-good', hint: 'Can sign in and use BiteBox.' },
-  inactive: { label: 'Inactive', tone: '', hint: 'Switched off, e.g. closed on request.' },
+  inactive: { label: 'Inactive', tone: 'tone-muted', hint: 'Switched off, e.g. closed on request.' },
   suspended: { label: 'Suspended', tone: 'tone-warn', hint: 'Temporarily locked out.' },
   blocked: { label: 'Blocked', tone: 'tone-bad', hint: 'Permanently banned.' },
 };

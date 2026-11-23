@@ -1625,7 +1625,7 @@ np-time-picker .time-picker-field {
   }
 }
 
-// Small coloured status badge: .tone-good / -warn / -bad / -info (neutral by default).
+// Small coloured status badge: .tone-good / -warn / -bad / -info / -muted (neutral by default).
 .bb-badge {
   display: inline-block;
   padding: 2px 10px;
@@ -1651,6 +1651,10 @@ np-time-picker .time-picker-field {
   &.tone-info {
     background: var(--bb-info-bg);
     color: var(--bb-info-ink);
+  }
+  &.tone-muted {
+    background: var(--bb-border);
+    color: var(--bb-ink-muted);
   }
 }
 

@@ -89,8 +89,9 @@ def test_every_non_active_status_blocks_sign_in_and_ends_sessions(
     assert not Session.objects.filter(user=customer, revoked_at__isnull=True).exists()
     refused = login(customer.email, make.PASSWORD)
     assert refused.status_code == 403
-    assert refused.json()["error"]["code"] == "FORBIDDEN"
-    assert refused.json()["message"] == message
+    assert refused.json()["error"]["code"] == "ACCOUNT_BLOCKED"
+    assert refused.json()["message"] == f"{message}. Reason: {REASON}"
+    assert field_errors(refused) == {"status": status, "reason": REASON}
 
 
 def test_reactivation_clears_the_reason_and_lets_the_person_back_in() -> None:
