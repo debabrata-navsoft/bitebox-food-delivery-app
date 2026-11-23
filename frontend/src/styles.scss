@@ -752,6 +752,11 @@ np-tabs.bb-tab-strip {
     scrollbar-width: none;
     scroll-behavior: smooth;
   }
+
+  // Readable tabs on every strip (NexPrime's default is 14px).
+  .tab-list .tab {
+    font-size: 1rem;
+  }
 }
 
 // A narrower np-menu popup for short action lists (e.g. Edit / Delete). Keep the width in sync with

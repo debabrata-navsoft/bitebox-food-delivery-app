@@ -3,11 +3,12 @@ import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  OnInit,
   computed,
   effect,
   inject,
   input,
-  OnInit,
+  linkedSignal,
   signal,
   untracked,
 } from '@angular/core';
@@ -32,6 +33,7 @@ import {
 } from '../../../../core/models/admin-roles.models';
 import { InrPipe, formatPaise } from '../../../../shared/pipes/money.pipes';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
+import { TabStrip } from '../../../../shared/components/tab-strip/tab-strip';
 
 const COPY: Record<PayoutType, { title: string; subtitle: string; payee: string }> = {
   restaurant: {
@@ -59,6 +61,7 @@ const COPY: Record<PayoutType, { title: string; subtitle: string; payee: string 
     ListEmpty,
     PageHeader,
     InrPipe,
+    TabStrip,
   ],
   templateUrl: './payouts.html',
   styleUrl: './payouts.scss',
@@ -81,9 +84,16 @@ export class PayoutsPage implements OnInit {
     stream: ({ params }) => this.api.due(params),
   });
   protected readonly dueError = resourceError(this.due, 'Could not load what is owed.');
-  protected readonly dueTotal = computed(() =>
-    (this.due.hasValue() ? this.due.value() : []).reduce((n, r) => n + r.amountPaise, 0),
-  );
+  /** The payees owed now ([] while loading). */
+  protected readonly owed = computed(() => (this.due.hasValue() ? this.due.value() : []));
+  protected readonly dueTotal = computed(() => this.owed().reduce((n, r) => n + r.amountPaise, 0));
+
+  /** Owed now (with the number of payees waiting) and Payout history; a new page starts on Owed now. */
+  protected readonly tabs = computed(() => [
+    { id: 'due', label: 'Owed now', content: '', badge: this.owed().length || undefined },
+    { id: 'history', label: 'Payout history', content: '' },
+  ]);
+  protected readonly tab = linkedSignal({ source: this.type, computation: () => 'due' });
 
   /** The payee section follows the page: restaurants, or riders (user ids), from the API's counts. */
   protected readonly filterSections = computed(() => [

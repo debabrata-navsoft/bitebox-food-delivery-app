@@ -10,7 +10,8 @@ describe('PayoutsPage', () => {
     const p = await listPage(PayoutsPage, '/admin/finance/payouts', { inputs: { type } });
     await new Promise((r) => setTimeout(r)); // the "owed now" resource asks once its effect runs
     const due = { success: true, message: '', data: { items: [] } };
-    for (const req of p.http.match((r) => r.url.endsWith('/admin/finance/payouts/due'))) req.flush(due);
+    for (const req of p.http.match((r) => r.url.endsWith('/admin/finance/payouts/due')))
+      req.flush(due);
     return { ...p, cmp: p.fixture.componentInstance as unknown as Cmp };
   }
 
