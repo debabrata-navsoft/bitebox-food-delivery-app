@@ -45,10 +45,14 @@ h2 {
 .photo-field {
   display: flex;
   align-items: center;
-  gap: var(--bb-space-3);
+  gap: var(--bb-space-4);
 
+  // A round avatar with just an icon and "Add photo"; the file rules sit beside it.
   .photo {
-    flex: 0 0 120px;
+    flex: 0 0 96px;
+  }
+  ::ng-deep np-image-upload .box {
+    border-radius: 50% !important;
   }
   .label {
     display: block;

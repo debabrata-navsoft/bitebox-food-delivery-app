@@ -20,10 +20,11 @@
       <section class="bb-card bb-form" aria-labelledby="personal-title">
         <h2 id="personal-title">Personal details</h2>
         <div class="photo-field">
-          <bb-image-upload class="photo" [(url)]="photo" endpoint="avatars" label="Add photo" aspectRatio="1 / 1" />
+          <bb-image-upload class="photo" [(url)]="photo" endpoint="avatars" label="Add photo" aspectRatio="1 / 1" variant="minimal" />
           <div>
             <span class="label">Profile photo</span>
             <small class="bb-muted">A clear face photo, as customers see it.</small>
+            <small class="bb-muted">JPEG, PNG or WebP, up to 2 MB.</small>
           </div>
         </div>
         <np-text-input [formField]="form.name" label="Full name" autocomplete="off" [error]="shownError(form.name)" />
