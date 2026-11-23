@@ -1,0 +1,12 @@
+<h2 bbDialogTitle>All photos ({{ data().length }})</h2>
+<div class="bb-dialog__content">
+  <bb-photo-gallery
+    class="all"
+    [limit]="null"
+    [photos]="data()"
+    (photosChange)="data.set($event)"
+  />
+</div>
+<div class="bb-dialog__actions">
+  <np-button severity="primary" label="Done" (clicked)="ref.close()" />
+</div>

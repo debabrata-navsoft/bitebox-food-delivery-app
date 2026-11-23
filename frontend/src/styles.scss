@@ -602,6 +602,9 @@ np-icon[matChipAvatar] {
 // rules need two classes to win. --bb-brand stays plum in dark mode; text on it is --bb-on-brand.
 :root {
   --bb-btn-radius: 12px;
+  // Every dialog's corners (BbDialog, Material dialogs, popups).
+  --bb-dialog-radius: var(--bb-radius);
+  --mat-dialog-container-shape: var(--bb-dialog-radius);
 }
 
 np-button
@@ -833,7 +836,7 @@ np-input-otp .otp.otp {
   .mat-mdc-dialog-surface {
     display: flex;
     flex-direction: column;
-    border-radius: var(--bb-radius-xl, 20px) !important;
+    border-radius: var(--bb-dialog-radius) !important;
     max-height: min(88vh, 640px) !important;
     overflow: hidden;
     background: var(--bb-surface, #ffffff);
@@ -883,7 +886,7 @@ np-input-otp .otp.otp {
   flex-direction: column;
   max-height: inherit;
   overflow: hidden;
-  border-radius: var(--bb-radius-lg);
+  border-radius: var(--bb-dialog-radius);
   background: var(--bb-surface);
   color: var(--bb-ink);
   box-shadow: var(--bb-shadow);
@@ -897,13 +900,8 @@ np-input-otp .otp.otp {
   }
 }
 
-// The checkout payment popup: less rounded corners.
-.bb-payment-dialog .cdk-dialog-container {
-  border-radius: var(--bb-radius);
-}
-
 .bb-location-detected-panel .cdk-dialog-container {
-  border-radius: var(--bb-radius-lg);
+  border-radius: var(--bb-dialog-radius);
   box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
   animation: popupScaleIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }

@@ -5,6 +5,40 @@
   gap: var(--bb-space-3);
 }
 
+// "+N": the next photo, dimmed, with the count of the hidden ones; opens them all.
+.more {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--bb-radius-sm);
+  background: var(--bb-brand);
+  cursor: pointer;
+
+  img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.35;
+  }
+
+  span {
+    position: relative;
+    color: var(--bb-on-brand);
+    font-size: 1.4rem;
+    font-weight: 800;
+  }
+
+  &:hover img {
+    opacity: 0.5;
+  }
+}
+
 .small {
   margin: var(--bb-space-2) 0 0;
   font-size: 0.85rem;

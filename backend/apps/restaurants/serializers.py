@@ -156,10 +156,7 @@ class RestaurantInput(serializers.Serializer):
         error_messages={"invalid": "An FSSAI number has 14 digits"},
     )
     fssai_valid_until = serializers.DateField(required=False, allow_null=True)
-    photos = serializers.ListField(
-        child=ImageUrlField(), max_length=8, required=False,
-        error_messages={"max_length": "Add up to 8 photos"},
-    )  # fmt: skip
+    photos = serializers.ListField(child=ImageUrlField(), required=False)  # no limit on how many
     weekly_hours = serializers.JSONField(required=False, allow_null=True)
 
     def validate_weekly_hours(self, value: Any) -> Any:

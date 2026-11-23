@@ -76,7 +76,7 @@ class Restaurant(BaseModel, RatingSummary):
     gstin = models.CharField(max_length=15, blank=True, default="")
     fssai_number = models.CharField(max_length=14, blank=True, default="")
     fssai_valid_until = models.DateField(null=True, blank=True)
-    photos = models.JSONField(default=list)  # up to 8 gallery image URLs (our uploads)
+    photos = models.JSONField(default=list)  # gallery image URLs (our uploads), any number
     # {"mon": [{"open": "09:00", "close": "23:00"}], ..., "sun": []}; null: the daily hours below.
     weekly_hours = models.JSONField(null=True, blank=True)
     # Daily hours (one slot) in `timezone`, used when there are no weekly hours.

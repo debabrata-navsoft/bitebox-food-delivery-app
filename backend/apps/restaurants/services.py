@@ -360,6 +360,7 @@ def list_public(query: dict[str, Any], page: Page) -> dict[str, Any]:
         "items": [
             {
                 **restaurant_json(r, owner="public", distance_m=getattr(r, "distance_m", None)),
+                "photos": [],  # the gallery has no limit: only the restaurant's page loads it
                 "offer": offers.get(str(r.pk)),
             }
             for r in items

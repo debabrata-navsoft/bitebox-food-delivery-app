@@ -620,6 +620,18 @@ def test_gallery_photos_are_saved_and_come_back_on_reload() -> None:
     assert reloaded["photos"] == photos
 
 
+def test_the_gallery_takes_any_number_of_photos_but_lists_leave_them_out() -> None:
+    owner = as_(partner())
+    owner.post("/api/v1/my/restaurant", payload(), format="json")
+    photos = [f"http://localhost:8000/uploads/images/gallery-{i}.webp" for i in range(20)]
+    saved = owner.patch("/api/v1/my/restaurant", {**payload(), "photos": photos}, format="json")
+    assert saved.status_code == 200, saved.json()
+    assert len(saved.json()["data"]["restaurant"]["photos"]) == 20
+    Restaurant.objects.update(status="approved")
+    items = APIClient().get("/api/v1/restaurants").json()["data"]["items"]
+    assert [r["photos"] for r in items] == [[]]  # the list stays light
+
+
 def test_customers_see_restaurants_within_the_admin_delivery_range() -> None:
     seed_catalog()  # ~5 km from these coordinates
     url = "/api/v1/restaurants?lat=12.9716&lng=77.5946"

@@ -35,5 +35,4 @@ export const choosePayment = (dialog: BbDialog, data: PaymentDialogData) =>
     data,
     width: '680px',
     disableClose: true, // only Cancel (or picking a method) closes it
-    panelClass: 'bb-payment-dialog',
   });

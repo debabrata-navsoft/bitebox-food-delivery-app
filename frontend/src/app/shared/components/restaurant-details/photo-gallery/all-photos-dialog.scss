@@ -1,0 +1,4 @@
+// Bigger tiles than the details page: there is room for them here.
+.all ::ng-deep .tiles {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
