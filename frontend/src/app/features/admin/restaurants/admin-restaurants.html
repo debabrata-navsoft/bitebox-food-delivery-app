@@ -50,7 +50,7 @@
     <ul class="rows" [class.dim]="list.loading()">
       @for (r of list.data()!.items; track r.id) {
         <li>
-          <a [routerLink]="['/admin/restaurants', r.id]" class="row">
+          <div class="row">
             @if (r.imageUrl | usableImage) {
               <img [bbSrc]="r.imageUrl" alt="" loading="lazy" />
             } @else {
@@ -64,8 +64,13 @@
             <span class="when bb-muted small"
               >Submitted {{ r.createdAt | date: 'mediumDate' }}</span
             >
-            <np-icon name="chevron-right" class="mat-icon chev" matButtonIcon />
-          </a>
+            <a
+              class="bb-btn bb-btn--outlined bb-pill-action view"
+              [routerLink]="['/admin/restaurants', r.id]"
+              [attr.aria-label]="'View ' + r.name"
+              ><np-icon name="eye" />View</a
+            >
+          </div>
         </li>
       }
     </ul>

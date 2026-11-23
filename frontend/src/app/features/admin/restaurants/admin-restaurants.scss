@@ -48,12 +48,6 @@
   align-items: center;
   gap: var(--bb-space-3);
   padding: var(--bb-space-3) var(--bb-space-4);
-  text-decoration: none;
-  color: inherit;
-
-  &:hover {
-    background: var(--bb-surface-alt);
-  }
 
   @include bp.tablet-up {
     grid-template-columns: auto minmax(0, 1fr) auto auto;
@@ -100,6 +94,8 @@
   }
 }
 
-.chev {
-  color: var(--bb-ink-muted);
+// Plum and only as wide as its label.
+.view {
+  --tone: var(--bb-plum);
+  min-width: 0;
 }
