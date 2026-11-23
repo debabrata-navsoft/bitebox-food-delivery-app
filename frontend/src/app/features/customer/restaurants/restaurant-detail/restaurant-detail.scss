@@ -7,8 +7,7 @@
 .hero {
   color: #fff6e5;
   background:
-    radial-gradient(circle at 90% 10%, rgb(255 181 46 / 30%) 0, transparent 45%),
-    var(--bb-brand);
+    radial-gradient(circle at 90% 10%, rgb(255 181 46 / 30%) 0, transparent 45%), var(--bb-brand);
 
   &.has-image {
     background:
@@ -75,6 +74,15 @@
     }
     &.veg {
       background: rgb(31 138 76 / 45%);
+    }
+    // The rating: a solid green badge, like the restaurant cards.
+    &.rated {
+      background: var(--bb-success-solid);
+      color: #fff;
+
+      np-icon {
+        color: inherit;
+      }
     }
   }
 
@@ -174,8 +182,7 @@
   }
 }
 
-.menu-section,
-.reviews-section {
+.menu-section {
   scroll-margin-top: 130px;
   margin-bottom: var(--bb-space-5);
 
@@ -419,6 +426,11 @@
 }
 
 .rating-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
   color: inherit;
   text-decoration: none;
   display: inline-flex;
@@ -427,14 +439,6 @@
 
   &:hover {
     text-decoration: underline;
-  }
-}
-
-.reviews-section {
-  margin-top: var(--bb-space-6);
-
-  h2 {
-    outline: none;
   }
 }
 
@@ -520,4 +524,122 @@
 
 .offers {
   margin-bottom: var(--bb-space-4);
+}
+
+// Tabs under the header: Overview, Order online, Reviews, Photos.
+.tabs-bar {
+  margin-top: var(--bb-space-3);
+
+  // Bigger tabs than the admin pages' strip: this is the page's main navigation.
+  ::ng-deep .tab-list {
+    gap: var(--bb-space-5);
+  }
+  ::ng-deep .tab {
+    padding: 12px 2px;
+    font-size: 1.05rem;
+  }
+}
+
+.tab-page {
+  padding-block: var(--bb-space-4) var(--bb-space-6);
+}
+
+// Overview: about the restaurant, then rating and a few photos beside it (below on phones).
+.overview {
+  display: grid;
+  gap: var(--bb-space-4);
+  align-items: start;
+  padding-block: var(--bb-space-4) var(--bb-space-6);
+
+  @include bp.desktop-up {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+
+  h2 {
+    margin: 0 0 var(--bb-space-3);
+    font-size: 1.15rem;
+  }
+
+  .main,
+  .side {
+    display: grid;
+    gap: var(--bb-space-4);
+    min-width: 0;
+  }
+}
+
+.details {
+  display: grid;
+  gap: var(--bb-space-2);
+  margin: var(--bb-space-3) 0 var(--bb-space-4);
+
+  div {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: var(--bb-space-3);
+    padding-bottom: var(--bb-space-2);
+    border-bottom: 1px dashed var(--bb-border);
+  }
+
+  dt {
+    color: var(--bb-ink-muted);
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+.big-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  --bb-icon-size: 28px;
+
+  np-icon {
+    color: var(--bb-amber-600);
+  }
+}
+
+// Photos: tiles as many per row as fit; the overview shows 4 in two columns.
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--bb-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  &.preview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--bb-space-2);
+    margin-bottom: var(--bb-space-3);
+  }
+}
+
+.photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius-sm);
+  background: var(--bb-surface-alt);
+  cursor: zoom-in;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover img,
+  &:focus-visible img {
+    transform: scale(1.05);
+  }
 }

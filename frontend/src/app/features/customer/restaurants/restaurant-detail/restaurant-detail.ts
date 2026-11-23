@@ -35,6 +35,9 @@ import { FoodDetailDialog, FoodDetailData } from '../../food/food-detail-dialog/
 import { form } from '@angular/forms/signals';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
 import { ImageFallback, UsableImagePipe } from '../../../../shared/directives/broken-images';
+import { MatDialog } from '@angular/material/dialog';
+import { openPhotoViewer } from '../../../../shared/components/photo-viewer/photo-viewer';
+import { TabStrip } from '../../../../shared/components/tab-strip/tab-strip';
 
 @Component({
   selector: 'bb-restaurant-detail',
@@ -57,6 +60,7 @@ import { ImageFallback, UsableImagePipe } from '../../../../shared/directives/br
     PublicReviews,
     Stars,
     OffersStrip,
+    TabStrip,
   ],
   templateUrl: './restaurant-detail.html',
   styleUrl: './restaurant-detail.scss',
@@ -65,6 +69,7 @@ import { ImageFallback, UsableImagePipe } from '../../../../shared/directives/br
 export class RestaurantDetail {
   private readonly catalog = inject(CatalogService);
   private readonly dialog = inject(BbDialog);
+  private readonly matDialog = inject(MatDialog);
   private readonly title = inject(Title);
   private readonly document = inject(DOCUMENT);
   protected readonly cart = inject(CartService);
@@ -73,6 +78,27 @@ export class RestaurantDetail {
   readonly slug = input.required<string>();
 
   protected readonly restaurant = signal<Restaurant | null>(null);
+
+  /** Overview, Order online (the menu, shown first), Reviews and Photos. */
+  protected readonly tab = signal('order');
+  protected readonly tabs = computed(() => {
+    const r = this.restaurant();
+    return [
+      { id: 'overview', label: 'Overview', content: '' },
+      { id: 'order', label: 'Order online', content: '' },
+      { id: 'reviews', label: 'Reviews', content: '', badge: r?.rating.count || undefined },
+      ...(r?.photos?.length
+        ? [{ id: 'photos', label: 'Photos', content: '', badge: r.photos.length }]
+        : []),
+    ];
+  });
+
+  /** The restaurant's gallery, full screen (zoom, previous/next). */
+  protected openPhotos(index: number): void {
+    const r = this.restaurant();
+    if (r?.photos?.length)
+      openPhotoViewer(this.matDialog, { images: r.photos, index, caption: r.name });
+  }
   protected readonly sections = signal<MenuSection[]>([]);
   protected readonly loading = signal(true);
   protected readonly notFound = signal(false);
@@ -190,13 +216,6 @@ export class RestaurantDetail {
     this.document
       .getElementById(this.sectionId(section))
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  protected scrollToReviews(event: Event): void {
-    event.preventDefault();
-    const target = this.document.getElementById('reviews');
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    target?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
   }
 
   protected openItem(item: FoodItem): void {

@@ -5,6 +5,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { CatalogService } from '../../../../core/services/catalog.service';
 import { ReviewService } from '../../../../core/services/review.service';
 import { FoodItem, MenuSection, Restaurant } from '../../../../core/models/catalog.models';
+import { MatDialog } from '@angular/material/dialog';
 import { RestaurantDetail } from './restaurant-detail';
 
 const restaurant = {
@@ -27,11 +28,24 @@ const restaurant = {
 } as unknown as Restaurant;
 
 const dish = (name: string, isVeg: boolean, isAvailable = true) =>
-  ({ id: name, name, isVeg, isAvailable, pricePaise: 10000, category: { name: 'Biryani', slug: 'biryani', icon: 'rice_bowl' } }) as unknown as FoodItem;
+  ({
+    id: name,
+    name,
+    isVeg,
+    isAvailable,
+    pricePaise: 10000,
+    category: { name: 'Biryani', slug: 'biryani', icon: 'rice_bowl' },
+  }) as unknown as FoodItem;
 
 const sections: MenuSection[] = [
-  { category: { id: 'c1', name: 'Biryani', slug: 'biryani', icon: 'rice_bowl' }, items: [dish('Chicken Biryani', false), dish('Veg Biryani', true)] },
-  { category: { id: 'c2', name: 'Desserts', slug: 'desserts', icon: 'icecream' }, items: [dish('Kulfi', true, false)] },
+  {
+    category: { id: 'c1', name: 'Biryani', slug: 'biryani', icon: 'rice_bowl' },
+    items: [dish('Chicken Biryani', false), dish('Veg Biryani', true)],
+  },
+  {
+    category: { id: 'c2', name: 'Desserts', slug: 'desserts', icon: 'icecream' },
+    items: [dish('Kulfi', true, false)],
+  },
 ];
 
 describe('RestaurantDetail', () => {
@@ -80,8 +94,55 @@ describe('RestaurantDetail', () => {
     toggle.click();
     await fixture.whenStable();
     // Strip the veg badge's screen-reader label ("Vegetarian") from each name.
-    const names = Array.from(el.querySelectorAll('.dish-name')).map((n) => n.textContent?.replace(/^\s*(Non-)?vegetarian/i, '').trim());
+    const names = Array.from(el.querySelectorAll('.dish-name')).map((n) =>
+      n.textContent?.replace(/^\s*(Non-)?vegetarian/i, '').trim(),
+    );
     expect(names).toEqual(['Veg Biryani', 'Kulfi']);
+  });
+
+  /** The page's tabs (Overview, Order online, Reviews, Photos). */
+  type Tabs = { tab: { set(v: string): void }; tabs: () => { id: string; label: string }[] };
+  const page = () => fixture.componentInstance as unknown as Tabs;
+  const tabTo = async (id: string) => {
+    page().tab.set(id);
+    await fixture.whenStable();
+  };
+
+  it('opens on the menu, with Overview, Reviews and Photos tabs', async () => {
+    catalog.restaurant.mockReturnValue(of({ ...restaurant, photos: ['/uploads/p1.jpg'] }));
+    const el = await create();
+    expect(el.querySelectorAll('.menu-section').length).toBe(2);
+    expect(
+      page()
+        .tabs()
+        .map((t) => t.label),
+    ).toEqual(['Overview', 'Order online', 'Reviews', 'Photos']);
+    await tabTo('overview');
+    expect(el.querySelector('.about')!.textContent).toContain('Cost for two');
+    expect(el.querySelector('.menu-section')).toBeNull();
+  });
+
+  it("shows the restaurant's photos and opens one full screen", async () => {
+    const photos = ['/uploads/p1.jpg', '/uploads/p2.jpg'];
+    catalog.restaurant.mockReturnValue(of({ ...restaurant, photos }));
+    const el = await create();
+    await tabTo('photos');
+    const open = vi.spyOn(TestBed.inject(MatDialog), 'open').mockReturnValue({} as never);
+    const thumbs = el.querySelectorAll<HTMLButtonElement>('.photo-grid button');
+    expect(thumbs.length).toBe(2);
+    thumbs[1].click();
+    expect(open.mock.calls[0][1]?.data).toEqual(
+      expect.objectContaining({ images: photos, index: 1, caption: 'Spice Route Kitchen' }),
+    );
+  });
+
+  it('has no Photos tab when the restaurant has no photos', async () => {
+    await create();
+    expect(
+      page()
+        .tabs()
+        .map((t) => t.id),
+    ).not.toContain('photos');
   });
 
   it('searches within the menu', async () => {
