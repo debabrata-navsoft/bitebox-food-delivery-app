@@ -104,8 +104,13 @@ export class AdminUserDetail {
   readonly id = input.required<string>();
   /** Route data: true on the edit page. */
   readonly edit = input(false, { transform: booleanAttribute });
-  /** Route data: the list this page belongs to (Customers or Users). */
-  readonly base = input('/admin/users');
+  /**
+   * Route data: the list this page belongs to (Customers or Users). Routes without it bind
+   * `undefined`, which would override a plain default, hence the transform.
+   */
+  readonly base = input('/admin/users', {
+    transform: (v: string | undefined) => v ?? '/admin/users',
+  });
 
   protected readonly roleMeta = ROLE_META;
   protected readonly statusMeta = USER_STATUS_META;
