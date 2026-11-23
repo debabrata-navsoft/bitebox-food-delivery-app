@@ -320,6 +320,38 @@ img {
   padding: var(--bb-space-5);
 }
 
+// A card's heading: an icon tile, the title and a one-line description.
+.bb-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-space-3);
+  margin-bottom: var(--bb-space-4);
+
+  h2,
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+
+  p {
+    margin: 2px 0 0;
+    color: var(--bb-ink-muted);
+    font-size: 0.88rem;
+  }
+}
+
+.bb-card-head__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--bb-amber-100);
+  color: var(--bb-plum);
+  --bb-icon-size: 20px;
+}
+
 .bb-muted {
   color: var(--bb-ink-muted);
 }

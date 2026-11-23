@@ -1,9 +1,17 @@
 @if (user(); as u) {
   <section class="bb-card" aria-labelledby="verify-title">
-    <h3 id="verify-title">Verification</h3>
+    <header class="bb-card-head">
+      <span class="bb-card-head__icon"
+        ><np-icon name="shield-check" class="mat-icon" matButtonIcon
+      /></span>
+      <div>
+        <h3 id="verify-title">Verification</h3>
+        <p>Verified contacts keep your account safe and your updates arriving.</p>
+      </div>
+    </header>
     <ul class="rows">
       <li>
-        <np-icon name="mail" class="mat-icon" matButtonIcon />
+        <span class="row-icon"><np-icon name="mail" class="mat-icon" matButtonIcon /></span>
         <span class="what">
           <strong>Email</strong>
           <span class="bb-muted small">{{ u.email }}</span>
@@ -23,7 +31,7 @@
         }
       </li>
       <li>
-        <np-icon name="smartphone" class="mat-icon" matButtonIcon />
+        <span class="row-icon"><np-icon name="smartphone" class="mat-icon" matButtonIcon /></span>
         <span class="what">
           <strong>Mobile number</strong>
           <span class="bb-muted small">{{ u.phone || 'Not added' }}</span>

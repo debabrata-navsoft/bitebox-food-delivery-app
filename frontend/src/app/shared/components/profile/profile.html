@@ -3,45 +3,77 @@
 @if (user(); as u) {
   <div class="layout">
     <aside class="bb-card summary">
+      <div class="banner" aria-hidden="true"></div>
       <div class="photo">
         <bb-image-upload
           [url]="u.avatarUrl ?? ''"
           (urlChange)="saveAvatar($event)"
           endpoint="avatars"
           aspectRatio="1 / 1"
+          variant="minimal"
           label="Add a photo"
         />
       </div>
       <h2>{{ u.name }}</h2>
       <span class="role-chip">{{ roleLabel() }}</span>
-      <dl>
-        <div>
-          <dt>Email</dt>
-          <dd>{{ u.email }}</dd>
-        </div>
-        <div>
-          <dt>Member since</dt>
-          <dd>{{ u.createdAt | date: 'mediumDate' }}</dd>
-        </div>
-        @if (u.lastLoginAt) {
-          <div>
-            <dt>Last sign-in</dt>
-            <dd>{{ u.lastLoginAt | date: 'medium' }}</dd>
-          </div>
+      <div class="checks">
+        <span [class.ok]="u.emailVerified">
+          <np-icon
+            [name]="u.emailVerified ? 'badge-check' : 'mail-warning'"
+            class="mat-icon"
+            matButtonIcon
+          />
+          Email {{ u.emailVerified ? 'verified' : 'not verified' }}
+        </span>
+        @if (u.phone) {
+          <span [class.ok]="u.phoneVerified">
+            <np-icon
+              [name]="u.phoneVerified ? 'badge-check' : 'smartphone'"
+              class="mat-icon"
+              matButtonIcon
+            />
+            Mobile {{ u.phoneVerified ? 'verified' : 'not verified' }}
+          </span>
         }
-      </dl>
+      </div>
+      <ul class="facts">
+        <li>
+          <np-icon name="mail" class="mat-icon" matButtonIcon />
+          <span><small>Email</small>{{ u.email }}</span>
+        </li>
+        <li>
+          <np-icon name="calendar-check" class="mat-icon" matButtonIcon />
+          <span><small>Member since</small>{{ u.createdAt | date: 'd MMM y' }}</span>
+        </li>
+        @if (u.lastLoginAt) {
+          <li>
+            <np-icon name="log-in" class="mat-icon" matButtonIcon />
+            <span><small>Last sign-in</small>{{ u.lastLoginAt | date: 'd MMM y, h:mm a' }}</span>
+          </li>
+        }
+      </ul>
     </aside>
 
     <div class="forms">
       <section class="bb-card" aria-labelledby="details-title">
-        <h3 id="details-title">Personal details</h3>
+        <header class="bb-card-head">
+          <span class="bb-card-head__icon"
+            ><np-icon name="user-round" class="mat-icon" matButtonIcon
+          /></span>
+          <div>
+            <h3 id="details-title">Personal details</h3>
+            <p>Your name and how we can reach you.</p>
+          </div>
+        </header>
         @if (profileError()) {
           <div class="bb-alert error" role="alert">
-            <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ profileError() }}</span>
+            <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{
+              profileError()
+            }}</span>
           </div>
         }
         <form class="bb-form" [formRoot]="profileForm">
-          <div class="bb-form-row">
+          <div class="fields">
             <np-text-input
               [formField]="profileForm.name"
               label="Full name"
@@ -54,10 +86,12 @@
               hint="Leave empty to remove"
               [error]="shownError(profileForm.phone)"
             />
-          </div>
-          <div class="bb-form-row">
             <div class="bb-field">
-              <np-select [formField]="profileForm.gender" label="Gender" [options]="genderOptions" />
+              <np-select
+                [formField]="profileForm.gender"
+                label="Gender"
+                [options]="genderOptions"
+              />
             </div>
             @if (isCustomer()) {
               @if (savedBirthDate(); as day) {
@@ -85,7 +119,7 @@
           </div>
           <div class="actions">
             <button
-              mat-flat-button
+              class="bb-btn"
               type="submit"
               [disabled]="profileForm().submitting() || !profileForm().dirty()"
             >
@@ -102,45 +136,56 @@
       <bb-account-verification />
 
       <section class="bb-card" aria-labelledby="password-title">
-        <h3 id="password-title">Change password</h3>
-        <p class="bb-muted">You'll be signed out on all devices after changing your password.</p>
+        <header class="bb-card-head">
+          <span class="bb-card-head__icon"
+            ><np-icon name="lock-keyhole" class="mat-icon" matButtonIcon
+          /></span>
+          <div>
+            <h3 id="password-title">Change password</h3>
+            <p>You'll be signed out on all devices after changing it.</p>
+          </div>
+        </header>
         @if (passwordError()) {
           <div class="bb-alert error" role="alert">
-            <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ passwordError() }}</span>
+            <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{
+              passwordError()
+            }}</span>
           </div>
         }
         <form class="bb-form narrow" [formRoot]="passwordForm">
-          <np-text-input
-            [formField]="passwordForm.currentPassword"
-            label="Current password"
-            type="password"
-            placeholder="••••••••"
-            autocomplete="current-password"
-            [error]="shownError(passwordForm.currentPassword)"
-          />
-          <np-text-input
-            [formField]="passwordForm.newPassword"
-            label="New password"
-            type="password"
-            placeholder="••••••••"
-            hint="At least 8 characters, with a letter and a number"
-            autocomplete="new-password"
-            [error]="shownError(passwordForm.newPassword)"
-          />
-          <np-text-input
-            [formField]="passwordForm.confirmPassword"
-            label="Confirm new password"
-            type="password"
-            placeholder="••••••••"
-            autocomplete="new-password"
-            [error]="shownError(passwordForm.confirmPassword)"
-          />
+          <div class="fields one-column">
+            <np-text-input
+              [formField]="passwordForm.currentPassword"
+              label="Current password"
+              type="password"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              [error]="shownError(passwordForm.currentPassword)"
+            />
+            <np-text-input
+              [formField]="passwordForm.newPassword"
+              label="New password"
+              type="password"
+              placeholder="••••••••"
+              hint="At least 8 characters, with a letter and a number"
+              autocomplete="new-password"
+              [error]="shownError(passwordForm.newPassword)"
+            />
+            <np-text-input
+              [formField]="passwordForm.confirmPassword"
+              label="Confirm new password"
+              type="password"
+              placeholder="••••••••"
+              autocomplete="new-password"
+              [error]="shownError(passwordForm.confirmPassword)"
+            />
+          </div>
           <div class="actions">
-            <button mat-stroked-button type="submit" [disabled]="passwordForm().submitting()">
+            <button class="bb-btn" type="submit" [disabled]="passwordForm().submitting()">
               @if (passwordForm().submitting()) {
                 <mat-progress-spinner mode="indeterminate" diameter="20" aria-label="Updating" />
               } @else {
-                Update password
+                <np-icon name="lock" class="mat-icon" matButtonIcon />Update password
               }
             </button>
           </div>

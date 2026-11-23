@@ -1,9 +1,5 @@
 @use 'breakpoints' as bp;
 
-h3 {
-  margin: 0 0 var(--bb-space-3);
-}
-
 .rows {
   list-style: none;
   margin: 0;
@@ -20,6 +16,18 @@ h3 {
   li + li {
     border-top: 1px solid var(--bb-border);
   }
+}
+
+.row-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bb-surface-alt);
+  color: var(--bb-plum);
+  --bb-icon-size: 18px;
 }
 
 .what {

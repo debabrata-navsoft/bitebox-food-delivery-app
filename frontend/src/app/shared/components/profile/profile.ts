@@ -126,7 +126,9 @@ export class Profile {
         await firstValueFrom(this.rewards.saveBirthday(isoDay(birthDate)));
       }
       // Saved last, so the user it returns carries the new date of birth too.
-      const user = await firstValueFrom(this.auth.updateProfile({ name, phone, gender: gender || null }));
+      const user = await firstValueFrom(
+        this.auth.updateProfile({ name, phone, gender: gender || null }),
+      );
       this.profileForm().reset(detailsOf(user));
       this.notify.success('Profile updated');
       return undefined;
