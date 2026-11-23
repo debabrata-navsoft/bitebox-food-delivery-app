@@ -20,6 +20,7 @@ h2 {
   font-size: 1.1rem;
 }
 
+// Two columns that stack their cards, so a short card leaves no gap under it.
 .layout {
   display: grid;
   gap: var(--bb-space-4);
@@ -28,6 +29,12 @@ h2 {
   @include bp.desktop-up {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
+}
+
+.col {
+  display: grid;
+  gap: var(--bb-space-4);
+  align-content: start;
 }
 
 .bb-form {
