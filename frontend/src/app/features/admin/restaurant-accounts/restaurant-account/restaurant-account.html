@@ -17,12 +17,15 @@
       }
     </span>
     <div class="who">
-      <h1>{{ r.name }} <span class="id">{{ shortId(r.id) }}</span></h1>
-      <span class="bb-badge {{ statusTone[r.status] }}">{{ statusLabel[r.status] }}</span>
-      <span class="bb-badge {{ kycMeta[d.kyc.status].tone }}">KYC: {{ kycMeta[d.kyc.status].label }}</span>
-      @if (r.status === 'approved') {
-        <span class="bb-badge" [class.tone-good]="r.isAcceptingOrders">{{ r.isAcceptingOrders ? 'Taking orders' : 'Closed for orders' }}</span>
-      }
+      <h1>{{ r.name }}</h1>
+      <div class="chips">
+        <span class="bb-badge {{ statusTone[r.status] }}">{{ statusLabel[r.status] }}</span>
+        <span class="bb-badge {{ kycMeta[d.kyc.status].tone }}">KYC: {{ kycMeta[d.kyc.status].label }}</span>
+        @if (r.status === 'approved') {
+          <span class="bb-badge" [class.tone-good]="r.isAcceptingOrders">{{ r.isAcceptingOrders ? 'Taking orders' : 'Closed for orders' }}</span>
+        }
+        <span class="id" title="Restaurant ID">{{ shortId(r.id) }}</span>
+      </div>
       @if (r.statusReason && r.status !== 'approved') {
         <p class="bb-muted small reason">{{ r.statusReason }}</p>
       }

@@ -18,15 +18,18 @@
       }
     </span>
     <div class="who">
-      <h1>{{ u.name }} <span class="id">{{ shortId(u.id) }}</span></h1>
-      <span class="bb-badge {{ verificationTone[review()] }}">{{ verificationLabel[review()] }}</span>
-      <span class="bb-badge {{ kycMeta[d.kyc.status].tone }}">KYC: {{ kycMeta[d.kyc.status].label }}</span>
-      @if (availability(); as a) {
-        <span class="bb-badge {{ a.tone }}">{{ a.label }}</span>
-      }
-      @if (u.status !== 'active') {
-        <span class="bb-badge {{ accountMeta[u.status].tone }}">Account {{ accountMeta[u.status].label }}</span>
-      }
+      <h1>{{ u.name }}</h1>
+      <div class="chips">
+        <span class="bb-badge {{ verificationTone[review()] }}">{{ verificationLabel[review()] }}</span>
+        <span class="bb-badge {{ kycMeta[d.kyc.status].tone }}">KYC: {{ kycMeta[d.kyc.status].label }}</span>
+        @if (availability(); as a) {
+          <span class="bb-badge {{ a.tone }}">{{ a.label }}</span>
+        }
+        @if (u.status !== 'active') {
+          <span class="bb-badge {{ accountMeta[u.status].tone }}">Account {{ accountMeta[u.status].label }}</span>
+        }
+        <span class="id" title="Account ID">{{ shortId(u.id) }}</span>
+      </div>
       @if (r.verification; as v) {
         @if (v.reason && v.status !== 'approved') {
           <p class="bb-muted small reason">{{ v.reason }}</p>
