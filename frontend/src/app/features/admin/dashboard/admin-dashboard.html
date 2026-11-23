@@ -133,15 +133,27 @@
     <ul class="recent-list">
       @for (u of recent(); track u.id) {
         <li>
-          <span class="avatar" aria-hidden="true">{{ u.name.charAt(0).toUpperCase() }}</span>
-          <span class="who">
-            <strong>{{ u.name }}</strong>
-            <span class="bb-muted">{{ u.email }}</span>
-          </span>
-          <span class="bb-role-chip role-{{ u.role }}">{{ roleMeta[u.role].label }}</span>
-          <time class="bb-muted when" [attr.datetime]="u.createdAt">{{
-            u.createdAt | date: 'mediumDate'
-          }}</time>
+          <a [routerLink]="['/admin/users', u.id]" [attr.aria-label]="'View ' + u.name">
+            <span class="avatar" aria-hidden="true">{{ u.name.charAt(0).toUpperCase() }}</span>
+            <span class="who">
+              <strong>{{ u.name }}</strong>
+              <span class="bb-muted">{{ u.email }}</span>
+            </span>
+            <span class="role"
+              ><span class="bb-role-chip role-{{ u.role }}">{{
+                roleMeta[u.role].label
+              }}</span></span
+            >
+            <span class="status"
+              ><span class="bb-badge {{ statusMeta[u.status].tone }}">{{
+                statusMeta[u.status].label
+              }}</span></span
+            >
+            <time class="bb-muted when" [attr.datetime]="u.createdAt">{{
+              u.createdAt | date: 'mediumDate'
+            }}</time>
+            <np-icon name="chevron-right" class="mat-icon chevron" />
+          </a>
         </li>
       }
     </ul>

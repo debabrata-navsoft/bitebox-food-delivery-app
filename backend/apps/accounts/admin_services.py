@@ -20,6 +20,7 @@ from apps.orders.models import Order, OrderStatus
 from apps.rbac.roles import (
     ADMIN_ROLE_VALUES,
     ADMIN_ROLES,
+    MEMBER_ROLE_VALUES,
     MEMBER_ROLES,
     STAFF_ADMIN_ROLES,
     Permission,
@@ -64,30 +65,6 @@ def status_permission(target_role: str, status: str) -> Permission | None:
     if status in (UserStatus.SUSPENDED, UserStatus.BLOCKED):
         return Permission.ACCOUNTS_SUSPEND
     return member_permission(target_role, "status")
-
-
-def list_users(roles: tuple[Role, ...], query: dict[str, Any], page: Page) -> dict[str, Any]:
-    """A page of accounts with one of `roles` (or just query["role"]), newest first."""
-    qs = (
-        User.objects.filter(role=query["role"])
-        if query.get("role")
-        else User.objects.filter(role__in=roles)
-    )
-    if query.get("status"):
-        qs = qs.filter(status=query["status"])
-    if search := (query.get("search") or "").strip():
-        qs = qs.filter(
-            Q(name__icontains=search) | Q(email__icontains=search) | Q(phone__icontains=search)
-        )
-    items, meta = paginate(qs.order_by("-created_at"), page)
-    return {"items": [user_json(u) for u in items], "pagination": meta}
-
-
-def list_members(actor: User, query: dict[str, Any], page: Page) -> dict[str, Any]:
-    """Only the kinds of member this admin may view; asking for another kind is a 403."""
-    roles = viewable_roles(actor)
-    require(bool(roles) and (not query.get("role") or query["role"] in roles))
-    return list_users(roles, query, page)
 
 
 USER_STATUS_FACET = Facet("status", values=UserStatus.values)
@@ -448,6 +425,29 @@ def id_search(search: str) -> Q:
         return Q(id__endswith=hex_id) if _ID_SUFFIX.match(hex_id) else Q(pk__in=[])
 
 
+# --- every member (the Users page) ---------------------------------------------------------------
+MEMBER_FACETS = (Facet("role", values=MEMBER_ROLE_VALUES), USER_STATUS_FACET)
+
+
+def list_members(actor: User, query: dict[str, Any], page: Page) -> dict[str, Any]:
+    """
+    Customers, restaurant partners and riders: only the kinds this admin may view (asking for
+    another kind is a 403). `role` and `status` take several values; search, joined days and the
+    account sorts work as on the customers list.
+    """
+    roles = viewable_roles(actor)
+    require(bool(roles) and set(query.get("role") or ()) <= set(roles))
+
+    def build(q: dict[str, Any]) -> QuerySet[User]:
+        return _accounts(User.objects.filter(role__in=roles), q, MEMBER_FACETS)
+
+    items, meta = paginate(
+        build(query).order_by(*ACCOUNT_SORTS[query.get("sort") or "newest"]), page
+    )
+    result = {"items": [user_json(u) for u in items], "pagination": meta}
+    return with_facets(result, query, build, MEMBER_FACETS)
+
+
 CUSTOMER_FACETS = (
     USER_STATUS_FACET,
     # The four values overlap (a customer is email_verified and phone_unverified...).
@@ -455,12 +455,18 @@ CUSTOMER_FACETS = (
 )
 
 
-def _customers(query: dict[str, Any]) -> QuerySet[User]:
-    qs = apply_facets(User.objects.filter(role=Role.CUSTOMER), query, CUSTOMER_FACETS)
-    qs = qs.filter(joined_between(query))
+def _accounts(
+    qs: QuerySet[User], query: dict[str, Any], specs: tuple[Facet, ...]
+) -> QuerySet[User]:
+    """`qs` narrowed by the facets, the joined days and the search (name, email, phone or id)."""
+    qs = apply_facets(qs, query, specs).filter(joined_between(query))
     if search := (query.get("search") or "").strip():
         qs = qs.filter(person_search(search) | id_search(search))
     return qs
+
+
+def _customers(query: dict[str, Any]) -> QuerySet[User]:
+    return _accounts(User.objects.filter(role=Role.CUSTOMER), query, CUSTOMER_FACETS)
 
 
 def list_customers(query: dict[str, Any], page: Page) -> dict[str, Any]:

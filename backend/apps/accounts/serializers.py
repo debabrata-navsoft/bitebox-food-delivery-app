@@ -12,6 +12,7 @@ from apps.rbac.roles import (
     ADMIN_ROLE_VALUES,
     ADMIN_ROLES,
     ALL_ROLES,
+    MEMBER_ROLE_VALUES,
     PERMISSION_VALUES,
     STAFF_ADMIN_ROLES,
     SUPER_ADMIN_ONLY,
@@ -356,20 +357,6 @@ class StatusInput(serializers.Serializer):
         return attrs
 
 
-class UserListQuery(serializers.Serializer):
-    page = serializers.IntegerField(required=False, min_value=1, max_value=10_000)
-    limit = serializers.IntegerField(required=False, min_value=1, max_value=100)
-    search = serializers.CharField(required=False, allow_blank=True, max_length=100)
-    role = serializers.ChoiceField(choices=[], required=False)
-    status = serializers.ChoiceField(choices=UserStatus.values, required=False)
-
-    def __init__(self, *args: Any, roles: tuple[Role, ...] = (), **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        role_field = self.fields["role"]
-        if isinstance(role_field, serializers.ChoiceField):
-            role_field.choices = [r.value for r in roles]
-
-
 class StaffListQuery(FacetQuery, PageQuery):
     """GET /admin/admins: `role` and `status` take several comma-separated values."""
 
@@ -380,7 +367,8 @@ class StaffListQuery(FacetQuery, PageQuery):
 INVALID: dict[str, Any] = dict.fromkeys(
     ("invalid", "invalid_choice", "null", "blank"), "Invalid value"
 )
-CUSTOMER_SORT_VALUES = ["newest", "oldest", "name", "orders", "spent"]
+ACCOUNT_SORT_VALUES = ["newest", "oldest", "name"]
+CUSTOMER_SORT_VALUES = [*ACCOUNT_SORT_VALUES, "orders", "spent"]
 VERIFICATION_VALUES = ["email_verified", "email_unverified", "phone_verified", "phone_unverified"]
 
 
@@ -424,6 +412,16 @@ class CustomerListQuery(FacetQuery, JoinedListQuery):
     joined_from = day_field()
     joined_to = day_field()
     sort = optional_choice(CUSTOMER_SORT_VALUES)
+
+
+class MemberListQuery(FacetQuery, JoinedListQuery):
+    """GET /admin/users: `role` and `status` take several comma-separated values."""
+
+    role = multi_choice(MEMBER_ROLE_VALUES)
+    status = multi_choice(UserStatus.values)
+    joined_from = day_field()
+    joined_to = day_field()
+    sort = optional_choice(ACCOUNT_SORT_VALUES)
 
 
 # ---------------------------------------------------------------------------

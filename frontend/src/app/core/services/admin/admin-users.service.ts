@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
@@ -8,14 +8,6 @@ import { toParams } from '../../../shared/utils/http-params';
 import { Faceted, ListQuery } from '../../../shared/list/filtered-list';
 import { AddressInput, DeliveryAddress } from '../../models/checkout.models';
 import { Gender, Role, User, UserStatus } from '../../models/user.models';
-
-export interface UserQuery {
-  role?: Role;
-  status?: UserStatus;
-  search?: string;
-  page?: number;
-  limit?: number;
-}
 
 /** GET /admin/users/:id: the account with its addresses, order totals and restaurant. */
 export interface AdminUserDetail {
@@ -51,12 +43,9 @@ export class AdminUsersService {
   private readonly url = `${environment.baseUrl}/admin/users`;
   private readonly customersUrl = `${environment.baseUrl}/admin/customers`;
 
-  list(query: UserQuery = {}): Observable<Paginated<User>> {
-    let params = new HttpParams();
-    for (const [key, value] of Object.entries(query)) {
-      if (value !== undefined && value !== null && value !== '') params = params.set(key, String(value));
-    }
-    return this.http.get<ApiResponse<Paginated<User>>>(this.url, { params }).pipe(map((res) => res.data));
+  /** Customers, restaurant partners and riders (the kinds this admin may view). */
+  list(query: ListQuery = {}): Observable<Faceted<User>> {
+    return this.http.get<ApiResponse<Faceted<User>>>(this.url, { params: toParams(query) }).pipe(map((res) => res.data));
   }
 
   /** A reason is required for anything but `active`. */

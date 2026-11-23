@@ -38,6 +38,7 @@ MEMBER_ROLES: tuple[Role, ...] = tuple(r for r in ALL_ROLES if r not in ADMIN_RO
 ALL_ROLE_VALUES = [r.value for r in ALL_ROLES]
 STAFF_ROLE_VALUES = [r.value for r in STAFF_ADMIN_ROLES]
 ADMIN_ROLE_VALUES = [r.value for r in ADMIN_ROLES]
+MEMBER_ROLE_VALUES = [r.value for r in MEMBER_ROLES]
 
 ROLE_LABEL: dict[Role, str] = {
     Role.CUSTOMER: "Customer",

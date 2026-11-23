@@ -14,7 +14,7 @@ import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
 import { ReviewShortcuts } from '../review-shortcuts/review-shortcuts';
 import { ReportsService } from '../../../core/services/reports.service';
 import { formatPaise } from '../../../shared/pipes/money.pipes';
-import { ROLE_META, Role, User } from '../../../core/models/user.models';
+import { ROLE_META, Role, USER_STATUS_META, User } from '../../../core/models/user.models';
 
 interface StatCard {
   role: Role;
@@ -35,6 +35,7 @@ export class AdminDashboard {
   private readonly staff = inject(AdminStaffService);
   protected readonly user = inject(AuthService).user;
   protected readonly roleMeta = ROLE_META;
+  protected readonly statusMeta = USER_STATUS_META;
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
