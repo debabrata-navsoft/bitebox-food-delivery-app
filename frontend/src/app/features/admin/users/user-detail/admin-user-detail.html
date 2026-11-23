@@ -13,9 +13,12 @@
       <img class="avatar" [src]="u.avatarUrl" alt="" width="64" height="64" />
     }
     <div class="who">
-      <h1>{{ u.name }} <span class="id">{{ shortId(u.id) }}</span></h1>
-      <span class="bb-role-chip role-{{ u.role }}">{{ roleMeta[u.role].label }}</span>
-      <span class="bb-badge {{ statusMeta[u.status].tone }}">{{ statusMeta[u.status].label }}</span>
+      <h1>{{ u.name }}</h1>
+      <div class="chips">
+        <span class="bb-role-chip role-{{ u.role }}">{{ roleMeta[u.role].label }}</span>
+        <span class="bb-badge {{ statusMeta[u.status].tone }}">{{ statusMeta[u.status].label }}</span>
+        <span class="id" title="Account ID">{{ shortId(u.id) }}</span>
+      </div>
       @if (u.status !== 'active' && u.statusReason) {
         <p class="bb-muted small reason">
           {{ u.statusReason }}{{ u.statusChangedAt ? ' · since ' + (u.statusChangedAt | date: 'd MMM y') : '' }}
