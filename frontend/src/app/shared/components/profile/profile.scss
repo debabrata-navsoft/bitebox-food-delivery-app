@@ -21,9 +21,10 @@
   padding-top: 0;
   text-align: center;
 
+  // Stays in view while the forms scroll, just below the sticky header (72px on desktop).
   @include bp.desktop-up {
     position: sticky;
-    top: var(--bb-space-4);
+    top: calc(72px + env(safe-area-inset-top) + var(--bb-space-4));
   }
 
   h2 {
