@@ -1,0 +1,64 @@
+:host {
+  display: block;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--bb-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--bb-space-2);
+  padding: var(--bb-space-5);
+
+  &.featured {
+    border-color: var(--bb-plum);
+  }
+
+  h3 {
+    margin: var(--bb-space-2) 0 0;
+    font-size: 1.1rem;
+  }
+
+  p {
+    flex: 1;
+    margin: 0 0 var(--bb-space-2);
+    font-size: 0.9rem;
+  }
+
+  .bb-btn {
+    // Long email addresses wrap instead of overflowing the card.
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    --bb-icon-size: 18px;
+  }
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  --bb-icon-size: 24px;
+
+  &.call {
+    background: var(--bb-success-bg);
+    color: var(--bb-success);
+  }
+  &.chat {
+    background: var(--bb-plum-100);
+    color: var(--bb-plum);
+  }
+  &.mail {
+    background: var(--bb-amber-100);
+    color: var(--bb-on-accent);
+  }
+}

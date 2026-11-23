@@ -5,7 +5,8 @@ import { FormRoot, TreeValidationResult, form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from 'nexprime';
-import { firstValueFrom } from 'rxjs';
+import { EMPTY, catchError, firstValueFrom, tap, throwError } from 'rxjs';
+import { pollWhileVisible } from '../../../../core/services/poll';
 import { errorMessage, resourceError } from '../../../utils/api-error';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { SupportService } from '../../../../core/services/support.service';
@@ -36,9 +37,21 @@ export class MyTicket {
   /** Route parameter. */
   readonly id = input.required<string>();
 
+  /** The conversation, re-read every 15 s while the tab is visible so support replies appear
+   * like a chat. Only the first load can fail the page; a failed refresh waits for the next. */
   protected readonly ticket = rxResource({
     params: () => this.id(),
-    stream: ({ params }) => this.api.get(params),
+    stream: ({ params }) => {
+      let loaded = false;
+      return pollWhileVisible(
+        () =>
+          this.api.get(params).pipe(
+            tap(() => (loaded = true)),
+            catchError((err) => (loaded ? EMPTY : throwError(() => err))),
+          ),
+        15_000,
+      );
+    },
   });
   protected readonly error = resourceError(this.ticket, 'Could not load this ticket.');
 

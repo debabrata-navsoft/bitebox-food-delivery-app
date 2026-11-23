@@ -1,0 +1,39 @@
+<ul class="options">
+  <li class="bb-card option">
+    <span class="icon call"><np-icon name="phone" class="mat-icon" /></span>
+    <h3>Call us</h3>
+    <p class="bb-muted">{{ support.hours }}</p>
+    <a class="bb-btn bb-btn--outlined" [href]="support.tel">
+      <np-icon name="phone-call" class="mat-icon" />{{ support.phone }}
+    </a>
+  </li>
+
+  @if (canChat()) {
+    <li class="bb-card option featured">
+      <span class="icon chat"><np-icon name="message-circle" class="mat-icon" /></span>
+      <h3>Chat with support</h3>
+      <p class="bb-muted">
+        {{
+          signedIn()
+            ? 'Write to our team and follow the replies here.'
+            : 'Sign in to start a conversation.'
+        }}
+      </p>
+      <button type="button" class="bb-btn" (click)="chat()">
+        <np-icon name="messages-square" class="mat-icon" />Start a chat
+      </button>
+      @if (signedIn()) {
+        <a class="bb-link-button" [routerLink]="base.path()">Your conversations</a>
+      }
+    </li>
+  }
+
+  <li class="bb-card option">
+    <span class="icon mail"><np-icon name="mail" class="mat-icon" /></span>
+    <h3>Email us</h3>
+    <p class="bb-muted">We usually reply within a day.</p>
+    <a class="bb-btn bb-btn--outlined" [href]="'mailto:' + support.email">
+      <np-icon name="send" class="mat-icon" />{{ support.email }}
+    </a>
+  </li>
+</ul>

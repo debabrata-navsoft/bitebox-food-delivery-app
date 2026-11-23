@@ -1,0 +1,58 @@
+<section class="hero">
+  <div class="bb-container hero-inner">
+    <h1>How can we help?</h1>
+    <p>Search common questions, or reach our support team any time.</p>
+    <np-text-input
+      class="search"
+      [formField]="search.term"
+      ariaLabel="Search help articles"
+      placeholder="Search, e.g. refund, cancel, coupon"
+      icon="search"
+      clearable
+    />
+    <a class="call" [href]="support.tel">
+      <np-icon name="headset" class="mat-icon" />Call {{ support.phone }} · {{ support.hours }}
+    </a>
+  </div>
+</section>
+
+<section class="bb-container page">
+  <div class="topics" role="group" aria-label="Topics">
+    @for (t of topics; track t.id) {
+      <button type="button" class="topic" [class.active]="topic() === t.id" (click)="pick(t.id)">
+        <np-icon [name]="t.icon" class="mat-icon" />{{ t.title }}
+      </button>
+    }
+  </div>
+
+  @for (t of shown(); track t.id) {
+    <section class="bb-card group" [id]="t.id" [attr.aria-labelledby]="t.id + '-title'">
+      <header class="bb-card-head">
+        <span class="bb-card-head__icon"><np-icon [name]="t.icon" class="mat-icon" /></span>
+        <h2 [id]="t.id + '-title'">{{ t.title }}</h2>
+      </header>
+      @for (f of t.faqs; track f.q) {
+        <details class="faq">
+          <summary>
+            {{ f.q }}
+            <np-icon name="chevron-down" class="mat-icon chevron" />
+          </summary>
+          <p>{{ f.a }}</p>
+        </details>
+      }
+    </section>
+  } @empty {
+    <div class="bb-card empty">
+      <np-icon name="search" class="mat-icon" />
+      <p>No answers match “{{ search.term().value() }}”. Try other words, or chat with us below.</p>
+    </div>
+  }
+
+  <section class="still" aria-labelledby="still-title">
+    <h2 id="still-title">Still need help?</h2>
+    <p class="bb-muted">
+      Our team answers calls, chats and emails. <a routerLink="/contact">More ways to reach us</a>
+    </p>
+    <bb-contact-options />
+  </section>
+</section>

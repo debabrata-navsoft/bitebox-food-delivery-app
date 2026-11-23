@@ -18,4 +18,12 @@ export const environment = {
     social: { facebook: '', instagram: '', youtube: '', linkedin: '', x: '' },
     apps: { googlePlay: '', appStore: '' },
   },
+
+  // Contact us / Help center. Placeholder details: replace with the company's real ones.
+  support: {
+    phone: '1800 123 2483',
+    email: 'support@bitebox.example',
+    hours: 'Every day, 8 AM to 11 PM',
+    address: 'BiteBox Foods, 4th Floor, Maple Court, Sunview Road, Bengaluru 560001',
+  },
 };

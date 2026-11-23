@@ -1,0 +1,161 @@
+@use 'breakpoints' as bp;
+
+// A plum band with the search box (text on it uses the brand's own ink).
+.hero {
+  background: var(--bb-brand);
+  color: var(--bb-on-brand);
+}
+
+.hero-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--bb-space-3);
+  padding-block: var(--bb-space-7);
+  text-align: center;
+
+  h1 {
+    margin: 0;
+    color: var(--bb-on-brand); // the global heading ink would vanish on plum
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+  }
+
+  p {
+    margin: 0;
+    opacity: 0.85;
+  }
+
+  .search {
+    width: min(560px, 100%) !important;
+    margin-top: var(--bb-space-2);
+  }
+
+  .call {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--bb-space-2);
+    color: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    --bb-icon-size: 18px;
+  }
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bb-space-4);
+  padding-block: var(--bb-space-5) var(--bb-space-7);
+}
+
+.topics {
+  display: flex;
+  gap: var(--bb-space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.topic {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--bb-space-2);
+  padding: 8px 14px;
+  border: 1px solid var(--bb-border);
+  border-radius: 999px;
+  background: var(--bb-surface);
+  color: var(--bb-ink);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  --bb-icon-size: 18px;
+
+  &:hover {
+    border-color: var(--bb-plum);
+  }
+
+  &.active {
+    border-color: var(--bb-brand);
+    background: var(--bb-brand);
+    color: var(--bb-on-brand);
+  }
+}
+
+.group {
+  padding: var(--bb-space-5);
+
+  @include bp.phone-only {
+    padding: var(--bb-space-4);
+  }
+
+  .bb-card-head {
+    margin-bottom: var(--bb-space-2);
+  }
+}
+
+.faq {
+  border-top: 1px solid var(--bb-border);
+
+  summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--bb-space-3);
+    padding-block: var(--bb-space-3);
+    font-weight: 600;
+    list-style: none;
+    cursor: pointer;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+
+  .chevron {
+    flex: none;
+    color: var(--bb-ink-muted);
+    transition: transform 0.2s;
+    --bb-icon-size: 18px;
+  }
+
+  &[open] .chevron {
+    transform: rotate(180deg);
+  }
+
+  p {
+    margin: 0 0 var(--bb-space-3);
+    color: var(--bb-ink-muted);
+    line-height: 1.55;
+  }
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-space-3);
+  padding: var(--bb-space-5);
+  color: var(--bb-ink-muted);
+
+  p {
+    margin: 0;
+  }
+}
+
+.still {
+  margin-top: var(--bb-space-4);
+
+  h2 {
+    margin: 0 0 var(--bb-space-1);
+    font-size: 1.3rem;
+  }
+
+  p {
+    margin: 0 0 var(--bb-space-4);
+  }
+}

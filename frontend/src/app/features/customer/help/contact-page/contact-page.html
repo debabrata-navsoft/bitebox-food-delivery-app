@@ -1,0 +1,55 @@
+<section class="bb-container page">
+  <bb-page-header
+    title="Contact us"
+    subtitle="Questions about an order, a payment or your account? We're here to help."
+  />
+
+  <bb-contact-options />
+
+  <div class="details">
+    <section class="bb-card info" aria-labelledby="office-title">
+      <header class="bb-card-head">
+        <span class="bb-card-head__icon"><np-icon name="building-2" class="mat-icon" /></span>
+        <div>
+          <h2 id="office-title">Our office</h2>
+          <p>For letters and business enquiries.</p>
+        </div>
+      </header>
+      <ul class="facts">
+        <li>
+          <np-icon name="map-pin" class="mat-icon" />
+          <span>{{ support.address }}</span>
+        </li>
+        <li>
+          <np-icon name="clock" class="mat-icon" />
+          <span>Support: {{ support.hours }}</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="bb-card info" aria-labelledby="quick-title">
+      <header class="bb-card-head">
+        <span class="bb-card-head__icon"><np-icon name="circle-help" class="mat-icon" /></span>
+        <div>
+          <h2 id="quick-title">Find an answer faster</h2>
+          <p>Most questions are answered in the Help center.</p>
+        </div>
+      </header>
+      <ul class="quick">
+        <li>
+          <a routerLink="/orders"><np-icon name="package" class="mat-icon" />Track an order</a>
+        </li>
+        <li>
+          <a routerLink="/help" fragment="payments"
+            ><np-icon name="undo-2" class="mat-icon" />Refunds and payments</a
+          >
+        </li>
+        <li>
+          <a routerLink="/help"
+            ><np-icon name="circle-help" class="mat-icon" />Browse the Help center</a
+          >
+        </li>
+      </ul>
+    </section>
+  </div>
+</section>

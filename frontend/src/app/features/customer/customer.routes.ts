@@ -88,6 +88,16 @@ export const CUSTOMER_ROUTES: Routes = [
       import('./rewards/special-rewards/special-rewards').then((m) => m.SpecialRewards),
   },
   {
+    path: 'contact',
+    title: 'Contact us | BiteBox',
+    loadComponent: () => import('./help/contact-page/contact-page').then((m) => m.ContactPage),
+  },
+  {
+    path: 'help',
+    title: 'Help center | BiteBox',
+    loadComponent: () => import('./help/help-center/help-center').then((m) => m.HelpCenter),
+  },
+  {
     path: 'support',
     title: 'Help & support | BiteBox',
     canActivate: [roleGuard('customer')],

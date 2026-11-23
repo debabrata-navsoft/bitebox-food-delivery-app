@@ -35,7 +35,7 @@ export const FOOTER_GROUPS: FooterGroup[] = [
       soon('Our story'),
       soon('Careers'),
       soon('Blog'),
-      { label: 'Contact us', route: '/support' },
+      { label: 'Contact us', route: '/contact' },
       { label: 'Partner with us', route: '/', fragment: 'partners', visitorsOnly: true },
     ],
   },
@@ -52,8 +52,8 @@ export const FOOTER_GROUPS: FooterGroup[] = [
   {
     title: 'Customer support',
     links: [
-      { label: 'Help center', route: '/support' },
-      soon('Frequently asked questions'),
+      { label: 'Help center', route: '/help' },
+      { label: 'Frequently asked questions', route: '/help' },
       soon('Cancellation policy'),
       soon('Refund policy'),
     ],
@@ -76,7 +76,7 @@ export const BOTTOM_LINKS: FooterLink[] = [
   soon('Terms & conditions'),
   soon('Privacy policy'),
   soon('Cookie settings'),
-  { label: 'Help & support', route: '/support' },
+  { label: 'Help & support', route: '/help' },
 ];
 
 export const PARTNER_CARDS = [
