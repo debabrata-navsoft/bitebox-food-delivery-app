@@ -1,5 +1,5 @@
 import { IconComponent } from 'nexprime';
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { EarningsScope, ReportsService } from '../../../core/services/reports.service';
 import { DailyChart } from '../daily-chart/daily-chart';
@@ -10,6 +10,7 @@ import { NP_FORM_FIELDS } from '../../forms/np-form-fields';
 import { periodReport } from '../../list/period-report';
 import { InrPipe, formatDistance, formatPaise } from '../../pipes/money.pipes';
 import { SettlementHistory } from './settlement-history/settlement-history';
+import { TabStrip } from '../tab-strip/tab-strip';
 
 @Component({
   selector: 'bb-earnings-page',
@@ -23,6 +24,7 @@ import { SettlementHistory } from './settlement-history/settlement-history';
     StatTile,
     InrPipe,
     SettlementHistory,
+    TabStrip,
   ],
   templateUrl: './earnings-page.html',
   styleUrl: './earnings-page.scss',
@@ -36,6 +38,11 @@ export class EarningsPage {
     (days) => this.api.earnings(this.scope(), days),
     'Could not load your earnings.',
   );
+  protected readonly tabs = [
+    { id: 'earnings', label: 'Earnings', content: '' },
+    { id: 'settlements', label: 'Settlements and payouts', content: '' },
+  ];
+  protected readonly tab = signal('earnings');
   protected readonly formatPaise = formatPaise;
   protected readonly distance = formatDistance;
 

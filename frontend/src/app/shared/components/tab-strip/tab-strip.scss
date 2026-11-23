@@ -17,6 +17,13 @@ np-tabs {
 // The strip's own bottom line is drawn by the host, under the buttons too.
 :host ::ng-deep np-tabs.bb-tab-strip .tab-list {
   border-bottom: 0;
+  gap: var(--bb-space-4);
+}
+
+// Readable tabs (NexPrime's default is small).
+:host ::ng-deep np-tabs.bb-tab-strip .tab {
+  padding: 10px 2px;
+  font-size: 1rem;
 }
 
 .arrow {

@@ -1,19 +1,13 @@
 @use 'breakpoints' as bp;
 
 .history {
-  margin-top: var(--bb-space-4);
-
   header {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: var(--bb-space-3);
     margin-bottom: var(--bb-space-3);
-
-    h3 {
-      margin: 0;
-    }
   }
 }
 

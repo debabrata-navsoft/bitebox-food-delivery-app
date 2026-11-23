@@ -529,15 +529,6 @@
 // Tabs under the header: Overview, Order online, Reviews, Photos.
 .tabs-bar {
   margin-top: var(--bb-space-3);
-
-  // Bigger tabs than the admin pages' strip: this is the page's main navigation.
-  ::ng-deep .tab-list {
-    gap: var(--bb-space-5);
-  }
-  ::ng-deep .tab {
-    padding: 12px 2px;
-    font-size: 1.05rem;
-  }
 }
 
 .tab-page {
