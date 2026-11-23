@@ -1,19 +1,28 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
-import { DatePipe } from '@angular/common';
-import { IconComponent, PaginationComponent } from 'nexprime';
+import { IconComponent } from 'nexprime';
 import { AdminOrdersService } from '../../../core/services/order-management.service';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
 import { FilterSection } from '../../../shared/components/filter-panel/filter-panel.models';
 import { OrderStatusChip } from '../../../shared/components/order-status-chip/order-status-chip';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { filterOptions, filteredList } from '../../../shared/list/filtered-list';
-import { ORDER_STATUS_LABEL, PaymentStatus, customerStatusLabel } from '../../../core/models/checkout.models';
+import {
+  ORDER_STATUS_LABEL,
+  Order,
+  PaymentStatus,
+  customerStatusLabel,
+} from '../../../core/models/checkout.models';
 import { PAYMENT_STATUS_LABEL } from '../../../core/models/payment.models';
-import { ItemCountPipe } from '../../../shared/pipes/item-count.pipe';
-import { InrPipe } from '../../../shared/pipes/money.pipes';
+import { itemCount } from '../../../shared/pipes/item-count.pipe';
+import {
+  BbCell,
+  DATE_TIME,
+  DataTable,
+  TableAction,
+  TableColumn,
+} from '../../../shared/components/data-table/data-table';
 import { openAdminOrder } from './admin-order-dialog/admin-order-dialog';
 
 /** Whether the customer has paid: [label, badge tone]. Cash is "Not paid" until delivery. */
@@ -29,16 +38,13 @@ const PAYMENT_BADGE: Record<PaymentStatus, [string, string]> = {
 @Component({
   selector: 'bb-admin-orders',
   imports: [
-    DatePipe,
     RouterLink,
     IconComponent,
-    PaginationComponent,
-    EmptyState,
     ListToolbar,
     OrderStatusChip,
     PageHeader,
-    InrPipe,
-    ItemCountPipe,
+    DataTable,
+    BbCell,
   ],
   templateUrl: './admin-orders.html',
   styleUrl: './admin-orders.scss',
@@ -68,6 +74,18 @@ export class AdminOrders {
     extra: () => ({ customer: this.customer() || undefined }),
   });
   protected readonly list = this.orders.list;
+
+  protected readonly columns: TableColumn<Order>[] = [
+    { label: 'Order', value: (o) => o.orderNumber, run: (o) => this.open(o.id), nowrap: true },
+    { label: 'Restaurant', value: (o) => o.restaurantSnapshot.name, sub: itemCount },
+    { label: 'Placed', date: (o) => o.createdAt, dateFormat: DATE_TIME, nowrap: true },
+    { label: 'Payment', value: (o) => (o.paymentMethod === 'cod' ? 'Cash' : 'Online') },
+    { label: 'Total', paise: (o) => o.pricing.totalPaise, strong: true },
+    { label: 'Status', key: 'status' },
+  ];
+  protected readonly actions: TableAction<Order>[] = [
+    { icon: 'eye', label: 'View', run: (o) => this.open(o.id) },
+  ];
 
   protected open(id: string): void {
     openAdminOrder(this.dialog, id).subscribe(() => this.list.reload());

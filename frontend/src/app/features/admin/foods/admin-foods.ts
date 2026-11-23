@@ -1,6 +1,5 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, linkedSignal } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { ButtonComponent, IconComponent, PaginationComponent, ToggleComponent } from 'nexprime';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input } from '@angular/core';
+import { ToggleComponent } from 'nexprime';
 import {
   AdminCatalogService,
   AdminFoodItem,
@@ -8,28 +7,28 @@ import {
 import { errorMessage } from '../../../shared/utils/api-error';
 import { NotificationService } from '../../../core/services/notification.service';
 import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
 import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
 import { FilterSection } from '../../../shared/components/filter-panel/filter-panel.models';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
 import { filterOptions, filteredList } from '../../../shared/list/filtered-list';
-import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
+import {
+  BbCell,
+  DataTable,
+  TableAction,
+  TableColumn,
+} from '../../../shared/components/data-table/data-table';
 
 @Component({
   selector: 'bb-admin-foods',
   imports: [
     ToggleComponent,
-    RouterLink,
-    IconComponent,
-    PaginationComponent,
-    EmptyState,
     ListToolbar,
     PageHeader,
     VegBadge,
-    InrPipe,
-    ButtonComponent,
+    DataTable,
+    BbCell,
   ],
   templateUrl: './admin-foods.html',
   styleUrl: './admin-foods.scss',
@@ -69,8 +68,22 @@ export class AdminFoods implements OnInit {
     lazy: true,
   });
   protected readonly list = this.foods.list;
-  /** The page's rows; availability changes and deletions apply here at once. */
-  protected readonly items = linkedSignal<AdminFoodItem[]>(() => this.list.data()?.items ?? []);
+
+  protected readonly columns: TableColumn<AdminFoodItem>[] = [
+    // The veg/non-veg marker and the name.
+    { label: 'Dish', key: 'dish' },
+    {
+      label: 'Restaurant',
+      value: (i) => i.restaurant.name,
+      link: (i) => ['/admin/restaurants', i.restaurant._id ?? i.restaurant.id],
+    },
+    { label: 'Category', value: (i) => i.category.name },
+    { label: 'Price', paise: (i) => i.pricePaise },
+    { label: 'Available', key: 'available', nowrap: true },
+  ];
+  protected readonly actions: TableAction<AdminFoodItem>[] = [
+    { icon: 'trash-2', label: 'Delete', run: (i) => this.remove(i) },
+  ];
 
   ngOnInit(): void {
     const id = this.restaurant();
@@ -79,8 +92,9 @@ export class AdminFoods implements OnInit {
   }
 
   protected toggle(item: AdminFoodItem, checked: boolean): void {
+    // Shown at once, restored if the save fails.
     const set = (isAvailable: boolean) =>
-      this.items.update((list) => list.map((i) => (i.id === item.id ? { ...i, isAvailable } : i)));
+      this.list.update((items) => items.map((i) => (i.id === item.id ? { ...i, isAvailable } : i)));
     set(checked);
     this.service.setFoodAvailability(item.id, checked).subscribe({
       error: (err: unknown) => {
@@ -103,7 +117,7 @@ export class AdminFoods implements OnInit {
     ).subscribe(() =>
       this.service.deleteFood(item.id).subscribe({
         next: () => {
-          this.items.update((list) => list.filter((i) => i.id !== item.id));
+          this.list.update((items) => items.filter((i) => i.id !== item.id));
           this.notify.success('Dish deleted');
         },
         error: (err: unknown) => this.notify.error(errorMessage(err)),

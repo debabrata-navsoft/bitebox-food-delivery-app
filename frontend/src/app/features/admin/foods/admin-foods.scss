@@ -1,41 +1,11 @@
-.list-card {
-  padding: 0;
-  overflow: hidden;
-}
-.row-skeleton {
-  height: 56px;
-  margin: var(--bb-space-3) var(--bb-space-4);
-}
-ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: var(--bb-space-2);
-  padding: var(--bb-space-3) var(--bb-space-4);
-  border-bottom: 1px solid var(--bb-border);
-  &.off .info {
-    opacity: 0.6;
-  }
-}
-.info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
+// The dish cell (bbCell): the veg/non-veg marker and the name, faded while unavailable.
 .name {
   display: flex;
   align-items: center;
   gap: var(--bb-space-2);
   font-weight: 700;
-}
-.small {
-  font-size: 0.85rem;
-}
-.dim {
-  opacity: 0.55;
+
+  &.off {
+    opacity: 0.6;
+  }
 }

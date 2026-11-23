@@ -1,4 +1,3 @@
-import { TableLabels } from '../../../../shared/directives/table-labels';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -7,15 +6,20 @@ import { MatButtonModule } from '@angular/material/button';
 import { IconComponent } from 'nexprime';
 import { AdminRewardsService } from '../../../../core/services/admin/admin-rewards.service';
 import { resourceError, resourceValue } from '../../../../shared/utils/api-error';
+import { DATE_TIME, DataTable, TableColumn } from '../../../../shared/components/data-table/data-table';
 import { StatTile } from '../../../../shared/components/stat-tile/stat-tile';
-import { CAMPAIGN_STATUS_LABEL, CAMPAIGN_STATUS_TONE, CUSTOMER_GROUP_LABEL } from '../../../../core/models/rewards.models';
+import {
+  AdminCampaignDetail,
+  CAMPAIGN_STATUS_LABEL,
+  CAMPAIGN_STATUS_TONE,
+  CUSTOMER_GROUP_LABEL,
+} from '../../../../core/models/rewards.models';
 import { InrPipe } from '../../../../shared/pipes/money.pipes';
 
 /** A campaign's settings, performance and latest claims. */
 @Component({
   selector: 'bb-campaign-detail-dialog',
-  imports: [
-    TableLabels,DatePipe, MatDialogModule, MatButtonModule, IconComponent, StatTile, InrPipe],
+  imports: [DatePipe, MatDialogModule, MatButtonModule, IconComponent, StatTile, InrPipe, DataTable],
   templateUrl: './campaign-detail-dialog.html',
   styleUrl: './campaign-detail-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,4 +33,10 @@ export class CampaignDetailDialog {
   protected readonly detail = rxResource({ stream: () => this.api.campaign(this.id) });
   protected readonly data = resourceValue(this.detail);
   protected readonly error = resourceError(this.detail, 'Could not load the campaign.');
+
+  protected readonly columns: TableColumn<AdminCampaignDetail['recentClaims'][number]>[] = [
+    { label: 'Customer', value: (r) => r.customer?.name ?? '–', sub: (r) => r.customer?.email },
+    { label: 'Coins', value: (r) => r.coins, align: 'end' },
+    { label: 'When', date: (r) => r.claimedAt, dateFormat: DATE_TIME },
+  ];
 }

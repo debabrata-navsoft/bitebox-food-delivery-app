@@ -1,7 +1,5 @@
-import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { IconComponent, PaginationComponent } from 'nexprime';
+import { IconComponent } from 'nexprime';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AdminUsersService, CustomerRow } from '../../../core/services/admin/admin-users.service';
 import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
@@ -11,10 +9,13 @@ import { NotificationService } from '../../../core/services/notification.service
 import { openAccountStatus, statusChanged } from '../../../shared/components/account-status-dialog/account-status-dialog';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
-import { TableLabels } from '../../../shared/directives/table-labels';
-import { USER_STATUS_META, initialsOf } from '../../../core/models/user.models';
-import { InrPipe } from '../../../shared/pipes/money.pipes';
-import { shortId } from '../account-list';
+import {
+  BbCell,
+  DataTable,
+  TableAction,
+  TableColumn,
+} from '../../../shared/components/data-table/data-table';
+import { accountStatusBadge, personColumn, viewEditActions } from '../account-list';
 import { JOINED_SECTION, accountSorts, accountStatusSection } from '../filter-sections';
 
 /**
@@ -23,16 +24,7 @@ import { JOINED_SECTION, accountSorts, accountStatusSection } from '../filter-se
  */
 @Component({
   selector: 'bb-admin-customers',
-  imports: [
-    DatePipe,
-    RouterLink,
-    IconComponent,
-    PaginationComponent,
-    PageHeader,
-    InrPipe,
-    TableLabels,
-    ListToolbar,
-  ],
+  imports: [IconComponent, PageHeader, ListToolbar, DataTable, BbCell],
   templateUrl: './admin-customers.html',
   styleUrl: './admin-customers.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -41,10 +33,7 @@ export class AdminCustomers {
   private readonly api = inject(AdminUsersService);
   private readonly dialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
-  protected readonly auth = inject(AuthService);
-  protected readonly statusMeta = USER_STATUS_META;
-  protected readonly shortId = shortId;
-  protected readonly initials = initialsOf;
+  private readonly auth = inject(AuthService);
 
   protected readonly filterSections: FilterSection[] = [
     accountStatusSection('status', 'Account status'),
@@ -68,6 +57,26 @@ export class AdminCustomers {
     sort: 'newest',
   });
   protected readonly list = this.accounts.list;
+
+  protected readonly columns: TableColumn<CustomerRow>[] = [
+    personColumn('Customer', '/admin/customers'),
+    { label: 'Mobile', value: (c) => c.phone },
+    { label: 'Orders', value: (c) => c.stats.orders, align: 'end' },
+    { label: 'Spent', paise: (c) => c.stats.spentPaise },
+    { label: 'Joined', date: (c) => c.createdAt, nowrap: true },
+    { label: 'Status', badge: (c) => accountStatusBadge(c) },
+    // Email and phone icons, green once verified.
+    { label: 'Verified', key: 'verified', nowrap: true },
+  ];
+  protected readonly actions: TableAction<CustomerRow>[] = [
+    ...viewEditActions<CustomerRow>('/admin/customers', () => this.auth.can('customers:edit')),
+    {
+      icon: 'shield-alert',
+      label: 'Change status',
+      run: (c) => this.changeStatus(c),
+      show: () => this.auth.can('customers:status') || this.auth.can('accounts:suspend'),
+    },
+  ];
 
   protected changeStatus(c: CustomerRow): void {
     openAccountStatus(this.dialog, {

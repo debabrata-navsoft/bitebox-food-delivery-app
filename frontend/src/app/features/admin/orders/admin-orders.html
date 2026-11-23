@@ -20,53 +20,19 @@
   </div>
 }
 
-@if (list.error(); as message) {
-  <div class="bb-alert error" role="alert">
-    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
-    <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
-  </div>
-}
-
-<div class="bb-card list-card" [attr.aria-busy]="list.loading()">
-  @if (list.showSkeleton()) {
-    @for (i of [1, 2, 3, 4, 5]; track i) {
-      <span class="bb-skeleton row-skeleton"></span>
-    }
-  } @else if (list.empty()) {
-    <bb-empty-state icon="receipt_long" title="No orders match these filters" />
-    @if (orders.filtered()) {
-      <p class="bb-list-clear"><button type="button" class="bb-link-button" (click)="orders.clear()">Clear filters</button></p>
-    }
-  } @else {
-    <ul class="rows" [class.dim]="list.loading()">
-      @for (o of list.data()!.items; track o.id) {
-        <li>
-          <button type="button" class="row" (click)="open(o.id)">
-            <div class="main">
-              <strong>{{ o.orderNumber }}</strong>
-              <span class="bb-muted meta"
-                >{{ o.restaurantSnapshot.name }} · {{ o | itemCount }} · {{ o.paymentMethod === 'cod' ? 'Cash' : 'Online' }} ·
-                <span class="when">{{ o.createdAt | date: 'd MMM, h:mm a' }}</span></span
-              >
-            </div>
-            <span class="amount">{{ o.pricing.totalPaise | inr }}</span>
-            <div class="badges">
-              <bb-order-status-chip [status]="o.status" [label]="statusLabel(o)" />
-              <span class="bb-badge pay {{ payment[o.paymentStatus][1] }}">{{ payment[o.paymentStatus][0] }}</span>
-            </div>
-            <np-icon name="chevron-right" class="mat-icon chev" matButtonIcon />
-          </button>
-        </li>
-      }
-    </ul>
-    <np-pagination
-      variant="compact"
-      [page]="list.data()!.pagination.page"
-      [rows]="list.data()!.pagination.limit"
-      [totalRecords]="list.data()!.pagination.total"
-      [rowsOptions]="[20, 50, 100]"
-      (pageChange)="list.goTo($event)"
-      (rowsChange)="list.goTo(1, $event)"
-    />
-  }
-</div>
+<bb-data-table
+  [list]="list"
+  [columns]="columns"
+  [actions]="actions"
+  label="Orders"
+  [filters]="orders"
+  emptyText="No orders match these filters"
+  emptyIcon="receipt_long"
+>
+  <ng-template [bbCellOf]="list" bbCell="status" let-o>
+    <div class="badges">
+      <bb-order-status-chip [status]="o.status" [label]="statusLabel(o)" />
+      <span class="bb-badge {{ payment[o.paymentStatus][1] }}">{{ payment[o.paymentStatus][0] }}</span>
+    </div>
+  </ng-template>
+</bb-data-table>

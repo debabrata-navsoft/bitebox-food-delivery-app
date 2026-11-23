@@ -1,15 +1,1 @@
-@use '../account-list';
-
-.plate {
-  font-family: monospace;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-// Verification, KYC and availability, one under another.
-.states {
-  .bb-badge {
-    display: table;
-    margin-bottom: 4px;
-  }
-}
+// The table's cells are styled by bb-data-table.

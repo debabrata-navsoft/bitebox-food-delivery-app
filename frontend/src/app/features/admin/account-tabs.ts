@@ -1,5 +1,4 @@
-import { formatDate } from '@angular/common';
-import { Signal, computed, inject, LOCALE_ID } from '@angular/core';
+import { Signal, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { AdminCatalogService, AdminFoodItem } from '../../core/services/admin/admin-catalog.service';
 import { AdminRewardsService } from '../../core/services/admin/admin-rewards.service';
@@ -12,9 +11,10 @@ import { AdminOrdersService } from '../../core/services/order-management.service
 import { ReportsService } from '../../core/services/reports.service';
 import { ReviewService } from '../../core/services/review.service';
 import { SupportDeskService } from '../../core/services/support.service';
+import { DATE_YEAR_TIME, TableColumn } from '../../shared/components/data-table/data-table';
 import { AnyListTab, ListTab } from '../../shared/components/record-table/record-table';
 import { AuthService } from '../../core/auth/auth.service';
-import { discountLabel } from '../../shared/coupons/coupon-labels';
+import { couponColumns, discountLabel } from '../../shared/coupons/coupon-labels';
 import {
   AuditEntry,
   LoginEntry,
@@ -36,14 +36,13 @@ import {
 } from '../../core/models/checkout.models';
 import { AdminPayment, PAYMENT_STATUS_LABEL, PROVIDER_LABEL, paymentTone } from '../../core/models/payment.models';
 import { AdminOrderReviews } from '../../core/models/review.models';
-import { AdminCoinTransaction, SOURCE_LABEL, TXN_TYPE_LABEL } from '../../core/models/rewards.models';
-import { formatPaise } from '../../shared/pipes/money.pipes';
+import { AdminCoinTransaction, SOURCE_LABEL, TXN_TYPE_LABEL, coinChange } from '../../core/models/rewards.models';
+import { dateText } from '../../shared/utils/dates';
 import { openAdminOrder } from './orders/admin-order-dialog/admin-order-dialog';
 import { changeLines } from './audit-log/audit-log';
 import { openTransaction } from './finance/transaction-dialog/transaction-dialog';
 import { BbDialog } from '../../shared/dialog/bb-dialog';
 
-const tone = (t: string) => `tone-${t}`;
 const FAILED = new Set(['cancelled', 'rejected']);
 
 type Id = () => string;
@@ -60,9 +59,13 @@ const SOURCE_TEXT: Record<AvailabilityChange['source'], string> = {
  * when a tab loads.
  */
 export function accountTabs() {
-  const locale = inject(LOCALE_ID);
-  const when = (iso: string | null | undefined) => (iso ? formatDate(iso, 'd MMM y, h:mm a', locale) : '—');
-  const day = (iso: string | null | undefined) => (iso ? formatDate(iso, 'd MMM y', locale) : '—');
+  const { day, range } = dateText();
+  /** A date-and-time column. */
+  const when = <T>(label: string, at: (row: T) => string | null | undefined): TableColumn<T> => ({
+    label,
+    date: at,
+    dateFormat: DATE_YEAR_TIME,
+  });
   const router = inject(Router);
   const dialog = inject(BbDialog);
   const orders = inject(AdminOrdersService);
@@ -89,18 +92,18 @@ export function accountTabs() {
       columns: [
         {
           label: 'Order',
-          text: (o) => o.orderNumber,
+          value: (o) => o.orderNumber,
           sub: (o) => (by === 'restaurant' ? null : o.restaurantSnapshot.name),
         },
-        { label: 'Placed', text: (o) => when(o.createdAt) },
+        when('Placed', (o) => o.createdAt),
         {
           label: 'Status',
           badge: (o) => ({
             label: ORDER_STATUS_LABEL[o.status],
-            tone: o.status === 'delivered' ? tone('good') : FAILED.has(o.status) ? tone('bad') : tone('info'),
+            tone: o.status === 'delivered' ? 'good' : FAILED.has(o.status) ? 'bad' : 'info',
           }),
         },
-        { label: 'Total', num: true, text: (o) => formatPaise(o.pricing.totalPaise) },
+        { label: 'Total', paise: (o) => o.pricing.totalPaise },
       ],
     }),
 
@@ -113,11 +116,11 @@ export function accountTabs() {
       // The same payment details as Finance → Transactions.
       open: (p) => openTransaction(dialog, p.id).subscribe(),
       columns: [
-        { label: 'Order', text: (p) => p.order?.orderNumber, sub: (p) => when(p.createdAt) },
-        { label: 'Method', text: (p) => (p.method === 'cod' ? 'Cash' : 'Online'), sub: (p) => PROVIDER_LABEL[p.provider] },
+        { label: 'Order', value: (p) => p.order?.orderNumber, sub: (p) => day(p.createdAt, DATE_YEAR_TIME) },
+        { label: 'Method', value: (p) => (p.method === 'cod' ? 'Cash' : 'Online'), sub: (p) => PROVIDER_LABEL[p.provider] },
         { label: 'Status', badge: (p) => ({ label: PAYMENT_STATUS_LABEL[p.status], tone: paymentTone(p.status) }) },
-        { label: 'Amount', num: true, text: (p) => formatPaise(p.amountPaise) },
-        { label: 'Refunded', num: true, text: (p) => (p.refundedPaise ? formatPaise(p.refundedPaise) : '—') },
+        { label: 'Amount', paise: (p) => p.amountPaise },
+        { label: 'Refunded', paise: (p) => p.refundedPaise || null },
       ],
     }),
 
@@ -128,11 +131,11 @@ export function accountTabs() {
       empty: 'No coin activity yet.',
       fetch: (page, limit) => rewards.transactions({ userId: userId(), page, limit }),
       columns: [
-        { label: 'When', text: (t) => when(t.createdAt) },
-        { label: 'Activity', text: (t) => TXN_TYPE_LABEL[t.type], sub: (t) => SOURCE_LABEL[t.source] },
-        { label: 'Details', text: (t) => t.description ?? t.note },
-        { label: 'Coins', num: true, text: (t) => (t.availableChange > 0 ? '+' : '') + t.availableChange },
-        { label: 'Balance', num: true, text: (t) => t.availableAfter },
+        when('When', (t) => t.createdAt),
+        { label: 'Activity', value: (t) => TXN_TYPE_LABEL[t.type], sub: (t) => SOURCE_LABEL[t.source] },
+        { label: 'Details', value: (t) => t.description ?? t.note },
+        { label: 'Coins', align: 'end', value: coinChange },
+        { label: 'Balance', align: 'end', value: (t) => t.availableAfter },
       ],
     }),
 
@@ -146,12 +149,12 @@ export function accountTabs() {
       columns: [
         {
           label: 'Order',
-          text: (r) => r.orderNumber,
+          value: (r) => r.orderNumber,
           sub: (r) => (by === 'customer' ? r.restaurant?.name : r.customerName),
         },
-        { label: 'Ratings', text: (r) => r.reviews.map((v) => `${v.rating}★ ${v.target}`).join(' · ') },
-        { label: 'Comment', text: (r) => r.reviews.find((v) => v.comment)?.comment },
-        { label: 'Reports', num: true, text: (r) => r.openReports || '—' },
+        { label: 'Ratings', value: (r) => r.reviews.map((v) => `${v.rating}★ ${v.target}`).join(' · ') },
+        { label: 'Comment', value: (r) => r.reviews.find((v) => v.comment)?.comment },
+        { label: 'Reports', align: 'end', value: (r) => r.openReports || null },
       ],
     }),
 
@@ -164,11 +167,11 @@ export function accountTabs() {
       fetch: (page, limit) => support.list({ requester: requester(), page, limit }),
       open: (t) => void router.navigate(['/admin/support/ticket', t.id]),
       columns: [
-        { label: 'Ticket', text: (t) => t.number, sub: (t) => t.subject },
-        { label: 'Type', text: (t) => TICKET_TYPE_LABEL[t.type], sub: (t) => t.orderNumber },
-        { label: 'Status', badge: (t) => ({ label: TICKET_STATUS_LABEL[t.status], tone: tone(TICKET_STATUS_TONE[t.status]) }) },
-        { label: 'Priority', text: (t) => TICKET_PRIORITY_LABEL[t.priority] },
-        { label: 'Last activity', text: (t) => when(t.lastActivityAt) },
+        { label: 'Ticket', value: (t) => t.number, sub: (t) => t.subject },
+        { label: 'Type', value: (t) => TICKET_TYPE_LABEL[t.type], sub: (t) => t.orderNumber },
+        { label: 'Status', badge: (t) => ({ label: TICKET_STATUS_LABEL[t.status], tone: TICKET_STATUS_TONE[t.status] }) },
+        { label: 'Priority', value: (t) => TICKET_PRIORITY_LABEL[t.priority] },
+        when('Last activity', (t) => t.lastActivityAt),
       ],
     }),
 
@@ -179,10 +182,10 @@ export function accountTabs() {
       empty: 'No sign-ins yet.',
       fetch: (page, limit) => users.logins(userId(), page, limit),
       columns: [
-        { label: 'Signed in', text: (l) => when(l.signedInAt) },
-        { label: 'Last active', text: (l) => when(l.lastActiveAt) },
-        { label: 'Device', text: (l) => l.userAgent.slice(0, 60), sub: (l) => l.ip },
-        { label: 'Session', badge: (l) => (l.active ? { label: 'Active', tone: tone('good') } : { label: l.endedReason ?? 'Ended' }) },
+        when('Signed in', (l) => l.signedInAt),
+        when('Last active', (l) => l.lastActiveAt),
+        { label: 'Device', value: (l) => l.userAgent.slice(0, 60), sub: (l) => l.ip },
+        { label: 'Session', badge: (l) => (l.active ? { label: 'Active', tone: 'good' } : { label: l.endedReason ?? 'Ended' }) },
       ],
     }),
 
@@ -194,10 +197,10 @@ export function accountTabs() {
       empty: 'No admin changes to this account.',
       fetch: (page, limit) => audit.auditLog({ resourceId: ids().join(','), page, limit }),
       columns: [
-        { label: 'When', text: (e) => when(e.createdAt) },
-        { label: 'Admin', text: (e) => e.admin?.name ?? 'Removed admin', sub: (e) => e.adminRole },
-        { label: 'What', text: (e) => e.description, sub: (e) => (e.reason ? `Reason: ${e.reason}` : null) },
-        { label: 'Changes', text: (e) => changeLines(e).join(' · ') || '—' },
+        when('When', (e) => e.createdAt),
+        { label: 'Admin', value: (e) => e.admin?.name ?? 'Removed admin', sub: (e) => e.adminRole },
+        { label: 'What', value: (e) => e.description, sub: (e) => (e.reason ? `Reason: ${e.reason}` : null) },
+        { label: 'Changes', value: (e) => changeLines(e).join(' · ') },
       ],
     }),
 
@@ -208,10 +211,10 @@ export function accountTabs() {
       empty: 'No availability changes yet.',
       fetch: (page, limit) => riders.availability(rider(), page, limit),
       columns: [
-        { label: 'When', text: (a) => when(a.at) },
-        { label: 'Change', badge: (a) => (a.isOnline ? { label: 'Went online', tone: tone('good') } : { label: 'Went offline' }) },
-        { label: 'By', text: (a) => SOURCE_TEXT[a.source] },
-        { label: 'Reason', text: (a) => a.reason },
+        when('When', (a) => a.at),
+        { label: 'Change', badge: (a) => (a.isOnline ? { label: 'Went online', tone: 'good' } : { label: 'Went offline' }) },
+        { label: 'By', value: (a) => SOURCE_TEXT[a.source] },
+        { label: 'Reason', value: (a) => a.reason },
       ],
     }),
 
@@ -222,13 +225,13 @@ export function accountTabs() {
       empty: 'No dishes on the menu.',
       fetch: (page, limit) => catalog.foods({ restaurant: restaurant(), page, limit }),
       columns: [
-        { label: 'Dish', text: (f) => f.name, sub: (f) => f.category?.name },
-        { label: 'Type', text: (f) => (f.isVeg ? 'Veg' : 'Non-veg') },
+        { label: 'Dish', value: (f) => f.name, sub: (f) => f.category?.name },
+        { label: 'Type', value: (f) => (f.isVeg ? 'Veg' : 'Non-veg') },
         {
           label: 'Available',
-          badge: (f) => (f.isAvailable ? { label: 'Available', tone: tone('good') } : { label: 'Unavailable' }),
+          badge: (f) => (f.isAvailable ? { label: 'Available', tone: 'good' } : { label: 'Unavailable' }),
         },
-        { label: 'Price', num: true, text: (f) => formatPaise(f.pricePaise) },
+        { label: 'Price', paise: (f) => f.pricePaise },
       ],
     }),
 
@@ -239,11 +242,11 @@ export function accountTabs() {
       empty: 'No offers or coupons for this restaurant.',
       fetch: (page, limit) => coupons.list({ restaurant: restaurant(), page, limit }),
       columns: [
-        { label: 'Offer', text: (c) => c.name || c.code, sub: (c) => COUPON_KIND_LABEL[c.kind ?? 'coupon'] },
-        { label: 'Discount', text: (c) => discountLabel(c) },
-        { label: 'Valid', text: (c) => `${day(c.validFrom)} – ${day(c.validUntil)}` },
+        { label: 'Offer', value: (c) => c.name || c.code, sub: (c) => COUPON_KIND_LABEL[c.kind ?? 'coupon'] },
+        { label: 'Discount', value: discountLabel },
+        couponColumns(range).valid(),
         { label: 'Status', badge: (c) => ({ label: COUPON_STATUS_LABEL[c.status] }) },
-        { label: 'Used', num: true, text: (c) => c.usedCount },
+        { label: 'Used', align: 'end', value: (c) => c.usedCount },
       ],
     }),
 
@@ -255,10 +258,10 @@ export function accountTabs() {
       empty: 'No payouts yet.',
       fetch: (page, limit) => finance.payouts({ type, [type]: id(), page, limit }),
       columns: [
-        { label: 'Created', text: (p) => day(p.createdAt), sub: (p) => (p.periodFrom ? `${day(p.periodFrom)} – ${day(p.periodTo)}` : null) },
-        { label: 'Orders', num: true, text: (p) => p.orders },
-        { label: 'Status', badge: (p) => ({ label: PAYOUT_STATUS_LABEL[p.status], tone: tone(PAYOUT_STATUS_TONE[p.status]) }) },
-        { label: 'Amount', num: true, text: (p) => formatPaise(p.amountPaise), sub: (p) => p.reference },
+        { label: 'Created', date: (p) => p.createdAt, sub: (p) => range(p.periodFrom, p.periodTo) },
+        { label: 'Orders', align: 'end', value: (p) => p.orders },
+        { label: 'Status', badge: (p) => ({ label: PAYOUT_STATUS_LABEL[p.status], tone: PAYOUT_STATUS_TONE[p.status] }) },
+        { label: 'Amount', paise: (p) => p.amountPaise, sub: (p) => p.reference },
       ],
     }),
   };

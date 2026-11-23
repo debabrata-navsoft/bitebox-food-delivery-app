@@ -1,14 +1,17 @@
-import { TableLabels } from '../../../../shared/directives/table-labels';
-import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatPaginatorModule } from '@angular/material/paginator';
-import { IconComponent } from 'nexprime';
 import { filter } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AdminRewardsService } from '../../../../core/services/admin/admin-rewards.service';
 import { NotificationService } from '../../../../core/services/notification.service';
+import {
+  BbCell,
+  BbEmpty,
+  DATE_YEAR_TIME,
+  DataTable,
+  TableAction,
+  TableColumn,
+} from '../../../../shared/components/data-table/data-table';
 import { ListEmpty } from '../../../../shared/components/list-empty/list-empty';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
 import { ListToolbar } from '../../../../shared/components/list-toolbar/list-toolbar';
@@ -17,6 +20,7 @@ import {
   AdminCoinTransaction,
   SOURCE_LABEL,
   TXN_TYPE_LABEL,
+  coinChange,
 } from '../../../../core/models/rewards.models';
 import { ReverseDialog } from '../reverse-dialog/reverse-dialog';
 import { WalletDialog } from '../wallet-dialog/wallet-dialog';
@@ -24,8 +28,7 @@ import { WalletDialog } from '../wallet-dialog/wallet-dialog';
 /** The coin ledger across all customers, with wallet details and reward reversals. */
 @Component({
   selector: 'bb-coin-transactions',
-  imports: [
-    TableLabels,DatePipe, ListToolbar, MatButtonModule, MatPaginatorModule, IconComponent, ListEmpty, PageHeader],
+  imports: [ListToolbar, ListEmpty, PageHeader, DataTable, BbCell, BbEmpty],
   templateUrl: './coin-transactions.html',
   styleUrl: './coin-transactions.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,8 +38,6 @@ export class CoinTransactionsPage {
   private readonly dialog = inject(MatDialog);
   private readonly notify = inject(NotificationService);
   protected readonly canManage = inject(AuthService).can('rewards:manage');
-  protected readonly sourceLabel = SOURCE_LABEL;
-  protected readonly typeLabel = TXN_TYPE_LABEL;
   /** ?userId= from other pages (one customer's history). */
   readonly userId = input<string>();
 
@@ -64,6 +65,27 @@ export class CoinTransactionsPage {
   });
   protected readonly list = this.transactions.list;
 
+  protected readonly columns: TableColumn<AdminCoinTransaction>[] = [
+    { label: 'When', date: (t) => t.createdAt, dateFormat: DATE_YEAR_TIME },
+    {
+      label: 'Customer',
+      value: (t) => t.customer?.name,
+      run: (t) => this.wallet(t),
+      sub: (t) => t.customer?.email,
+    },
+    { label: 'What', key: 'what' },
+    { label: 'Coins', key: 'change', align: 'end' },
+    { label: 'Balance', value: (t) => t.balanceAfter, align: 'end' },
+  ];
+  protected readonly actions: TableAction<AdminCoinTransaction>[] = [
+    {
+      icon: 'undo-2',
+      label: 'Reverse',
+      run: (t) => this.reverse(t),
+      show: (t) => this.canManage && t.type === 'CREDIT',
+    },
+  ];
+
   protected clearCustomer(): void {
     this.customer.set('');
   }
@@ -85,10 +107,7 @@ export class CoinTransactionsPage {
       });
   }
 
-  protected change(t: AdminCoinTransaction): string {
-    const sign = (n: number) => (n > 0 ? `+${n}` : `${n}`);
-    if (t.availableChange) return sign(t.availableChange);
-    if (t.reservedChange) return `held ${sign(t.reservedChange)}`;
-    return '0';
-  }
+  protected readonly typeLabel = TXN_TYPE_LABEL;
+  protected readonly sourceLabel = SOURCE_LABEL;
+  protected readonly coinChange = coinChange;
 }

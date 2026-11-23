@@ -8,102 +8,12 @@
   [sortOptions]="sortOptions"
 />
 
-@if (list.error(); as message) {
-  <div class="bb-alert error" role="alert">
-    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
-    <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
-  </div>
-}
-
-<div class="bb-card bb-list-card" [attr.aria-busy]="list.loading()">
-  @if (list.showSkeleton()) {
-    @for (i of [1, 2, 3, 4, 5]; track i) {
-      <span class="bb-skeleton row"></span>
-    }
-  } @else if (list.empty()) {
-    <div class="empty">
-      <np-icon name="user-search" class="mat-icon" matButtonIcon />
-      <p>No users match these filters.</p>
-      @if (accounts.filtered()) {
-        <button type="button" class="bb-link-button" (click)="accounts.clear()">Clear filters</button>
-      }
-    </div>
-  } @else {
-    <div class="bb-table-scroll" [class.bb-dim]="list.loading()">
-      <table class="bb-table">
-        <thead>
-          <tr>
-            <th scope="col">User</th>
-            <th scope="col">Mobile</th>
-            <th scope="col">Role</th>
-            <th scope="col">Joined</th>
-            <th scope="col">Status</th>
-            <th scope="col" class="actions">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (u of list.data()!.items; track u.id) {
-            <tr>
-              <td>
-                <div class="who">
-                  <span class="bb-avatar">
-                    @if (u.avatarUrl) {
-                      <img [src]="u.avatarUrl" alt="" width="40" height="40" />
-                    } @else {
-                      {{ initials(u.name) }}
-                    }
-                  </span>
-                  <span>
-                    <a class="name" [routerLink]="[u.id]">{{ u.name }}</a>
-                    <span class="sub">{{ u.email }}</span>
-                    <span class="sub id">{{ shortId(u.id) }}</span>
-                  </span>
-                </div>
-              </td>
-              <td>{{ u.phone || '—' }}</td>
-              <td>
-                <span class="bb-role-chip role-{{ u.role }}">{{ roleMeta[u.role].label }}</span>
-              </td>
-              <td class="nowrap">{{ u.createdAt | date: 'd MMM y' }}</td>
-              <td>
-                <span class="bb-badge {{ statusMeta[u.status].tone }}" [title]="u.statusReason ?? ''">{{
-                  statusMeta[u.status].label
-                }}</span>
-              </td>
-              <td class="actions">
-                <a class="bb-btn bb-btn--outlined bb-btn--icon act" [routerLink]="[u.id]" [attr.aria-label]="'View ' + u.name" title="View">
-                  <np-icon name="eye" />
-                </a>
-                @if (may(u.role, 'edit')) {
-                  <a class="bb-btn bb-btn--outlined bb-btn--icon act" [routerLink]="[u.id, 'edit']" [attr.aria-label]="'Edit ' + u.name" title="Edit">
-                    <np-icon name="pencil" />
-                  </a>
-                }
-                @if (may(u.role, 'status')) {
-                  <button
-                    type="button"
-                    class="bb-btn bb-btn--outlined bb-btn--icon act"
-                    [attr.aria-label]="'Change status of ' + u.name"
-                    title="Change status"
-                    (click)="changeStatus(u)"
-                  >
-                    <np-icon name="shield-alert" />
-                  </button>
-                }
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-    <np-pagination
-      variant="compact"
-      [page]="list.data()!.pagination.page"
-      [rows]="list.data()!.pagination.limit"
-      [totalRecords]="list.data()!.pagination.total"
-      [rowsOptions]="[20, 50, 100]"
-      (pageChange)="list.goTo($event)"
-      (rowsChange)="list.goTo(1, $event)"
-    />
-  }
-</div>
+<bb-data-table
+  [list]="list"
+  [columns]="columns"
+  [actions]="actions"
+  label="Users"
+  emptyIcon="user-search"
+  emptyText="No users match these filters."
+  [filters]="accounts"
+/>

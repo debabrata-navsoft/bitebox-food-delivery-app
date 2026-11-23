@@ -1,5 +1,3 @@
-import { TableLabels } from '../../../../shared/directives/table-labels';
-import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -10,10 +8,14 @@ import {
   input,
   untracked,
 } from '@angular/core';
-import { MatPaginatorModule } from '@angular/material/paginator';
 import { Router } from '@angular/router';
-import { IconComponent } from 'nexprime';
 import { SupportDeskService } from '../../../../core/services/support.service';
+import {
+  BbEmpty,
+  DATE_TIME,
+  DataTable,
+  TableColumn,
+} from '../../../../shared/components/data-table/data-table';
 import { ListEmpty } from '../../../../shared/components/list-empty/list-empty';
 import { ListToolbar } from '../../../../shared/components/list-toolbar/list-toolbar';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
@@ -26,6 +28,7 @@ import {
   TICKET_STATUS_TONE,
   TICKET_TYPE_LABEL,
   TicketQuery,
+  TicketSummary,
 } from '../../../../core/models/admin-roles.models';
 
 type View = 'all' | 'customer' | 'restaurant' | 'delivery' | 'refunds' | 'mine' | 'unassigned';
@@ -63,7 +66,7 @@ const VIEWS: Record<View, { title: string; subtitle: string; query: TicketQuery 
 
 @Component({
   selector: 'bb-support-tickets',
-  imports: [TableLabels, DatePipe, ListToolbar, MatPaginatorModule, IconComponent, ListEmpty, PageHeader],
+  imports: [ListToolbar, DataTable, BbEmpty, ListEmpty, PageHeader],
   templateUrl: './support-tickets.html',
   styleUrl: './support-tickets.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -76,12 +79,26 @@ export class SupportTickets implements OnInit {
   readonly view = input<View>('all');
   protected readonly config = computed(() => VIEWS[this.view()] ?? VIEWS.all);
 
-  protected readonly statusLabel = TICKET_STATUS_LABEL;
-  protected readonly statusTone = TICKET_STATUS_TONE;
-  protected readonly priorityLabel = TICKET_PRIORITY_LABEL;
-  protected readonly priorityTone = TICKET_PRIORITY_TONE;
-  protected readonly typeLabel = TICKET_TYPE_LABEL;
-  protected readonly requesterLabel = REQUESTER_LABEL;
+  protected readonly columns: TableColumn<TicketSummary>[] = [
+    {
+      label: 'Ticket',
+      value: (t) => t.subject,
+      strong: true,
+      sub: (t) =>
+        [t.number, TICKET_TYPE_LABEL[t.type], t.orderNumber].filter(Boolean).join(' · '),
+    },
+    { label: 'From', value: (t) => t.requesterName, sub: (t) => REQUESTER_LABEL[t.requesterRole] },
+    {
+      label: 'Status',
+      badge: (t) => ({ label: TICKET_STATUS_LABEL[t.status], tone: TICKET_STATUS_TONE[t.status] }),
+    },
+    {
+      label: 'Priority',
+      badge: (t) => ({ label: TICKET_PRIORITY_LABEL[t.priority], tone: TICKET_PRIORITY_TONE[t.priority] }),
+    },
+    { label: 'Assigned to', value: (t) => t.assignee?.name },
+    { label: 'Last activity', date: (t) => t.lastActivityAt, dateFormat: DATE_TIME, nowrap: true },
+  ];
 
   /** The panel leaves out what the view already fixes (who raised it, the type, the assignee). */
   protected readonly filterSections = computed(() => {

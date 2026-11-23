@@ -1,16 +1,20 @@
-import { IconComponent, PaginationComponent, TabsComponent } from 'nexprime';
+import { TabsComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal, computed } from '@angular/core';
-import { DatePipe } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { AdminCatalogService } from '../../../core/services/admin/admin-catalog.service';
-import { EmptyState } from '../../../shared/components/empty-state/empty-state';
+import { ListEmpty } from '../../../shared/components/list-empty/list-empty';
 import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
 import { FilterSection } from '../../../shared/components/filter-panel/filter-panel.models';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { filterOptions, filteredList } from '../../../shared/list/filtered-list';
 import { JOINED_SECTION } from '../filter-sections';
-import { RestaurantStatus } from '../../../core/models/catalog.models';
-import { ImageFallback, UsableImagePipe } from '../../../shared/directives/broken-images';
+import { AdminRestaurant, RestaurantStatus } from '../../../core/models/catalog.models';
+import {
+  BbEmpty,
+  DataTable,
+  TableAction,
+  TableColumn,
+} from '../../../shared/components/data-table/data-table';
 
 const TABS: { status: RestaurantStatus; label: string }[] = [
   { status: 'pending', label: 'Pending' },
@@ -22,18 +26,7 @@ const TABS: { status: RestaurantStatus; label: string }[] = [
 
 @Component({
   selector: 'bb-admin-restaurants',
-  imports: [
-    DatePipe,
-    RouterLink,
-    IconComponent,
-    PaginationComponent,
-    TabsComponent,
-    EmptyState,
-    ListToolbar,
-    PageHeader,
-    ImageFallback,
-    UsableImagePipe,
-  ],
+  imports: [TabsComponent, ListEmpty, ListToolbar, PageHeader, DataTable, BbEmpty],
   templateUrl: './admin-restaurants.html',
   styleUrl: './admin-restaurants.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -70,6 +63,22 @@ export class AdminRestaurants implements OnInit {
     extra: () => ({ status: TABS[this.activeTab()].status }),
   });
   protected readonly list = this.restaurants.list;
+
+  protected readonly columns: TableColumn<AdminRestaurant>[] = [
+    {
+      label: 'Restaurant',
+      avatar: (r) => ({ name: r.name, imageUrl: r.imageUrl }),
+      square: true,
+      value: (r) => r.name,
+      strong: true,
+      sub: (r) => `${r.cuisines.join(', ')} · ${r.address.city}`,
+    },
+    { label: 'Owner', value: (r) => r.owner.name, sub: (r) => r.owner.email },
+    { label: 'Submitted', date: (r) => r.createdAt, dateFormat: 'mediumDate', nowrap: true },
+  ];
+  protected readonly actions: TableAction<AdminRestaurant>[] = [
+    { icon: 'eye', label: 'View', link: (r) => ['/admin/restaurants', r.id] },
+  ];
 
   ngOnInit(): void {
     const index = TABS.findIndex((t) => t.status === this.status());

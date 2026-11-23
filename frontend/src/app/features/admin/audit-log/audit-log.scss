@@ -1,20 +1,7 @@
-.when {
-  white-space: nowrap;
-}
-
+// The Changes cell (bbCell).
 .ref {
   font-family: ui-monospace, monospace;
   font-size: 0.75rem;
-}
-
-.sub {
-  display: block;
-  font-size: 0.8rem;
-  color: var(--bb-ink-muted);
-}
-
-.reason {
-  color: var(--bb-ink);
 }
 
 .changes {

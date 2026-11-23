@@ -1,13 +1,19 @@
-import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { ButtonComponent, IconComponent, PaginationComponent } from 'nexprime';
+import { ButtonComponent, IconComponent } from 'nexprime';
 import { FinanceService } from '../../../../core/services/admin/finance.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { ListEmpty } from '../../../../shared/components/list-empty/list-empty';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
 import { ListToolbar } from '../../../../shared/components/list-toolbar/list-toolbar';
+import {
+  BbCell,
+  BbEmpty,
+  DATE_TIME,
+  DataTable,
+  TableColumn,
+} from '../../../../shared/components/data-table/data-table';
 import { datesSection, filteredList, optionsSection } from '../../../../shared/list/filtered-list';
-import { LedgerAccount } from '../../../../core/models/admin-roles.models';
+import { LedgerAccount, LedgerSummary } from '../../../../core/models/admin-roles.models';
 import { InrPipe } from '../../../../shared/pipes/money.pipes';
 
 // `sign` turns a balance into its natural reading: the ledger stores money held for others (and
@@ -44,10 +50,11 @@ const ACCOUNT: Record<LedgerAccount, { label: string; hint: string; sign: 1 | -1
 @Component({
   selector: 'bb-ledger',
   imports: [
-    DatePipe,
+    DataTable,
+    BbCell,
+    BbEmpty,
     ButtonComponent,
     IconComponent,
-    PaginationComponent,
     ListEmpty,
     ListToolbar,
     PageHeader,
@@ -78,6 +85,13 @@ export class LedgerPage {
     errorText: 'Could not load the ledger.',
   });
   protected readonly list = this.entries.list;
+
+  protected readonly columns: TableColumn<LedgerSummary['items'][number]>[] = [
+    { label: 'When', date: (e) => e.createdAt, dateFormat: DATE_TIME },
+    { label: 'Event', value: (e) => e.description },
+    { label: 'Account', value: (e) => ACCOUNT[e.account].label },
+    { label: 'Amount', key: 'amount', align: 'end' },
+  ];
 
   protected exportCsv(): void {
     this.exporting.set(true);

@@ -1,20 +1,9 @@
 import { ChangeDetectionStrategy, Component, OnInit, input } from '@angular/core';
-import { IconComponent, PaginationComponent } from 'nexprime';
 import { Observable } from 'rxjs';
 import { pagedList } from '../../list/paged-list';
-import { TableLabels } from '../../directives/table-labels';
+import { DataTable, TableColumn } from '../data-table/data-table';
 import { Paginated } from '../../../core/models/api.models';
 import { Permission } from '../../../core/models/user.models';
-
-/** One column: its text (and an optional second line), or a coloured badge. */
-export interface RecordColumn<T> {
-  label: string;
-  text?: (row: T) => string | number | null | undefined;
-  sub?: (row: T) => string | null | undefined;
-  badge?: (row: T) => { label: string; tone?: string } | null;
-  /** Right-aligned numbers (amounts, counts). */
-  num?: boolean;
-}
 
 /** A record tab of an account profile: who may see it, how it loads, its columns. */
 export interface ListTab<T = never> {
@@ -24,7 +13,7 @@ export interface ListTab<T = never> {
   needs?: Permission;
   empty: string;
   fetch: (page: number, limit: number) => Observable<Paginated<T>>;
-  columns: RecordColumn<T>[];
+  columns: TableColumn<T>[];
   /** Rows open something (an order, a ticket). */
   open?: (row: T) => void;
 }
@@ -34,12 +23,13 @@ export interface ListTab<T = never> {
 export type AnyListTab = ListTab<any>;
 
 /**
- * A paged table of one record list (an account's orders, payments, coins, tickets...): loading,
- * empty and error states, and np-pagination. Rows open the tab's `open` when it has one.
+ * A paged table of one record list (an account's orders, payments, coins, tickets...): the tab's
+ * columns on bb-data-table (loading, empty and error states, np-pagination). With an `open`, rows
+ * are clickable (and focusable: Enter opens them too).
  */
 @Component({
   selector: 'bb-record-table',
-  imports: [IconComponent, PaginationComponent, TableLabels],
+  imports: [DataTable],
   templateUrl: './record-table.html',
   styleUrl: './record-table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,9 +46,5 @@ export class RecordTable<T> implements OnInit {
 
   ngOnInit(): void {
     this.list.load(1);
-  }
-
-  protected rows(): T[] {
-    return (this.list.data()?.items ?? []) as T[];
   }
 }

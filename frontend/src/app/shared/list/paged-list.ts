@@ -84,6 +84,9 @@ export function pagedList<T extends { items: readonly unknown[] }>(
     reload: () => load(page),
     /** Drops the current page, e.g. on a tab switch where the old rows belong to another list. */
     clear: () => data.set(null),
+    /** Changes the shown rows in place (an optimistic edit or removal); the next load replaces them. */
+    update: (change: (items: T['items']) => T['items']) =>
+      data.update((d) => d && { ...d, items: change(d.items) }),
     onPage: (event: PageEvent) => {
       limit = event.pageSize;
       load(event.pageIndex + 1);

@@ -7,19 +7,14 @@
   placeholder="Ticket, order number, subject or name"
 />
 
-@if (list.error(); as message) {
-  <div class="bb-alert error" role="alert">
-    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
-    <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
-  </div>
-}
-
-<div class="bb-card bb-list-card" [attr.aria-busy]="list.loading()">
-  @if (list.showSkeleton()) {
-    @for (i of [1, 2, 3, 4, 5]; track i) {
-      <span class="bb-skeleton row"></span>
-    }
-  } @else if (list.empty()) {
+<bb-data-table
+  [list]="list"
+  [columns]="columns"
+  label="Support tickets"
+  clickable
+  (rowClick)="open($event.id)"
+>
+  <ng-template bbEmpty>
     <bb-list-empty
       [list]="tickets"
       icon="ticket"
@@ -27,51 +22,5 @@
       noMatch="No tickets match these filters"
       noMatchMessage="Try a different status or search."
     />
-  } @else {
-    <div class="bb-table-scroll" [class.bb-dim]="list.loading()">
-      <table class="bb-table">
-        <thead>
-          <tr>
-            <th scope="col">Ticket</th>
-            <th scope="col">From</th>
-            <th scope="col">Status</th>
-            <th scope="col">Priority</th>
-            <th scope="col">Assigned to</th>
-            <th scope="col">Last activity</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (t of list.data()!.items; track t.id) {
-            <tr class="clickable" tabindex="0" (click)="open(t.id)" (keydown.enter)="open(t.id)">
-              <td class="subject">
-                <strong>{{ t.subject }}</strong>
-                <span class="sub">
-                  {{ t.number }} · {{ typeLabel[t.type] }}
-                  @if (t.orderNumber) {
-                    · {{ t.orderNumber }}
-                  }
-                </span>
-              </td>
-              <td>
-                {{ t.requesterName }}
-                <span class="sub">{{ requesterLabel[t.requesterRole] }}</span>
-              </td>
-              <td><span class="bb-badge tone-{{ statusTone[t.status] }}">{{ statusLabel[t.status] }}</span></td>
-              <td><span class="bb-badge tone-{{ priorityTone[t.priority] }}">{{ priorityLabel[t.priority] }}</span></td>
-              <td>{{ t.assignee?.name ?? '–' }}</td>
-              <td class="when">{{ t.lastActivityAt | date: 'd MMM, h:mm a' }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-    <mat-paginator
-      [length]="list.data()!.pagination.total"
-      [pageIndex]="list.data()!.pagination.page - 1"
-      [pageSize]="list.data()!.pagination.limit"
-      [pageSizeOptions]="[20, 50, 100]"
-      (page)="list.onPage($event)"
-      aria-label="Ticket pages"
-    />
-  }
-</div>
+  </ng-template>
+</bb-data-table>

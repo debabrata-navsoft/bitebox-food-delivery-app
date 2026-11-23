@@ -11,6 +11,7 @@ import { errorMessage } from '../../../../shared/utils/api-error';
 import { liveRefresh } from '../../../../core/services/poll';
 import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
+import { DataTable, TableColumn } from '../../../../shared/components/data-table/data-table';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
 import { Monitoring, RestaurantAvailability } from '../../../../core/models/admin-roles.models';
 import { ORDER_STATUS_LABEL, OrderStatus } from '../../../../core/models/checkout.models';
@@ -37,6 +38,7 @@ const failed = <T>(err: unknown, text: string): Loaded<T> => ({
     EmptyState,
     PageHeader,
     InrPipe,
+    DataTable,
   ],
   templateUrl: './order-monitoring.html',
   styleUrl: './order-monitoring.scss',
@@ -117,6 +119,20 @@ export class OrderMonitoring {
     },
     { id: 'restaurants', label: 'Restaurant availability', content: '' },
   ]);
+  protected readonly restaurantColumns: TableColumn<RestaurantAvailability>[] = [
+    { label: 'Restaurant', value: (r) => r.name, strong: true, sub: (r) => r.city },
+    { label: 'Hours', value: (r) => r.hours },
+    {
+      label: 'Now',
+      badge: (r) =>
+        !r.isAcceptingOrders
+          ? { label: 'Paused', tone: 'warn' }
+          : r.isOpenNow
+            ? { label: 'Open', tone: 'good' }
+            : { label: 'Closed' },
+    },
+    { label: 'Live orders', value: (r) => r.activeOrders, align: 'end' },
+  ];
   protected readonly updatedAt = computed(() => this.board()?.data?.at ?? null);
 
   protected open(orderId: string): void {

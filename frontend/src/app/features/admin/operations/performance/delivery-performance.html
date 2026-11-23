@@ -77,30 +77,12 @@
   <section class="bb-card bb-list-card riders" aria-labelledby="riders-title">
     <h2 class="bb-h3" id="riders-title">Top delivery partners</h2>
     @if (d.topRiders.length) {
-      <div class="bb-table-scroll">
-        <table class="bb-table">
-          <thead>
-            <tr>
-              <th scope="col">Rider</th>
-              <th scope="col" class="num">Deliveries</th>
-              <th scope="col" class="num">Average ride</th>
-              <th scope="col" class="num">Distance (straight line)</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (r of d.topRiders; track r.id) {
-              <tr>
-                <td>
-                  <strong>{{ r.name }}</strong>
-                </td>
-                <td class="num">{{ r.deliveries }}</td>
-                <td class="num">{{ minutes(r.avgRideMinutes) }}</td>
-                <td class="num">{{ distance(r.distanceMeters) }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+      <bb-data-table
+        [rows]="d.topRiders"
+        [columns]="riderColumns"
+        [card]="false"
+        label="Top delivery partners"
+      />
     } @else {
       <p class="bb-muted empty">No deliveries in this period.</p>
     }

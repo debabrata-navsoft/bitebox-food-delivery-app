@@ -114,42 +114,15 @@
         @for (i of [1, 2, 3]; track i) {
           <span class="bb-skeleton row"></span>
         }
-      } @else if (!restaurants()!.data?.length) {
-        <bb-empty-state icon="storefront" title="No approved restaurants yet" />
       } @else {
-        <div class="bb-table-scroll">
-          <table class="bb-table">
-            <thead>
-              <tr>
-                <th scope="col">Restaurant</th>
-                <th scope="col">Hours</th>
-                <th scope="col">Now</th>
-                <th scope="col" class="num">Live orders</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (r of restaurants()!.data; track r.id) {
-                <tr>
-                  <td>
-                    <strong>{{ r.name }}</strong>
-                    <span class="sub">{{ r.city }}</span>
-                  </td>
-                  <td>{{ r.hours }}</td>
-                  <td>
-                    @if (!r.isAcceptingOrders) {
-                      <span class="bb-badge tone-warn">Paused</span>
-                    } @else if (r.isOpenNow) {
-                      <span class="bb-badge tone-good">Open</span>
-                    } @else {
-                      <span class="bb-badge">Closed</span>
-                    }
-                  </td>
-                  <td class="num">{{ r.activeOrders }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+        <bb-data-table
+          [rows]="restaurants()!.data ?? []"
+          [columns]="restaurantColumns"
+          [card]="false"
+          emptyIcon="storefront"
+          emptyText="No approved restaurants yet"
+          label="Restaurant availability"
+        />
       }
     </div>
   </div>

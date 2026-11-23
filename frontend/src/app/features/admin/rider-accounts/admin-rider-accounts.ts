@@ -1,15 +1,14 @@
-import { DatePipe, LowerCasePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { IconComponent, PaginationComponent } from 'nexprime';
 import { AuthService } from '../../../core/auth/auth.service';
-import { AdminRiderAccountsService } from '../../../core/services/admin/admin-rider-accounts.service';
+import {
+  AdminRiderAccountsService,
+  RiderAccountRow,
+} from '../../../core/services/admin/admin-rider-accounts.service';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { TableLabels } from '../../../shared/directives/table-labels';
+import { DataTable, TableColumn } from '../../../shared/components/data-table/data-table';
 import { VEHICLE_LABEL } from '../../../core/models/checkout.models';
 import { RIDER_VERIFICATION_LABEL, RIDER_VERIFICATION_TONE } from '../../../core/models/order-management.models';
-import { USER_STATUS_META, initialsOf } from '../../../core/models/user.models';
-import { shortId } from '../account-list';
+import { accountStatusBadge, personColumn, ratingColumn, viewEditActions } from '../account-list';
 import {
   JOINED_SECTION,
   KYC_SECTION,
@@ -22,7 +21,7 @@ import {
 import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
 import { FilterSection } from '../../../shared/components/filter-panel/filter-panel.models';
 import { filterOptions, filteredList } from '../../../shared/list/filtered-list';
-import { KYC_META } from '../restaurant-accounts/restaurant-status';
+import { kycStatusBadge } from '../restaurant-accounts/restaurant-status';
 import { availabilityOf } from './rider-status';
 
 /**
@@ -31,31 +30,14 @@ import { availabilityOf } from './rider-status';
  */
 @Component({
   selector: 'bb-admin-rider-accounts',
-  imports: [
-    DatePipe,
-    LowerCasePipe,
-    RouterLink,
-    IconComponent,
-    PaginationComponent,
-    PageHeader,
-    TableLabels,
-    ListToolbar,
-  ],
+  imports: [PageHeader, ListToolbar, DataTable],
   templateUrl: './admin-rider-accounts.html',
   styleUrl: './admin-rider-accounts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminRiderAccounts {
   private readonly api = inject(AdminRiderAccountsService);
-  protected readonly auth = inject(AuthService);
-  protected readonly shortId = shortId;
-  protected readonly initials = initialsOf;
-  protected readonly availability = availabilityOf;
-  protected readonly verificationLabel = RIDER_VERIFICATION_LABEL;
-  protected readonly verificationTone = RIDER_VERIFICATION_TONE;
-  protected readonly kycMeta = KYC_META;
-  protected readonly accountMeta = USER_STATUS_META;
-  protected readonly vehicleLabel = VEHICLE_LABEL;
+  private readonly auth = inject(AuthService);
 
   protected readonly filterSections: FilterSection[] = [
     {
@@ -78,4 +60,36 @@ export class AdminRiderAccounts {
     sort: 'newest',
   });
   protected readonly list = this.accounts.list;
+
+  protected readonly columns: TableColumn<RiderAccountRow>[] = [
+    {
+      ...personColumn('Delivery partner', '/admin/delivery-partner-accounts'),
+      badge: (r) => accountStatusBadge(r, { onlyIfInactive: true }),
+      sub: (r) => [r.email, r.phone || 'No mobile'],
+    },
+    {
+      label: 'Vehicle',
+      value: (r) => (r.vehicleType ? VEHICLE_LABEL[r.vehicleType] : null),
+      tag: (r) => r.vehicleNumber?.toUpperCase(),
+    },
+    { label: 'Zone', value: (r) => r.zone },
+    { label: 'Deliveries', value: (r) => r.completedDeliveries, align: 'end' },
+    ratingColumn((r) => r.rating),
+    { label: 'Joined', date: (r) => r.createdAt, nowrap: true },
+    {
+      // Verification, KYC and availability, one under another.
+      label: 'Status',
+      badge: (r) => [
+        {
+          label: RIDER_VERIFICATION_LABEL[r.verificationStatus],
+          tone: RIDER_VERIFICATION_TONE[r.verificationStatus],
+        },
+        kycStatusBadge(r.kycStatus),
+        availabilityOf(r),
+      ],
+    },
+  ];
+  protected readonly actions = viewEditActions<RiderAccountRow>('/admin/delivery-partner-accounts', () =>
+    this.auth.can('riders:edit'),
+  );
 }

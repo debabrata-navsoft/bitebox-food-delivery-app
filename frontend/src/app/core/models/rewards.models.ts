@@ -45,6 +45,18 @@ export const TXN_TYPE_LABEL: Record<CoinTxnType, string> = {
   REVERSAL: 'Reversal',
 };
 
+const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`);
+
+/**
+ * A ledger row's coin change: "+50", "-20", "held -30", "+50 (held -50)", or "0". Every coin table
+ * (admin transactions, a wallet's recent rows, an account's Coins tab) shows it this way.
+ */
+export function coinChange(t: Pick<CoinTransaction, 'availableChange' | 'reservedChange'>): string {
+  const held = t.reservedChange ? `held ${signed(t.reservedChange)}` : '';
+  if (!t.availableChange) return held || '0';
+  return held ? `${signed(t.availableChange)} (${held})` : signed(t.availableChange);
+}
+
 export interface CoinWallet {
   available: number;
   reserved: number;

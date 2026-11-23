@@ -1,7 +1,12 @@
+import type { TableColumn } from '../components/data-table/data-table.models';
+import { formatCount } from '../utils/numbers';
 import {
+  AdminCoupon,
   CardOffer,
   CartQuote,
   COUPON_KIND_LABEL,
+  COUPON_STATUS_LABEL,
+  COUPON_STATUS_TONE,
   CouponOffer,
   DiscountLine,
   NamedRef,
@@ -119,4 +124,30 @@ export function appliedMessage(quote: CartQuote, code?: string): string {
   const offer = quote.restaurantOffers?.find((o) => o.code === code && o.applied);
   if (offer) return `${offer.name || 'Restaurant offer'} applied — you save ${formatPaise(offer.savingPaise)}`;
   return `${quote.coupon?.code} applied — you save ${formatPaise(quote.coupon?.discountPaise ?? 0)}`;
+}
+
+/** An offer by name, as restaurants and reviewers know it: its name, description or discount. */
+export const offerTitle = (c: CouponOffer): string => c.name || c.description || discountLabel(c);
+
+/**
+ * The columns the coupon lists share (admin coupons, the review queue, a restaurant's offers):
+ * Discount, Valid (`valid('Runs')` to rename it), Used and Status (with a rejection's reason).
+ * `range` is `dateText().range`.
+ */
+export function couponColumns(range: (from: string, to: string) => string) {
+  const column = (c: TableColumn<AdminCoupon>) => c;
+  return {
+    discount: column({ label: 'Discount', value: discountLabel, sub: conditionsLabel }),
+    valid: (label = 'Valid') => column({ label, value: (c) => range(c.validFrom, c.validUntil) }),
+    used: column({
+      label: 'Used',
+      value: (c) => formatCount(c.usedCount) + (c.usageLimit ? ' / ' + formatCount(c.usageLimit) : ''),
+      align: 'end',
+    }),
+    status: column({
+      label: 'Status',
+      badge: (c) => ({ label: COUPON_STATUS_LABEL[c.status], tone: COUPON_STATUS_TONE[c.status] }),
+      sub: (c) => (c.status === 'rejected' ? c.rejectionReason : null),
+    }),
+  };
 }

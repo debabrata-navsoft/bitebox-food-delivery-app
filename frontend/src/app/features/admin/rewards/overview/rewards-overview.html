@@ -35,7 +35,7 @@
       @for (r of sources(); track r.label) {
         <div class="bb-bar-row">
           <span>{{ r.label }}</span>
-          <span class="num">{{ r.coins.toLocaleString('en-IN') }}</span>
+          <span class="num">{{ count(r.coins) }}</span>
           <span class="track"><span class="fill" [style.width.%]="r.share * 100"></span></span>
         </div>
       }
@@ -51,28 +51,7 @@
       @if (!d.campaigns.top.length) {
         <p class="bb-muted">No campaign has paid out yet.</p>
       } @else {
-        <div class="bb-table-scroll">
-          <table class="bb-table">
-            <thead>
-              <tr>
-                <th scope="col">Campaign</th>
-                <th scope="col">Status</th>
-                <th scope="col" class="num">Claims</th>
-                <th scope="col" class="num">Coins</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (c of d.campaigns.top; track c.id) {
-                <tr>
-                  <td>{{ c.name }}</td>
-                  <td>{{ statusLabel[c.status] }}</td>
-                  <td class="num">{{ c.claims }}</td>
-                  <td class="num">{{ c.coins.toLocaleString('en-IN') }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+        <bb-data-table [rows]="d.campaigns.top" [columns]="columns" [card]="false" label="Campaign performance" />
       }
     </section>
 

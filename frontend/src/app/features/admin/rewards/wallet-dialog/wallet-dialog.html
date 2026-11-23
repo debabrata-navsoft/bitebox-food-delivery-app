@@ -28,44 +28,11 @@
     @if (!d.batches.length) {
       <p class="bb-muted">No unspent coins.</p>
     } @else {
-      <div class="bb-table-scroll">
-        <table class="bb-table">
-          <thead>
-            <tr><th scope="col">From</th><th scope="col" class="num">Left</th><th scope="col">Earned</th><th scope="col">Expires</th></tr>
-          </thead>
-          <tbody>
-            @for (b of d.batches; track $index) {
-              <tr>
-                <td>{{ sourceLabel[b.source] }}</td>
-                <td class="num">{{ b.remaining }} / {{ b.original }}</td>
-                <td>{{ b.earnedAt | date: 'd MMM y' }}</td>
-                <td [class.expired]="isPast(b.expiresAt)">{{ b.expiresAt ? (b.expiresAt | date: 'd MMM y') : 'Never' }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+      <bb-data-table [rows]="d.batches" [columns]="batchColumns" [card]="false" label="Coin batches" />
     }
 
     <h3>Recent activity</h3>
-    <div class="bb-table-scroll">
-      <table class="bb-table">
-        <thead>
-          <tr><th scope="col">#</th><th scope="col">What</th><th scope="col" class="num">Change</th><th scope="col" class="num">Balance</th><th scope="col">When</th></tr>
-        </thead>
-        <tbody>
-          @for (t of d.recent; track t.id) {
-            <tr>
-              <td>{{ t.seq }}</td>
-              <td>{{ typeLabel[t.type] }} <span class="sub">{{ t.description }}</span></td>
-              <td class="num">{{ t.availableChange > 0 ? '+' : '' }}{{ t.availableChange }}{{ t.reservedChange ? ' (held ' + (t.reservedChange > 0 ? '+' : '') + t.reservedChange + ')' : '' }}</td>
-              <td class="num">{{ t.balanceAfter }}</td>
-              <td>{{ t.createdAt | date: 'd MMM, h:mm a' }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+    <bb-data-table [rows]="d.recent" [columns]="recentColumns" [card]="false" label="Recent activity" emptyText="No activity yet." />
   } @else if (!error()) {
     <span class="bb-skeleton" style="height: 280px"></span>
   }

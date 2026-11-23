@@ -1,0 +1,157 @@
+@if (list()?.error(); as message) {
+  <div class="bb-alert error" role="alert">
+    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
+    <span
+      >{{ message }} <button class="bb-link-button" (click)="list()!.load(1)">Retry</button></span
+    >
+  </div>
+}
+
+@if (skeleton()) {
+  @for (i of [1, 2, 3, 4, 5]; track i) {
+    <span class="bb-skeleton row"></span>
+  }
+} @else if (empty()) {
+  @if (emptyTemplate(); as custom) {
+    <ng-container *ngTemplateOutlet="custom.template" />
+  } @else if (filters(); as f) {
+    <bb-list-empty [list]="f" [icon]="emptyIcon()" [title]="emptyText()" />
+  } @else {
+    <bb-empty-state [icon]="emptyIcon()" [title]="emptyText()" />
+  }
+} @else {
+  <div class="bb-table-scroll" [class.bb-dim]="busy()">
+    <table class="bb-table" [attr.aria-label]="label()">
+      <thead>
+        <tr>
+          @for (c of columns(); track c.label) {
+            <th scope="col" [class]="c.class ?? ''" [class.num]="c.align === 'end' || !!c.paise">
+              @if (c.hideLabel) {
+                <span class="bb-sr-only">{{ c.label }}</span>
+              } @else {
+                {{ c.label }}
+              }
+            </th>
+          }
+          @if (actions().length) {
+            <th scope="col" class="actions">Actions</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of view(); track r.id) {
+          <tr
+            [class.clickable]="clickable()"
+            [attr.tabindex]="clickable() ? 0 : null"
+            (click)="open($event, r.row)"
+            (keydown.enter)="open($event, r.row)"
+          >
+            @for (c of columns(); track c.label; let i = $index) {
+              @let cell = r.cells[i];
+              <td
+                [class]="c.class ?? ''"
+                [class.num]="c.align === 'end' || !!c.paise"
+                [class.nowrap]="c.nowrap"
+              >
+                @if (cell.custom) {
+                  <ng-container *ngTemplateOutlet="cell.custom; context: { $implicit: r.row }" />
+                } @else if (cell.blank) {
+                  —
+                } @else {
+                  <div class="cell">
+                    @if (cell.avatar; as a) {
+                      <span class="bb-avatar" [class.square]="c.square">
+                        @if (a.imageUrl | usableImage) {
+                          <img [bbSrc]="a.imageUrl" alt="" width="40" height="40" />
+                        } @else if (a.icon) {
+                          <np-icon [name]="a.icon" class="mat-icon" />
+                        } @else {
+                          {{ initials(a.name) }}
+                        }
+                      </span>
+                    }
+                    <span class="text">
+                      @if (cell.date) {
+                        {{ cell.date | date: c.dateFormat ?? 'd MMM y' }}
+                      } @else if (cell.value !== undefined) {
+                        @if (cell.link) {
+                          <a class="link" [routerLink]="cell.link">{{ cell.value }}</a>
+                        } @else if (cell.run) {
+                          <button type="button" class="bb-link-button run" (click)="cell.run()">
+                            {{ cell.value }}
+                          </button>
+                        } @else {
+                          <span [class.strong]="c.strong">{{ cell.value }}</span>
+                        }
+                      }
+                      @for (b of cell.badges; track $index) {
+                        <span [class]="b.class" [title]="b.title">{{ b.label }}</span>
+                      }
+                      @for (line of cell.lines; track $index) {
+                        <span class="sub">{{ line }}</span>
+                      }
+                      @if (cell.tag) {
+                        <span class="sub tag">{{ cell.tag }}</span>
+                      }
+                    </span>
+                  </div>
+                }
+              </td>
+            }
+            @if (actions().length) {
+              <td class="actions">
+                @for (a of r.actions; track a.label) {
+                  @if (a.menu) {
+                    <np-button
+                      variant="text"
+                      severity="secondary"
+                      [icon]="a.icon"
+                      label=""
+                      [ariaLabel]="a.label"
+                      [disabled]="a.disabled"
+                      (clicked)="toggleMenu(menu, $event)"
+                    />
+                    <np-menu #menu class="bb-menu-compact" [popup]="true" [model]="a.menu" />
+                  } @else if (a.link) {
+                    <a
+                      class="bb-btn bb-btn--outlined"
+                      [class]="a.text ? 'bb-btn--small' : 'bb-btn--icon act'"
+                      [routerLink]="a.link"
+                      [attr.aria-label]="a.label"
+                      [title]="a.label"
+                      ><np-icon [name]="a.icon" />{{ a.text ? a.label : '' }}</a
+                    >
+                  } @else {
+                    <button
+                      type="button"
+                      class="bb-btn bb-btn--outlined"
+                      [class]="a.text ? 'bb-btn--small' : 'bb-btn--icon act'"
+                      [class.bb-btn--danger]="a.danger"
+                      [attr.aria-label]="a.label"
+                      [title]="a.label"
+                      [disabled]="a.disabled"
+                      (click)="a.run?.()"
+                    >
+                      <np-icon [name]="a.icon" />{{ a.text ? a.label : '' }}
+                    </button>
+                  }
+                }
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (page(); as p) {
+    <np-pagination
+      variant="compact"
+      [page]="p.page"
+      [rows]="p.limit"
+      [totalRecords]="p.total"
+      [rowsOptions]="rowsOptions()"
+      (pageChange)="list()!.goTo($event)"
+      (rowsChange)="list()!.goTo(1, $event)"
+    />
+  }
+}

@@ -8,111 +8,25 @@
   [sortOptions]="sortOptions"
 />
 
-@if (list.error(); as message) {
-  <div class="bb-alert error" role="alert">
-    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
-    <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
-  </div>
-}
-
-<div class="bb-card bb-list-card" [attr.aria-busy]="list.loading()">
-  @if (list.showSkeleton()) {
-    @for (i of [1, 2, 3, 4, 5]; track i) {
-      <span class="bb-skeleton row"></span>
-    }
-  } @else if (list.empty()) {
-    <div class="empty">
-      <np-icon name="user-search" class="mat-icon" matButtonIcon />
-      <p>No customers match these filters.</p>
-      @if (accounts.filtered()) {
-        <button type="button" class="bb-link-button" (click)="accounts.clear()">Clear filters</button>
+<bb-data-table
+  [list]="list"
+  [columns]="columns"
+  [actions]="actions"
+  label="Customers"
+  emptyIcon="user-search"
+  emptyText="No customers match these filters."
+  [filters]="accounts"
+>
+  <ng-template [bbCellOf]="list" bbCell="verified" let-c>
+    <span class="checks">
+      <span [class.ok]="c.emailVerified" [title]="c.emailVerified ? 'Email verified' : 'Email not verified'">
+        <np-icon name="mail" class="mat-icon" matButtonIcon />
+      </span>
+      @if (c.phone) {
+        <span [class.ok]="c.phoneVerified" [title]="c.phoneVerified ? 'Phone verified' : 'Phone not verified'">
+          <np-icon name="smartphone" class="mat-icon" matButtonIcon />
+        </span>
       }
-    </div>
-  } @else {
-    <div class="bb-table-scroll" [class.bb-dim]="list.loading()">
-      <table class="bb-table">
-        <thead>
-          <tr>
-            <th scope="col">Customer</th>
-            <th scope="col">Mobile</th>
-            <th scope="col" class="num">Orders</th>
-            <th scope="col" class="num">Spent</th>
-            <th scope="col">Joined</th>
-            <th scope="col">Status</th>
-            <th scope="col">Verified</th>
-            <th scope="col" class="actions">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (c of list.data()!.items; track c.id) {
-            <tr>
-              <td>
-                <div class="who">
-                  <span class="bb-avatar">
-                    @if (c.avatarUrl) {
-                      <img [src]="c.avatarUrl" alt="" width="40" height="40" />
-                    } @else {
-                      {{ initials(c.name) }}
-                    }
-                  </span>
-                  <span>
-                    <a class="name" [routerLink]="[c.id]">{{ c.name }}</a>
-                    <span class="sub">{{ c.email }}</span>
-                    <span class="sub id">{{ shortId(c.id) }}</span>
-                  </span>
-                </div>
-              </td>
-              <td>{{ c.phone || '—' }}</td>
-              <td class="num">{{ c.stats.orders }}</td>
-              <td class="num">{{ (c.stats.spentPaise | inr) || '₹0' }}</td>
-              <td class="nowrap">{{ c.createdAt | date: 'd MMM y' }}</td>
-              <td>
-                <span class="bb-badge {{ statusMeta[c.status].tone }}" [title]="c.statusReason ?? ''">{{ statusMeta[c.status].label }}</span>
-              </td>
-              <td class="checks">
-                <span [class.ok]="c.emailVerified" [title]="c.emailVerified ? 'Email verified' : 'Email not verified'">
-                  <np-icon name="mail" class="mat-icon" matButtonIcon />
-                </span>
-                @if (c.phone) {
-                  <span [class.ok]="c.phoneVerified" [title]="c.phoneVerified ? 'Phone verified' : 'Phone not verified'">
-                    <np-icon name="smartphone" class="mat-icon" matButtonIcon />
-                  </span>
-                }
-              </td>
-              <td class="actions">
-                <a class="bb-btn bb-btn--outlined bb-btn--icon act" [routerLink]="[c.id]" [attr.aria-label]="'View ' + c.name" title="View">
-                  <np-icon name="eye" />
-                </a>
-                @if (auth.can('customers:edit')) {
-                  <a class="bb-btn bb-btn--outlined bb-btn--icon act" [routerLink]="[c.id, 'edit']" [attr.aria-label]="'Edit ' + c.name" title="Edit">
-                    <np-icon name="pencil" />
-                  </a>
-                }
-                @if (auth.can('customers:status') || auth.can('accounts:suspend')) {
-                  <button
-                    type="button"
-                    class="bb-btn bb-btn--outlined bb-btn--icon act"
-                    [attr.aria-label]="'Change status of ' + c.name"
-                    title="Change status"
-                    (click)="changeStatus(c)"
-                  >
-                    <np-icon name="shield-alert" />
-                  </button>
-                }
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-    <np-pagination
-      variant="compact"
-      [page]="list.data()!.pagination.page"
-      [rows]="list.data()!.pagination.limit"
-      [totalRecords]="list.data()!.pagination.total"
-      [rowsOptions]="[20, 50, 100]"
-      (pageChange)="list.goTo($event)"
-      (rowsChange)="list.goTo(1, $event)"
-    />
-  }
-</div>
+    </span>
+  </ng-template>
+</bb-data-table>

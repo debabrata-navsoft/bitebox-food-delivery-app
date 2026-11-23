@@ -1,5 +1,3 @@
-import { TableLabels } from '../../../../shared/directives/table-labels';
-import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -13,7 +11,7 @@ import {
   untracked,
 } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { ButtonComponent, IconComponent, PaginationComponent } from 'nexprime';
+import { IconComponent } from 'nexprime';
 import { Observable } from 'rxjs';
 import { FinanceService } from '../../../../core/services/admin/finance.service';
 import { errorMessage, resourceError } from '../../../../shared/utils/api-error';
@@ -23,6 +21,12 @@ import { EmptyState } from '../../../../shared/components/empty-state/empty-stat
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
 import { ListEmpty } from '../../../../shared/components/list-empty/list-empty';
 import { ListToolbar } from '../../../../shared/components/list-toolbar/list-toolbar';
+import {
+  BbEmpty,
+  DataTable,
+  TableAction,
+  TableColumn,
+} from '../../../../shared/components/data-table/data-table';
 import { datesSection, filteredList, optionsSection } from '../../../../shared/list/filtered-list';
 import {
   PAYOUT_STATUS_LABEL,
@@ -34,6 +38,7 @@ import {
 import { InrPipe, formatPaise } from '../../../../shared/pipes/money.pipes';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 import { TabStrip } from '../../../../shared/components/tab-strip/tab-strip';
+import { dateText } from '../../../../shared/utils/dates';
 
 const COPY: Record<PayoutType, { title: string; subtitle: string; payee: string }> = {
   restaurant: {
@@ -51,11 +56,9 @@ const COPY: Record<PayoutType, { title: string; subtitle: string; payee: string 
 @Component({
   selector: 'bb-payouts',
   imports: [
-    TableLabels,
-    DatePipe,
+    DataTable,
+    BbEmpty,
     ListToolbar,
-    ButtonComponent,
-    PaginationComponent,
     IconComponent,
     EmptyState,
     ListEmpty,
@@ -71,13 +74,12 @@ export class PayoutsPage implements OnInit {
   private readonly api = inject(FinanceService);
   private readonly dialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
+  private readonly dates = dateText();
 
   /** Route parameter: restaurant or rider. */
   readonly type = input<PayoutType>('restaurant');
   protected readonly copy = computed(() => COPY[this.type()] ?? COPY.restaurant);
-  protected readonly statusLabel = PAYOUT_STATUS_LABEL;
-  protected readonly statusTone = PAYOUT_STATUS_TONE;
-  protected readonly busy = signal<string | null>(null);
+  private readonly busy = signal<string | null>(null);
 
   protected readonly due = rxResource({
     params: () => this.type(),
@@ -110,6 +112,64 @@ export class PayoutsPage implements OnInit {
   });
   protected readonly history = this.payouts.list;
 
+  protected readonly dueColumns = computed((): TableColumn<PayoutDue>[] => [
+    { label: this.copy().payee, value: (r) => r.name, strong: true },
+    { label: 'Orders', value: (r) => r.orders, align: 'end' },
+    { label: 'Delivered', value: (r) => this.dates.range(r.from, r.to, 'd MMM') },
+    { label: 'Amount', paise: (r) => r.amountPaise, strong: true },
+  ]);
+  protected readonly dueActions: TableAction<PayoutDue>[] = [
+    {
+      icon: 'hand-coins',
+      label: 'Pay out',
+      text: true,
+      run: (r) => this.payOut(r),
+      disabled: (r) => this.busy() === r.payeeId,
+    },
+  ];
+  protected readonly historyColumns = computed((): TableColumn<Payout>[] => [
+    {
+      label: this.copy().payee,
+      value: (p) => p.payeeName,
+      strong: true,
+      sub: (p) => `${p.orders} orders · ${this.dates.range(p.periodFrom, p.periodTo, 'd MMM')}`,
+    },
+    { label: 'Created', date: (p) => p.createdAt },
+    { label: 'Amount', paise: (p) => p.amountPaise },
+    {
+      label: 'Status',
+      badge: (p) => ({ label: PAYOUT_STATUS_LABEL[p.status], tone: PAYOUT_STATUS_TONE[p.status] }),
+      sub: (p) => (p.reference ? `Ref ${p.reference} · ${this.dates.day(p.paidAt, 'd MMM')}` : p.note),
+    },
+  ]);
+  private readonly pending = (p: Payout) => p.status === 'pending';
+  private readonly saving = (p: Payout) => this.busy() === p.id;
+  protected readonly historyActions: TableAction<Payout>[] = [
+    {
+      icon: 'circle-check',
+      label: 'Mark paid',
+      text: true,
+      run: (p) => this.markPaid(p),
+      show: this.pending,
+      disabled: this.saving,
+    },
+    {
+      icon: 'x',
+      label: 'Cancel',
+      text: true,
+      run: (p) => this.cancel(p),
+      show: this.pending,
+      disabled: this.saving,
+    },
+    {
+      icon: 'file-down',
+      label: 'Statement',
+      text: true,
+      run: (p) => this.statement(p),
+      show: (p) => p.status !== 'cancelled',
+    },
+  ];
+
   constructor() {
     // Restaurants and riders don't mix: a switch between the two pages starts with no filters.
     effect(() => {
@@ -122,7 +182,7 @@ export class PayoutsPage implements OnInit {
     this.history.load(1);
   }
 
-  protected payOut(row: PayoutDue): void {
+  private payOut(row: PayoutDue): void {
     confirmed(this.dialog, {
       title: `Pay ${row.name} ${formatPaise(row.amountPaise)}?`,
       message: `Creates a payout for ${row.orders} delivered order${row.orders === 1 ? '' : 's'}. Send the money, then mark the payout as paid with the transfer reference.`,
@@ -132,7 +192,7 @@ export class PayoutsPage implements OnInit {
     );
   }
 
-  protected markPaid(p: Payout): void {
+  private markPaid(p: Payout): void {
     confirmed(this.dialog, {
       title: `Mark ${formatPaise(p.amountPaise)} to ${p.payeeName} as paid?`,
       message: 'Enter the bank or UPI transfer reference so the payment can be traced.',
@@ -144,11 +204,11 @@ export class PayoutsPage implements OnInit {
     );
   }
 
-  protected statement(p: Payout): void {
+  private statement(p: Payout): void {
     this.api.statement(p.id).catch((err: Error) => this.notify.error(err.message));
   }
 
-  protected cancel(p: Payout): void {
+  private cancel(p: Payout): void {
     confirmed(this.dialog, {
       title: `Cancel this payout to ${p.payeeName}?`,
       message: 'Its orders go back to "owed" so they can be paid out again.',

@@ -1478,11 +1478,28 @@ np-time-picker .time-picker-field {
   }
 }
 
-// Plain data table: scrolls sideways on narrow screens, light dividers, muted headings.
+// A list's toolbar (search, Filters, sort) right above its card becomes that card's top strip.
+// (With an error alert between them they stay apart.)
+bb-list-toolbar:has(+ .bb-card) {
+  margin-bottom: 0;
+  padding: var(--bb-space-3) var(--bb-space-4);
+  border: 1px solid var(--bb-border);
+  border-bottom: 0;
+  border-radius: var(--bb-radius) var(--bb-radius) 0 0;
+  background: var(--bb-surface);
+}
+bb-list-toolbar + .bb-card {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+// The data table of every admin list: a grid with a grey heading row, ruled columns and compact
+// rows; scrolls sideways on narrow screens (phones show each row as a card, below).
 .bb-table-scroll {
   overflow-x: auto;
 }
 .bb-table {
+  --bb-table-rule: var(--bb-border);
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
@@ -1491,28 +1508,40 @@ np-time-picker .time-picker-field {
 
   th,
   td {
-    padding: 12px 16px;
+    padding: 10px 14px;
     text-align: left;
     vertical-align: middle;
-    border-bottom: 1px solid var(--bb-border);
+    border-bottom: 1px solid var(--bb-table-rule);
+  }
+  // Ruled columns (inner edges only: the card around the table draws the outside).
+  th + th,
+  td + td {
+    border-left: 1px solid var(--bb-table-rule);
   }
   thead th {
-    background: var(--bb-surface-alt);
-    color: var(--bb-ink-muted);
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    background: color-mix(in srgb, var(--bb-ink) 7%, var(--bb-surface));
+    border-bottom-color: color-mix(in srgb, var(--bb-ink) 14%, var(--bb-surface));
+    color: var(--bb-ink);
+    font-size: 0.82rem;
+    font-weight: 700;
     white-space: nowrap;
+  }
+  tbody tr {
+    transition: background 0.12s;
+
+    &:hover {
+      background: var(--bb-surface-alt);
+    }
   }
   tbody tr:last-child td {
     border-bottom: 0;
   }
+  // …unless the pagination follows: then the columns end on a line above it.
+  .bb-table-scroll:is(:has(+ np-pagination), :has(+ mat-paginator)) > & tbody tr:last-child td {
+    border-bottom: 1px solid var(--bb-table-rule);
+  }
   tbody tr.clickable {
     cursor: pointer;
-    &:hover {
-      background: var(--bb-surface-alt);
-    }
   }
   .num {
     text-align: right;

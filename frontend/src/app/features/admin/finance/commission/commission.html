@@ -31,32 +31,7 @@
   <section class="bb-card bb-list-card table-card" aria-labelledby="by-restaurant-title">
     <h2 class="bb-h3" id="by-restaurant-title">By restaurant</h2>
     @if (d.items.length) {
-      <div class="bb-table-scroll">
-        <table class="bb-table">
-          <thead>
-            <tr>
-              <th scope="col">Restaurant</th>
-              <th scope="col" class="num">Orders</th>
-              <th scope="col" class="num">Food value</th>
-              <th scope="col" class="num">Commission</th>
-              <th scope="col" class="num">Restaurant's share</th>
-              <th scope="col" class="num">BiteBox net</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (r of d.items; track r.restaurantId) {
-              <tr>
-                <td><strong>{{ r.name }}</strong></td>
-                <td class="num">{{ r.orders }}</td>
-                <td class="num">{{ r.foodPaise | inr }}</td>
-                <td class="num">{{ r.commissionPaise | inr }}</td>
-                <td class="num">{{ r.restaurantPaise | inr }}</td>
-                <td class="num"><strong>{{ r.platformPaise | inr }}</strong></td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+      <bb-data-table [rows]="d.items" [columns]="columns" [card]="false" label="Commission by restaurant" />
     } @else {
       <p class="bb-muted empty">No delivered orders in this period.</p>
     }

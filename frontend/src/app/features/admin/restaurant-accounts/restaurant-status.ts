@@ -97,5 +97,11 @@ export const KYC_META: Record<KycState, { label: string; tone: string }> = {
   rejected: { label: 'Rejected', tone: 'tone-bad' },
 };
 
+/** A table pill: "KYC awaiting review". */
+export const kycStatusBadge = (status: KycState) => ({
+  label: `KYC ${KYC_META[status].label.toLowerCase()}`,
+  tone: KYC_META[status].tone,
+});
+
 /** The profile's "KYC & bank" tab badge: nothing once verified. */
 export const kycBadge = (status: KycState | undefined) => (status && status !== 'verified' ? KYC_META[status].label : undefined);

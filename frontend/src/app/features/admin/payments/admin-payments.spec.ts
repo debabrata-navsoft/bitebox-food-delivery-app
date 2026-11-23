@@ -23,6 +23,7 @@ describe('AdminPayments', () => {
     for (const req of http.match((r) => r.url.endsWith('/admin/payments'))) req.flush(page([payment]));
     await fixture.whenStable();
     expect(text()).toContain('BB-FICT-000001');
+    expect(fixture.nativeElement.querySelectorAll('tbody tr').length).toBe(1);
 
     const cmp = fixture.componentInstance as unknown as { payments: ListHandle };
     const req = await applyFilters(cmp.payments, {

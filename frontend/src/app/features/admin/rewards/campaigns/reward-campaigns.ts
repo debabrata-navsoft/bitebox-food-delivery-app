@@ -1,21 +1,19 @@
-import { TableLabels } from '../../../../shared/directives/table-labels';
-import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import {
-  ButtonComponent,
-  IconComponent,
-  MenuComponent,
-  PaginationComponent,
-  type MenuItem,
-} from 'nexprime';
-import { COMPACT_MENU_WIDTH, toggleEndAligned } from '../../../../shared/utils/end-aligned-menu';
+import { ButtonComponent } from 'nexprime';
 import { filter, switchMap } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AdminRewardsService } from '../../../../core/services/admin/admin-rewards.service';
 import { errorMessage } from '../../../../shared/utils/api-error';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
+import {
+  BbEmpty,
+  DATE_YEAR_TIME,
+  DataTable,
+  TableAction,
+  TableColumn,
+} from '../../../../shared/components/data-table/data-table';
 import { ListEmpty } from '../../../../shared/components/list-empty/list-empty';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
 import { ListToolbar } from '../../../../shared/components/list-toolbar/list-toolbar';
@@ -31,14 +29,15 @@ import {
 import { CampaignDetailDialog } from '../campaign-detail-dialog/campaign-detail-dialog';
 import { CampaignFormDialog } from '../campaign-form-dialog/campaign-form-dialog';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
+import { dateText } from '../../../../shared/utils/dates';
+import { formatCount } from '../../../../shared/utils/numbers';
 
 type Action = 'activate' | 'pause' | 'end';
 
 /** Festival and promotional campaigns: create, schedule, pause, end and follow them. */
 @Component({
   selector: 'bb-reward-campaigns',
-  imports: [
-    TableLabels,DatePipe, ListToolbar, ButtonComponent, MenuComponent, PaginationComponent, IconComponent, ListEmpty, PageHeader],
+  imports: [ListToolbar, ButtonComponent, ListEmpty, PageHeader, DataTable, BbEmpty],
   templateUrl: './reward-campaigns.html',
   styleUrl: './reward-campaigns.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,10 +47,8 @@ export class RewardCampaignsPage {
   private readonly dialog = inject(MatDialog);
   private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
+  private readonly dates = dateText();
   protected readonly canManage = inject(AuthService).can('rewards:manage');
-  protected readonly statusLabel = CAMPAIGN_STATUS_LABEL;
-  protected readonly statusTone = CAMPAIGN_STATUS_TONE;
-  protected readonly typeLabel = CAMPAIGN_TYPE_LABEL;
   protected readonly busy = signal<string | null>(null);
 
   protected readonly filterSections = [
@@ -67,7 +64,53 @@ export class RewardCampaignsPage {
   });
   protected readonly list = this.campaigns.list;
 
-  protected actions(c: AdminCampaign): Action[] {
+  protected readonly columns: TableColumn<AdminCampaign>[] = [
+    {
+      label: 'Campaign',
+      value: (c) => c.name,
+      run: (c) => this.details(c),
+      sub: (c) =>
+        `${CAMPAIGN_TYPE_LABEL[c.type]} · ${c.trigger === 'CLAIM' ? 'claimed' : 'on orders'}`,
+    },
+    {
+      label: 'Runs',
+      value: (c) => this.dates.range(c.startAt, c.endAt),
+      sub: (c) => this.dates.range(c.startAt, c.endAt, 'h:mm a'),
+    },
+    { label: 'Reward', value: (c) => c.rewardCoins, align: 'end' },
+    {
+      label: 'Status',
+      badge: (c) => ({ label: CAMPAIGN_STATUS_LABEL[c.status], tone: CAMPAIGN_STATUS_TONE[c.status] }),
+    },
+    {
+      label: 'Given',
+      value: (c) => `${formatCount(c.stats.claims)} ${c.stats.claims === 1 ? 'claim' : 'claims'}`,
+      sub: (c) => `${formatCount(c.stats.coins)} coins`,
+      align: 'end',
+      strong: true,
+    },
+  ];
+  protected readonly actions: TableAction<AdminCampaign>[] = [
+    {
+      icon: 'ellipsis-vertical',
+      label: 'Actions',
+      disabled: (c) => this.busy() === c.id,
+      show: (c) => this.canManage && (this.moves(c).length > 0 || c.status !== 'EXPIRED'),
+      menu: (c) => [
+        ...(c.status !== 'EXPIRED' && c.status !== 'COMPLETED'
+          ? [{ label: 'Edit', icon: 'pencil', command: () => this.open(c) }]
+          : []),
+        ...this.moves(c).map((a) => ({
+          label: this.actionLabel[a],
+          icon: a === 'activate' ? 'play' : a === 'pause' ? 'pause' : 'square',
+          command: () => this.act(c, a),
+        })),
+        { label: 'Performance', icon: 'chart-column', command: () => this.details(c) },
+      ],
+    },
+  ];
+
+  protected moves(c: AdminCampaign): Action[] {
     const moves: Record<CampaignStatus, Action[]> = {
       DRAFT: ['activate', 'end'],
       SCHEDULED: ['pause', 'end'],
@@ -79,31 +122,7 @@ export class RewardCampaignsPage {
     return moves[c.status];
   }
 
-  protected readonly actionLabel: Record<Action, string> = { activate: 'Activate', pause: 'Pause', end: 'End now' };
-
-  protected readonly toggleMenu = (menu: MenuComponent, event: Event) =>
-    toggleEndAligned(menu, event, COMPACT_MENU_WIDTH);
-
-  /** Each campaign's actions menu (built once per page of results). */
-  protected readonly menus = computed(
-    () =>
-      new Map<string, MenuItem[]>(
-        (this.list.data()?.items ?? []).map((c) => [
-          c.id,
-          [
-            ...(c.status !== 'EXPIRED' && c.status !== 'COMPLETED'
-              ? [{ label: 'Edit', icon: 'pencil', command: () => this.open(c) }]
-              : []),
-            ...this.actions(c).map((a) => ({
-              label: this.actionLabel[a],
-              icon: a === 'activate' ? 'play' : a === 'pause' ? 'pause' : 'square',
-              command: () => this.act(c, a),
-            })),
-            { label: 'Performance', icon: 'chart-column', command: () => this.details(c) },
-          ],
-        ]),
-      ),
-  );
+  private readonly actionLabel: Record<Action, string> = { activate: 'Activate', pause: 'Pause', end: 'End now' };
 
   protected open(campaign?: AdminCampaign): void {
     this.dialog
@@ -128,7 +147,7 @@ export class RewardCampaignsPage {
     const messages: Record<Action, string> = {
       activate:
         new Date(c.startAt).getTime() > Date.now()
-          ? `It will start on ${new Date(c.startAt).toLocaleString('en-IN')}.`
+          ? `It will start on ${this.dates.day(c.startAt, DATE_YEAR_TIME)}.`
           : 'Customers can get it right away.',
       pause: 'Customers cannot get it until you activate it again.',
       end: 'It stops for good. Rewards already given are kept.',
@@ -148,7 +167,7 @@ export class RewardCampaignsPage {
       .subscribe({
         next: (updated) => {
           this.busy.set(null);
-          this.notify.success(`Campaign ${this.statusLabel[updated.status].toLowerCase()}`);
+          this.notify.success(`Campaign ${CAMPAIGN_STATUS_LABEL[updated.status].toLowerCase()}`);
           this.list.reload();
         },
         error: (err: unknown) => {

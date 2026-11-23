@@ -9,13 +9,6 @@
   />
 </bb-page-header>
 
-@if (list.error(); as message) {
-  <div class="bb-alert error" role="alert">
-    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
-    <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
-  </div>
-}
-
 @if (list.data(); as d) {
   <p class="check" [class.bad]="!d.balanced" role="status">
     <np-icon [name]="d.balanced ? 'circle-check' : 'triangle-alert'" class="mat-icon" matButtonIcon />
@@ -31,48 +24,18 @@
       </div>
     }
   </section>
+}
 
-  <section class="bb-card list-card" aria-labelledby="entries-title" [attr.aria-busy]="list.loading()">
-    <h2 class="bb-h3" id="entries-title">Entries</h2>
-    <bb-list-toolbar
-      [list]="entries"
-      [sections]="filterSections"
-      searchLabel="Search entries"
-      placeholder="Order number or payee"
-    />
-    @if (d.items.length) {
-      <div class="bb-table-scroll" [class.bb-dim]="list.loading()">
-        <table class="bb-table">
-          <thead>
-            <tr>
-              <th scope="col">When</th>
-              <th scope="col">Event</th>
-              <th scope="col">Account</th>
-              <th scope="col" class="num">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (e of d.items; track e.id) {
-              <tr>
-                <td>{{ e.createdAt | date: 'd MMM, h:mm a' }}</td>
-                <td>{{ e.description }}</td>
-                <td>{{ account[e.account].label }}</td>
-                <td class="num" [class.neg]="e.amountPaise < 0">{{ e.amountPaise | inr }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-      <np-pagination
-        variant="compact"
-        [page]="d.pagination.page"
-        [rows]="d.pagination.limit"
-        [totalRecords]="d.pagination.total"
-        [rowsOptions]="[20, 50, 100]"
-        (pageChange)="list.goTo($event)"
-        (rowsChange)="list.goTo(1, $event)"
-      />
-    } @else {
+<section class="bb-card list-card" aria-labelledby="entries-title">
+  <h2 class="bb-h3" id="entries-title">Entries</h2>
+  <bb-list-toolbar
+    [list]="entries"
+    [sections]="filterSections"
+    searchLabel="Search entries"
+    placeholder="Order number or payee"
+  />
+  <bb-data-table [list]="list" [columns]="columns" [card]="false" label="Ledger entries">
+    <ng-template bbEmpty>
       <bb-list-empty
         [list]="entries"
         icon="book-open"
@@ -80,8 +43,9 @@
         message="Delivered orders appear here."
         noMatch="No entries match these filters"
       />
-    }
-  </section>
-} @else if (!list.error()) {
-  <span class="bb-skeleton" style="height: 300px"></span>
-}
+    </ng-template>
+    <ng-template [bbCellOf]="list" bbCell="amount" let-e>
+      <span class="amount" [class.neg]="e.amountPaise < 0">{{ e.amountPaise | inr }}</span>
+    </ng-template>
+  </bb-data-table>
+</section>

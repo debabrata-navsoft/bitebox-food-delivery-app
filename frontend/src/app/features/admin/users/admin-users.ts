@@ -1,18 +1,8 @@
-import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { IconComponent, PaginationComponent } from 'nexprime';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AdminUsersService } from '../../../core/services/admin/admin-users.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import {
-  MEMBER_KIND,
-  Permission,
-  ROLE_META,
-  USER_STATUS_META,
-  User,
-  initialsOf,
-} from '../../../core/models/user.models';
+import { MEMBER_KIND, Permission, ROLE_META, User } from '../../../core/models/user.models';
 import {
   openAccountStatus,
   statusChanged,
@@ -20,10 +10,14 @@ import {
 import { FilterSection } from '../../../shared/components/filter-panel/filter-panel.models';
 import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { TableLabels } from '../../../shared/directives/table-labels';
+import {
+  DataTable,
+  TableAction,
+  TableColumn,
+} from '../../../shared/components/data-table/data-table';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { filterOptions, filteredList, optionsSection } from '../../../shared/list/filtered-list';
-import { shortId } from '../account-list';
+import { accountStatusBadge, personColumn, viewEditActions } from '../account-list';
 import { JOINED_SECTION, accountSorts, accountStatusSection } from '../filter-sections';
 
 type MemberRole = keyof typeof MEMBER_KIND;
@@ -31,15 +25,7 @@ type MemberRole = keyof typeof MEMBER_KIND;
 /** Every customer, restaurant partner and rider account this admin may view, in one list. */
 @Component({
   selector: 'bb-admin-users',
-  imports: [
-    DatePipe,
-    RouterLink,
-    IconComponent,
-    PaginationComponent,
-    PageHeader,
-    TableLabels,
-    ListToolbar,
-  ],
+  imports: [PageHeader, ListToolbar, DataTable],
   templateUrl: './admin-users.html',
   styleUrl: './admin-users.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -49,10 +35,6 @@ export class AdminUsers {
   private readonly dialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
   private readonly auth = inject(AuthService);
-  protected readonly roleMeta = ROLE_META;
-  protected readonly statusMeta = USER_STATUS_META;
-  protected readonly shortId = shortId;
-  protected readonly initials = initialsOf;
 
   protected readonly filterSections: FilterSection[] = [
     // Only the member roles this admin may view (the API refuses the others).
@@ -74,6 +56,26 @@ export class AdminUsers {
     sort: 'newest',
   });
   protected readonly list = this.accounts.list;
+
+  protected readonly columns: TableColumn<User>[] = [
+    personColumn('User', '/admin/users'),
+    { label: 'Mobile', value: (u) => u.phone },
+    {
+      label: 'Role',
+      badge: (u) => ({ label: ROLE_META[u.role].label, class: `bb-role-chip role-${u.role}` }),
+    },
+    { label: 'Joined', date: (u) => u.createdAt, nowrap: true },
+    { label: 'Status', badge: (u) => accountStatusBadge(u) },
+  ];
+  protected readonly actions: TableAction<User>[] = [
+    ...viewEditActions<User>('/admin/users', (u) => this.may(u.role, 'edit')),
+    {
+      icon: 'shield-alert',
+      label: 'Change status',
+      run: (u) => this.changeStatus(u),
+      show: (u) => this.may(u.role, 'status'),
+    },
+  ];
 
   /** `customers:edit`, `riders:status`…; suspending and blocking also come with accounts:suspend. */
   protected may(role: string, action: 'view' | 'edit' | 'status'): boolean {

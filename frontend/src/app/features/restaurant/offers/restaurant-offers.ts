@@ -1,21 +1,20 @@
-import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import {
-  ButtonComponent,
-  IconComponent,
-  MenuComponent,
-  PaginationComponent,
-  type MenuItem,
-} from 'nexprime';
+import { ButtonComponent } from 'nexprime';
 import { filter } from 'rxjs';
 import { MyOffersService } from '../../../core/services/my-offers.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
+import {
+  BbEmpty,
+  DataTable,
+  TableAction,
+  TableColumn,
+} from '../../../shared/components/data-table/data-table';
 import { ListEmpty } from '../../../shared/components/list-empty/list-empty';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatTile } from '../../../shared/components/stat-tile/stat-tile';
-import { conditionsLabel, discountLabel, itemsLabel } from '../../../shared/coupons/coupon-labels';
+import { couponColumns, itemsLabel, offerTitle } from '../../../shared/coupons/coupon-labels';
 import {
   COUPON_STATUS_SECTION,
   DISCOUNT_TYPE_SECTION,
@@ -25,14 +24,10 @@ import {
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
 import { datesSection, filteredList } from '../../../shared/list/filtered-list';
-import { TableLabels } from '../../../shared/directives/table-labels';
-import { COMPACT_MENU_WIDTH, toggleEndAligned } from '../../../shared/utils/end-aligned-menu';
-import {
-  AdminCoupon,
-  COUPON_STATUS_LABEL,
-  COUPON_STATUS_TONE,
-} from '../../../core/models/checkout.models';
+import { AdminCoupon } from '../../../core/models/checkout.models';
 import { formatPaise } from '../../../shared/pipes/money.pipes';
+import { dateText } from '../../../shared/utils/dates';
+import { formatCount } from '../../../shared/utils/numbers';
 import { OfferFormDialog } from './offer-form-dialog/offer-form-dialog';
 
 /** What a save did, by the offer's state afterwards. */
@@ -46,18 +41,7 @@ const SAVED: Partial<Record<AdminCoupon['status'], string>> = {
 /** The restaurant's own offers: totals, the list with approval status, and the form. */
 @Component({
   selector: 'bb-restaurant-offers',
-  imports: [
-    DatePipe,
-    ListToolbar,
-    ButtonComponent,
-    IconComponent,
-    MenuComponent,
-    PaginationComponent,
-    ListEmpty,
-    PageHeader,
-    StatTile,
-    TableLabels,
-  ],
+  imports: [ListToolbar, ButtonComponent, ListEmpty, PageHeader, StatTile, DataTable, BbEmpty],
   templateUrl: './restaurant-offers.html',
   styleUrl: './restaurant-offers.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -66,12 +50,8 @@ export class RestaurantOffers {
   private readonly service = inject(MyOffersService);
   private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
-  protected readonly statusLabel = COUPON_STATUS_LABEL;
-  protected readonly statusTone = COUPON_STATUS_TONE;
-  protected readonly discountLabel = discountLabel;
-  protected readonly itemsLabel = itemsLabel;
-  protected readonly conditionsLabel = conditionsLabel;
   protected readonly formatPaise = formatPaise;
+  protected readonly formatCount = formatCount;
 
   private readonly stats = rxResource({ stream: () => this.service.analytics() });
   /** Hidden while loading or after an error. */
@@ -91,30 +71,35 @@ export class RestaurantOffers {
   });
   protected readonly list = this.offers.list;
 
-  protected readonly toggleMenu = (menu: MenuComponent, event: Event) =>
-    toggleEndAligned(menu, event, COMPACT_MENU_WIDTH);
+  private readonly shared = couponColumns(dateText().range);
+  protected readonly columns: TableColumn<AdminCoupon>[] = [
+    { label: 'Offer', value: offerTitle, run: (o) => this.open(o), sub: () => 'Applies automatically' },
+    this.shared.discount,
+    { label: 'Dishes', value: (o) => itemsLabel(o) ?? 'Whole menu' },
+    this.shared.valid('Runs'),
+    this.shared.used,
+    this.shared.status,
+  ];
+  protected readonly actions: TableAction<AdminCoupon>[] = [
+    {
+      icon: 'ellipsis-vertical',
+      label: 'Actions',
+      disabled: (o) => this.busy() === o.id,
+      menu: (o) => [
+        { label: 'Edit', icon: 'pencil', command: () => this.open(o) },
+        o.isActive
+          ? { label: 'Pause', icon: 'pause', command: () => this.setActive(o, false) }
+          : { label: 'Resume', icon: 'play', command: () => this.setActive(o, true) },
+        ...(o.usedCount === 0 ? [{ label: 'Delete', icon: 'trash-2', command: () => this.remove(o) }] : []),
+      ],
+    },
+  ];
 
-  protected readonly menus = computed(
-    () =>
-      new Map<string, MenuItem[]>(
-        (this.list.data()?.items ?? []).map((o) => [
-          o.id,
-          [
-            { label: 'Edit', icon: 'pencil', command: () => this.open(o) },
-            o.isActive
-              ? { label: 'Pause', icon: 'pause', command: () => this.setActive(o, false) }
-              : { label: 'Resume', icon: 'play', command: () => this.setActive(o, true) },
-            ...(o.usedCount === 0 ? [{ label: 'Delete', icon: 'trash-2', command: () => this.remove(o) }] : []),
-          ],
-        ]),
-      ),
-  );
-
-  private readonly actions = rowActions(() => {
+  private readonly runner = rowActions(() => {
     this.list.reload();
     this.stats.reload();
   });
-  protected readonly busy = this.actions.busy;
+  protected readonly busy = this.runner.busy;
 
   protected open(offer?: AdminCoupon): void {
     this.bbDialog
@@ -131,7 +116,7 @@ export class RestaurantOffers {
   }
 
   protected setActive(o: AdminCoupon, isActive: boolean): void {
-    this.actions.run(o.id, this.service.setActive(o.id, isActive), isActive ? 'Offer resumed' : 'Offer paused');
+    this.runner.run(o.id, this.service.setActive(o.id, isActive), isActive ? 'Offer resumed' : 'Offer paused');
   }
 
   protected remove(o: AdminCoupon): void {
@@ -140,6 +125,6 @@ export class RestaurantOffers {
       message: 'Customers will no longer see or use this offer.',
       confirmLabel: 'Delete',
       danger: true,
-    }).subscribe(() => this.actions.run(o.id, this.service.remove(o.id), 'Offer deleted'));
+    }).subscribe(() => this.runner.run(o.id, this.service.remove(o.id), 'Offer deleted'));
   }
 }

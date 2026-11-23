@@ -42,22 +42,7 @@
     @if (!d.recentClaims.length) {
       <p class="bb-muted">Nobody has received this reward yet.</p>
     } @else {
-      <div class="bb-table-scroll">
-        <table class="bb-table">
-          <thead>
-            <tr><th scope="col">Customer</th><th scope="col" class="num">Coins</th><th scope="col">When</th></tr>
-          </thead>
-          <tbody>
-            @for (r of d.recentClaims; track r.id) {
-              <tr>
-                <td>{{ r.customer?.name ?? '–' }} <span class="bb-muted sub">{{ r.customer?.email }}</span></td>
-                <td class="num">{{ r.coins }}</td>
-                <td>{{ r.claimedAt | date: 'd MMM, h:mm a' }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+      <bb-data-table [rows]="d.recentClaims" [columns]="columns" [card]="false" label="Latest rewards" />
     }
   } @else if (!error()) {
     <span class="bb-skeleton" style="height: 240px"></span>

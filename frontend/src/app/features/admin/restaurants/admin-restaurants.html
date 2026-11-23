@@ -19,71 +19,24 @@
   placeholder="Search by name, city or cuisine"
 />
 
-@if (list.error(); as message) {
-  <div class="bb-alert error" role="alert">
-    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
-    <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
-  </div>
-}
-
-<div class="bb-card list-card" [attr.aria-busy]="list.loading()">
-  @if (list.showSkeleton()) {
-    @for (i of [1, 2, 3]; track i) {
-      <span class="bb-skeleton row-skeleton"></span>
-    }
-  } @else if (list.empty()) {
-    @if (restaurants.filtered()) {
-      <bb-empty-state icon="storefront" title="No restaurants match these filters" />
-      <p class="bb-list-clear"><button type="button" class="bb-link-button" (click)="restaurants.clear()">Clear filters</button></p>
-    } @else {
-      <bb-empty-state
-        icon="storefront"
-        [title]="'No ' + tabs[activeTab()].label.toLowerCase() + ' restaurants'"
-        [message]="
-          tabs[activeTab()].status === 'pending'
-            ? 'New applications will appear here for review.'
-            : undefined
-        "
-      />
-    }
-  } @else {
-    <ul class="rows" [class.dim]="list.loading()">
-      @for (r of list.data()!.items; track r.id) {
-        <li>
-          <div class="row">
-            @if (r.imageUrl | usableImage) {
-              <img [bbSrc]="r.imageUrl" alt="" loading="lazy" />
-            } @else {
-              <span class="avatar" aria-hidden="true">{{ r.name.charAt(0) }}</span>
-            }
-            <span class="info">
-              <strong>{{ r.name }}</strong>
-              <span class="bb-muted">{{ r.cuisines.join(', ') }} · {{ r.address.city }}</span>
-              <span class="bb-muted small">Owner: {{ r.owner.name }} ({{ r.owner.email }})</span>
-            </span>
-            <span class="when bb-muted small"
-              >Submitted {{ r.createdAt | date: 'mediumDate' }}</span
-            >
-            <a
-              class="bb-btn bb-btn--outlined bb-pill-action view"
-              [routerLink]="['/admin/restaurants', r.id]"
-              [attr.aria-label]="'View ' + r.name"
-              ><np-icon name="eye" />View</a
-            >
-          </div>
-        </li>
-      }
-    </ul>
-  }
-  @if (list.data(); as page) {
-    <np-pagination
-      variant="compact"
-      [page]="page.pagination.page"
-      [rows]="page.pagination.limit"
-      [totalRecords]="page.pagination.total"
-      [rowsOptions]="[10, 25, 50]"
-      (pageChange)="list.goTo($event)"
-      (rowsChange)="list.goTo(1, $event)"
+<bb-data-table
+  [list]="list"
+  [columns]="columns"
+  [actions]="actions"
+  label="Restaurants"
+  [rowsOptions]="[10, 25, 50]"
+>
+  <ng-template bbEmpty>
+    <bb-list-empty
+      [list]="restaurants"
+      icon="store"
+      [title]="'No ' + tabs[activeTab()].label.toLowerCase() + ' restaurants'"
+      [message]="
+        tabs[activeTab()].status === 'pending'
+          ? 'New applications will appear here for review.'
+          : undefined
+      "
+      noMatch="No restaurants match these filters"
     />
-  }
-</div>
+  </ng-template>
+</bb-data-table>

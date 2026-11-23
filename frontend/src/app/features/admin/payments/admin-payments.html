@@ -7,66 +7,20 @@
   placeholder="Order number, customer name, email or phone"
 />
 
-@if (list.error(); as message) {
-  <div class="bb-alert error" role="alert">
-    <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
-    <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
-  </div>
-}
-
-<div class="bb-card list-card" [attr.aria-busy]="list.loading()">
-  @if (list.showSkeleton()) {
-    @for (i of [1, 2, 3, 4, 5]; track i) {
-      <span class="bb-skeleton row-skeleton"></span>
+<bb-data-table
+  [list]="list"
+  [columns]="columns"
+  [actions]="actions"
+  label="Transactions"
+  [filters]="payments"
+  emptyText="No payments match these filters"
+  emptyIcon="payments"
+>
+  <ng-template [bbCellOf]="list" bbCell="orderStatus" let-p>
+    @if (p.order; as o) {
+      <bb-order-status-chip [status]="o.status" />
+    } @else {
+      —
     }
-  } @else if (list.empty()) {
-    <bb-list-empty [list]="payments" icon="payments" title="No payments match these filters" />
-  } @else {
-    <ul class="rows" [class.bb-dim]="list.loading()">
-      @for (p of list.data()!.items; track p.id) {
-        <li class="row">
-          <div class="main">
-            <div class="head">
-              @if (p.order; as o) {
-                <button type="button" class="bb-link-button order" (click)="details(p)">{{ o.orderNumber }}</button>
-                <bb-order-status-chip [status]="o.status" />
-              } @else {
-                <strong>Order removed</strong>
-              }
-            </div>
-            <span class="bb-muted meta">
-              @if (p.customer) {
-                {{ p.customer.name }} ·
-              }
-              {{ providerLabel[p.provider] }} · <span class="when">{{ p.createdAt | date: 'd MMM, h:mm a' }}</span>
-              @if (p.providerPaymentId) {
-                · <span class="ref">{{ p.providerPaymentId }}</span>
-              }
-            </span>
-            @if (p.failureReason) {
-              <span class="reason">{{ p.failureReason }}</span>
-            }
-          </div>
-          <span class="amount">{{ p.amountPaise | inr }}</span>
-          <span class="pay-status pay-{{ p.status }}">{{ statusLabel[p.status] }}</span>
-          <div class="action">
-            @if (p.refundNeeded && canRefund) {
-              <np-button size="small" variant="outlined" severity="primary" icon="rotate-ccw" label="Retry refund" [disabled]="refunding() === p.id" (clicked)="retryRefund(p)" />
-            } @else if (hasRefunds(p)) {
-              <np-button size="small" variant="outlined" severity="secondary" [label]="canRefund && p.refundablePaise! > 0 ? 'Refund' : 'Refunds'" (clicked)="refunds(p)" />
-            }
-          </div>
-        </li>
-      }
-    </ul>
-    <np-pagination
-      variant="compact"
-      [page]="list.data()!.pagination.page"
-      [rows]="list.data()!.pagination.limit"
-      [totalRecords]="list.data()!.pagination.total"
-      [rowsOptions]="[20, 50, 100]"
-      (pageChange)="list.goTo($event)"
-      (rowsChange)="list.goTo(1, $event)"
-    />
-  }
-</div>
+  </ng-template>
+</bb-data-table>
