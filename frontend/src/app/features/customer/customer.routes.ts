@@ -64,9 +64,9 @@ export const CUSTOMER_ROUTES: Routes = [
   },
   {
     path: 'account/payments',
-    title: 'Payments | BiteBox',
+    title: 'Payment methods | BiteBox',
     canActivate: [roleGuard('customer')],
-    loadComponent: () => import('./payments/payment-history').then((m) => m.PaymentHistory),
+    loadComponent: () => import('./payments/payment-methods').then((m) => m.PaymentMethods),
   },
   {
     path: 'account/coins',

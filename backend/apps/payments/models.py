@@ -126,3 +126,52 @@ class Refund(BaseModel):
                 name="refunds_provider_refund_unique",
             ),
         ]
+
+
+class PaymentCustomer(BaseModel):
+    """The customer's id at the gateway (a Razorpay customer), which keeps their saved cards."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payment_customers"
+    )
+    provider = models.CharField(max_length=20, choices=Provider.choices)
+    provider_customer_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = "payment_customers"
+        constraints = [
+            one_of("provider", Provider, "payment_customers_provider_valid"),
+            models.UniqueConstraint(
+                fields=["user", "provider"], name="payment_customers_one_per_provider"
+            ),
+        ]
+
+
+class SavedCard(BaseModel):
+    """
+    A card the gateway saved (tokenised, with the customer's consent) for one customer. Never the
+    card number: only the gateway's token reference and what the customer needs to recognise it.
+    For Razorpay these rows mirror the customer's tokens there (`cards.list_cards` syncs them).
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="saved_cards"
+    )
+    provider = models.CharField(max_length=20, choices=Provider.choices)
+    provider_token_id = models.CharField(max_length=100)
+    network = models.CharField(max_length=30, blank=True, default="")
+    last4 = models.CharField(max_length=4)
+    issuer = models.CharField(max_length=60, blank=True, default="")
+    card_type = models.CharField(max_length=10, blank=True, default="")  # credit, debit, prepaid
+    expiry_month = models.PositiveSmallIntegerField(null=True, blank=True)
+    expiry_year = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    class Meta:
+        db_table = "saved_cards"
+        constraints = [
+            one_of("provider", Provider, "saved_cards_provider_valid"),
+            models.UniqueConstraint(
+                fields=["provider", "provider_token_id"], name="saved_cards_token_unique"
+            ),
+        ]
+        indexes = [models.Index(fields=["user", "-created_at"], name="saved_cards_user_recent")]

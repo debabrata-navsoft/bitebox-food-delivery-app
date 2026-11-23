@@ -150,6 +150,25 @@ h2 {
     monospace;
 }
 
+.saved-title {
+  margin-top: var(--bb-space-3);
+}
+
+.save {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: var(--bb-space-3);
+  font-size: 0.9rem;
+  cursor: pointer;
+
+  input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--bb-brand);
+  }
+}
+
 .gateway-foot {
   display: flex;
   flex-direction: column;

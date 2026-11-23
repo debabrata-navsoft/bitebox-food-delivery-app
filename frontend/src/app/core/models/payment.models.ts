@@ -63,12 +63,26 @@ export const paymentTone = (status: PaymentStatus | RefundStatus): string =>
         ? ''
         : 'tone-warn';
 
-/** One entry of the customer's payment history (`GET /payments/mine`). */
-export interface PaymentHistoryItem extends PaymentInfo {
+/**
+ * A card the payment gateway saved for the customer (`GET /payments/cards`). Never the card
+ * number: only what is needed to recognise it.
+ */
+export interface SavedCard {
   id: string;
+  network: string | null;
+  last4: string;
+  issuer: string | null;
+  cardType: string | null;
+  expiryMonth: number | null;
+  expiryYear: number | null;
   createdAt: string;
-  order: { id: string; orderNumber: string; status: OrderStatus; restaurantName: string };
-  refunds: RefundInfo[];
+}
+
+export interface SavedCards {
+  cards: SavedCard[];
+  /** False when online payment is off (cards can't be saved then). */
+  canSave: boolean;
+  simulated: boolean;
 }
 
 export interface CheckoutSession {
@@ -81,6 +95,10 @@ export interface CheckoutSession {
   orderNumber: string;
   /** The channel the customer chose (its payment offer is priced in); null: any method. */
   channel?: PaymentChannel | null;
+  /** Razorpay: the customer's id there, so checkout offers "save card" and their saved cards. */
+  customerId?: string | null;
+  /** The simulated gateway: the customer's saved test cards. */
+  savedCards?: SavedCard[];
 }
 
 export interface AppNotification {

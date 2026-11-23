@@ -48,6 +48,7 @@ from common.api import ApiError
 from common.filters import Facet, apply_facets, text_search, with_facets
 from common.pagination import Page, paginate
 
+from . import cards
 from .models import Payment, Provider, Refund, RefundStatus, WebhookEvent
 from .providers import online_provider, provider_named
 
@@ -134,6 +135,9 @@ def _load_for_customer(user: User, order_id: uuid.UUID) -> tuple[Order, Payment]
 
 def _checkout_info(order: Order, payment: Payment) -> dict[str, Any]:
     online = online_provider()
+    # Cards can be saved (and saved ones used) when the customer may pay by card.
+    cards_allowed = online is not None and order.payment_channel in ("", None, "card")
+    customer = order.customer
     return {
         "provider": payment.provider,
         "simulated": payment.provider == Provider.MOCK,
@@ -145,6 +149,18 @@ def _checkout_info(order: Order, payment: Payment) -> dict[str, Any]:
         # The channel the customer chose (its payment offer is priced in): checkout opens
         # with only that method. Null when any method will do.
         "channel": order.payment_channel or None,
+        # Razorpay: the customer's id there, so checkout offers "save card" and their saved cards.
+        "customer_id": (
+            cards.customer_ref(customer)
+            if cards_allowed and payment.provider == Provider.RAZORPAY
+            else None
+        ),
+        # The simulated gateway shows saved test cards itself.
+        "saved_cards": (
+            cards.list_cards(customer)["cards"]
+            if cards_allowed and payment.provider == Provider.MOCK
+            else []
+        ),
     }
 
 
@@ -211,7 +227,9 @@ def confirm_payment(
     return payment_view(payment)  # still processing: the webhook or reconciliation finishes it
 
 
-def complete_mock_payment(user: User, order_id: uuid.UUID, outcome: str) -> dict[str, Any]:
+def complete_mock_payment(
+    user: User, order_id: uuid.UUID, outcome: str, *, save_card: bool = False
+) -> dict[str, Any]:
     """Development only: finishes a simulated payment with the outcome the tester chose."""
     order, payment = _load_for_customer(user, order_id)
     if payment.provider != Provider.MOCK or not settings.PAYMENTS_MOCK_ENABLED:
@@ -222,6 +240,8 @@ def complete_mock_payment(user: User, order_id: uuid.UUID, outcome: str) -> dict
         raise _conflict("Start the payment first", "PAYMENT_NOT_STARTED")
     if outcome == "success":
         updated = mark_paid(payment.pk, f"mock_pay_{payment.provider_order_id[-8:]}")
+        if save_card:
+            cards.save_test_card(user)
     else:
         updated = mark_failed(payment.pk, "Simulated failure")
     return payment_view(updated)

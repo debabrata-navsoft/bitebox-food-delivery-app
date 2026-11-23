@@ -17,7 +17,7 @@ import {
   available,
 } from './footer-links';
 import { NewsletterSignup } from './newsletter-signup/newsletter-signup';
-import { CASH_OPTION, ONLINE_OPTIONS } from '../../utils/payment-options';
+import { acceptedOptions } from '../../utils/payment-options';
 
 /**
  * The customer site footer. Links come from footer-links.ts and only those leading to a real page
@@ -67,12 +67,6 @@ export class SiteFooter {
       initialValue: [],
     },
   );
-  protected readonly payments = computed(() => {
-    const methods = this.methods();
-    const online = methods.some((m) => m.method === 'online' && !m.simulated);
-    return [
-      ...(online ? ONLINE_OPTIONS : []),
-      ...(methods.some((m) => m.method === 'cod') ? [CASH_OPTION] : []),
-    ];
-  });
+  /** Real payments only (no simulated gateway). */
+  protected readonly payments = computed(() => acceptedOptions(this.methods(), true));
 }

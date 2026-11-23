@@ -614,7 +614,8 @@ Other cases:
 - **Refund records:** each refund is a `Refund` document (`pending → processing → processed | failed`; cash refunds `manual_pending → manual_done`). Opening one reserves its amount on `payment.refundedPaise`, so two refunds can never return more than was paid. Finance can refund any amount up to what is left (`POST /admin/payments/{id}/refunds`, with an optional `Idempotency-Key`); the payment becomes `partially_refunded` or `refunded`. Cash refunds are paid by hand and marked with `POST /admin/refunds/{id}/paid`.
 - **Refund status:** Razorpay `refund.processed` / `refund.failed` webhooks settle refunds the bank confirms later.
 - **Reconciliation:** every 5 minutes the API checks unpaid online payments the gateway reports as captured, refunds whose gateway call never finished, and refunds still waiting for the bank.
-- **History:** customers see their payments and refunds at `GET /payments/mine` (the account menu's **Payments** page).
+- **History:** `GET /payments/mine` lists a customer's payments and refunds (the app shows them on each order's page).
+- **Saved cards:** the account menu's **Payment methods** page (`GET /payments/cards`, `DELETE /payments/cards/{id}`). The gateway saves (tokenises) a card when the customer agrees at checkout; BiteBox stores only the token reference, network, last 4 digits, issuer and expiry (`SavedCard`), never the card number or CVV. With Razorpay, checkout gets the customer's Razorpay customer id (`PaymentCustomer`, created once; `checkout.customerId`), Razorpay offers "save card" and shows saved cards, and the page mirrors the customer's card tokens there (removing one deletes the token at Razorpay). Razorpay's saved-cards feature must be enabled on the account. The simulated gateway has a "Save this card" box and lists saved test cards (`checkout.savedCards`).
 
 ### 10.7 Earnings, settlement, payouts and reports
 
@@ -1022,6 +1023,8 @@ Customer screens: `/offers` (signed-in customers, filter by kind), the offer rib
 |---|---|---|---|
 | GET | `/payments/methods` | public | Methods offered at checkout |
 | GET | `/payments/mine` | customer | My payments and refunds |
+| GET | `/payments/cards` | customer | My saved cards |
+| DELETE | `/payments/cards/{id}` | customer | Remove a saved card |
 | POST | `/payments/orders/{orderId}/start` | customer | Create or reuse the gateway order |
 | POST | `/payments/orders/{orderId}/confirm` | customer | Confirm Razorpay (signature and amount verified) |
 | POST | `/payments/orders/{orderId}/abandon` | customer | Cancel the unpaid order, restore the cart |

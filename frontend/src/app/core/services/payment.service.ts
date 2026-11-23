@@ -3,12 +3,12 @@ import { DOCUMENT } from '@angular/common';
 import { Injectable, inject } from '@angular/core';
 import { Observable, firstValueFrom, map, shareReplay } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse, Paginated } from '../models/api.models';
+import { ApiResponse } from '../models/api.models';
 import {
   CheckoutSession,
-  PaymentHistoryItem,
   PaymentInfo,
   PaymentMethodOption,
+  SavedCards,
 } from '../models/payment.models';
 import { openMockPayment } from '../../shared/components/mock-payment-dialog/mock-payment-dialog';
 import { BbDialog } from '../../shared/dialog/bb-dialog';
@@ -63,8 +63,8 @@ export class PaymentService {
 
   async pay(orderId: string, session: CheckoutSession): Promise<PaymentInfo | null> {
     if (session.provider === 'mock') {
-      const outcome = await firstValueFrom(openMockPayment(this.dialog, session));
-      return outcome ? this.post(orderId, 'mock', { outcome }) : null;
+      const result = await firstValueFrom(openMockPayment(this.dialog, session));
+      return result ? this.post(orderId, 'mock', result) : null;
     }
     const result = await this.openRazorpay(session);
     return result
@@ -100,6 +100,8 @@ export class PaymentService {
         theme: { color: '#2e1a3d' },
         // The order was priced for one channel (its payment offer): offer only that one.
         ...(session.channel ? { config: onlyMethod(session.channel) } : {}),
+        // Saved cards: Razorpay offers to save the card (with consent) and shows saved ones.
+        ...(session.customerId ? { customer_id: session.customerId, remember_customer: true } : {}),
         handler: (result: RazorpayResult) => resolve(result),
         modal: { ondismiss: () => resolve(null) },
       }).open();
@@ -124,12 +126,12 @@ export class PaymentService {
     return this.razorpay;
   }
 
-  /** Django API: the customer's payment history, with refunds. */
-  history(page = 1, limit = 10): Observable<Paginated<PaymentHistoryItem>> {
-    return this.http
-      .get<ApiResponse<Paginated<PaymentHistoryItem>>>(`${this.url}/mine`, {
-        params: { page, limit },
-      })
-      .pipe(map((r) => r.data));
+  /** The customer's saved cards (kept by the gateway; never the card number). */
+  cards(): Observable<SavedCards> {
+    return this.http.get<ApiResponse<SavedCards>>(`${this.url}/cards`).pipe(map((r) => r.data));
+  }
+
+  removeCard(id: string): Observable<unknown> {
+    return this.http.delete(`${this.url}/cards/${encodeURIComponent(id)}`);
   }
 }

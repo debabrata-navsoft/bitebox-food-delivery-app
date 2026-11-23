@@ -70,6 +70,19 @@ class FakeRazorpay:
     def fetch_refund(self, refund_id: str) -> dict[str, Any]:
         return {"id": refund_id, "status": "processed"}
 
+    tokens: list[dict[str, Any]]
+    customers: list[dict[str, Any]]
+
+    def create_customer(self, body: dict[str, Any]) -> dict[str, Any]:
+        self.customers = [*getattr(self, "customers", []), body]
+        return {"id": "cust_TEST1"}
+
+    def customer_tokens(self, customer_id: str) -> list[dict[str, Any]]:
+        return getattr(self, "tokens", [])
+
+    def delete_token(self, customer_id: str, token_id: str) -> None:
+        self.tokens = [t for t in self.tokens if t["id"] != token_id]
+
 
 class Shop(World):
     def place_online(self, client: APIClient | None = None) -> dict[str, Any]:
@@ -593,3 +606,69 @@ def test_two_refunds_can_never_return_more_than_was_paid(w: Shop) -> None:
         _open_refund(payment, most, key="race-b", reason="b")
     assert lost.value.code == "REFUND_TOO_LARGE"
     assert Payment.objects.get(pk=payment.pk).refunded_paise == most
+
+
+# --- saved cards -------------------------------------------------------------------------------
+
+
+def test_saves_the_test_card_when_asked_and_offers_it_next_time(w: Shop) -> None:
+    order_id = w.place_online()["order"]["id"]
+    w.c.post(
+        f"/api/v1/payments/orders/{order_id}/mock",
+        {"outcome": "success", "saveCard": True},
+        format="json",
+    )
+    data = w.c.get("/api/v1/payments/cards").json()["data"]
+    assert data["canSave"] is True
+    assert data["simulated"] is True
+    [card] = data["cards"]
+    assert (card["network"], card["last4"], card["expiryYear"]) == ("Visa", "1111", 2030)
+    assert "number" not in card  # only what the customer needs to recognise it
+
+    checkout = w.place_online()["checkout"]
+    assert [c["last4"] for c in checkout["savedCards"]] == ["1111"]
+
+    other = w.new_customer()
+    assert other.get("/api/v1/payments/cards").json()["data"]["cards"] == []
+    assert other.delete(f"/api/v1/payments/cards/{card['id']}").status_code == 404
+    assert w.c.delete(f"/api/v1/payments/cards/{card['id']}").status_code == 200
+    assert w.c.get("/api/v1/payments/cards").json()["data"]["cards"] == []
+    assert w.o.get("/api/v1/payments/cards").status_code == 403  # customers only
+
+
+def test_razorpay_keeps_cards_with_the_customer_and_we_mirror_them(
+    w: Shop, gateway: FakeRazorpay
+) -> None:
+    placed = w.place_online()
+    assert placed["checkout"]["customerId"] == "cust_TEST1"  # checkout can offer "save card"
+    again = w.c.post(f"/api/v1/payments/orders/{placed['order']['id']}/start")
+    assert again.json()["data"]["checkout"]["customerId"] == "cust_TEST1"
+    assert len(gateway.customers) == 1  # created once
+
+    visa = {"network": "Visa", "last4": "4242", "issuer": "HDFC", "type": "credit"}
+    gateway.tokens = [
+        {
+            "id": "token_A",
+            "method": "card",
+            "card": {**visa, "expiry_month": "8", "expiry_year": "2031"},
+        },
+        {"id": "token_U", "method": "upi", "vpa": {"username": "test"}},  # not a card
+    ]
+    [card] = w.c.get("/api/v1/payments/cards").json()["data"]["cards"]
+    assert (card["last4"], card["issuer"], card["expiryMonth"]) == ("4242", "HDFC", 8)
+
+    assert w.c.delete(f"/api/v1/payments/cards/{card['id']}").status_code == 200
+    assert [t["id"] for t in gateway.tokens] == ["token_U"]  # deleted at Razorpay too
+
+    gateway.tokens = [{"id": "token_B", "method": "card", "card": visa}]
+    assert [c["last4"] for c in w.c.get("/api/v1/payments/cards").json()["data"]["cards"]] == [
+        "4242"
+    ]
+    gateway.tokens = []  # removed at Razorpay: removed here too
+    assert w.c.get("/api/v1/payments/cards").json()["data"]["cards"] == []
+
+
+def test_no_saved_cards_without_online_payment(w: Shop, settings: Any) -> None:
+    settings.PAYMENTS_MOCK_ENABLED = False
+    data = w.c.get("/api/v1/payments/cards").json()["data"]
+    assert data == {"cards": [], "canSave": False, "simulated": False}

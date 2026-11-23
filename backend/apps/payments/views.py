@@ -32,7 +32,7 @@ from common.permissions import PUBLIC, permission_required, role_required
 from common.schema import envelope, errors
 from common.validation import PageQuery, parse_id, validated
 
-from . import services
+from . import cards, services
 from .models import Provider
 
 PAYMENT = envelope("PaymentResult")
@@ -70,6 +70,31 @@ class MineView(APIView):
     def get(self, request: Request) -> Response:
         query = validated(PageQuery, request.query_params)
         return ok(services.list_mine(current_user(request), Page.from_query(query)))
+
+
+class CardsView(APIView):
+    """The customer's saved cards (saved by the gateway at checkout, never the card number)."""
+
+    permission_classes = CUSTOMER
+
+    @extend_schema(
+        tags=["Payments"], operation_id="payments_cards", responses={200: envelope("SavedCards")}
+    )
+    def get(self, request: Request) -> Response:
+        return ok(cards.list_cards(current_user(request)))
+
+
+class CardView(APIView):
+    permission_classes = CUSTOMER
+
+    @extend_schema(
+        tags=["Payments"],
+        operation_id="payments_card_remove",
+        responses={200: envelope("SavedCardRemoved"), **errors(401, 403, 404, 503)},
+    )
+    def delete(self, request: Request, id: str) -> Response:
+        cards.remove_card(current_user(request), parse_id(id, "id"))
+        return ok({"removed": True}, message="Card removed")
 
 
 class StartView(APIView):
@@ -138,6 +163,7 @@ class AbandonView(APIView):
 
 class MockInput(serializers.Serializer):
     outcome = _choice(["success", "failure"], "Outcome must be success or failure")
+    save_card = serializers.BooleanField(required=False, default=False)
 
 
 class MockView(APIView):
@@ -153,7 +179,9 @@ class MockView(APIView):
     def post(self, request: Request, order_id: str) -> Response:
         order = parse_id(order_id, "orderId")
         data = validated(MockInput, request.data)
-        payment = services.complete_mock_payment(current_user(request), order, data["outcome"])
+        payment = services.complete_mock_payment(
+            current_user(request), order, data["outcome"], save_card=data["save_card"]
+        )
         return ok({"payment": payment})
 
 

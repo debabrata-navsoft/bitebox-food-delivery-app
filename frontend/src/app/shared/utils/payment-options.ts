@@ -1,4 +1,5 @@
 import { PaymentChannel } from '../../core/models/checkout.models';
+import { PaymentMethodOption } from '../../core/models/payment.models';
 
 /** How a customer can pay: cash, or an online channel. */
 export type PayWith = 'cod' | PaymentChannel;
@@ -33,8 +34,24 @@ const BRANDS = {
   axis: ['Axis Bank', '#97144d'],
   amazonpay: ['Amazon Pay', '#232f3e'],
 } as const;
-const brands = (...ids: (keyof typeof BRANDS)[]): PaymentBrand[] =>
-  ids.map((id) => ({ name: BRANDS[id][0], color: BRANDS[id][1] }));
+type BrandId = keyof typeof BRANDS;
+const brand = (id: BrandId): PaymentBrand => ({ name: BRANDS[id][0], color: BRANDS[id][1] });
+const brands = (...ids: BrandId[]): PaymentBrand[] => ids.map(brand);
+
+/** A saved card's network ("Visa", "MasterCard", "American Express"...) as a brand, if known. */
+export function cardBrand(network: string | null): PaymentBrand | null {
+  const n = (network ?? '').toLowerCase().replace(/\s+/g, '');
+  const id: BrandId | null = n.includes('visa')
+    ? 'visa'
+    : n.includes('master')
+      ? 'mastercard'
+      : n.includes('rupay')
+        ? 'rupay'
+        : n.includes('amex') || n.includes('americanexpress')
+          ? 'amex'
+          : null;
+  return id && brand(id);
+}
 
 /** Online channels (only when an online provider is set up), in the order they are offered. */
 export const ONLINE_OPTIONS: PaymentOption[] = [
@@ -75,3 +92,12 @@ export const CASH_OPTION: PaymentOption = {
   image: '/cod.svg',
   brands: [],
 };
+
+/** The ways to pay the API offers (`GET /payments/methods`); `liveOnly` leaves out test payments. */
+export function acceptedOptions(methods: PaymentMethodOption[], liveOnly = false): PaymentOption[] {
+  const online = methods.some((m) => m.method === 'online' && !(liveOnly && m.simulated));
+  return [
+    ...(online ? ONLINE_OPTIONS : []),
+    ...(methods.some((m) => m.method === 'cod') ? [CASH_OPTION] : []),
+  ];
+}

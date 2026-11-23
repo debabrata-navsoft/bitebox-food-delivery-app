@@ -1,0 +1,94 @@
+<div class="bb-container page">
+  <bb-page-header title="Payment methods" subtitle="Your saved cards and the ways you can pay." />
+
+  <section class="bb-card" aria-labelledby="cards-title">
+    <h2 class="bb-h3" id="cards-title">Saved cards</h2>
+
+    @if (loadError(); as message) {
+      <div class="bb-alert error" role="alert">
+        <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
+        <span
+          >{{ message }}
+          <button class="bb-link-button" type="button" (click)="saved.reload()">Retry</button></span
+        >
+      </div>
+    } @else if (data(); as d) {
+      @if (d.simulated) {
+        <p class="bb-alert info test">
+          <np-icon name="flask-conical" class="mat-icon" matButtonIcon />
+          <span>Test mode: these are test cards. No real cards are saved.</span>
+        </p>
+      }
+      @if (d.cards.length) {
+        <ul class="cards">
+          @for (c of d.cards; track c.id) {
+            @let b = brand(c.network);
+            <li class="card" [class.expired]="expired(c)">
+              <span class="network" [style.--brand]="b?.color">{{
+                b?.name ?? c.network ?? 'Card'
+              }}</span>
+              <span class="info">
+                <strong>•••• {{ c.last4 }}</strong>
+                <span class="bb-muted">
+                  {{ meta(c) }}
+                </span>
+              </span>
+              @if (expiry(c); as exp) {
+                <span class="exp" [class.bad]="expired(c)">
+                  {{ expired(c) ? 'Expired' : 'Expires' }} {{ exp }}
+                </span>
+              }
+              <np-button
+                size="small"
+                variant="text"
+                severity="danger"
+                icon="trash-2"
+                label="Remove"
+                [disabled]="removing() === c.id"
+                (clicked)="remove(c)"
+              />
+            </li>
+          }
+        </ul>
+      } @else if (d.canSave) {
+        <div class="empty">
+          <span class="empty-icon"
+            ><np-icon name="credit-card" class="mat-icon" matButtonIcon
+          /></span>
+          <strong>No saved cards yet</strong>
+          <p class="bb-muted">
+            When you pay by card, choose <em>Save card</em> on the payment screen. It will appear
+            here for faster checkout next time.
+          </p>
+        </div>
+      } @else {
+        <p class="bb-muted">Online payment isn't available right now, so cards can't be saved.</p>
+      }
+      <p class="secure bb-muted">
+        <np-icon name="shield-check" class="mat-icon" matButtonIcon />
+        Cards are saved securely by our payment partner. BiteBox never sees or stores your full card
+        number or CVV.
+      </p>
+    } @else {
+      <span class="bb-skeleton" style="height: 72px"></span>
+    }
+  </section>
+
+  @if (ways().length) {
+    <section class="bb-card" aria-labelledby="ways-title">
+      <h2 class="bb-h3" id="ways-title">Ways to pay</h2>
+      <ul class="ways">
+        @for (w of ways(); track w.value) {
+          <li class="way">
+            <img [src]="w.image" alt="" width="44" height="44" />
+            <span class="info">
+              <strong>{{ w.label }}</strong>
+              <span class="bb-muted">{{ w.detail }}</span>
+            </span>
+          </li>
+        }
+      </ul>
+      <p class="bb-muted small">You choose how to pay each time you place an order.</p>
+    </section>
+  }
+</div>

@@ -49,6 +49,16 @@ class PaymentProvider(Protocol):
         """Payments made against a gateway order: [{"id", "status", "amount_paise"}]."""
         ...
 
+    def ensure_customer(self, name: str, email: str, contact: str) -> str:
+        """The customer's id at the gateway (created once), which holds their saved cards."""
+        ...
+
+    def saved_cards(self, provider_customer_id: str) -> list[dict[str, Any]] | None:
+        """The customer's saved cards at the gateway, or None when our rows are the record."""
+        ...
+
+    def delete_card(self, provider_customer_id: str, token_id: str) -> None: ...
+
 
 class MockProvider:
     name = Provider.MOCK.value
@@ -67,6 +77,15 @@ class MockProvider:
 
     def order_payments(self, provider_order_id: str) -> list[dict[str, Any]]:
         return []  # simulated payments finish only through the test dialog
+
+    def ensure_customer(self, name: str, email: str, contact: str) -> str:
+        return f"mock_cust_{secrets.token_hex(8)}"
+
+    def saved_cards(self, provider_customer_id: str) -> list[dict[str, Any]] | None:
+        return None  # simulated cards live only in our table
+
+    def delete_card(self, provider_customer_id: str, token_id: str) -> None:
+        return None
 
 
 class RazorpayClient:
@@ -102,6 +121,15 @@ class RazorpayClient:
 
     def fetch_refund(self, refund_id: str) -> dict[str, Any]:
         return dict(self._call("GET", f"/refunds/{refund_id}"))
+
+    def create_customer(self, body: dict[str, Any]) -> dict[str, Any]:
+        return dict(self._call("POST", "/customers", body))
+
+    def customer_tokens(self, customer_id: str) -> list[dict[str, Any]]:
+        return list(self._call("GET", f"/customers/{customer_id}/tokens").get("items", []))
+
+    def delete_token(self, customer_id: str, token_id: str) -> None:
+        self._call("DELETE", f"/customers/{customer_id}/tokens/{token_id}")
 
 
 def _hmac_hex(secret: str, data: bytes) -> str:
@@ -167,6 +195,42 @@ class RazorpayProvider:
 
     def refund_status(self, provider_refund_id: str) -> str:
         return str(self._client.fetch_refund(provider_refund_id).get("status", ""))
+
+    def ensure_customer(self, name: str, email: str, contact: str) -> str:
+        # fail_existing=0: Razorpay returns the customer it already has for this email/phone.
+        body = {"name": name[:50], "email": email, "fail_existing": "0"}
+        if contact:
+            body["contact"] = contact
+        return str(self._client.create_customer(body)["id"])
+
+    def saved_cards(self, provider_customer_id: str) -> list[dict[str, Any]] | None:
+        cards = []
+        for token in self._client.customer_tokens(provider_customer_id):
+            card = token.get("card") or {}
+            if token.get("method") != "card" or not card.get("last4"):
+                continue  # saved UPI and other tokens are not shown as cards
+            cards.append(
+                {
+                    "token_id": str(token["id"]),
+                    "network": str(card.get("network") or ""),
+                    "last4": str(card["last4"]),
+                    "issuer": str(card.get("issuer") or ""),
+                    "card_type": str(card.get("type") or ""),
+                    "expiry_month": _int(card.get("expiry_month")),
+                    "expiry_year": _int(card.get("expiry_year")),
+                }
+            )
+        return cards
+
+    def delete_card(self, provider_customer_id: str, token_id: str) -> None:
+        self._client.delete_token(provider_customer_id, token_id)
+
+
+def _int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 _UNSET: Any = object()

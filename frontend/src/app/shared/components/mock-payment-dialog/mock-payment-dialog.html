@@ -4,7 +4,13 @@
     <strong [id]="titleId">BiteBox</strong>
     <span>Order {{ session.orderNumber }}</span>
   </div>
-  <button type="button" class="bb-btn bb-btn--text bb-btn--icon close" aria-label="Close payment" [disabled]="processing()" (click)="ref.close()">
+  <button
+    type="button"
+    class="bb-btn bb-btn--text bb-btn--icon close"
+    aria-label="Close payment"
+    [disabled]="processing()"
+    (click)="ref.close()"
+  >
     <np-icon name="x" class="mat-icon" matButtonIcon />
   </button>
   <span class="amount-label">Amount to pay</span>
@@ -29,7 +35,7 @@
         [disabled]="processing()"
         (click)="method.set(m.id)"
       >
-        <np-icon [name]="(m.icon) | npIcon" class="mat-icon" matButtonIcon />
+        <np-icon [name]="m.icon | npIcon" class="mat-icon" matButtonIcon />
         <span class="text">
           {{ m.label }}
           <span class="bb-muted hint">{{ m.hint }}</span>
@@ -38,16 +44,79 @@
       </button>
     }
   </div>
-  <p class="detail">{{ selected().detail }}</p>
+  @if (method() === 'card' && savedCards.length) {
+    <h2 class="bb-muted saved-title">Saved cards</h2>
+    <div class="methods" role="radiogroup" aria-label="Card">
+      @for (c of savedCards; track c.id) {
+        <button
+          type="button"
+          class="method"
+          role="radio"
+          [attr.aria-checked]="card() === c.id"
+          [class.active]="card() === c.id"
+          [disabled]="processing()"
+          (click)="card.set(c.id)"
+        >
+          <np-icon name="credit-card" class="mat-icon" matButtonIcon />
+          <span class="text">
+            {{ c.network }} •••• {{ c.last4 }}
+            <span class="bb-muted hint">{{ c.issuer }}</span>
+          </span>
+          <span class="check" aria-hidden="true"></span>
+        </button>
+      }
+      <button
+        type="button"
+        class="method"
+        role="radio"
+        [attr.aria-checked]="card() === 'new'"
+        [class.active]="card() === 'new'"
+        [disabled]="processing()"
+        (click)="card.set('new')"
+      >
+        <np-icon name="plus" class="mat-icon" matButtonIcon />
+        <span class="text">New card</span>
+        <span class="check" aria-hidden="true"></span>
+      </button>
+    </div>
+  }
+  @if (method() !== 'card' || card() === 'new') {
+    <p class="detail">{{ selected().detail }}</p>
+  }
+  @if (method() === 'card' && card() === 'new') {
+    <label class="save">
+      <input
+        type="checkbox"
+        [checked]="saveCard()"
+        [disabled]="processing()"
+        (change)="saveCard.set($any($event.target).checked)"
+      />
+      Save this card for next time
+    </label>
+  }
 </div>
 
 <footer class="gateway-foot">
-  <button type="button" class="pay bb-btn bb-btn--accent" [disabled]="processing()" (click)="finish('success')" cdkFocusInitial>
+  <button
+    type="button"
+    class="pay bb-btn bb-btn--accent"
+    [disabled]="processing()"
+    (click)="finish('success')"
+    cdkFocusInitial
+  >
     <np-icon name="lock" class="mat-icon" matButtonIcon />
     {{ processing() ? 'Processing…' : 'Pay ' + (session.amountPaise | inr) }}
   </button>
-  <button type="button" class="bb-link-button fail" [disabled]="processing()" (click)="finish('failure')">
+  <button
+    type="button"
+    class="bb-link-button fail"
+    [disabled]="processing()"
+    (click)="finish('failure')"
+  >
     Simulate a failed payment
   </button>
-  <p class="bb-muted secured"><np-icon name="shield-check" class="mat-icon" matButtonIcon /> Simulated gateway · BiteBox test environment</p>
+  <p class="bb-muted secured">
+    <np-icon name="shield-check" class="mat-icon" matButtonIcon /> Simulated gateway · BiteBox test
+    environment
+  </p>
 </footer>
