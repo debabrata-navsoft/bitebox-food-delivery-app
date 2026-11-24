@@ -46,60 +46,25 @@
       searchLabel="Search order history"
       placeholder="Order number or customer name"
     />
-    @if (historyList.error(); as message) {
-      <div class="bb-alert error" role="alert">
-        <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
-        <span
-          >{{ message }}
-          <button class="bb-link-button" (click)="historyList.load(1)">Retry</button></span
-        >
-      </div>
-    }
-    @if (historyList.showSkeleton()) {
-      <span class="bb-skeleton" style="height: 240px"></span>
-    } @else if (historyList.empty()) {
-      <bb-list-empty
-        [list]="history"
-        icon="history"
-        title="No finished orders yet"
-        message="Delivered, rejected and cancelled orders appear here."
-        noMatch="No orders match these filters"
-      />
-    } @else if (historyList.data(); as h) {
-      <ul
-        class="history bb-card"
-        [class.bb-dim]="historyList.loading()"
-        [attr.aria-busy]="historyList.loading()"
-      >
-        @for (o of h.items; track o.id) {
-          <li>
-            <div class="h-main">
-              <strong>{{ o.orderNumber }}</strong>
-              <span class="bb-muted"
-                >{{ o.createdAt | date: 'd MMM, h:mm a' }} · {{ o | itemCount }} ·
-                {{ o.deliveryAddress.recipientName }}</span
-              >
-              @if (o.cancellation?.reason) {
-                <span class="reason">{{ o.cancellation!.reason }}</span>
-              }
-            </div>
-            <div class="h-side">
-              <bb-order-status-chip [status]="o.status" />
-              <strong>{{ o.pricing.totalPaise | inr }}</strong>
-            </div>
-          </li>
-        }
-      </ul>
-      <np-pagination
-        [page]="h.pagination.page"
-        [rows]="h.pagination.limit"
-        [totalRecords]="h.pagination.total"
-        [rowsOptions]="[15, 30, 50]"
-        variant="compact"
-        (pageChange)="historyList.goTo($event)"
-        (rowsChange)="historyList.goTo(1, $event)"
-      />
-    }
+    <bb-data-table
+      [list]="historyList"
+      [columns]="historyColumns"
+      label="Order history"
+      [rowsOptions]="[15, 30, 50]"
+    >
+      <ng-template bbEmpty>
+        <bb-list-empty
+          [list]="history"
+          icon="history"
+          title="No finished orders yet"
+          message="Delivered, rejected and cancelled orders appear here."
+          noMatch="No orders match these filters"
+        />
+      </ng-template>
+      <ng-template [bbCellOf]="historyList" bbCell="status" let-o>
+        <bb-order-status-chip [status]="o.status" />
+      </ng-template>
+    </bb-data-table>
   } @else if (!board.board()) {
     <div class="grid">
       @for (i of [1, 2, 3]; track i) {

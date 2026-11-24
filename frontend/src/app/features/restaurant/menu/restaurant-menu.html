@@ -28,66 +28,36 @@
     placeholder="Search dishes"
   />
 
-  @if (list.error(); as message) {
-    <div class="bb-alert error" role="alert">
-      <np-icon name="circle-alert" class="mat-icon" matButtonIcon />
-      <span>{{ message }} <button class="bb-link-button" (click)="list.load(1)">Retry</button></span>
-    </div>
-  }
-
-  @if (list.showSkeleton()) {
-    @for (i of [1, 2, 3, 4]; track i) {
-      <span class="bb-skeleton" style="height: 72px; margin-bottom: 8px"></span>
-    }
-  } @else if (list.data(); as page) {
-    <ul class="items bb-card" [class.bb-dim]="list.loading()" [attr.aria-busy]="list.loading()">
-      @for (item of items(); track item.id) {
-        <li [class.off]="!item.isAvailable" [attr.aria-busy]="busyId() === item.id">
-          @if (item.imageUrl | usableImage) {
-            <img [bbSrc]="item.imageUrl" alt="" loading="lazy" />
-          } @else {
-            <span class="thumb" aria-hidden="true"
-              ><np-icon [name]="(item.category.icon) | npIcon: 'utensils'" class="mat-icon" matButtonIcon /></span
-            >
-          }
-          <div class="info">
-            <span class="name"><bb-veg-badge [veg]="item.isVeg" /> {{ item.name }}</span>
-            <span class="bb-muted meta">{{ item.category.name }} · {{ item.pricePaise | inr }}</span>
-          </div>
-          <np-toggle
-            [checked]="item.isAvailable"
-            [disabled]="busyId() === item.id"
-            class="bb-toggle-stable bb-label-hidden-phone"
-            [label]="item.isAvailable ? 'Available' : 'Off'"
-            [attr.title]="'Available: ' + item.name"
-            (checkedChange)="toggleAvailability(item, $event)"
-          />
-          <np-button
-            variant="text"
-            severity="secondary"
-            icon="ellipsis-vertical"
-            label=""
-            [ariaLabel]="'Actions for ' + item.name"
-            [disabled]="busyId() === item.id"
-            (clicked)="toggleMenu(itemMenu, $event)"
-          />
-          <np-menu #itemMenu class="bb-menu-compact" [popup]="true" [model]="menus().get(item.id) ?? []" />
-        </li>
-      } @empty {
-        <li class="none bb-muted">
-          No dishes match these filters.
-          <button type="button" class="bb-link-button" (click)="menu.clear()">Clear filters</button>
-        </li>
-      }
-    </ul>
-    <np-pagination
-      [page]="page.pagination.page"
-      [rows]="page.pagination.limit"
-      [totalRecords]="page.pagination.total"
-      [rowsOptions]="[20, 50, 100]"
-      variant="compact"
-      (pageChange)="list.goTo($event)"
-      (rowsChange)="list.goTo(1, $event)"
-    />
-  }
+  <bb-data-table
+    [list]="list"
+    [columns]="columns"
+    [actions]="actions"
+    label="Menu"
+    emptyIcon="utensils"
+    emptyText="No dishes match these filters."
+    [filters]="menu"
+  >
+    <ng-template [bbCellOf]="list" bbCell="dish" let-item>
+      <div class="dish" [class.off]="!item.isAvailable">
+        @if (item.imageUrl | usableImage) {
+          <img [bbSrc]="item.imageUrl" alt="" loading="lazy" />
+        } @else {
+          <span class="thumb" aria-hidden="true"
+            ><np-icon [name]="item.category.icon | npIcon: 'utensils'" class="mat-icon"
+          /></span>
+        }
+        <span class="name"><bb-veg-badge [veg]="item.isVeg" /> {{ item.name }}</span>
+      </div>
+    </ng-template>
+    <ng-template [bbCellOf]="list" bbCell="available" let-item>
+      <np-toggle
+        [checked]="item.isAvailable"
+        [disabled]="busyId() === item.id"
+        class="bb-toggle-stable bb-label-hidden-phone"
+        [label]="item.isAvailable ? 'Available' : 'Off'"
+        [attr.title]="'Available: ' + item.name"
+        (checkedChange)="toggleAvailability(item, $event)"
+      />
+    </ng-template>
+  </bb-data-table>
 }

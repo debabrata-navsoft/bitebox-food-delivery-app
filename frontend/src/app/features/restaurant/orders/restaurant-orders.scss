@@ -181,44 +181,6 @@
   color: var(--bb-ink-muted);
 }
 
-.history {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-
-  li {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: var(--bb-space-3);
-    align-items: center;
-    padding: var(--bb-space-3) var(--bb-space-4);
-    border-bottom: 1px solid var(--bb-border);
-  }
-}
-
-// The status on top, the total under it, both on the right.
-.h-side {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--bb-space-2);
-}
-
-.h-main {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-
-  span {
-    font-size: 0.85rem;
-  }
-}
-
-.reason {
-  color: var(--bb-danger);
-}
-
 .pickup-by {
   margin: 4px 0 0;
   font-size: 0.8rem;

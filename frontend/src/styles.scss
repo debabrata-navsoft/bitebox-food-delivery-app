@@ -1563,6 +1563,11 @@ bb-list-toolbar + .bb-card {
   tbody tr.clickable {
     cursor: pointer;
   }
+  // A switch (e.g. a dish's availability) sits inline, so a centred column centres it.
+  td np-toggle {
+    display: inline-flex;
+    vertical-align: middle;
+  }
   // A name or number that opens something (an order, a rider, an account) turns red on hover,
   // in the table's own cells and in a page's custom cells alike (not the row's buttons).
   tbody :is(a:not(.bb-btn), .bb-link-button) {

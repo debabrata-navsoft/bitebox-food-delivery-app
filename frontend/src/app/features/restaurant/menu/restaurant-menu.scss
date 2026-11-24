@@ -1,34 +1,17 @@
-.items {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+// The dish cell (bbCell): photo or category icon, veg mark and name; faded when switched off.
+.dish {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-space-3);
+  min-width: 0;
 
-  li {
-    position: relative;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
-    align-items: center;
-    gap: var(--bb-space-3);
-    padding: var(--bb-space-3) var(--bb-space-4);
-    border-bottom: 1px solid var(--bb-border);
-
-    &:last-child {
-      border-bottom: 0;
-    }
-
-    &.off .info {
-      opacity: 0.6;
-    }
-  }
-
-  .none {
-    display: block;
-    text-align: center;
-    padding: var(--bb-space-6);
+  &.off {
+    opacity: 0.6;
   }
 
   img,
   .thumb {
+    flex: none;
     width: 52px;
     height: 52px;
     border-radius: var(--bb-radius-sm);
@@ -43,27 +26,9 @@
   }
 }
 
-.info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
 .name {
   display: flex;
   align-items: center;
   gap: var(--bb-space-2);
   font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.meta {
-  font-size: 0.88rem;
-}
-
-// The actions popup floats (position: fixed) when open; keep its host out of the row's grid, or it
-// takes a fifth cell, wraps onto a second grid row and makes every row taller.
-.items np-menu {
-  position: absolute;
 }

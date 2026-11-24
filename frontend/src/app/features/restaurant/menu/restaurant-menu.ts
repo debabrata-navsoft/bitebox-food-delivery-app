@@ -6,7 +6,6 @@ import {
   computed,
   inject,
   input,
-  linkedSignal,
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -24,22 +23,16 @@ import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { VegBadge } from '../../../shared/components/veg-badge/veg-badge';
 import { filteredList, optionsSection } from '../../../shared/list/filtered-list';
 import { FoodItem } from '../../../core/models/catalog.models';
-import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { FoodFormDialog, FoodFormData } from '../food-form-dialog/food-form-dialog';
+import { ButtonComponent, IconComponent, ToggleComponent } from 'nexprime';
 import {
-  ButtonComponent,
-  IconComponent,
-  MenuComponent,
-  type MenuItem,
-  PaginationComponent,
-  ToggleComponent,
-} from 'nexprime';
+  BbCell,
+  DataTable,
+  TableAction,
+  TableColumn,
+} from '../../../shared/components/data-table/data-table';
 import { ImageFallback, UsableImagePipe } from '../../../shared/directives/broken-images';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
-import {
-  COMPACT_MENU_WIDTH,
-  toggleEndAligned,
-} from '../../../shared/utils/end-aligned-menu';
 
 /**
  * The partner's menu: a paged list filtered on the server (search plus the Filters panel's
@@ -53,13 +46,12 @@ import {
     ButtonComponent,
     IconComponent,
     NpIconPipe,
-    MenuComponent,
-    PaginationComponent,
+    DataTable,
+    BbCell,
     EmptyState,
     ListToolbar,
     PageHeader,
     VegBadge,
-    InrPipe,
     ImageFallback,
     UsableImagePipe,
   ],
@@ -104,25 +96,26 @@ export class RestaurantMenu implements OnInit {
     { errorText: 'Could not load your menu.', limit: 50, lazy: true },
   );
   protected readonly list = this.menu.list;
-  /** The page's rows; availability changes, edits and deletions apply here at once. */
-  protected readonly items = linkedSignal<FoodItem[]>(() => this.list.data()?.items ?? []);
-
-  protected readonly toggleMenu = (menu: MenuComponent, event: Event) =>
-    toggleEndAligned(menu, event, COMPACT_MENU_WIDTH);
-  /** Each dish's actions menu (built once per list change, not on every render). */
-  protected readonly menus = computed(
-    () =>
-      new Map<string, MenuItem[]>(
-        this.items().map((item) => [
-          item.id,
-          [
-            { label: 'Edit', icon: 'pencil', command: () => this.openForm(item) },
-            { label: 'Delete', icon: 'trash-2', command: () => this.remove(item) },
-          ],
-        ]),
-      ),
-  );
   protected readonly busyId = signal<string | null>(null);
+
+  protected readonly columns: TableColumn<FoodItem>[] = [
+    { label: 'Dish', key: 'dish' },
+    { label: 'Category', value: (i) => i.category.name },
+    { label: 'Price', paise: (i) => i.pricePaise },
+    { label: 'Available', key: 'available', align: 'center', nowrap: true },
+  ];
+  /** Edit and Delete in a "⋮" menu (availability changes, edits and deletions show at once). */
+  protected readonly actions: TableAction<FoodItem>[] = [
+    {
+      icon: 'ellipsis-vertical',
+      label: 'Actions',
+      disabled: (i) => this.busyId() === i.id,
+      menu: (i) => [
+        { label: 'Edit', icon: 'pencil', command: () => this.openForm(i) },
+        { label: 'Delete', icon: 'trash-2', command: () => this.remove(i) },
+      ],
+    },
+  ];
 
   ngOnInit(): void {
     if (this.available() === 'true') this.menu.panel.set({ availability: ['available'] });
@@ -138,7 +131,7 @@ export class RestaurantMenu implements OnInit {
       .closed
       .pipe(filter((saved): saved is FoodItem => !!saved))
       .subscribe((saved) => {
-        if (item) this.items.update((list) => list.map((i) => (i.id === saved.id ? saved : i)));
+        if (item) this.list.update((list) => list.map((i) => (i.id === saved.id ? saved : i)));
         else this.list.reload(); // where a new dish lands depends on the filters and the page
         this.notify.success(item ? 'Dish saved' : 'Dish added to your menu');
       });
@@ -146,7 +139,7 @@ export class RestaurantMenu implements OnInit {
 
   protected toggleAvailability(item: FoodItem, checked: boolean): void {
     const set = (isAvailable: boolean) =>
-      this.items.update((list) => list.map((i) => (i.id === item.id ? { ...i, isAvailable } : i)));
+      this.list.update((list) => list.map((i) => (i.id === item.id ? { ...i, isAvailable } : i)));
     set(checked);
     this.busyId.set(item.id);
     this.service.setFoodAvailability(item.id, checked).subscribe({
@@ -173,8 +166,8 @@ export class RestaurantMenu implements OnInit {
       this.busyId.set(item.id);
       this.service.deleteFood(item.id).subscribe({
         next: () => {
-          this.items.update((list) => list.filter((i) => i.id !== item.id));
-          if (!this.items().length) this.list.reload(); // the page emptied: fetch what is left
+          this.list.update((list) => list.filter((i) => i.id !== item.id));
+          if (!this.list.data()?.items.length) this.list.reload(); // the page emptied: fetch what is left
           this.notify.success('Dish deleted');
           this.busyId.set(null);
         },

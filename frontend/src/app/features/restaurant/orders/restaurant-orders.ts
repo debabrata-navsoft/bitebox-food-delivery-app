@@ -1,3 +1,10 @@
+import {
+  BbCell,
+  BbEmpty,
+  DATE_TIME,
+  DataTable,
+  TableColumn,
+} from '../../../shared/components/data-table/data-table';
 import { NpIconPipe } from '../../../shared/pipes/np-icon-name';
 import { askPrepTime } from './accept-dialog/accept-dialog';
 import { openNearbyRiders } from './nearby-riders-dialog/nearby-riders-dialog';
@@ -6,7 +13,6 @@ import {
   ButtonComponent,
   ButtonToggleComponent,
   IconComponent,
-  PaginationComponent,
 } from 'nexprime';
 import {
   ChangeDetectionStrategy,
@@ -38,7 +44,7 @@ import {
   RestaurantOrder,
   collectsCash,
 } from '../../../core/models/order-management.models';
-import { ItemCountPipe } from '../../../shared/pipes/item-count.pipe';
+import { ItemCountPipe, itemCount } from '../../../shared/pipes/item-count.pipe';
 import { InrPipe } from '../../../shared/pipes/money.pipes';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
 
@@ -73,8 +79,10 @@ const NEXT: Partial<
     ButtonToggleComponent,
     IconComponent,
     NpIconPipe,
-    PaginationComponent,
     EmptyState,
+    DataTable,
+    BbCell,
+    BbEmpty,
     ListEmpty,
     ListToolbar,
     OrderStatusChip,
@@ -118,6 +126,20 @@ export class RestaurantOrders {
     errorText: 'Could not load order history.',
   });
   protected readonly historyList = this.history.list;
+  protected readonly historyColumns: TableColumn<RestaurantOrder>[] = [
+    {
+      label: 'Order',
+      value: (o) => o.orderNumber,
+      strong: true,
+      // Why it was rejected or cancelled.
+      sub: (o) => o.cancellation?.reason,
+    },
+    { label: 'Placed', date: (o) => o.createdAt, dateFormat: DATE_TIME, nowrap: true },
+    { label: 'Items', value: (o) => itemCount(o) },
+    { label: 'Customer', value: (o) => o.deliveryAddress.recipientName },
+    { label: 'Status', key: 'status', align: 'center' },
+    { label: 'Total', paise: (o) => o.pricing.totalPaise, strong: true },
+  ];
 
   protected readonly countFor = (tab: (typeof TABS)[number]) =>
     tab.statuses.reduce((sum, s) => sum + (this.board.board()?.counts[s] ?? 0), 0);
