@@ -120,6 +120,37 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
     Role.OPERATOR: frozenset(),
 }
 
+# What each permission needs to be useful: acting on something needs seeing it (an edit page
+# loads the record first, a status change shows the account). Granting one grants these too, so a
+# hand-picked list works without also ticking every "view" (the editor ticks them as well).
+REQUIRES: dict[Permission, frozenset[Permission]] = {
+    **{
+        p: frozenset({P.CUSTOMERS_VIEW})
+        for p in (P.CUSTOMERS_EDIT, P.CUSTOMERS_STATUS)
+    },
+    **{
+        p: frozenset({P.RESTAURANTS_VIEW})
+        for p in (P.RESTAURANTS_EDIT, P.RESTAURANTS_STATUS, P.RESTAURANTS_APPROVE,
+                  P.RESTAURANTS_KYC, P.RESTAURANTS_MANAGE)
+    },
+    **{
+        p: frozenset({P.RIDERS_VIEW})
+        for p in (P.RIDERS_EDIT, P.RIDERS_STATUS, P.RIDERS_APPROVE, P.RIDERS_KYC, P.RIDERS_MANAGE)
+    },
+    P.ACCOUNTS_SUSPEND: frozenset({P.CUSTOMERS_VIEW, P.RESTAURANTS_VIEW, P.RIDERS_VIEW}),
+    P.ORDERS_MANAGE: frozenset({P.ORDERS_VIEW}),
+    P.REFUNDS_MANAGE: frozenset({P.FINANCE_VIEW}),
+    P.PAYOUTS_MANAGE: frozenset({P.FINANCE_VIEW}),
+    P.REWARDS_MANAGE: frozenset({P.REWARDS_VIEW}),
+}  # fmt: skip
+
+
+def with_required(permissions: Iterable[Permission]) -> frozenset[Permission]:
+    """The permissions plus everything they need (see REQUIRES)."""
+    chosen = frozenset(permissions)
+    return chosen.union(*(REQUIRES.get(p, frozenset()) for p in chosen))
+
+
 # The member kind each account permission is about (the target's role).
 MEMBER_KIND: dict[Role, str] = {
     Role.CUSTOMER: "customers",
@@ -188,7 +219,12 @@ PERMISSION_PRESETS: tuple[tuple[str, str, tuple[Permission, ...]], ...] = (
 def permission_catalogue() -> dict[str, Any]:
     return {
         "permissions": [
-            {"key": p.value, "label": label, "group": group}
+            {
+                "key": p.value,
+                "label": label,
+                "group": group,
+                "requires": sorted(r.value for r in REQUIRES.get(p, ())),
+            }
             for p, label, group in PERMISSION_CATALOGUE
         ],
         "presets": [
@@ -218,7 +254,9 @@ def effective_permissions(role: str | None, custom: Iterable[str] | None) -> fro
     if custom is None:
         return permissions_for(role)
     known = {p.value: p for p in Permission}
-    return frozenset(known[k] for k in custom if k in known and known[k] not in SUPER_ADMIN_ONLY)
+    return with_required(
+        known[k] for k in custom if k in known and known[k] not in SUPER_ADMIN_ONLY
+    )
 
 
 def user_permissions(user: Any) -> frozenset[Permission]:

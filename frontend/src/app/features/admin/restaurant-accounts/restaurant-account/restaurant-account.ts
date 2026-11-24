@@ -111,7 +111,7 @@ export class RestaurantAccount {
     ...(this.canSeeKyc() ? [{ id: 'kyc', label: 'KYC & bank', content: '', badge: kycBadge(this.data()?.kyc.status) }] : []),
     ...this.records.strip(),
   ]);
-  protected readonly canSeeKyc = computed(() => this.auth.can('restaurants:kyc') || this.auth.can('restaurants:manage'));
+  protected readonly canSeeKyc = computed(() => this.auth.can('restaurants:kyc', 'restaurants:manage'));
 
   protected act(action: StatusAction): void {
     const r = this.data()!.restaurant;

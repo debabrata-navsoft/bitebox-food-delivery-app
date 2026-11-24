@@ -418,6 +418,8 @@ PERMISSION_CATALOGUE = envelope(
                     "key": serializers.CharField(),
                     "label": serializers.CharField(),
                     "group": serializers.CharField(),
+                    # Ticked along with it (granting it grants these too).
+                    "requires": serializers.ListField(child=serializers.CharField()),
                 },
                 many=True,
             ),

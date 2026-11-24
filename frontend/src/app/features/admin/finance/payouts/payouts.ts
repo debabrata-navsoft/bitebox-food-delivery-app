@@ -139,7 +139,8 @@ export class PayoutsPage implements OnInit {
     {
       label: 'Status',
       badge: (p) => ({ label: PAYOUT_STATUS_LABEL[p.status], tone: PAYOUT_STATUS_TONE[p.status] }),
-      sub: (p) => (p.reference ? `Ref ${p.reference} · ${this.dates.day(p.paidAt, 'd MMM')}` : p.note),
+      sub: (p) =>
+        p.reference ? `Ref ${p.reference} · ${this.dates.day(p.paidAt, 'd MMM')}` : p.note,
     },
   ]);
   private readonly pending = (p: Payout) => p.status === 'pending';

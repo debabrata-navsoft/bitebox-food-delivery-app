@@ -14,23 +14,28 @@
       <h1>{{ u.name }}</h1>
       <div class="chips">
         <span class="bb-role-chip role-{{ u.role }}">{{ roleMeta[u.role].label }}</span>
-        <span class="bb-badge {{ statusMeta[u.status].tone }}">{{ statusMeta[u.status].label }}</span>
+        <span class="bb-badge {{ statusMeta[u.status].tone }}">{{
+          statusMeta[u.status].label
+        }}</span>
         <span class="id" title="Account ID">{{ shortId(u.id) }}</span>
       </div>
       @if (u.status !== 'active' && u.statusReason) {
         <p class="bb-muted small reason">
-          {{ u.statusReason }}{{ u.statusChangedAt ? ' · since ' + (u.statusChangedAt | date: 'd MMM y') : '' }}
+          {{ u.statusReason
+          }}{{ u.statusChangedAt ? ' · since ' + (u.statusChangedAt | date: 'd MMM y') : '' }}
         </p>
       }
     </div>
-    <button type="button" class="bb-btn bb-btn--outlined" (click)="changeStatus()">
-      <np-icon name="shield-alert" class="mat-icon" matButtonIcon />Status
-    </button>
+    @if (canSetStatus()) {
+      <button type="button" class="bb-btn bb-btn--outlined" (click)="changeStatus()">
+        <np-icon name="shield-alert" class="mat-icon" matButtonIcon />Status
+      </button>
+    }
     @if (edit()) {
       <a class="bb-btn bb-btn--outlined" [routerLink]="[base(), u.id]">
         <np-icon name="eye" class="mat-icon" matButtonIcon />View
       </a>
-    } @else {
+    } @else if (canEdit()) {
       <a class="bb-btn" [routerLink]="[base(), u.id, 'edit']">
         <np-icon name="pencil" class="mat-icon" matButtonIcon />Edit
       </a>
@@ -43,10 +48,24 @@
 
   @if (isCustomer() && tab() === 'overview') {
     <section class="bb-grid cols-4 tiles" aria-label="Order totals">
-      <bb-stat-tile icon="receipt" label="Orders" [value]="d.stats.orders" [hint]="d.stats.lastOrderAt ? 'Last on ' + (d.stats.lastOrderAt | date: 'd MMM y') : 'No orders yet'" />
+      <bb-stat-tile
+        icon="receipt"
+        label="Orders"
+        [value]="d.stats.orders"
+        [hint]="
+          d.stats.lastOrderAt
+            ? 'Last on ' + (d.stats.lastOrderAt | date: 'd MMM y')
+            : 'No orders yet'
+        "
+      />
       <bb-stat-tile icon="circle-check" label="Delivered" [value]="d.stats.delivered" />
       <bb-stat-tile icon="circle-x" label="Cancelled" [value]="d.stats.cancelled" />
-      <bb-stat-tile icon="wallet" label="Spent" [value]="(d.stats.spentPaise | inr) || '₹0'" hint="On delivered orders" />
+      <bb-stat-tile
+        icon="wallet"
+        label="Spent"
+        [value]="(d.stats.spentPaise | inr) || '₹0'"
+        hint="On delivered orders"
+      />
     </section>
   }
 
@@ -56,15 +75,25 @@
       <section class="bb-card" aria-labelledby="help-title">
         <h2 id="help-title">Account help</h2>
         <p class="bb-muted small">
-          Sends the customer the usual email. Admins never see or set passwords, and only the customer can change
-          their email and phone number.
+          Sends the customer the usual email. Admins never see or set passwords, and only the
+          customer can change their email and phone number.
         </p>
         <div class="help">
-          <button type="button" class="bb-btn bb-btn--outlined" [disabled]="helping() || !auth.can('customers:edit')" (click)="sendPasswordReset()">
+          <button
+            type="button"
+            class="bb-btn bb-btn--outlined"
+            [disabled]="helping() || !auth.can('customers:edit')"
+            (click)="sendPasswordReset()"
+          >
             <np-icon name="key-round" class="mat-icon" matButtonIcon />Send password reset link
           </button>
           @if (!u.emailVerified) {
-            <button type="button" class="bb-btn bb-btn--outlined" [disabled]="helping() || !auth.can('customers:edit')" (click)="sendEmailVerification()">
+            <button
+              type="button"
+              class="bb-btn bb-btn--outlined"
+              [disabled]="helping() || !auth.can('customers:edit')"
+              (click)="sendEmailVerification()"
+            >
               <np-icon name="mail-check" class="mat-icon" matButtonIcon />Resend email verification
             </button>
           }
@@ -74,105 +103,132 @@
 
     <!-- Profile: read-only, or the form on the edit page -->
     @if (shows('profile')) {
-    <section class="bb-card" aria-labelledby="profile-title">
-      <h2 id="profile-title">Profile</h2>
-      @if (edit()) {
-        @if (formError(); as e) {
-          <div class="bb-alert error" role="alert">
-            <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ e }}</span>
-          </div>
-        }
-        <form class="profile-form" [formRoot]="form" novalidate>
-          <div class="photo-field">
-            <bb-image-upload class="photo" [(url)]="photo" endpoint="avatars" label="Add photo" aspectRatio="1 / 1" variant="minimal" />
-            <div>
-              <span class="label">Profile photo</span>
-              <small class="bb-muted">A square photo works best. JPEG, PNG or WebP up to 2 MB.</small>
+      <section class="bb-card" aria-labelledby="profile-title">
+        <h2 id="profile-title">Profile</h2>
+        @if (edit()) {
+          @if (formError(); as e) {
+            <div class="bb-alert error" role="alert">
+              <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ e }}</span>
             </div>
-          </div>
-          <np-text-input [formField]="form.name" label="Name" autocomplete="off" [error]="shownError(form.name)" />
-          <div class="bb-field">
-            <np-select [formField]="form.gender" label="Gender" [options]="genderOptions" />
-          </div>
-          <!-- Sign-in details: shown, not editable (only the user changes them) -->
-          <dl class="locked">
+          }
+          <form class="profile-form" [formRoot]="form" novalidate>
+            <div class="photo-field">
+              <bb-image-upload
+                class="photo"
+                [(url)]="photo"
+                endpoint="avatars"
+                label="Add photo"
+                aspectRatio="1 / 1"
+                variant="minimal"
+              />
+              <div>
+                <span class="label">Profile photo</span>
+                <small class="bb-muted"
+                  >A square photo works best. JPEG, PNG or WebP up to 2 MB.</small
+                >
+              </div>
+            </div>
+            <np-text-input
+              [formField]="form.name"
+              label="Name"
+              autocomplete="off"
+              [error]="shownError(form.name)"
+            />
+            <div class="bb-field">
+              <np-select [formField]="form.gender" label="Gender" [options]="genderOptions" />
+            </div>
+            <!-- Sign-in details: shown, not editable (only the user changes them) -->
+            <dl class="locked">
+              <div>
+                <dt>Email</dt>
+                <dd>{{ u.email }} <np-icon name="lock" class="mat-icon" matButtonIcon /></dd>
+              </div>
+              <div>
+                <dt>Phone</dt>
+                <dd>
+                  {{ u.phone || 'Not added' }}
+                  <np-icon name="lock" class="mat-icon" matButtonIcon />
+                </dd>
+              </div>
+            </dl>
+            @if (isCustomer()) {
+              <div class="bb-field">
+                <np-calendar
+                  [formField]="form.birthDate"
+                  label="Date of birth"
+                  dateFormat="dd M yy"
+                  [maxDate]="born.latest"
+                  [minDate]="born.earliest"
+                  placeholder="DD Mon YYYY"
+                  showIcon
+                  showButtonBar
+                />
+                <bb-field-error [field]="form.birthDate" />
+              </div>
+            }
+            <p class="bb-muted small">
+              Only the user can change their email and phone number, from their account.
+            </p>
+            <div class="form-actions">
+              <a class="bb-btn bb-btn--text" [routerLink]="[base(), u.id]">Cancel</a>
+              <button class="bb-btn" type="submit" [disabled]="form().submitting()">
+                Save changes
+              </button>
+            </div>
+          </form>
+        } @else {
+          <dl>
             <div>
               <dt>Email</dt>
-              <dd>{{ u.email }} <np-icon name="lock" class="mat-icon" matButtonIcon /></dd>
+              <dd>
+                {{ u.email }}
+                <span class="verified" [class.no]="!u.emailVerified">{{
+                  u.emailVerified ? 'Verified' : 'Not verified'
+                }}</span>
+              </dd>
             </div>
             <div>
               <dt>Phone</dt>
-              <dd>{{ u.phone || 'Not added' }} <np-icon name="lock" class="mat-icon" matButtonIcon /></dd>
+              <dd>
+                @if (u.phone) {
+                  {{ u.phone }}
+                  <span class="verified" [class.no]="!u.phoneVerified">{{
+                    u.phoneVerified ? 'Verified' : 'Not verified'
+                  }}</span>
+                } @else {
+                  <span class="bb-muted">Not added</span>
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>Gender</dt>
+              <dd>{{ u.gender ? genderLabel[u.gender] : 'Not added' }}</dd>
+            </div>
+            @if (isCustomer()) {
+              <div>
+                <dt>Date of birth</dt>
+                <dd>
+                  {{ u.birthDate ? (fromIsoDay(u.birthDate) | date: 'd MMM y') : 'Not added' }}
+                </dd>
+              </div>
+            }
+            @if (u.referralCode) {
+              <div>
+                <dt>Referral code</dt>
+                <dd class="code">{{ u.referralCode }}</dd>
+              </div>
+            }
+            <div>
+              <dt>Joined</dt>
+              <dd>{{ u.createdAt | date: 'd MMM y, h:mm a' }}</dd>
+            </div>
+            <div>
+              <dt>Last sign-in</dt>
+              <dd>{{ u.lastLoginAt ? (u.lastLoginAt | date: 'd MMM y, h:mm a') : 'Never' }}</dd>
             </div>
           </dl>
-          @if (isCustomer()) {
-            <div class="bb-field">
-              <np-calendar
-                [formField]="form.birthDate"
-                label="Date of birth"
-                dateFormat="dd M yy"
-                [maxDate]="born.latest"
-                [minDate]="born.earliest"
-                placeholder="DD Mon YYYY"
-                showIcon
-                showButtonBar
-              />
-              <bb-field-error [field]="form.birthDate" />
-            </div>
-          }
-          <p class="bb-muted small">Only the user can change their email and phone number, from their account.</p>
-          <div class="form-actions">
-            <a class="bb-btn bb-btn--text" [routerLink]="[base(), u.id]">Cancel</a>
-            <button class="bb-btn" type="submit" [disabled]="form().submitting()">Save changes</button>
-          </div>
-        </form>
-      } @else {
-        <dl>
-          <div>
-            <dt>Email</dt>
-            <dd>
-              {{ u.email }}
-              <span class="verified" [class.no]="!u.emailVerified">{{ u.emailVerified ? 'Verified' : 'Not verified' }}</span>
-            </dd>
-          </div>
-          <div>
-            <dt>Phone</dt>
-            <dd>
-              @if (u.phone) {
-                {{ u.phone }}
-                <span class="verified" [class.no]="!u.phoneVerified">{{ u.phoneVerified ? 'Verified' : 'Not verified' }}</span>
-              } @else {
-                <span class="bb-muted">Not added</span>
-              }
-            </dd>
-          </div>
-          <div>
-            <dt>Gender</dt>
-            <dd>{{ u.gender ? genderLabel[u.gender] : 'Not added' }}</dd>
-          </div>
-          @if (isCustomer()) {
-            <div>
-              <dt>Date of birth</dt>
-              <dd>{{ u.birthDate ? (fromIsoDay(u.birthDate) | date: 'd MMM y') : 'Not added' }}</dd>
-            </div>
-          }
-          @if (u.referralCode) {
-            <div>
-              <dt>Referral code</dt>
-              <dd class="code">{{ u.referralCode }}</dd>
-            </div>
-          }
-          <div>
-            <dt>Joined</dt>
-            <dd>{{ u.createdAt | date: 'd MMM y, h:mm a' }}</dd>
-          </div>
-          <div>
-            <dt>Last sign-in</dt>
-            <dd>{{ u.lastLoginAt ? (u.lastLoginAt | date: 'd MMM y, h:mm a') : 'Never' }}</dd>
-          </div>
-        </dl>
-      }
-    </section>
+        }
+      </section>
     }
 
     <!-- What the partner runs: their restaurant or rider profile -->
@@ -183,15 +239,19 @@
           <strong>{{ r.name }}</strong>
           <span class="bb-muted small"> · {{ r.status }}</span>
         </p>
-        @if (auth.can('restaurants:manage')) {
-          <a class="bb-btn bb-btn--outlined" [routerLink]="['/admin/restaurants', r.id]">Open restaurant</a>
+        @if (auth.can('restaurants:view')) {
+          <a class="bb-btn bb-btn--outlined" [routerLink]="['/admin/restaurants', r.id]"
+            >Open restaurant</a
+          >
         }
       </section>
-    } @else if (u.role === 'delivery' && auth.can('riders:manage')) {
+    } @else if (u.role === 'delivery' && auth.can('riders:view')) {
       <section class="bb-card" aria-labelledby="rider-title">
         <h2 id="rider-title">Delivery partner</h2>
         <p class="bb-muted">Vehicle, documents, verification and earnings.</p>
-        <a class="bb-btn bb-btn--outlined" [routerLink]="['/admin/delivery-partners', u.id]">Open rider profile</a>
+        <a class="bb-btn bb-btn--outlined" [routerLink]="['/admin/delivery-partners', u.id]"
+          >Open rider profile</a
+        >
       </section>
     }
 
@@ -201,14 +261,22 @@
         <div class="section-head">
           <h2 id="addresses-title">Addresses</h2>
           @if (edit()) {
-            <button type="button" class="bb-btn bb-btn--small bb-btn--outlined" (click)="editAddress(null)">
+            <button
+              type="button"
+              class="bb-btn bb-btn--small bb-btn--outlined"
+              (click)="editAddress(null)"
+            >
               <np-icon name="plus" class="mat-icon" matButtonIcon />Add
             </button>
           }
         </div>
         @for (a of d.addresses; track a.id) {
           <div class="address" [class.bb-dim]="busyAddress() === a.id">
-            <np-icon [name]="a.label === 'work' ? 'briefcase' : a.label === 'home' ? 'house' : 'map-pin'" class="mat-icon" matButtonIcon />
+            <np-icon
+              [name]="a.label === 'work' ? 'briefcase' : a.label === 'home' ? 'house' : 'map-pin'"
+              class="mat-icon"
+              matButtonIcon
+            />
             <div class="text">
               <strong>
                 {{ a.label | titlecase }}
@@ -216,16 +284,36 @@
                   <span class="bb-badge tone-good">Default</span>
                 }
               </strong>
-              <span>{{ a.line1 }}{{ a.line2 ? ', ' + a.line2 : '' }}{{ a.area ? ', ' + a.area : '' }}</span>
-              <span class="bb-muted small">{{ a.city }}, {{ a.state }} {{ a.postalCode }} · {{ a.recipientName }}, {{ a.phone }}</span>
+              <span
+                >{{ a.line1 }}{{ a.line2 ? ', ' + a.line2 : ''
+                }}{{ a.area ? ', ' + a.area : '' }}</span
+              >
+              <span class="bb-muted small"
+                >{{ a.city }}, {{ a.state }} {{ a.postalCode }} · {{ a.recipientName }},
+                {{ a.phone }}</span
+              >
             </div>
             @if (edit()) {
               <div class="address-actions">
                 @if (!a.isDefault) {
-                  <button type="button" class="bb-link-button" [disabled]="busyAddress() !== null" (click)="makeDefault(a)">Make default</button>
+                  <button
+                    type="button"
+                    class="bb-link-button"
+                    [disabled]="busyAddress() !== null"
+                    (click)="makeDefault(a)"
+                  >
+                    Make default
+                  </button>
                 }
                 <button type="button" class="bb-link-button" (click)="editAddress(a)">Edit</button>
-                <button type="button" class="bb-link-button danger" [disabled]="busyAddress() !== null" (click)="removeAddress(a)">Delete</button>
+                <button
+                  type="button"
+                  class="bb-link-button danger"
+                  [disabled]="busyAddress() !== null"
+                  (click)="removeAddress(a)"
+                >
+                  Delete
+                </button>
               </div>
             }
           </div>
@@ -243,7 +331,8 @@
             <h2 id="orders-title">Recent orders</h2>
             @if (d.stats.orders > (orders()?.items?.length ?? 0)) {
               <button type="button" class="bb-link-button more" (click)="tab.set('orders')">
-                See all {{ d.stats.orders }}<np-icon name="chevron-right" class="mat-icon" matButtonIcon />
+                See all {{ d.stats.orders
+                }}<np-icon name="chevron-right" class="mat-icon" matButtonIcon />
               </button>
             }
           </div>
@@ -251,7 +340,10 @@
             <button type="button" class="order" (click)="openOrder(o.id)">
               <span class="main">
                 <strong>{{ o.orderNumber }}</strong>
-                <span class="bb-muted small">{{ o.restaurantSnapshot.name }} · {{ o.createdAt | date: 'd MMM y, h:mm a' }}</span>
+                <span class="bb-muted small"
+                  >{{ o.restaurantSnapshot.name }} ·
+                  {{ o.createdAt | date: 'd MMM y, h:mm a' }}</span
+                >
               </span>
               <bb-order-status-chip [status]="o.status" [label]="statusLabel(o)" />
               <span class="amount">{{ o.pricing.totalPaise | inr }}</span>

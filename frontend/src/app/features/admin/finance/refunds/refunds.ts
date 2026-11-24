@@ -33,6 +33,7 @@ import { RouterLink } from '@angular/router';
 })
 export class RefundsPage {
   private readonly api = inject(FinanceService);
+  protected readonly auth = inject(AuthService);
   private readonly payments = inject(ReportsService);
   private readonly notify = inject(NotificationService);
   private readonly dates = dateText();
@@ -62,8 +63,7 @@ export class RefundsPage {
         r.refundNeeded
           ? { label: 'Needs a refund', tone: 'bad' }
           : { label: 'Refunded', tone: 'good' },
-      sub: (r) =>
-        r.refundNeeded ? r.failureReason : this.dates.day(r.refundedAt, DATE_YEAR_TIME),
+      sub: (r) => (r.refundNeeded ? r.failureReason : this.dates.day(r.refundedAt, DATE_YEAR_TIME)),
     },
   ];
   protected readonly actions: TableAction<RefundRow>[] = [
@@ -76,7 +76,6 @@ export class RefundsPage {
       disabled: (r) => this.busy() === r.id,
     },
   ];
-
 
   private retry(r: RefundRow): void {
     this.busy.set(r.id);

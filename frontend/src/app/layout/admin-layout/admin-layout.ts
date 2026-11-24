@@ -1,11 +1,8 @@
 import { ChangeDetectionStrategy, Component, Signal, computed, inject } from '@angular/core';
+import { pagePermission } from '../../core/auth/admin-pages';
 import { AuthService } from '../../core/auth/auth.service';
 import { AdminReviewCounts } from '../../core/services/admin/admin-review-counts.service';
-import {
-  AdminRole,
-  Permission,
-  ROLE_META,
-} from '../../core/models/user.models';
+import { AdminRole, Permission, ROLE_META } from '../../core/models/user.models';
 import { NavItem, PanelShell } from '../panel-shell/panel-shell';
 
 const PROFILE: NavItem[] = [{ label: 'Profile', icon: 'manage_accounts', link: '/admin/profile' }];
@@ -151,35 +148,8 @@ const NAV: Record<AdminRole, NavItem[]> = {
   ],
 };
 
-/** The permission each admin page needs (mirrors admin.routes.ts); the most specific path first. */
-const PAGE_PERMISSION: [string, Permission][] = [
-  ['/admin/finance/payouts', 'payouts:manage'],
-  ['/admin/finance', 'finance:view'],
-  ['/admin/payments', 'finance:view'],
-  ['/admin/reports', 'finance:view'],
-  ['/admin/operations/dispatch', 'riders:manage'],
-  ['/admin/operations', 'operations:view'],
-  ['/admin/orders', 'orders:view'],
-  ['/admin/customers', 'customers:view'],
-  ['/admin/restaurant-accounts', 'restaurants:view'],
-  ['/admin/restaurants', 'restaurants:manage'],
-  ['/admin/foods', 'restaurants:manage'],
-  ['/admin/delivery-partner-accounts', 'riders:view'],
-  ['/admin/delivery-partners', 'riders:manage'],
-  ['/admin/support', 'support:manage'],
-  ['/admin/reviews', 'reviews:moderate'],
-  ['/admin/rewards', 'rewards:view'],
-  ['/admin/categories', 'catalog:manage'],
-  ['/admin/coupons', 'catalog:manage'],
-  ['/admin/promotions', 'promotions:send'],
-  ['/admin/admins', 'admins:manage'],
-  ['/admin/audit-log', 'audit:view'],
-];
-
-const permissionFor = ({ link }: NavItem): Permission | null => {
-  if (link === '/admin') return 'admins:manage';
-  return PAGE_PERMISSION.find(([path]) => link?.startsWith(path))?.[1] ?? null;
-};
+const permissionFor = ({ link }: NavItem): Permission | null =>
+  link ? pagePermission(link) : null;
 
 /** The items this person may open; groups left empty are dropped. */
 const allowed = (items: NavItem[], can: (p: Permission) => boolean): NavItem[] =>

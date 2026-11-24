@@ -109,7 +109,7 @@ export const ADMIN_ROUTES: Routes = [
   {
     path: 'users/:id/edit',
     title: 'Edit user | BiteBox Admin',
-    canActivate: [can('customers:view', 'restaurants:view', 'riders:view')],
+    canActivate: [can('customers:edit', 'restaurants:edit', 'riders:edit')],
     data: { edit: true },
     loadComponent: () =>
       import('./users/user-detail/admin-user-detail').then((m) => m.AdminUserDetail),
@@ -240,33 +240,33 @@ export const ADMIN_ROUTES: Routes = [
   {
     path: 'restaurants',
     title: 'Restaurants | BiteBox Admin',
-    canActivate: [can('restaurants:manage')],
+    canActivate: [can('restaurants:view')],
     loadComponent: () => import('./restaurants/admin-restaurants').then((m) => m.AdminRestaurants),
   },
   {
     path: 'restaurants/:id',
     title: 'Review restaurant | BiteBox Admin',
-    canActivate: [can('restaurants:manage')],
+    canActivate: [can('restaurants:view')],
     loadComponent: () =>
       import('./restaurant-review/admin-restaurant-review').then((m) => m.AdminRestaurantReview),
   },
   {
     path: 'foods',
     title: 'Food items | BiteBox Admin',
-    canActivate: [can('restaurants:manage')],
+    canActivate: [can('restaurants:view')],
     loadComponent: () => import('./foods/admin-foods').then((m) => m.AdminFoods),
   },
   {
     path: 'delivery-partners',
     title: 'Delivery partners | BiteBox Admin',
-    canActivate: [can('riders:manage')],
+    canActivate: [can('riders:view')],
     loadComponent: () =>
       import('./delivery-partners/admin-delivery-partners').then((m) => m.AdminDeliveryPartners),
   },
   {
     path: 'delivery-partners/:id',
     title: 'Delivery partner | BiteBox Admin',
-    canActivate: [can('riders:manage')],
+    canActivate: [can('riders:view')],
     loadComponent: () =>
       import('./delivery-partners/rider-review/admin-rider-review').then((m) => m.AdminRiderReview),
   },

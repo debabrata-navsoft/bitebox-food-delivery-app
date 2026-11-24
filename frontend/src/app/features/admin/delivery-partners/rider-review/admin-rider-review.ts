@@ -1,4 +1,5 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
+import { AuthService } from '../../../../core/auth/auth.service';
 import { DetailNav } from '../../../../shared/components/detail-nav/detail-nav';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { finalize } from 'rxjs';
@@ -35,6 +36,7 @@ export class AdminRiderReview {
   private readonly api = inject(AdminOrdersService);
   private readonly dialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
+  protected readonly auth = inject(AuthService);
 
   readonly id = input.required<string>();
 

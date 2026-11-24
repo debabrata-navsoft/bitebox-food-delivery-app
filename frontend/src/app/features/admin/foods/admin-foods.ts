@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input } from '@angular/core';
+import { AuthService } from '../../../core/auth/auth.service';
 import { ToggleComponent } from 'nexprime';
 import {
   AdminCatalogService,
@@ -22,14 +23,7 @@ import {
 
 @Component({
   selector: 'bb-admin-foods',
-  imports: [
-    ToggleComponent,
-    ListToolbar,
-    PageHeader,
-    VegBadge,
-    DataTable,
-    BbCell,
-  ],
+  imports: [ToggleComponent, ListToolbar, PageHeader, VegBadge, DataTable, BbCell],
   templateUrl: './admin-foods.html',
   styleUrl: './admin-foods.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,6 +31,9 @@ import {
 export class AdminFoods implements OnInit {
   private readonly service = inject(AdminCatalogService);
   private readonly bbDialog = inject(BbDialog);
+  private readonly auth = inject(AuthService);
+  /** Viewing needs restaurants:view; changing dishes needs restaurants:manage. */
+  protected readonly canManage = () => this.auth.can('restaurants:manage');
   private readonly notify = inject(NotificationService);
 
   /** ?restaurant=<id> (the restaurant review's "Menu" link) preselects that restaurant. */
@@ -46,15 +43,28 @@ export class AdminFoods implements OnInit {
   private readonly restaurantNames = computed(
     () =>
       new Map(
-        (this.list.data()?.items ?? []).map((i) => [i.restaurant._id ?? i.restaurant.id ?? '', i.restaurant.name]),
+        (this.list.data()?.items ?? []).map((i) => [
+          i.restaurant._id ?? i.restaurant.id ?? '',
+          i.restaurant.name,
+        ]),
       ),
   );
 
   protected readonly filterSections: FilterSection[] = [
     // Restaurants and categories that have dishes (the API's counts, with their names).
-    { kind: 'options', key: 'restaurant', label: 'Restaurant', labelOf: (id) => this.restaurantNames().get(id) ?? id },
+    {
+      kind: 'options',
+      key: 'restaurant',
+      label: 'Restaurant',
+      labelOf: (id) => this.restaurantNames().get(id) ?? id,
+    },
     { kind: 'options', key: 'category', label: 'Category' },
-    { kind: 'options', key: 'type', label: 'Type', options: filterOptions({ veg: 'Veg', non_veg: 'Non-veg' }) },
+    {
+      kind: 'options',
+      key: 'type',
+      label: 'Type',
+      options: filterOptions({ veg: 'Veg', non_veg: 'Non-veg' }),
+    },
     {
       kind: 'options',
       key: 'availability',
@@ -82,7 +92,7 @@ export class AdminFoods implements OnInit {
     { label: 'Available', key: 'available', align: 'center', nowrap: true },
   ];
   protected readonly actions: TableAction<AdminFoodItem>[] = [
-    { icon: 'trash-2', label: 'Delete', run: (i) => this.remove(i) },
+    { icon: 'trash-2', label: 'Delete', run: (i) => this.remove(i), show: this.canManage },
   ];
 
   ngOnInit(): void {

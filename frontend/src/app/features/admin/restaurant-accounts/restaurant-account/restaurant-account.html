@@ -134,7 +134,7 @@
       <section class="bb-card">
         <div class="section-head">
           <h2>Owner</h2>
-          @if (d.owner && (auth.can('restaurants:status') || auth.can('accounts:suspend'))) {
+          @if (d.owner && (auth.can('restaurants:status', 'accounts:suspend'))) {
             <button type="button" class="bb-btn bb-btn--outlined bb-btn--small" (click)="changeOwnerStatus()">
               <np-icon name="shield-alert" class="mat-icon" matButtonIcon />Account status
             </button>
@@ -173,7 +173,7 @@
           <p class="bb-muted small">
             Bank details and documents are changed by the owner and checked again here; admins can't edit them.
           </p>
-          <bb-kyc-review [partnerId]="o.id" [canReview]="auth.can('restaurants:kyc') || auth.can('restaurants:manage')" (changed)="account.reload()" />
+          <bb-kyc-review [partnerId]="o.id" [canReview]="auth.can('restaurants:kyc', 'restaurants:manage')" (changed)="account.reload()" />
         </section>
       }
     }

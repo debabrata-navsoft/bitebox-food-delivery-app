@@ -199,8 +199,17 @@ RESTAURANTS_MANAGE = [permission_required(Permission.RESTAURANTS_MANAGE)]
 ADMIN_PAGE = facets_page("AdminRestaurantPage", services.ADMIN_FACETS)
 
 
+# Seeing restaurants needs "view" (which "manage" includes); changing them needs "manage".
+RESTAURANTS_READ = [permission_required(Permission.RESTAURANTS_VIEW)]
+
+
 class AdminListView(APIView):
-    permission_classes = RESTAURANTS_MANAGE
+    # Also the restaurant pickers: commission rates (finance) and coupon scope (catalog).
+    permission_classes = [
+        permission_required(
+            Permission.RESTAURANTS_VIEW, Permission.FINANCE_VIEW, Permission.CATALOG_MANAGE
+        )
+    ]
 
     @extend_schema(
         tags=["Admin: restaurants"],
@@ -222,7 +231,7 @@ class AdminListView(APIView):
 
 
 class AdminCountsView(APIView):
-    permission_classes = RESTAURANTS_MANAGE
+    permission_classes = RESTAURANTS_READ
 
     @extend_schema(tags=["Admin: restaurants"], responses={200: ANY, **errors(401, 403)})
     def get(self, request: Request) -> Response:
@@ -230,7 +239,7 @@ class AdminCountsView(APIView):
 
 
 class AdminDetailView(APIView):
-    permission_classes = RESTAURANTS_MANAGE
+    permission_classes = RESTAURANTS_READ
 
     @extend_schema(
         tags=["Admin: restaurants"],

@@ -51,7 +51,7 @@
             <tbody>
               @for (o of orders(); track o.id) {
                 <tr
-                  class="clickable"
+                  [class.clickable]="auth.can('orders:view')"
                   [class.late]="o.late"
                   (click)="open(o.id)"
                   tabindex="0"

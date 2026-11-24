@@ -158,8 +158,9 @@
         </div>
       </section>
 
-      @if (v.ownerId; as ownerId) {
-        <bb-kyc-review [partnerId]="ownerId" />
+      <!-- Documents: their reviewers only (restaurants:kyc, or the older restaurants:manage) -->
+      @if (v.ownerId && (auth.can('restaurants:kyc', 'restaurants:manage'))) {
+        <bb-kyc-review [partnerId]="v.ownerId" />
       }
     </div>
 
@@ -184,7 +185,9 @@
         </div>
         <bb-info-rows [rows]="v.owner" />
         <!-- Restaurant accounts are keyed by the restaurant, not the owner's user id. -->
-        <a class="bb-btn bb-btn--outlined bb-btn--small wide" [routerLink]="['/admin/restaurant-accounts', r.id]"
+        <a
+          class="bb-btn bb-btn--outlined bb-btn--small wide"
+          [routerLink]="['/admin/restaurant-accounts', r.id]"
           ><np-icon name="user" />Open account</a
         >
       </section>

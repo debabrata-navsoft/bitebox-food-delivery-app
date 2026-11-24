@@ -36,7 +36,11 @@
   <ng-template [bbCellOf]="list" bbCell="availability" let-r>
     <div class="work">
       @if (r.activeOrder; as o) {
-        <a class="bb-link-button" [routerLink]="['/admin/orders', o.id]">{{ o.orderNumber }}</a>
+        @if (auth.can('orders:view')) {
+          <a class="bb-link-button" [routerLink]="['/admin/orders', o.id]">{{ o.orderNumber }}</a>
+        } @else {
+          {{ o.orderNumber }}
+        }
         <bb-order-status-chip [status]="o.status" />
       } @else {
         <span class="bb-muted">{{ r.isOnline ? 'Available' : 'Offline' }}</span>

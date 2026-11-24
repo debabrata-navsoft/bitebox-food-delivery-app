@@ -12,11 +12,13 @@ import pytest
 from apps.rbac.roles import (
     ADMIN_ROLES,
     MEMBER_ROLES,
+    REQUIRES,
     ROLE_PERMISSIONS,
     Permission,
     Role,
     effective_permissions,
     has_permission,
+    permission_catalogue,
     permissions_for,
 )
 
@@ -61,6 +63,30 @@ def test_has_permission_reads_the_person_not_the_role() -> None:
     assert not has_permission(None, Permission.ORDERS_VIEW)
     assert not has_permission("admin", Permission.ORDERS_VIEW)
     assert effective_permissions("support_admin", None) == permissions_for("support_admin")
+
+
+def test_a_hand_picked_list_includes_what_each_permission_needs() -> None:
+    # "Edit restaurants" alone: the edit page loads the restaurant, which needs "view".
+    assert effective_permissions("operator", ["restaurants:edit"]) == {
+        Permission.RESTAURANTS_EDIT,
+        Permission.RESTAURANTS_VIEW,
+    }
+    granted = effective_permissions("operations_admin", ["restaurants:manage", "orders:manage"])
+    assert {Permission.RESTAURANTS_VIEW, Permission.ORDERS_VIEW} <= granted
+    assert effective_permissions("operator", ["payouts:manage"]) >= {Permission.FINANCE_VIEW}
+    # Views alone add nothing; an empty list stays empty.
+    assert effective_permissions("operator", ["riders:view"]) == {Permission.RIDERS_VIEW}
+    assert effective_permissions("operator", []) == frozenset()
+    # Every role preset already has what its permissions need.
+    for role, preset in ROLE_PERMISSIONS.items():
+        for p in preset:
+            assert REQUIRES.get(p, frozenset()) <= preset, (role, p)
+
+
+def test_the_catalogue_says_what_each_permission_ticks_along() -> None:
+    rows = {r["key"]: r for r in permission_catalogue()["permissions"]}
+    assert rows["restaurants:edit"]["requires"] == ["restaurants:view"]
+    assert rows["restaurants:view"]["requires"] == []
 
 
 @pytest.mark.skipif(not NODE_CONFIG.exists(), reason="Node API removed; nothing to compare with")

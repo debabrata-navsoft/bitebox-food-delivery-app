@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { AuthService } from '../../../../core/auth/auth.service';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { IconComponent } from 'nexprime';
@@ -51,6 +52,7 @@ const card = (r: AdminReviewDetail): ReviewCardData => ({
 })
 export class AdminOrderReviewsDialog {
   private readonly orderId = inject<string>(MAT_DIALOG_DATA);
+  protected readonly auth = inject(AuthService);
   private readonly reviews = inject(ReviewService);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);

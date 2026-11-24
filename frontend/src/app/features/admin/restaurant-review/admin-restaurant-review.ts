@@ -1,4 +1,5 @@
 import { NpIconPipe } from '../../../shared/pipes/np-icon-name';
+import { AuthService } from '../../../core/auth/auth.service';
 import { DetailNav } from '../../../shared/components/detail-nav/detail-nav';
 import { IconComponent } from 'nexprime';
 import {
@@ -70,6 +71,7 @@ export class AdminRestaurantReview {
   protected readonly acting = signal(false);
   private readonly changeStatus = restaurantStatusChanger();
   private readonly dialog = inject(MatDialog);
+  protected readonly auth = inject(AuthService);
 
   private readonly dates = dateText();
 
@@ -140,7 +142,7 @@ export class AdminRestaurantReview {
   protected readonly statusTone = RESTAURANT_STATUS_TONE;
   protected readonly actions = computed(() => {
     const r = this.restaurant();
-    return r ? ACTIONS[r.status] : [];
+    return r && this.auth.can('restaurants:manage') ? ACTIONS[r.status] : [];
   });
   protected readonly mapLink = computed(() => {
     const r = this.restaurant();

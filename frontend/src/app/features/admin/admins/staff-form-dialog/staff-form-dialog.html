@@ -8,20 +8,24 @@
     }
 
     @if (user; as u) {
-      <dl class="details">
-        <div>
-          <dt>Email</dt>
-          <dd>{{ u.email }}</dd>
+      <!-- Who is being edited: email and dates can't be changed here -->
+      <div class="account">
+        <span class="initial" aria-hidden="true">{{ u.name.charAt(0) }}</span>
+        <div class="who">
+          <strong>{{ u.name }}</strong>
+          <span class="email" [title]="u.email">{{ u.email }}</span>
         </div>
-        <div>
-          <dt>Joined</dt>
-          <dd>{{ u.createdAt | date: 'mediumDate' }}</dd>
-        </div>
-        <div>
-          <dt>Last sign-in</dt>
-          <dd>{{ u.lastLoginAt ? (u.lastLoginAt | date: 'd MMM y, h:mm a') : 'Never' }}</dd>
-        </div>
-      </dl>
+        <dl>
+          <div>
+            <dt><np-icon name="calendar" />Joined</dt>
+            <dd>{{ u.createdAt | date: 'd MMM y' }}</dd>
+          </div>
+          <div>
+            <dt><np-icon name="log-in" />Last sign-in</dt>
+            <dd>{{ u.lastLoginAt ? (u.lastLoginAt | date: 'd MMM y, h:mm a') : 'Never' }}</dd>
+          </div>
+        </dl>
+      </div>
     }
 
     <np-text-input

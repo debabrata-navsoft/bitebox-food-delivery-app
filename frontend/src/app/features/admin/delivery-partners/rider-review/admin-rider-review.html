@@ -43,29 +43,31 @@
           <p class="status-reason">Suspended: {{ d.user.statusReason }}</p>
         }
       </div>
-      <div class="actions">
-        <button
-          type="button"
-          class="bb-btn bb-btn--outlined"
-          [class.bb-btn--danger]="d.user.status === 'active'"
-          [disabled]="changingStatus()"
-          (click)="toggleStatus()"
-        >
-          <np-icon [name]="d.user.status === 'active' ? 'shield-alert' : 'rotate-ccw'" />{{
-            statusAction(d.user.status)
-          }}
-        </button>
-        @for (dec of decisions(); track dec.status) {
+      @if (auth.can('riders:manage')) {
+        <div class="actions">
           <button
             type="button"
-            class="bb-btn"
-            [class.bb-btn--danger]="dec.danger"
-            (click)="decide(dec)"
+            class="bb-btn bb-btn--outlined"
+            [class.bb-btn--danger]="d.user.status === 'active'"
+            [disabled]="changingStatus()"
+            (click)="toggleStatus()"
           >
-            {{ dec.label }}
+            <np-icon [name]="d.user.status === 'active' ? 'shield-alert' : 'rotate-ccw'" />{{
+              statusAction(d.user.status)
+            }}
           </button>
-        }
-      </div>
+          @for (dec of decisions(); track dec.status) {
+            <button
+              type="button"
+              class="bb-btn"
+              [class.bb-btn--danger]="dec.danger"
+              (click)="decide(dec)"
+            >
+              {{ dec.label }}
+            </button>
+          }
+        </div>
+      }
     </div>
 
     <bb-info-rows facts [rows]="v.kpis" />
@@ -95,7 +97,9 @@
         }
       </section>
 
-      <bb-kyc-review [partnerId]="d.user.id" />
+      @if (auth.can('riders:kyc', 'riders:manage')) {
+        <bb-kyc-review [partnerId]="d.user.id" />
+      }
     </div>
 
     <aside class="side">

@@ -1,7 +1,20 @@
 import { TabsComponent } from 'nexprime';
-import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal, computed } from '@angular/core';
+import { AuthService } from '../../../core/auth/auth.service';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  inject,
+  input,
+  signal,
+  computed,
+} from '@angular/core';
 import { Router } from '@angular/router';
-import { RESTAURANT_ACTIONS, StatusAction, restaurantStatusChanger } from '../restaurant-accounts/restaurant-status';
+import {
+  RESTAURANT_ACTIONS,
+  StatusAction,
+  restaurantStatusChanger,
+} from '../restaurant-accounts/restaurant-status';
 import { finalize } from 'rxjs';
 import { AdminCatalogService } from '../../../core/services/admin/admin-catalog.service';
 import { ListEmpty } from '../../../shared/components/list-empty/list-empty';
@@ -36,6 +49,7 @@ const TABS: { status: RestaurantStatus; label: string }[] = [
 export class AdminRestaurants implements OnInit {
   private readonly service = inject(AdminCatalogService);
   private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
   private readonly changeStatus = restaurantStatusChanger();
 
   readonly status = input<RestaurantStatus>();
@@ -48,7 +62,12 @@ export class AdminRestaurants implements OnInit {
     // Cities and cuisines come from the restaurants themselves (the API's counts).
     { kind: 'options', key: 'city', label: 'City' },
     { kind: 'options', key: 'cuisine', label: 'Cuisine' },
-    { kind: 'options', key: 'veg', label: 'Food type', options: filterOptions({ pure_veg: 'Pure veg', mixed: 'Veg and non-veg' }) },
+    {
+      kind: 'options',
+      key: 'veg',
+      label: 'Food type',
+      options: filterOptions({ pure_veg: 'Pure veg', mixed: 'Veg and non-veg' }),
+    },
     {
       kind: 'options',
       key: 'accepting',
@@ -84,7 +103,10 @@ export class AdminRestaurants implements OnInit {
   /** Approved restaurants can be suspended and suspended ones reinstated, as on the details page. */
   protected readonly actions = computed((): TableAction<AdminRestaurant>[] => {
     const status = TABS[this.activeTab()].status;
-    const action = status === 'approved' || status === 'suspended' ? RESTAURANT_ACTIONS[status][0] : null;
+    const action =
+      (status === 'approved' || status === 'suspended') && this.auth.can('restaurants:manage')
+        ? RESTAURANT_ACTIONS[status][0]
+        : null;
     return action
       ? [
           {

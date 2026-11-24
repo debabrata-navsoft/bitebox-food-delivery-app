@@ -94,7 +94,7 @@ export class RiderAccount {
     t.activity(this.id),
     t.audit(() => [this.id()]),
   ]);
-  protected readonly canSeeKyc = computed(() => this.auth.can('riders:kyc') || this.auth.can('riders:manage'));
+  protected readonly canSeeKyc = computed(() => this.auth.can('riders:kyc', 'riders:manage'));
   protected readonly tabs = computed(() => [
     { id: 'overview', label: 'Overview', content: '' },
     { id: 'personal', label: 'Personal info', content: '' },

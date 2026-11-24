@@ -10,9 +10,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.rbac.roles import Role
+from apps.rbac.roles import Permission, Role
 from common.api import ApiError, ok
-from common.permissions import IsSignedIn, role_required
+from common.permissions import IsSignedIn, permission_required, role_required
 from common.schema import envelope, errors
 from common.throttling import rate_limit
 
@@ -57,7 +57,12 @@ class _ImageUpload(APIView):
 
 
 class ImageUploadView(_ImageUpload):
-    permission_classes = [role_required(Role.RESTAURANT, Role.ADMIN)]
+    # Restaurant partners, or admins who edit restaurants' photos or category images (a role check
+    # alone left out every staff admin).
+    permission_classes = [
+        role_required(Role.RESTAURANT)
+        | permission_required(Permission.RESTAURANTS_EDIT, Permission.CATALOG_MANAGE)
+    ]
     throttle_classes = [
         rate_limit("IMAGE_UPLOAD_RATE_LIMIT", "Too many image uploads. Try again later.")
     ]
