@@ -1,7 +1,9 @@
 @use 'breakpoints' as bp;
+
 .page {
   padding-block: var(--bb-space-5) var(--bb-space-7);
 }
+
 .grid {
   display: grid;
   gap: var(--bb-space-3);
@@ -12,35 +14,169 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
 .address {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bb-space-3);
+  padding: var(--bb-space-4);
+  transition:
+    box-shadow 0.15s,
+    border-color 0.15s;
+
+  &:hover {
+    box-shadow: var(--bb-shadow);
+  }
+  // The default address: an amber outline and a soft amber wash at the top.
   &.default {
     border-color: var(--bb-amber-600);
+    background: linear-gradient(180deg, var(--bb-amber-100), var(--bb-surface) 70px);
   }
+
   header {
     display: flex;
     align-items: center;
-    gap: var(--bb-space-2);
+    gap: var(--bb-space-3);
     button {
-      margin-left: auto;
+      margin: -8px -8px -8px auto;
     }
   }
   p {
-    margin: var(--bb-space-2) 0 0;
+    margin: 0;
   }
 }
-.label {
+
+// Icon tile, one tint per label.
+.kind {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--bb-plum-100);
+  color: var(--bb-plum);
+  --bb-icon-size: 20px;
+
+  &.kind-work {
+    background: var(--bb-teal-bg);
+    color: var(--bb-teal-ink);
+  }
+  &.kind-other {
+    background: var(--bb-amber-100);
+    color: var(--bb-warning-ink);
+  }
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--bb-space-2);
+  min-width: 0;
+  strong {
+    font-size: 1.05rem;
+  }
+}
+
+.chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-weight: 700;
-}
-.chip {
   font-size: 0.72rem;
   font-weight: 700;
-  background: var(--bb-amber-100);
   padding: 2px 8px;
   border-radius: 999px;
+  background: var(--bb-success-bg);
+  color: var(--bb-success);
+  --bb-icon-size: 13px;
 }
-.small {
+
+.where {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  align-content: start;
+  .line {
+    font-weight: 600;
+  }
+  .place {
+    color: var(--bb-ink-muted);
+    font-size: 0.92rem;
+  }
+}
+
+.landmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px !important;
+  width: fit-content;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--bb-bg);
+  color: var(--bb-ink-muted);
+  font-size: 0.8rem;
+  --bb-icon-size: 13px;
+}
+
+footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bb-space-1) var(--bb-space-4);
+  padding-top: var(--bb-space-3);
+  border-top: 1px dashed var(--bb-border);
   font-size: 0.85rem;
+  color: var(--bb-ink-muted);
+  --bb-icon-size: 15px;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+}
+
+// "Add a new address": a dashed tile at the end of the grid.
+.add-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 180px;
+  padding: var(--bb-space-4);
+  border: 2px dashed var(--bb-border);
+  border-radius: var(--bb-radius);
+  background: transparent;
+  color: var(--bb-ink);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--bb-plum);
+    background: var(--bb-plum-100);
+  }
+  .plus {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 6px;
+    border-radius: 50%;
+    background: var(--bb-brand);
+    color: var(--bb-on-brand);
+    --bb-icon-size: 22px;
+  }
+  .bb-muted {
+    font-size: 0.82rem;
+  }
+  @include bp.phone-only {
+    min-height: 120px;
+  }
 }

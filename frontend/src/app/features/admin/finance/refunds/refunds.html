@@ -1,4 +1,7 @@
-<bb-page-header title="Refund management" subtitle="Paid online orders that were cancelled or rejected. A failed automatic refund shows here for a retry." />
+<bb-page-header
+  title="Refund management"
+  subtitle="Paid online orders that were cancelled or rejected. A failed automatic refund shows here for a retry."
+/>
 
 <bb-list-toolbar
   [list]="refunds"
@@ -19,7 +22,11 @@
   </ng-template>
   <ng-template [bbCellOf]="list" bbCell="order" let-r>
     @if (r.order; as o) {
-      <a class="bb-link-button" [routerLink]="['/admin/orders', o.id]">{{ o.orderNumber }}</a>
+      @if (auth.can('orders:view')) {
+        <a class="bb-link-button" [routerLink]="['/admin/orders', o.id]">{{ o.orderNumber }}</a>
+      } @else {
+        {{ o.orderNumber }}
+      }
     } @else {
       Order removed
     }

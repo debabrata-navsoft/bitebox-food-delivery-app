@@ -416,6 +416,7 @@ def test_the_permission_catalogue() -> None:
         "key": "restaurants:approve",
         "label": "Approve restaurants",
         "group": "Restaurants",
+        "requires": ["restaurants:view"],
     } in (data["permissions"])
     presets = {p["key"]: p for p in data["presets"]}
     assert set(presets) == {"support", "restaurant", "delivery", "kyc", "finance"}

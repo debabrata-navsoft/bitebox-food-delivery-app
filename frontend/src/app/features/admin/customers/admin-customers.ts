@@ -74,7 +74,7 @@ export class AdminCustomers {
       icon: 'shield-alert',
       label: 'Change status',
       run: (c) => this.changeStatus(c),
-      show: () => this.auth.can('customers:status') || this.auth.can('accounts:suspend'),
+      show: () => this.auth.can('customers:status', 'accounts:suspend'),
     },
   ];
 

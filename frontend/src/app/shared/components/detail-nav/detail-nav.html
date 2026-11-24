@@ -1,0 +1,14 @@
+@for (b of arrows; track b.step) {
+  @let to = b.step < 0 ? around()?.prev : around()?.next;
+  <button
+    type="button"
+    class="nav-btn icon"
+    [attr.aria-label]="b.label"
+    [title]="b.label"
+    [disabled]="!to"
+    (click)="go(to)"
+  >
+    <np-icon [name]="b.icon" />
+  </button>
+}
+<button type="button" class="nav-btn back" (click)="back()">Back</button>

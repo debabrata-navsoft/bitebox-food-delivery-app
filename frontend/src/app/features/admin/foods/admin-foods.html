@@ -24,6 +24,7 @@
   <ng-template [bbCellOf]="list" bbCell="available" let-item>
     <np-toggle
       [checked]="item.isAvailable"
+      [disabled]="!canManage()"
       (checkedChange)="toggle(item, $event)"
       class="bb-label-hidden"
       [label]="'Available: ' + item.name"

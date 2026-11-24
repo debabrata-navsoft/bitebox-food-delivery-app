@@ -1,4 +1,5 @@
 import { DatePipe, TitleCasePipe } from '@angular/common';
+import { DetailNav } from '../../../../shared/components/detail-nav/detail-nav';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -42,6 +43,7 @@ import {
 @Component({
   selector: 'bb-restaurant-account',
   imports: [
+    DetailNav,
     DatePipe,
     TitleCasePipe,
     RouterLink,
@@ -109,7 +111,7 @@ export class RestaurantAccount {
     ...(this.canSeeKyc() ? [{ id: 'kyc', label: 'KYC & bank', content: '', badge: kycBadge(this.data()?.kyc.status) }] : []),
     ...this.records.strip(),
   ]);
-  protected readonly canSeeKyc = computed(() => this.auth.can('restaurants:kyc') || this.auth.can('restaurants:manage'));
+  protected readonly canSeeKyc = computed(() => this.auth.can('restaurants:kyc', 'restaurants:manage'));
 
   protected act(action: StatusAction): void {
     const r = this.data()!.restaurant;

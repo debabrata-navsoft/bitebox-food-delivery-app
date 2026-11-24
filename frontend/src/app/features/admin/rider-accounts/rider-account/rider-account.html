@@ -1,6 +1,4 @@
-<a class="bb-back-link" routerLink="/admin/delivery-partner-accounts"
-  ><np-icon name="arrow-left" class="mat-icon" matButtonIcon />All delivery partners</a
->
+<bb-detail-nav [id]="id()" backLink="/admin/delivery-partner-accounts" />
 
 @if (loadError(); as message) {
   <div class="bb-alert error" role="alert">
@@ -47,7 +45,7 @@
           <np-icon name="circle-pause" class="mat-icon" matButtonIcon />Take offline
         </button>
       }
-      @if (auth.can('riders:status') || auth.can('accounts:suspend')) {
+      @if (auth.can('riders:status', 'accounts:suspend')) {
         <button type="button" class="bb-btn bb-btn--outlined" (click)="changeStatus()">
           <np-icon name="shield-alert" class="mat-icon" matButtonIcon />Account status
         </button>
@@ -132,7 +130,7 @@
     @case ('kyc') {
       <section class="bb-card">
         <p class="bb-muted small">The rider uploads documents and bank details; admins check them here but can't edit them.</p>
-        <bb-kyc-review [partnerId]="u.id" [canReview]="auth.can('riders:kyc') || auth.can('riders:manage')" (changed)="account.reload()" />
+        <bb-kyc-review [partnerId]="u.id" [canReview]="auth.can('riders:kyc', 'riders:manage')" (changed)="account.reload()" />
       </section>
     }
   }

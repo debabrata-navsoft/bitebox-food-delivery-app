@@ -104,13 +104,39 @@ td.center {
 }
 
 .actions > * + * {
-  margin-left: var(--bb-space-1);
+  margin-left: 6px;
 }
 
-.act {
-  --bb-icon-size: 16px;
-  width: 32px;
-  height: 32px;
+// Row buttons: no border, a soft tinted background (red for danger), barely rounded. Icon buttons
+// are 34px squares with a small icon; labelled ones (e.g. "Reverse") show just their name.
+.act.bb-btn,
+.txt.bb-btn {
   min-height: 0;
+  border: 0;
+  border-radius: 4px;
+  background: var(--bb-plum-100);
+  color: var(--bb-plum);
+  box-shadow: none;
+  transition: filter 0.15s;
+
+  &:hover:not(:disabled) {
+    filter: brightness(0.93);
+  }
+  &.bb-btn--danger {
+    background: var(--bb-danger-bg);
+    color: var(--bb-danger);
+  }
+}
+
+.act.bb-btn {
+  --bb-icon-size: 16px;
+  width: 34px; // room around the icon
+  height: 34px;
   padding: 0;
+}
+
+.txt.bb-btn {
+  height: 34px;
+  padding: 0 var(--bb-space-3);
+  font-weight: 600;
 }

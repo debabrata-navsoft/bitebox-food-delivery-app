@@ -189,8 +189,12 @@ class AdminCategoryView(APIView):
 ADMIN_FOOD_PAGE = facets_page("AdminFoodPage", services.ADMIN_FACETS)
 
 
+# Seeing restaurants' dishes needs "view"; changing them needs "manage".
+RESTAURANTS_READ = [permission_required(Permission.RESTAURANTS_VIEW)]
+
+
 class AdminFoodsView(APIView):
-    permission_classes = RESTAURANTS
+    permission_classes = RESTAURANTS_READ
 
     @extend_schema(
         tags=["Admin: catalogue"],

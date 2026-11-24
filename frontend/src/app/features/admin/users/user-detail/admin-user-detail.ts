@@ -1,4 +1,5 @@
 import { DatePipe, TitleCasePipe } from '@angular/common';
+import { DetailNav } from '../../../../shared/components/detail-nav/detail-nav';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -51,7 +52,10 @@ import {
   USER_STATUS_META,
   User,
 } from '../../../../core/models/user.models';
-import { openAccountStatus, statusChanged } from '../../../../shared/components/account-status-dialog/account-status-dialog';
+import {
+  openAccountStatus,
+  statusChanged,
+} from '../../../../shared/components/account-status-dialog/account-status-dialog';
 import { ImageUpload } from '../../../../shared/components/image-upload/image-upload';
 import { InrPipe } from '../../../../shared/pipes/money.pipes';
 
@@ -64,11 +68,14 @@ const profileOf = (u: User | undefined) => ({
   birthDate: fromIsoDay(u?.birthDate),
 });
 
+/** A member's role → its kind in permission names (e.g. `restaurants:edit`). */
+const KIND = { customer: 'customers', restaurant: 'restaurants', delivery: 'riders' } as const;
+
 /** Where a person's page leads back to, by role. */
 const BACK = {
-  customer: { link: '/admin/customers', label: 'All customers' },
-  restaurant: { link: '/admin/restaurant-accounts', label: 'All restaurant accounts' },
-  delivery: { link: '/admin/delivery-partner-accounts', label: 'All delivery partner accounts' },
+  customer: '/admin/customers',
+  restaurant: '/admin/restaurant-accounts',
+  delivery: '/admin/delivery-partner-accounts',
 };
 
 /**
@@ -80,6 +87,7 @@ const BACK = {
 @Component({
   selector: 'bb-admin-user-detail',
   imports: [
+    DetailNav,
     DatePipe,
     TitleCasePipe,
     RouterLink,
@@ -142,6 +150,15 @@ export class AdminUserDetail {
     this.detail.error() ? errorMessage(this.detail.error(), 'Could not load this user.') : null,
   );
   protected readonly isCustomer = computed(() => this.data()?.user.role === 'customer');
+  /** The person's kind in permissions ("customers", "restaurants", "riders"). */
+  private readonly kind = computed(
+    () => KIND[this.data()?.user.role as keyof typeof KIND] ?? 'customers',
+  );
+  /** Buttons only for what this admin may do with this kind of account. */
+  protected readonly canEdit = computed(() => this.auth.can(`${this.kind()}:edit`));
+  protected readonly canSetStatus = computed(() =>
+    this.auth.can(`${this.kind()}:status`, 'accounts:suspend'),
+  );
 
   // Customers: a tab per part of the account; record tabs only with that area's permission.
   // Each tab lists a different kind of record, so the list holds them loosely typed.
@@ -158,7 +175,12 @@ export class AdminUserDetail {
   protected readonly tabs = computed(() => [
     { id: 'overview', label: 'Overview', content: '' },
     { id: 'profile', label: 'Personal info', content: '' },
-    { id: 'addresses', label: 'Addresses', content: '', badge: this.data()?.addresses.length || undefined },
+    {
+      id: 'addresses',
+      label: 'Addresses',
+      content: '',
+      badge: this.data()?.addresses.length || undefined,
+    },
     ...this.records.strip(),
   ]);
   /** Non-customers have no tabs: every section shows at once. */

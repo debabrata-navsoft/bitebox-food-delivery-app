@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { AuthService } from '../../../core/auth/auth.service';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from 'nexprime';
 import { AdminOrdersService } from '../../../core/services/order-management.service';
@@ -34,21 +35,14 @@ const PAYMENT_BADGE: Record<PaymentStatus, [string, string]> = {
 
 @Component({
   selector: 'bb-admin-orders',
-  imports: [
-    RouterLink,
-    IconComponent,
-    ListToolbar,
-    OrderStatusChip,
-    PageHeader,
-    DataTable,
-    BbCell,
-  ],
+  imports: [RouterLink, IconComponent, ListToolbar, OrderStatusChip, PageHeader, DataTable, BbCell],
   templateUrl: './admin-orders.html',
   styleUrl: './admin-orders.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminOrders {
   private readonly api = inject(AdminOrdersService);
+  protected readonly auth = inject(AuthService);
   protected readonly statusLabel = customerStatusLabel;
   protected readonly payment = PAYMENT_BADGE;
 
@@ -56,9 +50,24 @@ export class AdminOrders {
   readonly customer = input<string>();
 
   protected readonly filterSections: FilterSection[] = [
-    { kind: 'options', key: 'status', label: 'Order status', options: filterOptions(ORDER_STATUS_LABEL) },
-    { kind: 'options', key: 'paymentMethod', label: 'Payment method', options: filterOptions({ cod: 'Cash', online: 'Online' }) },
-    { kind: 'options', key: 'paymentStatus', label: 'Payment status', options: filterOptions(PAYMENT_STATUS_LABEL) },
+    {
+      kind: 'options',
+      key: 'status',
+      label: 'Order status',
+      options: filterOptions(ORDER_STATUS_LABEL),
+    },
+    {
+      kind: 'options',
+      key: 'paymentMethod',
+      label: 'Payment method',
+      options: filterOptions({ cod: 'Cash', online: 'Online' }),
+    },
+    {
+      kind: 'options',
+      key: 'paymentStatus',
+      label: 'Payment status',
+      options: filterOptions(PAYMENT_STATUS_LABEL),
+    },
     // Restaurants that have orders (the API's counts, with their names).
     { kind: 'options', key: 'restaurant', label: 'Restaurant' },
     { kind: 'dates', key: 'placed', label: 'Placed' },
@@ -72,12 +81,16 @@ export class AdminOrders {
   protected readonly list = this.orders.list;
 
   protected readonly columns: TableColumn<Order>[] = [
-    { label: 'Order', value: (o) => o.orderNumber, link: (o) => ['/admin/orders', o.id], nowrap: true },
+    {
+      label: 'Order',
+      value: (o) => o.orderNumber,
+      link: (o) => ['/admin/orders', o.id],
+      nowrap: true,
+    },
     { label: 'Restaurant', value: (o) => o.restaurantSnapshot.name, sub: itemCount },
     { label: 'Placed', date: (o) => o.createdAt, dateFormat: DATE_TIME, nowrap: true },
     { label: 'Payment', value: (o) => (o.paymentMethod === 'cod' ? 'Cash' : 'Online') },
     { label: 'Total', paise: (o) => o.pricing.totalPaise, strong: true },
     { label: 'Status', key: 'status' },
   ];
-
 }

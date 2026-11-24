@@ -22,7 +22,8 @@ export type StaffAdminUpdate = Partial<
 
 /** GET /admin/admins/permissions: what a super admin can grant, and ready-made sets. */
 export interface PermissionCatalogue {
-  permissions: { key: Permission; label: string; group: string }[];
+  /** `requires`: ticked along with it (granting it grants those too). */
+  permissions: { key: Permission; label: string; group: string; requires?: Permission[] }[];
   presets: { key: string; label: string; permissions: Permission[] }[];
 }
 

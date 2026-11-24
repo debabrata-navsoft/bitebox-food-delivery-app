@@ -1,0 +1,78 @@
+:host {
+  display: block;
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--bb-space-2);
+    padding: 10px 0;
+    font-size: 0.88rem;
+    --bb-icon-size: 16px;
+
+    & + li {
+      border-top: 1px dashed var(--bb-border);
+    }
+  }
+  np-icon {
+    color: var(--bb-ink-muted);
+  }
+  span {
+    color: var(--bb-ink-muted);
+  }
+  strong {
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+}
+
+// `facts`: the strip of quick facts along the bottom of a details hero.
+:host(.facts) {
+  ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    border-top: 1px solid var(--bb-border);
+  }
+  li {
+    display: flex;
+    gap: var(--bb-space-3);
+    padding: var(--bb-space-3) var(--bb-space-4);
+    border: 0 solid var(--bb-border);
+    border-width: 0 1px 1px 0;
+    margin: 0 -1px -1px 0; // the outer edges lose their lines
+    font-size: inherit;
+    --bb-icon-size: 18px;
+
+    & + li {
+      border-top: 0; // no dashed divider here (the list style's)
+    }
+  }
+  div {
+    display: grid;
+    min-width: 0;
+  }
+  np-icon {
+    padding: 9px;
+    border-radius: 10px;
+    background: var(--bb-plum-100);
+    color: var(--bb-plum);
+    box-sizing: content-box;
+  }
+  span,
+  small {
+    font-size: 0.74rem;
+  }
+  strong {
+    font-size: 0.98rem;
+    text-align: left;
+  }
+  small {
+    color: var(--bb-success);
+  }
+}

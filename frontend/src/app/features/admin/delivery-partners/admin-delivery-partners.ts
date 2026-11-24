@@ -1,4 +1,5 @@
 import { finalize } from 'rxjs';
+import { AuthService } from '../../../core/auth/auth.service';
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { AdminOrdersService } from '../../../core/services/order-management.service';
@@ -38,32 +39,32 @@ const RIDER_EVENTS: OrderStatus[] = [
 
 @Component({
   selector: 'bb-admin-delivery-partners',
-  imports: [
-    RouterLink,
-    DatePipe,
-    ListToolbar,
-    OrderStatusChip,
-    PageHeader,
-    DataTable,
-    BbCell,
-  ],
+  imports: [RouterLink, DatePipe, ListToolbar, OrderStatusChip, PageHeader, DataTable, BbCell],
   templateUrl: './admin-delivery-partners.html',
   styleUrl: './admin-delivery-partners.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminDeliveryPartners implements OnInit {
   private readonly api = inject(AdminOrdersService);
+  protected readonly auth = inject(AuthService);
   private readonly changeStatus = riderStatusChanger();
 
   /** ?verification=pending (the dashboards' "Review" shortcut) preselects that filter. */
   readonly verification = input<RiderReviewState>();
   /** "Not submitted" for a pending rider who has not sent everything yet. */
   protected readonly stateOf = (r: AdminRider): RiderReviewState | null =>
-    r.verificationStatus ? riderReviewState({ status: r.verificationStatus, submitted: r.submitted }) : null;
+    r.verificationStatus
+      ? riderReviewState({ status: r.verificationStatus, submitted: r.submitted })
+      : null;
   protected readonly busyId = signal<string | null>(null);
 
   protected readonly filterSections: FilterSection[] = [
-    { kind: 'options', key: 'verification', label: 'Verification', options: filterOptions(RIDER_VERIFICATION_LABEL) },
+    {
+      kind: 'options',
+      key: 'verification',
+      label: 'Verification',
+      options: filterOptions(RIDER_VERIFICATION_LABEL),
+    },
     RIDER_AVAILABILITY_SECTION,
     VEHICLE_SECTION,
     ZONE_SECTION,
@@ -110,14 +111,15 @@ export class AdminDeliveryPartners implements OnInit {
       danger: (r) => r.status === 'active',
       disabled: (r) => this.busyId() === r.id,
       run: (r) => this.toggleStatus(r),
+      show: () => this.auth.can('riders:manage'),
     },
   ];
 
   ngOnInit(): void {
     const preset = this.verification();
-    if (preset && preset in RIDER_VERIFICATION_LABEL) this.riders.panel.set({ verification: [preset] });
+    if (preset && preset in RIDER_VERIFICATION_LABEL)
+      this.riders.panel.set({ verification: [preset] });
   }
-
 
   protected toggleStatus(rider: AdminRider): void {
     this.busyId.set(rider.id);

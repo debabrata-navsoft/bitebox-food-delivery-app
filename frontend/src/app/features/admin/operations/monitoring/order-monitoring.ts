@@ -1,4 +1,5 @@
 import { TableLabels } from '../../../../shared/directives/table-labels';
+import { AuthService } from '../../../../core/auth/auth.service';
 import { Router } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
@@ -45,6 +46,7 @@ const failed = <T>(err: unknown, text: string): Loaded<T> => ({
 })
 export class OrderMonitoring {
   private readonly api = inject(OperationsService);
+  protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   protected readonly statusLabel = ORDER_STATUS_LABEL;
 
@@ -134,7 +136,8 @@ export class OrderMonitoring {
   ];
   protected readonly updatedAt = computed(() => this.board()?.data?.at ?? null);
 
+  /** Rows open the order for admins who can see orders. */
   protected open(orderId: string): void {
-    void this.router.navigate(['/admin/orders', orderId]);
+    if (this.auth.can('orders:view')) void this.router.navigate(['/admin/orders', orderId]);
   }
 }

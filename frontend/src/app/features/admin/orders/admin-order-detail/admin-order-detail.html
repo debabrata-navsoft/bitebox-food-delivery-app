@@ -1,6 +1,4 @@
-<a class="bb-back-link" routerLink="/admin/orders"
-  ><np-icon name="arrow-left" class="mat-icon" matButtonIcon />All orders</a
->
+<bb-detail-nav [id]="id()" backLink="/admin/orders" />
 
 @if (order(); as o) {
   <!-- Summary: number, badges, total, actions and the journey tracker. -->

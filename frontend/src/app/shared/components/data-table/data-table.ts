@@ -8,15 +8,26 @@ import {
   computed,
   contentChild,
   contentChildren,
+  effect,
   inject,
   input,
   output,
+  untracked,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ButtonComponent, IconComponent, MenuComponent, MenuItem, PaginationComponent } from 'nexprime';
+import { AuthService } from '../../../core/auth/auth.service';
+import { pagePermission } from '../../../core/auth/admin-pages';
+import {
+  ButtonComponent,
+  IconComponent,
+  MenuComponent,
+  MenuItem,
+  PaginationComponent,
+} from 'nexprime';
 import { initialsOf } from '../../../core/models/user.models';
 import { ImageFallback, UsableImagePipe } from '../../directives/broken-images';
 import { TableLabels } from '../../directives/table-labels';
+import { DetailOrder } from '../../list/detail-order';
 import { FilteredList } from '../../list/filtered-list';
 import { formatPaise } from '../../pipes/money.pipes';
 import { COMPACT_MENU_WIDTH, toggleEndAligned } from '../../utils/end-aligned-menu';
@@ -62,7 +73,7 @@ interface CellView {
 }
 
 interface ActionView {
-  icon: string;
+  icon?: string;
   label: string;
   text: boolean;
   danger: boolean;
@@ -72,11 +83,13 @@ interface ActionView {
   menu?: MenuItem[];
 }
 
-const present = <V>(v: V | null | undefined | ''): v is V => v !== null && v !== undefined && v !== '';
+const present = <V>(v: V | null | undefined | ''): v is V =>
+  v !== null && v !== undefined && v !== '';
 const list = <V>(v: V | null | undefined | readonly (V | null | undefined)[]): V[] =>
   (Array.isArray(v) ? v : [v]).filter((x): x is V => !!x);
 const badgeClass = (b: TableBadge) =>
-  b.class ?? `bb-badge ${b.tone && !b.tone.startsWith('tone-') ? 'tone-' + b.tone : (b.tone ?? '')}`;
+  b.class ??
+  `bb-badge ${b.tone && !b.tone.startsWith('tone-') ? 'tone-' + b.tone : (b.tone ?? '')}`;
 
 /**
  * The shared data table. The page passes data only: `columns` (and `actions`) built in its TS,
@@ -147,8 +160,27 @@ export class DataTable<T> {
       row,
       id: track(row),
       cells: columns.map((c) => this.cell(c, row, custom)),
-      actions: actions.filter((a) => a.show?.(row) ?? true).map((a) => this.action(a, row)),
+      actions: actions
+        .filter((a) => (a.show?.(row) ?? true) && (a.run || !a.link || this.allowed(a.link(row))))
+        .map((a) => this.action(a, row)),
     }));
+  });
+
+  /** The rows' order, for previous / next on the details page a row opens (`bb-detail-nav`). */
+  private readonly detailOrder = inject(DetailOrder);
+  private readonly auth = inject(AuthService);
+
+  /** A link to a page this admin can't open shows as plain text (no dead ends). */
+  private allowed(link: TableLink | null | undefined): TableLink | undefined {
+    if (!link) return undefined;
+    const needs = pagePermission(link);
+    return !needs || this.auth.can(needs) ? link : undefined;
+  }
+  private readonly remembered = effect(() => {
+    const ids = this.view()
+      .map((r) => r.id)
+      .filter((id): id is string => typeof id === 'string');
+    untracked(() => this.detailOrder.remember(ids));
   });
 
   /** The Actions column shows only when some row on this page has a button (e.g. a refund). */
@@ -177,7 +209,7 @@ export class DataTable<T> {
       avatar,
       value: present(value) ? value : undefined,
       date,
-      link: present(value) ? c.link?.(row) || undefined : undefined,
+      link: present(value) ? this.allowed(c.link?.(row)) : undefined,
       run: c.run && (() => c.run!(row)),
       badges,
       lines,
@@ -192,7 +224,7 @@ export class DataTable<T> {
       text: !!a.text,
       danger: a.danger?.(row) ?? false,
       disabled: a.disabled?.(row) ?? false,
-      link: a.link?.(row),
+      link: this.allowed(a.link?.(row)),
       run: a.run && (() => a.run!(row)),
       menu: a.menu?.(row),
     };
@@ -201,7 +233,9 @@ export class DataTable<T> {
   /** A click (or Enter) on the row itself or plain text in it, not on a control inside it. */
   protected open(event: Event, row: T): void {
     const target = event.target as Element;
-    const control = target.closest('a, button, input, select, textarea, [role="switch"], np-toggle');
+    const control = target.closest(
+      'a, button, input, select, textarea, [role="switch"], np-toggle',
+    );
     if (this.clickable() && (!control || control === event.currentTarget)) this.rowClick.emit(row);
   }
 

@@ -194,7 +194,9 @@ def test_bad_filters_and_unknown_fields(admin: APIClient) -> None:
 
 def test_list_needs_customers_view() -> None:
     assert operator("customers:view").get(CUSTOMERS).status_code == 200
-    for perms in (("customers:edit", "restaurants:view", "riders:view"), ()):
+    # Editing customers includes seeing them; other members' views do not.
+    assert operator("customers:edit").get(CUSTOMERS).status_code == 200
+    for perms in (("restaurants:view", "riders:view"), ()):
         assert operator(*perms).get(CUSTOMERS).status_code == 403
     assert client_for(make.user(Role.FINANCE_ADMIN)).get(CUSTOMERS).status_code == 403
     assert client_for(make.user(Role.SUPPORT_ADMIN)).get(CUSTOMERS).status_code == 200

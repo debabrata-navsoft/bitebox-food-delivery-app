@@ -1,101 +1,137 @@
-<a class="bb-back-link" routerLink="/admin/delivery-partners"
-  ><np-icon name="arrow-left" class="mat-icon" matButtonIcon />All delivery partners</a
->
+<bb-detail-nav [id]="id()" backLink="/admin/delivery-partners" />
 
 @if (loadError(); as message) {
   <div class="bb-alert error" role="alert">
     <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ message }}</span>
   </div>
-} @else if (data(); as d) {
-  <header class="head">
-    <div>
-      <div class="bb-title-row">
-        <h1>{{ d.user.name }}</h1>
-        <span class="bb-badge {{ tone[state()] }}">{{ label[state()] }}</span>
-        @if (d.user.status === 'suspended') {
-          <span class="bb-badge tone-bad">Account suspended</span>
+} @else if (view(); as v) {
+  @let d = v.detail;
+  <!-- Hero: photo, name, badges, quick facts and the actions -->
+  <section class="bb-card hero">
+    <div class="cover" aria-hidden="true"></div>
+    <div class="hero-body">
+      <div class="logo round">
+        @if (d.user.avatarUrl) {
+          <img [src]="d.user.avatarUrl" alt="" />
+        } @else {
+          <span aria-hidden="true">{{ d.user.name.charAt(0) }}</span>
         }
       </div>
-      @if (d.user.status === 'suspended' && d.user.statusReason) {
-        <p class="status-reason">Reason: {{ d.user.statusReason }}</p>
+      <div class="title">
+        <div class="bb-title-row">
+          <h1>{{ d.user.name }}</h1>
+          <span class="bb-badge {{ tone[state()] }}">{{ label[state()] }}</span>
+          @if (d.user.status === 'suspended') {
+            <span class="bb-badge tone-bad">Account suspended</span>
+          }
+        </div>
+        <div class="meta">
+          <span class="open" [class.yes]="d.profile.isOnline"
+            ><i></i>{{ d.profile.isOnline ? 'Online' : 'Offline' }}</span
+          >
+          @if (d.profile.rating?.count) {
+            <span class="rating"
+              ><np-icon name="star" />{{ d.profile.rating!.average | number: '1.1-1' }}
+              <small>({{ d.profile.rating!.count }})</small></span
+            >
+          }
+          @if (d.profile.address; as a) {
+            <span><np-icon name="map-pin" />{{ a.area || a.line1 }}, {{ a.city }}</span>
+          }
+        </div>
+        @if (d.user.status === 'suspended' && d.user.statusReason) {
+          <p class="status-reason">Suspended: {{ d.user.statusReason }}</p>
+        }
+      </div>
+      @if (auth.can('riders:manage')) {
+        <div class="actions">
+          <button
+            type="button"
+            class="bb-btn bb-btn--outlined"
+            [class.bb-btn--danger]="d.user.status === 'active'"
+            [disabled]="changingStatus()"
+            (click)="toggleStatus()"
+          >
+            <np-icon [name]="d.user.status === 'active' ? 'shield-alert' : 'rotate-ccw'" />{{
+              statusAction(d.user.status)
+            }}
+          </button>
+          @for (dec of decisions(); track dec.status) {
+            <button
+              type="button"
+              class="bb-btn"
+              [class.bb-btn--danger]="dec.danger"
+              (click)="decide(dec)"
+            >
+              {{ dec.label }}
+            </button>
+          }
+        </div>
       }
     </div>
-    <div class="actions">
-      <button
-        type="button"
-        class="bb-btn bb-btn--outlined"
-        [class.bb-btn--danger]="d.user.status === 'active'"
-        [disabled]="changingStatus()"
-        (click)="toggleStatus()"
-      >
-        <np-icon [name]="d.user.status === 'active' ? 'shield-alert' : 'rotate-ccw'" />{{
-          statusAction(d.user.status)
-        }}
-      </button>
-      @for (dec of decisions(); track dec.status) {
-        <button
-          type="button"
-          class="bb-btn"
-          [class.bb-btn--danger]="dec.danger"
-          (click)="decide(dec)"
-        >
-          {{ dec.label }}
-        </button>
-      }
-    </div>
-  </header>
+
+    <bb-info-rows facts [rows]="v.kpis" />
+  </section>
+
   @if (d.profile.verification?.reason; as reason) {
-    <p class="reason"><strong>Reason given:</strong> {{ reason }}</p>
+    <div class="bb-alert info" role="note">
+      <np-icon name="sticky-note" class="mat-icon" matButtonIcon />
+      <span><strong>Reason given:</strong> {{ reason }}</span>
+    </div>
   }
 
-  <div class="grid">
-    <section class="bb-card">
-      <h3>Rider</h3>
-      <dl>
-        <div>
-          <dt>Email</dt>
-          <dd>{{ d.user.email }}</dd>
-        </div>
-        <div>
-          <dt>Phone</dt>
-          <dd>{{ d.user.phone || '—' }}</dd>
-        </div>
-        <div>
-          <dt>Joined</dt>
-          <dd>{{ d.user.createdAt | date: 'd MMM y' }}</dd>
-        </div>
-        <div>
-          <dt>Deliveries</dt>
-          <dd>{{ d.profile.completedDeliveries }}</dd>
-        </div>
-      </dl>
-    </section>
-    <section class="bb-card">
-      <h3>Vehicle and address</h3>
-      <dl>
-        <div>
-          <dt>Vehicle</dt>
-          <dd>
-            {{ d.profile.vehicleType ? vehicleLabel[d.profile.vehicleType] : 'Not added' }}
-            {{ d.profile.vehicleNumber ? '· ' + d.profile.vehicleNumber : '' }}
-          </dd>
-        </div>
-        <div class="wide">
-          <dt>Address</dt>
-          <dd>
-            @if (d.profile.address; as a) {
-              {{ a.line1 }}{{ a.area ? ', ' + a.area : '' }}, {{ a.city }}, {{ a.state }}
-              {{ a.postalCode }}
-            } @else {
-              Not added
-            }
-          </dd>
-        </div>
-      </dl>
-    </section>
-  </div>
+  <div class="layout">
+    <div class="main">
+      <section class="bb-card">
+        <h2>Address</h2>
+        @if (d.profile.address; as a) {
+          <div class="location">
+            <span class="pin" aria-hidden="true"><np-icon name="map-pin" /></span>
+            <address>
+              {{ a.line1 }}{{ a.line2 ? ', ' + a.line2 : '' }}<br />
+              {{ a.area ? a.area + ', ' : '' }}{{ a.city }}, {{ a.state }} {{ a.postalCode }}
+            </address>
+          </div>
+        } @else {
+          <p class="bb-muted">Not added yet.</p>
+        }
+      </section>
 
-  <bb-kyc-review class="kyc" [partnerId]="d.user.id" />
+      @if (auth.can('riders:kyc', 'riders:manage')) {
+        <bb-kyc-review [partnerId]="d.user.id" />
+      }
+    </div>
+
+    <aside class="side">
+      <section class="bb-card">
+        <h2>Contact</h2>
+        <bb-info-rows [rows]="v.contact" />
+      </section>
+
+      <section class="bb-card">
+        <h2>History</h2>
+        <ol class="timeline">
+          <li>
+            <strong>Joined</strong>
+            <span>{{ d.user.createdAt | date: 'd MMM y, h:mm a' }}</span>
+          </li>
+          <li [class.pending]="!d.profile.verification?.verifiedAt">
+            <strong>Verified</strong>
+            <span>{{
+              d.profile.verification?.verifiedAt
+                ? (d.profile.verification!.verifiedAt | date: 'd MMM y, h:mm a')
+                : 'Not yet'
+            }}</span>
+          </li>
+        </ol>
+        <a
+          class="bb-btn bb-btn--outlined bb-btn--small wide"
+          [routerLink]="['/admin/delivery-partner-accounts', d.user.id]"
+          ><np-icon name="user" />Open account</a
+        >
+      </section>
+    </aside>
+  </div>
 } @else {
-  <span class="bb-skeleton" style="height: 240px"></span>
+  <span class="bb-skeleton" style="height: 360px"></span>
 }

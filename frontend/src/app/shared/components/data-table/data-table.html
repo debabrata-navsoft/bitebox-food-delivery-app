@@ -114,7 +114,7 @@
                     <np-button
                       variant="text"
                       severity="secondary"
-                      [icon]="a.icon"
+                      [icon]="a.icon ?? 'ellipsis-vertical'"
                       label=""
                       [ariaLabel]="a.label"
                       [disabled]="a.disabled"
@@ -124,24 +124,29 @@
                   } @else if (a.link) {
                     <a
                       class="bb-btn bb-btn--outlined"
-                      [class]="a.text ? 'bb-btn--small' : 'bb-btn--icon act'"
+                      [class]="a.text ? 'bb-btn--small txt' : 'bb-btn--icon act'"
                       [routerLink]="a.link"
                       [attr.aria-label]="a.label"
                       [title]="a.label"
-                      ><np-icon [name]="a.icon" />{{ a.text ? a.label : '' }}</a
+                      >@if (a.icon) {
+                        <np-icon [name]="a.icon" />
+                      }{{ a.text ? a.label : '' }}</a
                     >
                   } @else {
                     <button
                       type="button"
                       class="bb-btn bb-btn--outlined"
-                      [class]="a.text ? 'bb-btn--small' : 'bb-btn--icon act'"
+                      [class]="a.text ? 'bb-btn--small txt' : 'bb-btn--icon act'"
                       [class.bb-btn--danger]="a.danger"
                       [attr.aria-label]="a.label"
                       [title]="a.label"
                       [disabled]="a.disabled"
                       (click)="a.run?.()"
                     >
-                      <np-icon [name]="a.icon" />{{ a.text ? a.label : '' }}
+                      <!-- Icon buttons: the icon; labelled ones: the name, after an icon if set -->
+                      @if (a.icon) {
+                        <np-icon [name]="a.icon" />
+                      }{{ a.text ? a.label : '' }}
                     </button>
                   }
                 }

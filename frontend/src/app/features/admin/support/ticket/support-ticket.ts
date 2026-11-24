@@ -1,4 +1,5 @@
 import { DatePipe } from '@angular/common';
+import { DetailNav } from '../../../../shared/components/detail-nav/detail-nav';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -11,7 +12,6 @@ import {
 import { rxResource } from '@angular/core/rxjs-interop';
 import { FormRoot, TreeValidationResult, form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
-import { RouterLink } from '@angular/router';
 import { IconComponent, SelectOption, ToggleComponent } from 'nexprime';
 import { Observable, firstValueFrom } from 'rxjs';
 import { errorMessage, resourceError } from '../../../../shared/utils/api-error';
@@ -48,8 +48,8 @@ const HISTORY_LABEL: Record<string, string> = {
 @Component({
   selector: 'bb-support-ticket',
   imports: [
+    DetailNav,
     DatePipe,
-    RouterLink,
     FormRoot,
     NP_FORM_FIELDS,
     ToggleComponent,

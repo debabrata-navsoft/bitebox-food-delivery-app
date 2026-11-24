@@ -57,7 +57,6 @@ describe('AdminOrderDetail', () => {
     expect(el.textContent).toContain('Olive Grove Kitchen');
     expect(el.textContent).toContain('Tara Lane');
     expect(el.textContent).toContain('Masala Dosa');
-    expect(el.querySelector('.bb-back-link')?.getAttribute('href')).toBe('/admin/orders');
     expect(el.textContent).toContain('Cancel order');
   });
 

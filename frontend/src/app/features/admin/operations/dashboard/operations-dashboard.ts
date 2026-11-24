@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { AuthService } from '../../../../core/auth/auth.service';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from 'nexprime';
 import { OperationsService } from '../../../../core/services/admin/operations.service';
@@ -29,6 +30,7 @@ const LIVE_ORDER: OrderStatus[] = [
 })
 export class OperationsDashboardPage {
   private readonly api = inject(OperationsService);
+  protected readonly auth = inject(AuthService);
   protected readonly report = periodReport(
     (days) => this.api.dashboard(days),
     'Could not load the dashboard.',

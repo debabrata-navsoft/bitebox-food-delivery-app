@@ -1,0 +1,45 @@
+:host {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--bb-space-2);
+}
+
+// White, thin grey border, slightly rounded; "Back" in red text.
+.nav-btn {
+  display: inline-grid;
+  place-items: center;
+  height: 36px;
+  padding: 0 var(--bb-space-4);
+  border: 1px solid var(--bb-border);
+  border-radius: 6px;
+  background: var(--bb-surface);
+  color: var(--bb-ink-muted);
+  font: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: var(--bb-shadow-sm);
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  --bb-icon-size: 18px;
+
+  &.icon {
+    width: 36px;
+    padding: 0;
+  }
+  &.back {
+    color: var(--bb-danger);
+  }
+  &:hover:not(:disabled) {
+    background: var(--bb-surface-alt);
+    border-color: var(--bb-ink-muted);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--bb-plum);
+    outline-offset: 2px;
+  }
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+}

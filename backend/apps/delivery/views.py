@@ -329,8 +329,13 @@ RIDERS_ADMIN = [permission_required(Permission.RIDERS_MANAGE)]
 ADMIN_RIDER_PAGE = facets_page("AdminRiderPage", services.ADMIN_FACETS)
 
 
+# Seeing riders needs "view" (which "manage" includes); changing them needs "manage".
+RIDERS_READ = [permission_required(Permission.RIDERS_VIEW)]
+
+
 class AdminRidersView(APIView):
-    permission_classes = RIDERS_ADMIN
+    # Also the "Assign rider" picker on an order (orders:manage).
+    permission_classes = [permission_required(Permission.RIDERS_VIEW, Permission.ORDERS_MANAGE)]
 
     @extend_schema(
         tags=["Admin: delivery partners"],
@@ -379,7 +384,7 @@ class AdminRiderStatusView(APIView):
 
 
 class AdminRiderView(APIView):
-    permission_classes = RIDERS_ADMIN
+    permission_classes = RIDERS_READ
 
     @extend_schema(
         tags=["Admin: delivery partners"],

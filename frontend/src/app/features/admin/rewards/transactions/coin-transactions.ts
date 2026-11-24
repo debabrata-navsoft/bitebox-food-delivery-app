@@ -79,7 +79,6 @@ export class CoinTransactionsPage {
   ];
   protected readonly actions: TableAction<AdminCoinTransaction>[] = [
     {
-      icon: 'undo-2',
       label: 'Reverse',
       text: true,
       run: (t) => this.reverse(t),

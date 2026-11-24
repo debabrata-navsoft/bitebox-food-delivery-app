@@ -767,7 +767,9 @@ def test_availability_needs_riders_status() -> None:
     body = {"isOnline": False, "reason": "Phone unreachable"}
     assert operator("riders:view", "riders:edit").patch(url, body, format="json").status_code == 403
     assert operator("riders:status").patch(url, body, format="json").status_code == 200
-    assert operator("riders:status").get(url).status_code == 403
+    # Changing availability includes seeing it ("riders:status" brings "riders:view").
+    assert operator("riders:status").get(url).status_code == 200
+    assert operator("restaurants:view").get(url).status_code == 403
     missing = make.user(Role.CUSTOMER)
     assert operator("riders:view").get(f"{ACCOUNTS}/{missing.pk}/availability").status_code == 404
 
@@ -835,3 +837,52 @@ def test_reviews_filter_by_rider(admin: APIClient) -> None:
     bad = admin.get("/api/v1/admin/reviews/orders?rider=1")
     assert bad.status_code == 422
     assert set(field_errors(bad)) == {"rider"}
+
+
+# --- seeing vs changing on the Operations pages -------------------------------------------------
+
+
+def test_view_permissions_open_the_operations_lists_read_only() -> None:
+    """ "View" opens the Restaurants and Delivery partners pages; changes still need "manage"."""
+    kitchen = make.restaurant(status="approved")
+    partner = rider()
+    viewer = operator("restaurants:view", "riders:view")
+    assert viewer.get("/api/v1/admin/restaurants").status_code == 200
+    assert viewer.get(f"/api/v1/admin/restaurants/{kitchen.pk}").status_code == 200
+    assert viewer.get("/api/v1/admin/foods").status_code == 200
+    assert viewer.get("/api/v1/admin/delivery-partners").status_code == 200
+    assert viewer.get(f"/api/v1/admin/delivery-partners/{partner.pk}").status_code == 200
+    body = {"status": "suspended", "reason": "Checking access"}
+    assert (
+        viewer.patch(
+            f"/api/v1/admin/restaurants/{kitchen.pk}/status", body, format="json"
+        ).status_code
+        == 403
+    )
+    assert (
+        viewer.patch(
+            f"/api/v1/admin/delivery-partners/{partner.pk}/status", body, format="json"
+        ).status_code
+        == 403
+    )
+    # Without "view" (or anything that includes it) the pages stay closed.
+    assert operator("orders:view").get("/api/v1/admin/restaurants").status_code == 403
+    assert operator("orders:view").get("/api/v1/admin/delivery-partners").status_code == 403
+
+
+def test_pickers_uploads_and_suspend_work_with_the_permission_that_uses_them() -> None:
+    """Pages that borrow another area's data: each works with its own permission."""
+    # Restaurant picker: commission rates (finance) and coupon scope (catalog).
+    for perm in ("finance:view", "catalog:manage"):
+        assert operator(perm).get("/api/v1/admin/restaurants").status_code == 200
+    # "Assign rider" on an order lists the riders.
+    assert operator("orders:manage").get("/api/v1/admin/delivery-partners").status_code == 200
+    # Photo uploads: admins who edit restaurants or categories (an empty post is refused as 4xx,
+    # not 403); someone without either may not upload.
+    for perm in ("restaurants:edit", "catalog:manage"):
+        assert operator(perm).post("/api/v1/uploads/images", {}).status_code not in (401, 403)
+    assert operator("orders:view").post("/api/v1/uploads/images", {}).status_code == 403
+    # "Suspend or block accounts" can open the accounts it suspends.
+    suspender = operator("accounts:suspend")
+    for url in ("/api/v1/admin/customers", "/api/v1/admin/restaurant-accounts", ACCOUNTS):
+        assert suspender.get(url).status_code == 200, url

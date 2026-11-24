@@ -1,13 +1,32 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { ButtonComponent, CheckboxComponent, IconComponent } from 'nexprime';
+import { ButtonComponent, CheckboxComponent, IconComponent, ToggleComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
 import { AdminStaffService } from '../../../../core/services/admin/admin-staff.service';
 import { errorMessage } from '../../../../shared/utils/api-error';
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
 import { loaded } from '../../../../shared/coupons/coupon-list';
-import { BB_DIALOG_DATA, BbDialog, BbDialogRef, BbDialogTitle } from '../../../../shared/dialog/bb-dialog';
+import {
+  BB_DIALOG_DATA,
+  BbDialog,
+  BbDialogRef,
+  BbDialogTitle,
+} from '../../../../shared/dialog/bb-dialog';
 import { Permission, ROLE_META, User } from '../../../../core/models/user.models';
+
+/** An icon per permission group (the catalogue's group names). */
+const GROUP_ICON: Record<string, string> = {
+  Customers: 'users',
+  Restaurants: 'store',
+  'Delivery partners': 'bike',
+  Accounts: 'shield-alert',
+  'Orders & operations': 'receipt',
+  Finance: 'wallet',
+  Support: 'life-buoy',
+  'Catalog & marketing': 'megaphone',
+  Rewards: 'gift',
+  Admin: 'settings',
+};
 
 /**
  * The super admin picks what one admin or operator may do: permissions in groups, ready-made sets
@@ -16,7 +35,7 @@ import { Permission, ROLE_META, User } from '../../../../core/models/user.models
  */
 @Component({
   selector: 'bb-permission-editor-dialog',
-  imports: [BbDialogTitle, ButtonComponent, CheckboxComponent, IconComponent],
+  imports: [BbDialogTitle, ButtonComponent, CheckboxComponent, IconComponent, ToggleComponent],
   templateUrl: './permission-editor-dialog.html',
   styleUrl: './permission-editor-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,15 +52,25 @@ export class PermissionEditorDialog {
   private readonly catalogue = rxResource({ stream: () => this.api.permissionCatalogue() });
   protected readonly data = computed(() => loaded(this.catalogue));
   protected readonly loadError = computed(() =>
-    this.catalogue.error() ? errorMessage(this.catalogue.error(), 'Could not load the permissions.') : null,
+    this.catalogue.error()
+      ? errorMessage(this.catalogue.error(), 'Could not load the permissions.')
+      : null,
+  );
+  /** The catalogue by key (label, group, what it requires). */
+  private readonly byKey = computed(
+    () => new Map((this.data()?.permissions ?? []).map((p) => [p.key, p])),
   );
   protected readonly groups = computed(() => {
     const byGroup = new Map<string, { key: Permission; label: string }[]>();
-    for (const p of this.data()?.permissions ?? []) byGroup.set(p.group, [...(byGroup.get(p.group) ?? []), p]);
+    for (const p of this.data()?.permissions ?? [])
+      byGroup.set(p.group, [...(byGroup.get(p.group) ?? []), p]);
     return [...byGroup].map(([name, items]) => ({ name, items }));
   });
 
-  private readonly start = new Set<Permission>(this.user.customPermissions ?? this.user.permissions ?? []);
+  /** What applies now (`permissions` includes what a saved list needs, e.g. "view"). */
+  private readonly start = new Set<Permission>(
+    this.user.permissions ?? this.user.customPermissions ?? [],
+  );
   protected readonly selected = signal(new Set(this.start));
   /** True once "Use the role's preset" is picked (saves null). */
   protected readonly usePreset = signal(this.hasPreset && this.user.customPermissions == null);
@@ -49,37 +78,54 @@ export class PermissionEditorDialog {
   protected readonly error = signal<string | null>(null);
 
   protected readonly added = computed(() => [...this.selected()].filter((p) => !this.start.has(p)));
-  protected readonly removed = computed(() => [...this.start].filter((p) => !this.selected().has(p)));
+  protected readonly removed = computed(() =>
+    [...this.start].filter((p) => !this.selected().has(p)),
+  );
   protected readonly changed = computed(
-    () => this.added().length + this.removed().length > 0 || this.usePreset() !== (this.hasPreset && this.user.customPermissions == null),
+    () =>
+      this.added().length + this.removed().length > 0 ||
+      this.usePreset() !== (this.hasPreset && this.user.customPermissions == null),
   );
 
   protected toggle(key: Permission, on: boolean): void {
-    this.usePreset.set(false);
-    this.selected.update((s) => {
-      const next = new Set(s);
-      if (on) next.add(key);
-      else next.delete(key);
-      return next;
-    });
+    this.toggleGroup([{ key }], on);
   }
 
+  /**
+   * Ticking also ticks what those permissions need (e.g. "Edit restaurants" → "View restaurants");
+   * unticking also unticks what needs them. The API grants the same, so the boxes show what applies.
+   */
   protected toggleGroup(items: { key: Permission }[], on: boolean): void {
     this.usePreset.set(false);
     this.selected.update((s) => {
       const next = new Set(s);
       for (const { key } of items) on ? next.add(key) : next.delete(key);
-      return next;
+      return this.settle(next, on);
     });
   }
 
-  protected allOn(items: { key: Permission }[]): boolean {
-    return items.every(({ key }) => this.selected().has(key));
+  /** Adds what each permission requires, or (when one was unticked) drops what lost a requirement. */
+  private settle(set: Set<Permission>, add = true): Set<Permission> {
+    for (const key of [...set])
+      for (const r of this.byKey().get(key)?.requires ?? [])
+        if (!set.has(r)) add ? set.add(r) : set.delete(key);
+    return set;
+  }
+
+  /** How many of these the person holds. */
+  protected heldIn(items: { key: Permission }[]): number {
+    return items.filter(({ key }) => this.selected().has(key)).length;
+  }
+
+  protected readonly total = computed(() => this.data()?.permissions.length ?? 0);
+
+  protected groupIcon(group: string): string {
+    return GROUP_ICON[group] ?? 'key-round';
   }
 
   protected applyPreset(permissions: Permission[]): void {
     this.usePreset.set(false);
-    this.selected.set(new Set(permissions));
+    this.selected.set(this.settle(new Set(permissions)));
   }
 
   /** Back to the role's own set (the API then serves the preset). */
@@ -89,7 +135,7 @@ export class PermissionEditorDialog {
   }
 
   protected label(key: Permission): string {
-    return this.data()?.permissions.find((p) => p.key === key)?.label ?? key;
+    return this.byKey().get(key)?.label ?? key;
   }
 
   protected async save(): Promise<void> {
@@ -97,8 +143,16 @@ export class PermissionEditorDialog {
     const summary = preset
       ? `${this.user.name} goes back to the ${this.roleLabel} role's own permissions.`
       : [
-          this.added().length ? `Adds: ${this.added().map((k) => this.label(k)).join(', ')}.` : '',
-          this.removed().length ? `Removes: ${this.removed().map((k) => this.label(k)).join(', ')}.` : '',
+          this.added().length
+            ? `Adds: ${this.added()
+                .map((k) => this.label(k))
+                .join(', ')}.`
+            : '',
+          this.removed().length
+            ? `Removes: ${this.removed()
+                .map((k) => this.label(k))
+                .join(', ')}.`
+            : '',
         ]
           .filter(Boolean)
           .join(' ');
@@ -126,4 +180,7 @@ export class PermissionEditorDialog {
 
 /** Opens the editor; emits the saved user. */
 export const openPermissionEditor = (dialog: BbDialog, user: User) =>
-  dialog.result<PermissionEditorDialog, User, User>(PermissionEditorDialog, { data: user, width: '720px' });
+  dialog.result<PermissionEditorDialog, User, User>(PermissionEditorDialog, {
+    data: user,
+    width: '720px',
+  });

@@ -90,9 +90,10 @@ export class AuthService {
     });
   }
 
-  /** Admin permission check for menus and guards (the API enforces the real rule). */
-  can(permission: Permission): boolean {
-    return this.permissions().has(permission);
+  /** Admin permission check for menus and guards: holds any of them (the API enforces the real rule). */
+  can(...permissions: Permission[]): boolean {
+    const held = this.permissions();
+    return permissions.some((p) => held.has(p));
   }
 
   constructor() {

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { AuthService } from '../../../../core/auth/auth.service';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { IconComponent } from 'nexprime';
@@ -12,14 +13,26 @@ import { formatPaise } from '../../../../shared/pipes/money.pipes';
 
 @Component({
   selector: 'bb-finance-dashboard',
-  imports: [RouterLink, MatButtonModule, IconComponent, NP_FORM_FIELDS, PageHeader, StatTile, DailyChart],
+  imports: [
+    RouterLink,
+    MatButtonModule,
+    IconComponent,
+    NP_FORM_FIELDS,
+    PageHeader,
+    StatTile,
+    DailyChart,
+  ],
   templateUrl: './finance-dashboard.html',
   styleUrl: './finance-dashboard.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FinanceDashboardPage {
   private readonly api = inject(FinanceService);
-  protected readonly report = periodReport((days) => this.api.dashboard(days), 'Could not load finance figures.');
+  protected readonly auth = inject(AuthService);
+  protected readonly report = periodReport(
+    (days) => this.api.dashboard(days),
+    'Could not load finance figures.',
+  );
   protected readonly money = (paise: number) => formatPaise(paise) || '₹0';
 
   private readonly daily = computed(() => this.report.data()?.daily ?? []);
