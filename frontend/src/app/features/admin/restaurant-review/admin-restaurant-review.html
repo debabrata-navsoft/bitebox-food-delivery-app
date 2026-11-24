@@ -183,13 +183,10 @@
           </div>
         </div>
         <bb-info-rows [rows]="v.owner" />
-        @if (v.ownerId; as ownerId) {
-          <a
-            class="bb-btn bb-btn--outlined bb-btn--small wide"
-            [routerLink]="['/admin/restaurant-accounts', ownerId]"
-            ><np-icon name="user" />Open account</a
-          >
-        }
+        <!-- Restaurant accounts are keyed by the restaurant, not the owner's user id. -->
+        <a class="bb-btn bb-btn--outlined bb-btn--small wide" [routerLink]="['/admin/restaurant-accounts', r.id]"
+          ><np-icon name="user" />Open account</a
+        >
       </section>
 
       <section class="bb-card">
