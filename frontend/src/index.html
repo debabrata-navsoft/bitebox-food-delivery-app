@@ -46,15 +46,23 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <!-- The app's launch splash (shown inside <app-root> until Angular renders the first page).
+    <!-- The phone app's launch splash (shown inside <app-root> until Angular renders the first page;
+         only in the installed app on a touch device, see app.ts#PHONE_APP).
          Same box, lid and dashes as shared/components/brand-loader; plum like the manifest's
          background_color, so the installed app goes from the phone's splash straight into it. -->
     <style>
       .bb-splash {
+        display: none;
+      }
+      @media (display-mode: standalone) and (pointer: coarse), (display-mode: fullscreen) and (pointer: coarse) {
+        .bb-splash {
+          display: flex;
+        }
+      }
+      .bb-splash {
         position: fixed;
         inset: 0;
         z-index: 10000;
-        display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
