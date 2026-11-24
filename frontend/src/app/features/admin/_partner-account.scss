@@ -18,14 +18,14 @@
 .logo {
   display: inline-grid;
   place-items: center;
-  width: 64px;
-  height: 64px;
+  width: 52px;
+  height: 52px;
   overflow: hidden;
   border-radius: var(--bb-radius);
   background: var(--bb-surface);
   border: 1px solid var(--bb-border);
   color: var(--bb-ink-muted);
-  --bb-icon-size: 28px;
+  --bb-icon-size: 24px;
 
   img {
     width: 100%;

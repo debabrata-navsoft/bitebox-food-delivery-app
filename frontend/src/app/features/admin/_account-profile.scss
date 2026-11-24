@@ -5,7 +5,12 @@
 :host {
   display: grid;
   grid-template-columns: minmax(0, 1fr); // children never widen the page (tabs, tables)
-  gap: var(--bb-space-4);
+  gap: var(--bb-space-3);
+}
+
+// The grid's gap already spaces the "← All …" link from the header.
+.bb-back-link {
+  margin-bottom: 0;
 }
 
 .head {
@@ -17,8 +22,10 @@
   .who {
     flex: 1;
   }
+  // A compact name (like the page titles), the chips close under it.
   h1 {
-    margin: 0 0 var(--bb-space-1);
+    margin: 0 0 6px;
+    font-size: clamp(1.4rem, 2.6vw, 1.75rem);
   }
   // Statuses and the ID in one row under the name.
   .chips {

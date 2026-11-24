@@ -34,4 +34,4 @@ export const DECISIONS: Record<RiderVerificationStatus, Decision[]> = {
 
 /** "Online", "On a delivery" or "Offline". */
 export const availabilityOf = (r: { isOnline: boolean; busy?: boolean }) =>
-  r.busy ? { label: 'On a delivery', tone: 'tone-info' } : r.isOnline ? { label: 'Online', tone: 'tone-good' } : { label: 'Offline', tone: '' };
+  r.busy ? { label: 'On a delivery', tone: 'tone-info' } : r.isOnline ? { label: 'Online', tone: 'tone-good' } : { label: 'Offline', tone: 'tone-muted' };
