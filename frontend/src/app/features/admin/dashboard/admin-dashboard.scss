@@ -1,71 +1,411 @@
 @use 'breakpoints' as bp;
 
-.stat-skeleton {
-  height: 132px;
-}
-
-.stat {
+// --- Greeting and quick actions ------------------------------------------------------------------
+.top {
   display: flex;
-  flex-direction: column;
-  gap: var(--bb-space-1);
-  text-decoration: none;
-  color: inherit;
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--bb-space-3);
+  margin-bottom: var(--bb-space-4);
 
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--bb-shadow);
+  h1 {
+    margin: 2px 0 0;
+    font-size: clamp(1.4rem, 2.6vw, 1.85rem);
   }
 }
 
-.stat-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  background: var(--bb-amber-100);
-  color: var(--bb-plum);
-  margin-bottom: var(--bb-space-2);
-}
-
-.stat-value {
-  font-size: 1.9rem;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.stat-label {
+.date {
   color: var(--bb-ink-muted);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
-.business {
-  margin-bottom: var(--bb-space-5);
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bb-space-2);
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid var(--bb-border);
+    border-radius: 999px;
+    background: var(--bb-surface);
+    color: var(--bb-ink);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition:
+      border-color 0.15s,
+      background 0.15s;
+    --bb-icon-size: 16px;
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--bb-plum);
+      background: var(--bb-plum-100);
+    }
+  }
 }
 
-.business-head {
+// --- The bento grid ------------------------------------------------------------------------------
+.bento {
+  display: grid;
+  gap: var(--bb-space-3);
+  margin-top: var(--bb-space-3);
+
+  @include bp.tablet-up {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include bp.desktop-up {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-areas:
+      'revenue revenue live mix'
+      'revenue revenue owed mix'
+      'month month month accounts';
+
+    .revenue {
+      grid-area: revenue;
+    }
+    .live {
+      grid-area: live;
+    }
+    .mix {
+      grid-area: mix;
+    }
+    .owed {
+      grid-area: owed;
+    }
+    .month {
+      grid-area: month;
+    }
+    .accounts {
+      grid-area: accounts;
+    }
+  }
+}
+
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: var(--bb-space-5);
+  border: 1px solid var(--bb-border);
+  border-radius: calc(var(--bb-radius) * 1.4);
+  background: var(--bb-surface);
+  box-shadow: var(--bb-shadow-sm);
+  color: inherit;
+  text-decoration: none;
+}
+
+a.tile {
+  transition:
+    transform 0.18s,
+    box-shadow 0.18s,
+    border-color 0.18s;
+
+  &:hover,
+  &:focus-visible {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--bb-plum) 35%, var(--bb-border));
+    box-shadow: var(--bb-shadow);
+
+    .go {
+      opacity: 1;
+      transform: translate(2px, -2px);
+    }
+  }
+}
+
+.go {
+  position: absolute;
+  top: var(--bb-space-4);
+  right: var(--bb-space-4);
+  color: var(--bb-plum);
+  opacity: 0.4;
+  transition:
+    opacity 0.18s,
+    transform 0.18s;
+  --bb-icon-size: 18px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--bb-ink-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.big {
+  font-size: clamp(1.9rem, 3vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--bb-ink-muted);
+  font-size: 0.86rem;
+}
+.small {
+  font-size: 0.78rem;
+}
+
+// Revenue: plum, with the trend at the bottom.
+.revenue {
+  justify-content: flex-start;
+  border: 0;
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--bb-amber) 30%, transparent), transparent 45%),
+    linear-gradient(150deg, var(--bb-brand), var(--bb-brand-700));
+  color: var(--bb-on-brand);
+  box-shadow: var(--bb-shadow);
+
+  .eyebrow,
+  .soft {
+    color: color-mix(in srgb, var(--bb-on-brand) 75%, transparent);
+  }
+  .big {
+    font-size: clamp(2.4rem, 5vw, 3.4rem);
+  }
+  b {
+    color: var(--bb-on-brand);
+  }
+}
+
+.spark {
+  width: 100%;
+  height: 110px;
+  margin-top: auto;
+  color: var(--bb-amber);
+}
+
+// Live: the pulsing dot.
+.pulse {
+  position: relative;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--bb-success);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: inherit;
+    animation: pulse 1.8s ease-out infinite;
+  }
+}
+
+@keyframes pulse {
+  to {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse::after {
+    animation: none;
+  }
+}
+
+// Split bars with a legend (order mix, settlements).
+.bar {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+  margin-top: var(--bb-space-2);
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--bb-surface-alt);
+}
+
+.seg {
+  border-radius: 999px;
+}
+
+.legend {
+  display: grid;
+  gap: 6px;
+  margin: var(--bb-space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.86rem;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  b {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+.fill-success {
+  background: var(--bb-success);
+}
+.fill-teal {
+  background: var(--bb-teal-ink);
+}
+.fill-danger {
+  background: var(--bb-danger);
+}
+.fill-amber {
+  background: var(--bb-amber);
+}
+.fill-plum {
+  background: var(--bb-plum-500);
+}
+
+// Last 30 days: four small tiles.
+.tile-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--bb-space-2);
 
-  h2 {
-    margin: 0;
-    font-size: 1rem;
+  .link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--bb-plum);
+    font-size: 0.86rem;
+    font-weight: 600;
+    text-decoration: none;
+    --bb-icon-size: 16px;
   }
 }
 
-.platform {
-  display: flex;
-  flex-direction: column;
+.minis {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: var(--bb-space-3);
+  margin-top: var(--bb-space-2);
+
+  // Beside the accounts list: two by two, so both tiles are the same height.
+  @include bp.desktop-up {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.platform-grid {
-  display: grid;
+.mini {
+  --tone: var(--bb-plum);
+  --tone-bg: var(--bb-plum-100);
+  display: flex;
+  align-items: center;
   gap: var(--bb-space-3);
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  padding: var(--bb-space-3);
+  border-radius: var(--bb-radius);
+  background: var(--bb-surface-alt);
+
+  &.tone-amber {
+    --tone: var(--bb-amber-600);
+    --tone-bg: var(--bb-amber-100);
+  }
+  &.tone-info {
+    --tone: var(--bb-info);
+    --tone-bg: var(--bb-info-bg);
+  }
+  &.tone-success {
+    --tone: var(--bb-success);
+    --tone-bg: var(--bb-success-bg);
+  }
+
+  .icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--tone-bg);
+    color: var(--tone);
+    --bb-icon-size: 20px;
+  }
+  .body {
+    display: grid;
+    min-width: 0;
+  }
+  strong {
+    font-size: 1.3rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// Accounts: a list with counts.
+.accounts ul {
+  display: grid;
+  margin: var(--bb-space-2) 0 0;
+  padding: 0;
+  list-style: none;
+
+  li + li {
+    border-top: 1px solid var(--bb-border);
+  }
+
+  a {
+    display: flex;
+    align-items: center;
+    gap: var(--bb-space-3);
+    padding: 10px 4px;
+    border-radius: var(--bb-radius-sm);
+    color: inherit;
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--bb-surface-alt);
+
+      .chev {
+        color: var(--bb-plum);
+        transform: translateX(2px);
+      }
+    }
+  }
+  .icon {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--bb-plum-100);
+    color: var(--bb-plum);
+    --bb-icon-size: 18px;
+  }
+  .name {
+    flex: 1;
+    font-weight: 600;
+  }
+  strong {
+    font-size: 1.1rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .chev {
+    color: var(--bb-ink-muted);
+    transition:
+      transform 0.15s,
+      color 0.15s;
+    --bb-icon-size: 16px;
+  }
 }

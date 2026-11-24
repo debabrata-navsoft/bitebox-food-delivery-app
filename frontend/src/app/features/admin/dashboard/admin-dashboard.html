@@ -1,7 +1,16 @@
-<bb-page-header
-  [title]="'Hello, ' + (user()?.name?.split(' ')?.[0] ?? 'Admin')"
-  subtitle="Overview of BiteBox business and accounts."
-/>
+<header class="top">
+  <div>
+    <span class="date">{{ today | date: 'EEEE, d MMMM' }}</span>
+    <h1>Good to see you, {{ firstName() }}</h1>
+  </div>
+  <nav class="pills" aria-label="Quick actions">
+    <a routerLink="/admin/orders"><np-icon name="receipt" class="mat-icon" />Orders</a>
+    <a routerLink="/admin/operations/monitoring"
+      ><np-icon name="monitor" class="mat-icon" />Monitoring</a
+    >
+    <a routerLink="/admin/reports"><np-icon name="chart-column" class="mat-icon" />Reports</a>
+  </nav>
+</header>
 
 @if (error()) {
   <div class="bb-alert error" role="alert">
@@ -10,103 +19,143 @@
   </div>
 }
 
-@if (summary.value(); as sm) {
-  <section class="platform" aria-labelledby="platform-title">
-    <h2 class="bb-h3" id="platform-title">Platform</h2>
-    <div class="platform-grid">
-      <bb-stat-tile icon="receipt" label="Orders" [value]="sm.orders.total" />
-      <bb-stat-tile icon="activity" label="Active now" [value]="sm.orders.active" />
-      <bb-stat-tile icon="circle-check" label="Delivered" [value]="sm.orders.completed" />
-      <bb-stat-tile icon="circle-x" label="Cancelled or rejected" [value]="sm.orders.cancelled" />
-      @if (sm.money; as money) {
-        <bb-stat-tile
-          icon="indian-rupee"
-          label="Gross order value"
-          [value]="formatPaise(money.gmvPaise)"
-          hint="Delivered orders, all time"
-        />
-        <bb-stat-tile
-          icon="landmark"
-          label="Platform revenue"
-          [value]="formatPaise(money.platformRevenuePaise)"
-        />
-        <bb-stat-tile
-          icon="hourglass"
-          label="Pending settlements"
-          [value]="formatPaise(money.pendingSettlementsPaise)"
-          [hint]="
-            formatPaise(money.pendingRestaurantPaise) +
-            ' restaurants · ' +
-            formatPaise(money.pendingRiderPaise) +
-            ' riders'
-          "
-        />
-      }
-    </div>
-  </section>
-}
-
 <bb-review-shortcuts />
 
-<section class="business" aria-labelledby="business-title">
-  <div class="business-head">
-    <h2 class="bb-h3" id="business-title">Last 30 days</h2>
-    <a class="bb-btn bb-btn--text" routerLink="/admin/reports"
-      >Full report <np-icon name="arrow-right" iconPositionEnd
-    /></a>
-  </div>
-  @if (report.hasValue()) {
-    @let t = report.value().totals;
-    <div class="bb-grid cols-4">
-      <bb-stat-tile
-        icon="payments"
-        label="Delivered value"
-        [value]="formatPaise(t.gmvPaise) || '₹0'"
-      />
-      <bb-stat-tile
-        icon="account_balance"
-        label="Platform revenue"
-        [value]="formatPaise(t.platformRevenuePaise) || '₹0'"
-      />
-      <bb-stat-tile
-        icon="receipt_long"
-        label="Orders placed"
-        [value]="t.orders"
-        [hint]="t.delivered + ' delivered · ' + t.cancelled + ' cancelled'"
-      />
-      <bb-stat-tile icon="person_add" label="New customers" [value]="t.newCustomers" />
-    </div>
-  } @else if (report.error()) {
-    <p class="bb-muted">
-      Business figures are unavailable right now.
-      <button class="bb-link-button" (click)="report.reload()">Retry</button>
-    </p>
-  } @else {
-    <div class="bb-grid cols-4" aria-busy="true">
-      @for (i of [1, 2, 3, 4]; track i) {
-        <span class="bb-skeleton stat-skeleton"></span>
-      }
-    </div>
-  }
-</section>
-
-<section class="bb-grid cols-4" aria-label="Account totals" [attr.aria-busy]="loading()">
-  @if (loading()) {
-    @for (i of [1, 2, 3, 4]; track i) {
-      <span class="bb-skeleton stat-skeleton"></span>
-    }
-  } @else {
-    @for (card of stats(); track card.role) {
-      <a
-        class="bb-card stat"
-        [routerLink]="card.link"
+<div class="bento">
+  <!-- Revenue: the headline figure with the 30-day trend. -->
+  <section class="tile revenue" aria-labelledby="revenue-title">
+    <span class="eyebrow" id="revenue-title">Gross order value · all time</span>
+    @if (summary.value()?.money; as m) {
+      <strong class="big">{{ money(m.gmvPaise) }}</strong>
+      <span class="soft"
+        >Platform revenue <b>{{ money(m.platformRevenuePaise) }}</b></span
       >
-        <span class="stat-icon"
-          ><np-icon [name]="card.icon | npIcon" class="mat-icon" matButtonIcon
-        /></span>
-        <span class="stat-value">{{ card.value }}</span>
-        <span class="stat-label">{{ card.label }}</span>
-      </a>
+    } @else {
+      <strong class="big">—</strong>
     }
+    @if (trend(); as t) {
+      <svg class="spark" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="spark-fill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stop-color="currentColor" stop-opacity="0.35" />
+            <stop offset="1" stop-color="currentColor" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+        <polygon [attr.points]="t.area" fill="url(#spark-fill)" />
+        <polyline
+          [attr.points]="t.line"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          vector-effect="non-scaling-stroke"
+        />
+      </svg>
+      <span class="soft small">Delivered value, last 30 days</span>
+    }
+  </section>
+
+  <!-- Live orders. -->
+  <a class="tile live" routerLink="/admin/operations/monitoring">
+    <span class="eyebrow"><span class="pulse" aria-hidden="true"></span>Live now</span>
+    <strong class="big">{{ summary.value()?.orders?.active ?? '—' }}</strong>
+    <span class="muted">orders being prepared or on the way</span>
+    <np-icon name="arrow-up-right" class="mat-icon go" />
+  </a>
+
+  <!-- The order mix. -->
+  <a class="tile mix" routerLink="/admin/orders">
+    <span class="eyebrow">Orders · all time</span>
+    <strong class="big">{{ summary.value()?.orders?.total ?? '—' }}</strong>
+    @if (mix().length) {
+      <div class="bar" role="img" aria-label="Delivered, active and cancelled orders">
+        @for (s of mix(); track s.label) {
+          <span class="seg fill-{{ s.tone }}" [style.width.%]="s.share"></span>
+        }
+      </div>
+      <ul class="legend">
+        @for (s of mix(); track s.label) {
+          <li>
+            <span class="dot fill-{{ s.tone }}"></span>{{ s.label }} <b>{{ s.value }}</b>
+          </li>
+        }
+      </ul>
+    }
+    <np-icon name="arrow-up-right" class="mat-icon go" />
+  </a>
+
+  <!-- Pending settlements. -->
+  @if (owed(); as o) {
+    <a class="tile owed" routerLink="/admin/finance">
+      <span class="eyebrow">Pending settlements</span>
+      <strong class="big">{{ money(o.total) }}</strong>
+      <div class="bar" role="img" aria-label="Owed to restaurants and riders">
+        <span class="seg fill-amber" [style.width.%]="o.restaurants"></span>
+        <span class="seg fill-plum" [style.width.%]="o.riders"></span>
+      </div>
+      <ul class="legend">
+        <li>
+          <span class="dot fill-amber"></span>Restaurants
+          <b>{{ money(o.m.pendingRestaurantPaise) }}</b>
+        </li>
+        <li>
+          <span class="dot fill-plum"></span>Riders <b>{{ money(o.m.pendingRiderPaise) }}</b>
+        </li>
+      </ul>
+      <np-icon name="arrow-up-right" class="mat-icon go" />
+    </a>
   }
-</section>
+
+  <!-- The last 30 days. -->
+  <section class="tile month" aria-labelledby="month-title">
+    <header class="tile-head">
+      <span class="eyebrow" id="month-title">Last 30 days</span>
+      <a class="link" routerLink="/admin/reports"
+        >Full report <np-icon name="arrow-right" class="mat-icon"
+      /></a>
+    </header>
+    @if (month().length) {
+      <div class="minis">
+        @for (k of month(); track k.label) {
+          <div class="mini tone-{{ k.tone }}">
+            <span class="icon"><np-icon [name]="k.icon" class="mat-icon" /></span>
+            <span class="body">
+              <span class="muted">{{ k.label }}</span>
+              <strong>{{ k.value }}</strong>
+              @if (k.hint) {
+                <span class="muted small">{{ k.hint }}</span>
+              }
+            </span>
+          </div>
+        }
+      </div>
+    } @else if (report.error()) {
+      <p class="muted">
+        Business figures are unavailable right now.
+        <button class="bb-link-button" (click)="report.reload()">Retry</button>
+      </p>
+    } @else {
+      <span class="bb-skeleton" style="height: 120px"></span>
+    }
+  </section>
+
+  <!-- Accounts. -->
+  <section class="tile accounts" aria-labelledby="accounts-title" [attr.aria-busy]="loading()">
+    <span class="eyebrow" id="accounts-title">Accounts</span>
+    @if (loading()) {
+      <span class="bb-skeleton" style="height: 160px"></span>
+    } @else {
+      <ul>
+        @for (a of accounts(); track a.label) {
+          <li>
+            <a [routerLink]="a.link">
+              <span class="icon"><np-icon [name]="a.icon" class="mat-icon" /></span>
+              <span class="name">{{ a.label }}</span>
+              <strong>{{ a.value }}</strong>
+              <np-icon name="chevron-right" class="mat-icon chev" />
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</div>
