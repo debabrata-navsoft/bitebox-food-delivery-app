@@ -53,6 +53,7 @@ export class AdminStaff {
       strong: true,
       sub: (u) => `${u.email}${u.phone ? ' · ' + u.phone : ''}`,
       badge: (u) => (u.id === this.me() ? { label: 'You' } : null),
+      inline: true,
     },
     {
       label: 'Role',

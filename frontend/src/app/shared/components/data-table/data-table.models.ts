@@ -50,6 +50,8 @@ export interface TableColumn<T> {
   nowrap?: boolean;
   /** The value in bold (e.g. a name or a total). */
   strong?: boolean;
+  /** The badges on the value's line (e.g. a name with "You"), not under it. */
+  inline?: boolean;
   /** Extra classes on the heading and the cells (e.g. `actions` for a custom buttons column). */
   class?: string;
   /** Keep the heading for screen readers only (e.g. a buttons column). */

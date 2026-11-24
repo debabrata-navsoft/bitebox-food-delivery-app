@@ -51,6 +51,18 @@ td.center {
   }
 }
 
+// The value and its badges: part of the stack, or one wrapping row (`inline`).
+.line {
+  display: contents;
+
+  &.inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px var(--bb-space-2);
+  }
+}
+
 .bb-avatar {
   img {
     width: 100%;

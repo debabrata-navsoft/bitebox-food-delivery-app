@@ -77,22 +77,25 @@
                       </span>
                     }
                     <span class="text">
-                      @if (cell.date) {
-                        {{ cell.date | date: c.dateFormat ?? 'd MMM y' }}
-                      } @else if (cell.value !== undefined) {
-                        @if (cell.link) {
-                          <a class="link" [routerLink]="cell.link">{{ cell.value }}</a>
-                        } @else if (cell.run) {
-                          <button type="button" class="bb-link-button run" (click)="cell.run()">
-                            {{ cell.value }}
-                          </button>
-                        } @else {
-                          <span [class.strong]="c.strong">{{ cell.value }}</span>
+                      <!-- The value and its badges (beside it with `inline`, else stacked). -->
+                      <span class="line" [class.inline]="c.inline">
+                        @if (cell.date) {
+                          {{ cell.date | date: c.dateFormat ?? 'd MMM y' }}
+                        } @else if (cell.value !== undefined) {
+                          @if (cell.link) {
+                            <a class="link" [routerLink]="cell.link">{{ cell.value }}</a>
+                          } @else if (cell.run) {
+                            <button type="button" class="bb-link-button run" (click)="cell.run()">
+                              {{ cell.value }}
+                            </button>
+                          } @else {
+                            <span [class.strong]="c.strong">{{ cell.value }}</span>
+                          }
                         }
-                      }
-                      @for (b of cell.badges; track $index) {
-                        <span [class]="b.class" [title]="b.title">{{ b.label }}</span>
-                      }
+                        @for (b of cell.badges; track $index) {
+                          <span [class]="b.class" [title]="b.title">{{ b.label }}</span>
+                        }
+                      </span>
                       @for (line of cell.lines; track $index) {
                         <span class="sub">{{ line }}</span>
                       }
