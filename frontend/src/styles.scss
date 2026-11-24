@@ -757,6 +757,13 @@ np-tabs.bb-tab-strip {
   .tab-list .tab {
     font-size: 1rem;
   }
+
+  // Tab counts in the brand tokens: plum on lavender, and in dark mode light lavender on a deep
+  // plum tint (NexPrime's --ui-primary is too dim to read there).
+  .tab-list .tab .tab__badge {
+    background: var(--bb-plum-100);
+    color: var(--bb-plum);
+  }
 }
 
 // A narrower np-menu popup for short action lists (e.g. Edit / Delete). Keep the width in sync with
