@@ -46,9 +46,103 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <!-- The app's launch splash (shown inside <app-root> until Angular renders the first page).
+         Same box, lid and dashes as shared/components/brand-loader; plum like the manifest's
+         background_color, so the installed app goes from the phone's splash straight into it. -->
+    <style>
+      .bb-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom);
+        background: radial-gradient(circle at 50% 35%, #43295a 0%, #2e1a3d 60%);
+        color: #ffb52e;
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      }
+      .bb-splash svg {
+        width: 84px;
+        height: 84px;
+        filter: drop-shadow(0 14px 24px rgb(0 0 0 / 35%));
+      }
+      .bb-splash .lid {
+        transform-box: fill-box;
+        transform-origin: left bottom;
+        animation: bb-lid 1.2s ease-in-out infinite;
+      }
+      .bb-splash__name {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: #fff6e5;
+      }
+      .bb-splash__name b {
+        color: #ffb52e;
+      }
+      .bb-splash__dashes {
+        position: relative;
+        width: 96px;
+        height: 5px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgb(255 181 46 / 22%);
+      }
+      .bb-splash__dashes i {
+        position: absolute;
+        top: 0;
+        left: -18px;
+        width: 16px;
+        height: 100%;
+        border-radius: 999px;
+        background: #ffb52e;
+        animation: bb-dash 1.2s linear infinite;
+      }
+      .bb-splash__dashes i:nth-child(2) {
+        animation-delay: 0.4s;
+      }
+      .bb-splash__dashes i:nth-child(3) {
+        animation-delay: 0.8s;
+      }
+      @keyframes bb-lid {
+        0%,
+        100% {
+          transform: translateY(0) rotate(0);
+        }
+        40%,
+        60% {
+          transform: translateY(-7px) rotate(-14deg);
+        }
+      }
+      @keyframes bb-dash {
+        to {
+          transform: translateX(132px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .bb-splash .lid,
+        .bb-splash__dashes i {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body class="mat-typography">
-    <app-root ngCspNonce="CSP_NONCE"></app-root>
+    <app-root ngCspNonce="CSP_NONCE">
+      <div class="bb-splash" role="status" aria-label="Opening BiteBox">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <rect width="64" height="64" rx="15" fill="#2E1A3D" />
+          <rect class="lid" x="9" y="14" width="46" height="12" rx="4" fill="#FFB52E" />
+          <rect x="12" y="28.5" width="40" height="25.5" rx="5" fill="#FFB52E" />
+          <path d="M25.5 38.5 Q32 44.5 38.5 38.5" fill="none" stroke="#2E1A3D" stroke-width="3.4" stroke-linecap="round" />
+        </svg>
+        <div class="bb-splash__name">Bite<b>Box</b></div>
+        <span class="bb-splash__dashes" aria-hidden="true"><i></i><i></i><i></i></span>
+      </div>
+    </app-root>
     <noscript>BiteBox needs JavaScript to run. Please enable it in your browser settings.</noscript>
   </body>
 </html>

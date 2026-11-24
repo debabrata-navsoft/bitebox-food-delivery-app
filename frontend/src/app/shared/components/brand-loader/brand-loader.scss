@@ -1,0 +1,109 @@
+// Same look as the boot splash in index.html (.bb-splash): keep them in step.
+:host {
+  display: grid;
+  place-items: center;
+}
+
+// Over the page: a soft veil with the loader in the middle (phones and desktops alike).
+:host(.overlay) {
+  position: fixed;
+  inset: 0;
+  z-index: 9999; // under the page-loader bar, over everything else
+  background: color-mix(in srgb, var(--bb-bg, #f5f3f7) 70%, transparent);
+  backdrop-filter: blur(2px);
+  animation: fade-in 0.2s ease-out;
+}
+
+.loader {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+}
+
+.box {
+  width: clamp(56px, 16vw, 72px);
+  height: auto;
+  filter: drop-shadow(0 10px 18px rgb(46 26 61 / 25%));
+
+  .tile {
+    fill: var(--bb-brand, #2e1a3d);
+  }
+  .lid,
+  .body {
+    fill: var(--bb-amber, #ffb52e);
+  }
+  .smile {
+    fill: none;
+    stroke: var(--bb-brand, #2e1a3d);
+    stroke-width: 3.4;
+    stroke-linecap: round;
+  }
+  .lid {
+    transform-box: fill-box;
+    transform-origin: left bottom;
+    animation: lid 1.2s ease-in-out infinite;
+  }
+}
+
+// Three dashes running along a short track.
+.dashes {
+  position: relative;
+  width: 72px;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bb-amber, #ffb52e) 25%, transparent);
+
+  i {
+    position: absolute;
+    top: 0;
+    left: -18px;
+    width: 14px;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--bb-amber, #ffb52e);
+    animation: dash 1.2s linear infinite;
+
+    &:nth-child(2) {
+      animation-delay: 0.4s;
+    }
+    &:nth-child(3) {
+      animation-delay: 0.8s;
+    }
+  }
+}
+
+@keyframes lid {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  40% {
+    transform: translateY(-7px) rotate(-14deg);
+  }
+  60% {
+    transform: translateY(-7px) rotate(-14deg);
+  }
+}
+
+@keyframes dash {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(108px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .box .lid,
+  .dashes i {
+    animation: none;
+  }
+}
