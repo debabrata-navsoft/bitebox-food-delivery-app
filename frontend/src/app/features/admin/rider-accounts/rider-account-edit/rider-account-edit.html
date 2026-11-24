@@ -1,33 +1,54 @@
-<a class="bb-back-link" [routerLink]="['/admin/delivery-partner-accounts', id()]"
-  ><np-icon name="arrow-left" class="mat-icon" matButtonIcon />Back to {{ data()?.user?.name ?? 'the delivery partner' }}</a
->
 <header>
-  <h1>Edit {{ data()?.user?.name ?? 'delivery partner' }}</h1>
-  <p class="bb-muted">
-    Changes go live at once and are recorded in the admin log. Changing the vehicle number sends an approved vehicle
-    document back for review. The rider changes their own email, mobile, documents and bank details.
-  </p>
+  <div>
+    <h1>Edit {{ data()?.user?.name ?? 'delivery partner' }}</h1>
+    <p class="bb-muted">
+      Changes go live at once and are recorded in the admin log. Changing the vehicle number sends
+      an approved vehicle document back for review. The rider changes their own email, mobile,
+      documents and bank details.
+    </p>
+  </div>
+  <bb-detail-nav
+    [id]="id()"
+    [arrows]="false"
+    [backLink]="['/admin/delivery-partner-accounts', id()]"
+  />
 </header>
 
 @if (loadError(); as message) {
-  <div class="bb-alert error" role="alert"><np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ message }}</span></div>
+  <div class="bb-alert error" role="alert">
+    <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ message }}</span>
+  </div>
 } @else if (data()) {
   @if (error(); as e) {
-    <div class="bb-alert error" role="alert"><np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ e }}</span></div>
+    <div class="bb-alert error" role="alert">
+      <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ e }}</span>
+    </div>
   }
   <form class="layout" [formRoot]="form" novalidate>
     <div class="col">
       <section class="bb-card bb-form" aria-labelledby="personal-title">
         <h2 id="personal-title">Personal details</h2>
         <div class="photo-field">
-          <bb-image-upload class="photo" [(url)]="photo" endpoint="avatars" label="Add photo" aspectRatio="1 / 1" variant="minimal" />
+          <bb-image-upload
+            class="photo"
+            [(url)]="photo"
+            endpoint="avatars"
+            label="Add photo"
+            aspectRatio="1 / 1"
+            variant="minimal"
+          />
           <div>
             <span class="label">Profile photo</span>
             <small class="bb-muted">A clear face photo, as customers see it.</small>
             <small class="bb-muted">JPEG, PNG or WebP, up to 2 MB.</small>
           </div>
         </div>
-        <np-text-input [formField]="form.name" label="Full name" autocomplete="off" [error]="shownError(form.name)" />
+        <np-text-input
+          [formField]="form.name"
+          label="Full name"
+          autocomplete="off"
+          [error]="shownError(form.name)"
+        />
         <div class="bb-form-row">
           <div class="bb-field">
             <np-select [formField]="form.gender" label="Gender" [options]="genderOptions" />
@@ -51,25 +72,54 @@
       <section class="bb-card bb-form" aria-labelledby="emergency-title">
         <h2 id="emergency-title">Emergency contact</h2>
         <div class="bb-form-row">
-          <np-text-input [formField]="form.emergencyContact.name" label="Name" [error]="shownError(form.emergencyContact.name)" />
-          <np-text-input [formField]="form.emergencyContact.relation" label="Relation (optional)" [error]="shownError(form.emergencyContact.relation)" />
+          <np-text-input
+            [formField]="form.emergencyContact.name"
+            label="Name"
+            [error]="shownError(form.emergencyContact.name)"
+          />
+          <np-text-input
+            [formField]="form.emergencyContact.relation"
+            label="Relation (optional)"
+            [error]="shownError(form.emergencyContact.relation)"
+          />
         </div>
-        <bb-phone-input [formField]="form.emergencyContact.phone" label="Phone" [error]="shownError(form.emergencyContact.phone)" />
+        <bb-phone-input
+          [formField]="form.emergencyContact.phone"
+          label="Phone"
+          [error]="shownError(form.emergencyContact.phone)"
+        />
         <small class="bb-muted">Leave the name and phone empty to remove the contact.</small>
       </section>
     </div>
     <div class="col">
       <section class="bb-card bb-form" aria-labelledby="address-title">
         <h2 id="address-title">Address</h2>
-        <np-text-input [formField]="form.address.line1" label="Street address" [error]="shownError(form.address.line1)" />
+        <np-text-input
+          [formField]="form.address.line1"
+          label="Street address"
+          [error]="shownError(form.address.line1)"
+        />
         <div class="bb-form-row">
           <np-text-input [formField]="form.address.line2" label="Flat, floor (optional)" />
           <np-text-input [formField]="form.address.area" label="Area (optional)" />
         </div>
         <div class="bb-form-row">
-          <np-text-input [formField]="form.address.city" label="City" [error]="shownError(form.address.city)" />
-          <np-text-input [formField]="form.address.state" label="State" [error]="shownError(form.address.state)" />
-          <np-text-input [formField]="form.address.postalCode" label="PIN code" inputmode="numeric" [error]="shownError(form.address.postalCode)" />
+          <np-text-input
+            [formField]="form.address.city"
+            label="City"
+            [error]="shownError(form.address.city)"
+          />
+          <np-text-input
+            [formField]="form.address.state"
+            label="State"
+            [error]="shownError(form.address.state)"
+          />
+          <np-text-input
+            [formField]="form.address.postalCode"
+            label="PIN code"
+            inputmode="numeric"
+            [error]="shownError(form.address.postalCode)"
+          />
         </div>
       </section>
 
@@ -80,14 +130,26 @@
             <np-select [formField]="form.vehicleType" label="Vehicle" [options]="vehicleOptions" />
             <bb-field-error [field]="form.vehicleType" />
           </div>
-          <np-text-input [formField]="form.vehicleNumber" label="Registration number" autocapitalize="characters" [error]="shownError(form.vehicleNumber)" />
+          <np-text-input
+            [formField]="form.vehicleNumber"
+            label="Registration number"
+            autocapitalize="characters"
+            [error]="shownError(form.vehicleNumber)"
+          />
         </div>
-        <np-text-input [formField]="form.zone" label="Delivery zone" placeholder="e.g. Koramangala" [error]="shownError(form.zone)" />
+        <np-text-input
+          [formField]="form.zone"
+          label="Delivery zone"
+          placeholder="e.g. Koramangala"
+          [error]="shownError(form.zone)"
+        />
       </section>
     </div>
 
     <div class="form-actions">
-      <a class="bb-btn bb-btn--text" [routerLink]="['/admin/delivery-partner-accounts', id()]">Cancel</a>
+      <a class="bb-btn bb-btn--text" [routerLink]="['/admin/delivery-partner-accounts', id()]"
+        >Cancel</a
+      >
       <button class="bb-btn" type="submit" [disabled]="form().submitting()">Save changes</button>
     </div>
   </form>

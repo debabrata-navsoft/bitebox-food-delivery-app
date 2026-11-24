@@ -6,12 +6,22 @@
   gap: var(--bb-space-4);
 }
 
+// Title and note on the left, Back on the right (one row, no gap above).
+header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--bb-space-3);
+}
+
 h1 {
-  margin: 0 0 var(--bb-space-1);
+  margin: 0 0 2px;
+  font-size: clamp(1.35rem, 1.1rem + 0.8vw, 1.75rem); // as page headers
 }
 
 header p {
   margin: 0;
+  font-size: 0.92rem;
   max-width: 70ch;
 }
 
