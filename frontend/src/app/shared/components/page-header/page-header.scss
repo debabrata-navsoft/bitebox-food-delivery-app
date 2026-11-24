@@ -6,7 +6,7 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--bb-space-3);
-  margin-bottom: var(--bb-space-5);
+  margin-bottom: var(--bb-space-4);
 
   // Phones: less space between the title and the first card.
   @include bp.phone-only {
@@ -14,15 +14,14 @@
     margin-bottom: var(--bb-space-3);
   }
 }
+// A compact page title (smaller than the global h1, which stays for hero headings).
 h1 {
-  margin-bottom: var(--bb-space-1);
-
-  @include bp.phone-only {
-    margin-bottom: 2px;
-  }
+  margin-bottom: 2px;
+  font-size: clamp(1.35rem, 1.1rem + 0.8vw, 1.75rem);
 }
 p {
   margin: 0;
+  font-size: 0.92rem;
 }
 .actions {
   display: flex;

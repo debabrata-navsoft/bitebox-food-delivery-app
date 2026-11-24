@@ -20,7 +20,6 @@ import {
   BbCell,
   DATE_TIME,
   DataTable,
-  TableAction,
   TableColumn,
 } from '../../../shared/components/data-table/data-table';
 import { openAdminOrder } from './admin-order-dialog/admin-order-dialog';
@@ -82,9 +81,6 @@ export class AdminOrders {
     { label: 'Payment', value: (o) => (o.paymentMethod === 'cod' ? 'Cash' : 'Online') },
     { label: 'Total', paise: (o) => o.pricing.totalPaise, strong: true },
     { label: 'Status', key: 'status' },
-  ];
-  protected readonly actions: TableAction<Order>[] = [
-    { icon: 'eye', label: 'View', run: (o) => this.open(o.id) },
   ];
 
   protected open(id: string): void {

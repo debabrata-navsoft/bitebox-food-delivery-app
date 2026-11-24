@@ -141,11 +141,12 @@ export function couponColumns(range: (from: string, to: string) => string) {
     valid: (label = 'Valid') => column({ label, value: (c) => range(c.validFrom, c.validUntil) }),
     used: column({
       label: 'Used',
+      align: 'center',
       value: (c) => formatCount(c.usedCount) + (c.usageLimit ? ' / ' + formatCount(c.usageLimit) : ''),
-      align: 'end',
     }),
     status: column({
       label: 'Status',
+      align: 'center',
       badge: (c) => ({ label: COUPON_STATUS_LABEL[c.status], tone: COUPON_STATUS_TONE[c.status] }),
       sub: (c) => (c.status === 'rejected' ? c.rejectionReason : null),
     }),

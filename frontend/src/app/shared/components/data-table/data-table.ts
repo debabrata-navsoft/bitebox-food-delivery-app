@@ -151,6 +151,9 @@ export class DataTable<T> {
     }));
   });
 
+  /** The Actions column shows only when some row on this page has a button (e.g. a refund). */
+  protected readonly hasActions = computed(() => this.view().some((r) => r.actions.length));
+
   private cell(
     c: TableColumn<T>,
     row: T,

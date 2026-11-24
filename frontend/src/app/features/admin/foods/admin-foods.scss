@@ -9,3 +9,9 @@
     opacity: 0.6;
   }
 }
+
+// The availability switch, centred in its column.
+np-toggle {
+  display: inline-flex;
+  vertical-align: middle;
+}

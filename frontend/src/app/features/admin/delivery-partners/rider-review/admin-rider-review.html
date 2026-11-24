@@ -9,13 +9,29 @@
 } @else if (data(); as d) {
   <header class="head">
     <div>
-      <h1>{{ d.user.name }}</h1>
-      <span class="bb-badge {{ tone[state()] }}">{{ label[state()] }}</span>
-      @if (d.user.status === 'suspended') {
-        <span class="bb-badge tone-bad">Account suspended</span>
+      <div class="bb-title-row">
+        <h1>{{ d.user.name }}</h1>
+        <span class="bb-badge {{ tone[state()] }}">{{ label[state()] }}</span>
+        @if (d.user.status === 'suspended') {
+          <span class="bb-badge tone-bad">Account suspended</span>
+        }
+      </div>
+      @if (d.user.status === 'suspended' && d.user.statusReason) {
+        <p class="status-reason">Reason: {{ d.user.statusReason }}</p>
       }
     </div>
     <div class="actions">
+      <button
+        type="button"
+        class="bb-btn bb-btn--outlined"
+        [class.bb-btn--danger]="d.user.status === 'active'"
+        [disabled]="changingStatus()"
+        (click)="toggleStatus()"
+      >
+        <np-icon [name]="d.user.status === 'active' ? 'shield-alert' : 'rotate-ccw'" />{{
+          statusAction(d.user.status)
+        }}
+      </button>
       @for (dec of decisions(); track dec.status) {
         <button
           type="button"

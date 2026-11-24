@@ -1,9 +1,8 @@
+import { finalize } from 'rxjs';
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { errorMessage } from '../../../shared/utils/api-error';
-import { NotificationService } from '../../../core/services/notification.service';
 import { AdminOrdersService } from '../../../core/services/order-management.service';
-import { confirmed } from '../../../shared/components/confirm-dialog/confirm-dialog';
+import { riderStatusAction, riderStatusChanger } from './rider-account-status';
 import { OrderStatusChip } from '../../../shared/components/order-status-chip/order-status-chip';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { filterOptions, filteredList } from '../../../shared/list/filtered-list';
@@ -57,7 +56,7 @@ const RIDER_EVENTS: OrderStatus[] = [
 export class AdminDeliveryPartners implements OnInit {
   private readonly api = inject(AdminOrdersService);
   private readonly bbDialog = inject(BbDialog);
-  private readonly notify = inject(NotificationService);
+  private readonly changeStatus = riderStatusChanger();
 
   /** ?verification=pending (the dashboards' "Review" shortcut) preselects that filter. */
   readonly verification = input<RiderReviewState>();
@@ -85,6 +84,7 @@ export class AdminDeliveryPartners implements OnInit {
     { label: 'Rider', key: 'rider' },
     {
       label: 'Verification',
+      align: 'center',
       badge: (r) => {
         const v = this.stateOf(r);
         return v ? { label: RIDER_VERIFICATION_LABEL[v], tone: RIDER_VERIFICATION_TONE[v] } : null;
@@ -102,14 +102,14 @@ export class AdminDeliveryPartners implements OnInit {
       align: 'end',
     },
     // The current order (opens it) and its status, or "Available" / "Offline".
-    { label: 'Availability', key: 'availability' },
-    { label: 'Account', badge: (r) => accountStatusBadge(r) },
+    { label: 'Availability', align: 'center', key: 'availability' },
+    { label: 'Account', align: 'center', badge: (r) => accountStatusBadge(r) },
   ];
   protected readonly actions: TableAction<AdminRider>[] = [
     {
       icon: 'shield-alert',
       text: true,
-      label: (r) => (r.status === 'active' ? 'Suspend' : 'Reactivate'),
+      label: (r) => riderStatusAction(r.status),
       danger: (r) => r.status === 'active',
       disabled: (r) => this.busyId() === r.id,
       run: (r) => this.toggleStatus(r),
@@ -126,35 +126,9 @@ export class AdminDeliveryPartners implements OnInit {
   }
 
   protected toggleStatus(rider: AdminRider): void {
-    const suspend = rider.status === 'active';
-    confirmed(
-      this.bbDialog,
-      suspend
-        ? {
-            title: `Suspend ${rider.name}?`,
-            message: 'They are taken offline and signed out, and cannot accept deliveries.',
-            confirmLabel: 'Suspend',
-            danger: true,
-          }
-        : {
-            title: `Reactivate ${rider.name}?`,
-            message: 'They can sign in and go online again.',
-            confirmLabel: 'Reactivate',
-          },
-      '420px',
-    ).subscribe(() => {
-      this.busyId.set(rider.id);
-      this.api.setRiderStatus(rider.id, suspend ? 'suspended' : 'active').subscribe({
-        next: () => {
-          this.busyId.set(null);
-          this.notify.success(suspend ? 'Rider suspended' : 'Rider reactivated');
-          this.list.reload();
-        },
-        error: (err: unknown) => {
-          this.busyId.set(null);
-          this.notify.error(errorMessage(err));
-        },
-      });
-    });
+    this.busyId.set(rider.id);
+    this.changeStatus(rider)
+      .pipe(finalize(() => this.busyId.set(null)))
+      .subscribe(() => this.list.reload());
   }
 }

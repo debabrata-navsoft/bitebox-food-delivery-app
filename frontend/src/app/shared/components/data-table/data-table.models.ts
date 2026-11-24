@@ -45,8 +45,8 @@ export interface TableColumn<T> {
    */
   avatar?: (row: T) => { name: string; imageUrl?: string | null; icon?: string };
   square?: boolean;
-  /** `end` for amounts and counts (money columns are). */
-  align?: 'start' | 'end';
+  /** `end` for amounts and counts (money columns are), `center` for short values and badges. */
+  align?: 'start' | 'end' | 'center';
   nowrap?: boolean;
   /** The value in bold (e.g. a name or a total). */
   strong?: boolean;

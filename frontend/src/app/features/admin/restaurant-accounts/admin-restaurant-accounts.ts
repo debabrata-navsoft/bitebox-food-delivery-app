@@ -66,6 +66,7 @@ export class AdminRestaurantAccounts {
     { label: 'Joined', date: (r) => r.createdAt, nowrap: true },
     {
       label: 'Status',
+      align: 'center',
       badge: (r) => [
         {
           label: RESTAURANT_STATUS_LABEL[r.status],

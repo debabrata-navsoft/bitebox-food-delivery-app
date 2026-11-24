@@ -66,21 +66,22 @@ export class CoinTransactionsPage {
   protected readonly list = this.transactions.list;
 
   protected readonly columns: TableColumn<AdminCoinTransaction>[] = [
-    { label: 'When', date: (t) => t.createdAt, dateFormat: DATE_YEAR_TIME },
     {
       label: 'Customer',
       value: (t) => t.customer?.name,
       run: (t) => this.wallet(t),
       sub: (t) => t.customer?.email,
     },
+    { label: 'When', date: (t) => t.createdAt, dateFormat: DATE_YEAR_TIME },
     { label: 'What', key: 'what' },
-    { label: 'Coins', key: 'change', align: 'end' },
-    { label: 'Balance', value: (t) => t.balanceAfter, align: 'end' },
+    { label: 'Coins', key: 'change', align: 'center' },
+    { label: 'Balance', value: (t) => t.balanceAfter, align: 'center' },
   ];
   protected readonly actions: TableAction<AdminCoinTransaction>[] = [
     {
       icon: 'undo-2',
       label: 'Reverse',
+      text: true,
       run: (t) => this.reverse(t),
       show: (t) => this.canManage && t.type === 'CREDIT',
     },

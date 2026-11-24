@@ -34,16 +34,17 @@ export class RewardHistoryPage {
   protected readonly list = this.claims.list;
 
   protected readonly columns: TableColumn<RewardClaim>[] = [
+    { label: 'Customer', value: (r) => r.customer?.name, sub: (r) => r.customer?.email },
     { label: 'When', date: (r) => r.claimedAt, dateFormat: DATE_YEAR_TIME },
-    { label: 'Customer', value: (r) => r.customer?.name ?? '–', sub: (r) => r.customer?.email },
     {
       label: 'Reward',
       value: (r) => r.campaign?.name ?? REWARD_TYPE_LABEL[r.rewardType] + ' bonus',
       sub: (r) => REWARD_TYPE_LABEL[r.rewardType],
     },
-    { label: 'Coins', value: (r) => r.coins, align: 'end' },
+    { label: 'Coins', value: (r) => r.coins, align: 'center' },
     {
       label: 'State',
+      align: 'center',
       badge: (r) => (r.status === 'ISSUED' ? { label: 'Paid', tone: 'good' } : { label: 'Paying', tone: 'warn' }),
     },
   ];

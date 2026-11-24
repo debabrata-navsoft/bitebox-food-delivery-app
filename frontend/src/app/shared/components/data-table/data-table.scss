@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 // Sub-lines (`.sub`), numbers (`.num`) and the grid itself are the global `.bb-table` rules.
 :host {
   display: block;
@@ -24,6 +26,14 @@
   .num & {
     justify-content: flex-end;
   }
+  .center & {
+    justify-content: center;
+  }
+}
+
+th.center,
+td.center {
+  text-align: center;
 }
 
 .text {
@@ -35,6 +45,9 @@
 
   .num & {
     align-items: flex-end;
+  }
+  .center & {
+    align-items: center;
   }
 }
 
@@ -69,7 +82,15 @@
   white-space: nowrap;
 }
 
-// Row buttons: small round icon buttons (labels in tooltips), or small labelled ones (`text`).
+// Row buttons: small round icon buttons (labels in tooltips), or small labelled ones (`text`),
+// centred under their heading (phones lay them out as the row card's foot instead).
+@include bp.tablet-up {
+  th.actions,
+  td.actions {
+    text-align: center;
+  }
+}
+
 .actions > * + * {
   margin-left: var(--bb-space-1);
 }

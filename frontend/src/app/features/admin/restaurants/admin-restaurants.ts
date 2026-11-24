@@ -1,6 +1,8 @@
 import { TabsComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
+import { RESTAURANT_ACTIONS, StatusAction, restaurantStatusChanger } from '../restaurant-accounts/restaurant-status';
+import { finalize } from 'rxjs';
 import { AdminCatalogService } from '../../../core/services/admin/admin-catalog.service';
 import { ListEmpty } from '../../../shared/components/list-empty/list-empty';
 import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
@@ -34,6 +36,7 @@ const TABS: { status: RestaurantStatus; label: string }[] = [
 export class AdminRestaurants implements OnInit {
   private readonly service = inject(AdminCatalogService);
   private readonly router = inject(Router);
+  private readonly changeStatus = restaurantStatusChanger();
 
   readonly status = input<RestaurantStatus>();
 
@@ -70,15 +73,31 @@ export class AdminRestaurants implements OnInit {
       avatar: (r) => ({ name: r.name, imageUrl: r.imageUrl }),
       square: true,
       value: (r) => r.name,
-      strong: true,
+      link: (r) => ['/admin/restaurants', r.id],
       sub: (r) => `${r.cuisines.join(', ')} · ${r.address.city}`,
     },
     { label: 'Owner', value: (r) => r.owner.name, sub: (r) => r.owner.email },
     { label: 'Submitted', date: (r) => r.createdAt, dateFormat: 'mediumDate', nowrap: true },
   ];
-  protected readonly actions: TableAction<AdminRestaurant>[] = [
-    { icon: 'eye', label: 'View', link: (r) => ['/admin/restaurants', r.id] },
-  ];
+  /** The restaurant being suspended or reinstated (its button waits). */
+  private readonly busyId = signal<string | null>(null);
+  /** Approved restaurants can be suspended and suspended ones reinstated, as on the details page. */
+  protected readonly actions = computed((): TableAction<AdminRestaurant>[] => {
+    const status = TABS[this.activeTab()].status;
+    const action = status === 'approved' || status === 'suspended' ? RESTAURANT_ACTIONS[status][0] : null;
+    return action
+      ? [
+          {
+            icon: action.danger ? 'shield-alert' : 'rotate-ccw',
+            text: true,
+            label: action.label,
+            danger: () => action.danger,
+            disabled: (r) => this.busyId() === r.id,
+            run: (r) => this.act(r, action),
+          },
+        ]
+      : [];
+  });
 
   ngOnInit(): void {
     const index = TABS.findIndex((t) => t.status === this.status());
@@ -109,6 +128,16 @@ export class AdminRestaurants implements OnInit {
       queryParams: { status: TABS[index].status },
       replaceUrl: true,
     });
+  }
+
+  private act(r: AdminRestaurant, action: StatusAction): void {
+    this.busyId.set(r.id);
+    this.changeStatus(r, action)
+      .pipe(finalize(() => this.busyId.set(null)))
+      .subscribe(() => {
+        this.list.reload();
+        this.loadCounts();
+      });
   }
 
   protected loadCounts(): void {

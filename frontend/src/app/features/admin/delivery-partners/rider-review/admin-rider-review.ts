@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { finalize } from 'rxjs';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from 'nexprime';
@@ -8,6 +9,7 @@ import { NotificationService } from '../../../../core/services/notification.serv
 import { AdminOrdersService } from '../../../../core/services/order-management.service';
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
 import { DECISIONS, Decision } from '../../rider-accounts/rider-status';
+import { riderStatusAction, riderStatusChanger } from '../rider-account-status';
 import { KycReview } from '../../../../shared/components/kyc/kyc-review/kyc-review';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 import { VEHICLE_LABEL } from '../../../../core/models/checkout.models';
@@ -55,6 +57,20 @@ export class AdminRiderReview {
   protected readonly label = RIDER_VERIFICATION_LABEL;
   protected readonly tone = RIDER_VERIFICATION_TONE;
   protected readonly vehicleLabel = VEHICLE_LABEL;
+  protected readonly statusAction = riderStatusAction;
+  /** While a suspension or reactivation saves (its button waits). */
+  protected readonly changingStatus = signal(false);
+  private readonly changeStatus = riderStatusChanger();
+
+  /** Suspends an active rider or reactivates a suspended one, as on the Delivery partners list. */
+  protected toggleStatus(): void {
+    const user = this.data()?.user;
+    if (!user) return;
+    this.changingStatus.set(true);
+    this.changeStatus(user)
+      .pipe(finalize(() => this.changingStatus.set(false)))
+      .subscribe(() => this.rider.reload());
+  }
 
   protected decide(d: Decision): void {
     const name = this.data()?.user.name ?? 'this rider';

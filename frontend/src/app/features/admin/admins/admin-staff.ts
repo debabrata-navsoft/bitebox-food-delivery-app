@@ -56,6 +56,7 @@ export class AdminStaff {
     },
     {
       label: 'Role',
+      align: 'center',
       badge: (u) => ({
         label: this.roleLabel(u.role),
         class: `bb-role-chip role-${u.role}`,
@@ -67,7 +68,7 @@ export class AdminStaff {
       sub: (u) => (u.role === 'admin' ? 'Everything' : this.permissionSummary(u)),
       nowrap: true,
     },
-    { label: 'Status', badge: (u) => accountStatusBadge(u) },
+    { label: 'Status', align: 'center', badge: (u) => accountStatusBadge(u) },
     {
       label: 'Last sign-in',
       date: (u) => u.lastLoginAt,

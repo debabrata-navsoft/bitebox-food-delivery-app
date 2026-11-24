@@ -64,9 +64,9 @@ export class AdminCustomers {
     { label: 'Orders', value: (c) => c.stats.orders, align: 'end' },
     { label: 'Spent', paise: (c) => c.stats.spentPaise },
     { label: 'Joined', date: (c) => c.createdAt, nowrap: true },
-    { label: 'Status', badge: (c) => accountStatusBadge(c) },
+    { label: 'Status', align: 'center', badge: (c) => accountStatusBadge(c) },
     // Email and phone icons, green once verified.
-    { label: 'Verified', key: 'verified', nowrap: true },
+    { label: 'Verified', align: 'center', key: 'verified', nowrap: true },
   ];
   protected readonly actions: TableAction<CustomerRow>[] = [
     ...viewEditActions<CustomerRow>('/admin/customers', () => this.auth.can('customers:edit')),

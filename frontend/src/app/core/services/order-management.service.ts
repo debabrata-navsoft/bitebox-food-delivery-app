@@ -232,11 +232,16 @@ export class AdminOrdersService {
       .pipe(map((r) => r.data));
   }
 
-  setRiderStatus(id: string, status: 'active' | 'suspended'): Observable<AdminRider['status']> {
+  /** A reason (shown to the rider) is required for anything but `active`. */
+  setRiderStatus(
+    id: string,
+    status: 'active' | 'suspended',
+    reason?: string,
+  ): Observable<AdminRider['status']> {
     return this.http
       .patch<ApiResponse<{ user: { status: AdminRider['status'] } }>>(
         `${this.api}/delivery-partners/${encodeURIComponent(id)}/status`,
-        { status },
+        { status, ...(reason ? { reason } : {}) },
       )
       .pipe(map((r) => r.data.user.status));
   }

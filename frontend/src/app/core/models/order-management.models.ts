@@ -188,7 +188,7 @@ export interface AdminRider {
 
 /** GET /admin/delivery-partners/{id}. */
 export interface AdminRiderDetail {
-  user: { id: string; name: string; email: string; phone?: string; status: 'active' | 'suspended'; avatarUrl?: string; createdAt: string };
+  user: { id: string; name: string; email: string; phone?: string; status: 'active' | 'suspended'; statusReason?: string | null; avatarUrl?: string; createdAt: string };
   profile: RiderProfile;
 }
 

@@ -25,7 +25,12 @@
       <thead>
         <tr>
           @for (c of columns(); track c.label) {
-            <th scope="col" [class]="c.class ?? ''" [class.num]="c.align === 'end' || !!c.paise">
+            <th
+              scope="col"
+              [class]="c.class ?? ''"
+              [class.num]="c.align === 'end' || !!c.paise"
+              [class.center]="c.align === 'center'"
+            >
               @if (c.hideLabel) {
                 <span class="bb-sr-only">{{ c.label }}</span>
               } @else {
@@ -33,7 +38,7 @@
               }
             </th>
           }
-          @if (actions().length) {
+          @if (hasActions()) {
             <th scope="col" class="actions">Actions</th>
           }
         </tr>
@@ -51,6 +56,7 @@
               <td
                 [class]="c.class ?? ''"
                 [class.num]="c.align === 'end' || !!c.paise"
+                [class.center]="c.align === 'center'"
                 [class.nowrap]="c.nowrap"
               >
                 @if (cell.custom) {
@@ -98,7 +104,7 @@
                 }
               </td>
             }
-            @if (actions().length) {
+            @if (hasActions()) {
               <td class="actions">
                 @for (a of r.actions; track a.label) {
                   @if (a.menu) {

@@ -79,7 +79,7 @@ export class AdminFoods implements OnInit {
     },
     { label: 'Category', value: (i) => i.category.name },
     { label: 'Price', paise: (i) => i.pricePaise },
-    { label: 'Available', key: 'available', nowrap: true },
+    { label: 'Available', key: 'available', align: 'center', nowrap: true },
   ];
   protected readonly actions: TableAction<AdminFoodItem>[] = [
     { icon: 'trash-2', label: 'Delete', run: (i) => this.remove(i) },

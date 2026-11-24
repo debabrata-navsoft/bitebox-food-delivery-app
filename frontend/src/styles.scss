@@ -1465,6 +1465,19 @@ np-time-picker .time-picker-field {
   text-align: center;
 }
 
+// A detail page's title: the name with its status badges beside it (rider, restaurant pages).
+.bb-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--bb-space-2) var(--bb-space-3);
+
+  h1 {
+    margin: 0;
+    font-size: clamp(1.4rem, 2.6vw, 1.75rem);
+  }
+}
+
 // A card holding a list or table edge to edge, with a paginator at the bottom.
 .bb-list-card {
   padding: 0;
@@ -1542,6 +1555,16 @@ bb-list-toolbar + .bb-card {
   }
   tbody tr.clickable {
     cursor: pointer;
+  }
+  // A name or number that opens something (an order, a rider, an account) turns red on hover,
+  // in the table's own cells and in a page's custom cells alike (not the row's buttons).
+  tbody :is(a:not(.bb-btn), .bb-link-button) {
+    transition: color 0.15s;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--bb-danger);
+    }
   }
   .num {
     text-align: right;

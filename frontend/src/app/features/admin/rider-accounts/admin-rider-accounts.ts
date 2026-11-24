@@ -79,6 +79,7 @@ export class AdminRiderAccounts {
     {
       // Verification, KYC and availability, one under another.
       label: 'Status',
+      align: 'center',
       badge: (r) => [
         {
           label: RIDER_VERIFICATION_LABEL[r.verificationStatus],

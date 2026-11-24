@@ -22,23 +22,21 @@
 
   img,
   .avatar {
-    width: 72px;
-    height: 72px;
+    width: 56px;
+    height: 56px;
     border-radius: var(--bb-radius);
     object-fit: cover;
   }
   .avatar {
     display: grid;
     place-items: center;
-    font-size: 2rem;
+    font-size: 1.5rem;
     font-weight: 800;
     background: var(--bb-brand);
     color: var(--bb-amber);
   }
-  h1 {
-    margin-bottom: var(--bb-space-1);
-  }
 }
+
 
 .status {
   text-transform: capitalize;

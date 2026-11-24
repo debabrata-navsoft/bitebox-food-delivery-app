@@ -74,9 +74,10 @@ export class AdminPayments {
     },
     { label: 'Date', date: (p) => p.createdAt, dateFormat: DATE_TIME, nowrap: true },
     { label: 'Amount', paise: (p) => p.amountPaise, strong: true },
-    { label: 'Order status', key: 'orderStatus' },
+    { label: 'Order status', align: 'center', key: 'orderStatus' },
     {
       label: 'Payment',
+      align: 'center',
       badge: (p) => ({ label: PAYMENT_STATUS_LABEL[p.status], tone: paymentTone(p.status) }),
       sub: (p) => p.failureReason,
     },
