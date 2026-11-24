@@ -1,9 +1,6 @@
 <section class="bb-container page">
-  <bb-page-header title="Saved addresses" subtitle="Where should we deliver?">
-    <button mat-flat-button (click)="open()" [disabled]="addresses().length >= 10">
-      <np-icon name="plus" class="mat-icon" matButtonIcon />Add address
-    </button>
-  </bb-page-header>
+  <!-- Adding is the dashed tile at the end of the list (or the empty state's button). -->
+  <bb-page-header title="Saved addresses" subtitle="Where should we deliver?" />
   @if (error()) {
     <div class="bb-alert error" role="alert">
       <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ error() }}</span>
@@ -28,13 +25,20 @@
       @for (a of addresses(); track a.id) {
         <article class="bb-card address" [class.default]="a.isDefault">
           <header>
-            <span class="label">
-              <np-icon [name]="(a.label === 'home' ? 'home' : a.label === 'work' ? 'work' : 'place') | npIcon" class="mat-icon" matButtonIcon />
-              {{ a.label | titlecase }}
-            </span>
-            @if (a.isDefault) {
-              <span class="chip">Default</span>
-            }
+            <span class="kind kind-{{ a.label }}" aria-hidden="true"
+              ><np-icon
+                [name]="a.label === 'home' ? 'house' : a.label === 'work' ? 'briefcase' : 'map-pin'"
+                class="mat-icon"
+                matButtonIcon
+            /></span>
+            <div class="title">
+              <strong>{{ a.label | titlecase }}</strong>
+              @if (a.isDefault) {
+                <span class="chip"
+                  ><np-icon name="circle-check" class="mat-icon" matButtonIcon />Default</span
+                >
+              }
+            </div>
             <button
               mat-icon-button
               [matMenuTriggerFor]="menu"
@@ -56,15 +60,31 @@
               </button>
             </mat-menu>
           </header>
-          <p>
-            {{ a.line1 }}{{ a.line2 ? ', ' + a.line2 : '' }}<br />
-            {{ a.area ? a.area + ', ' : '' }}{{ a.city }}, {{ a.state }} {{ a.postalCode }}
+
+          <div class="where">
+            <p class="line">{{ a.line1 }}{{ a.line2 ? ', ' + a.line2 : '' }}</p>
+            <p class="place">
+              {{ a.area ? a.area + ', ' : '' }}{{ a.city }}, {{ a.state }} {{ a.postalCode }}
+            </p>
             @if (a.landmark) {
-              <br /><span class="bb-muted">Landmark: {{ a.landmark }}</span>
+              <p class="landmark">
+                <np-icon name="flag" class="mat-icon" matButtonIcon />{{ a.landmark }}
+              </p>
             }
-          </p>
-          <p class="bb-muted small">{{ a.recipientName }} · {{ a.phone }}</p>
+          </div>
+
+          <footer>
+            <span><np-icon name="user" class="mat-icon" matButtonIcon />{{ a.recipientName }}</span>
+            <span><np-icon name="phone" class="mat-icon" matButtonIcon />{{ a.phone }}</span>
+          </footer>
         </article>
+      }
+      @if (addresses().length < 10) {
+        <button type="button" class="add-tile" (click)="open()">
+          <span class="plus"><np-icon name="plus" class="mat-icon" matButtonIcon /></span>
+          <strong>Add a new address</strong>
+          <span class="bb-muted">Home, work or anywhere else</span>
+        </button>
       }
     </div>
   }

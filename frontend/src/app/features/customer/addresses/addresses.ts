@@ -1,4 +1,3 @@
-import { NpIconPipe } from '../../../shared/pipes/np-icon-name';
 import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
@@ -18,15 +17,7 @@ import { BbDialog } from '../../../shared/dialog/bb-dialog';
 
 @Component({
   selector: 'bb-addresses',
-  imports: [
-    TitleCasePipe,
-    MatButtonModule,
-    IconComponent,
-    NpIconPipe,
-    MatMenuModule,
-    EmptyState,
-    PageHeader,
-  ],
+  imports: [TitleCasePipe, MatButtonModule, IconComponent, MatMenuModule, EmptyState, PageHeader],
   templateUrl: './addresses.html',
   styleUrl: './addresses.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
