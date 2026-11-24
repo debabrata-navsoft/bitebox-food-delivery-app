@@ -1,4 +1,5 @@
 import { NpIconPipe } from '../../../shared/pipes/np-icon-name';
+import { DetailNav } from '../../../shared/components/detail-nav/detail-nav';
 import { IconComponent } from 'nexprime';
 import {
   ChangeDetectionStrategy,
@@ -10,7 +11,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
@@ -22,6 +23,7 @@ import { formatPaise } from '../../../shared/pipes/money.pipes';
 import { formatClockTime } from '../../../shared/pipes/clock-time.pipe';
 import { dateText } from '../../../shared/utils/dates';
 import { ImageFallback, UsableImagePipe } from '../../../shared/directives/broken-images';
+import { InfoRow, InfoRows } from '../../../shared/components/info-rows/info-rows';
 import { KycReview } from '../../../shared/components/kyc/kyc-review/kyc-review';
 import { openPhotoViewer } from '../../../shared/components/photo-viewer/photo-viewer';
 import { MatDialog } from '@angular/material/dialog';
@@ -36,24 +38,17 @@ import {
 /** Photo tiles in the Photos card. */
 const PHOTO_TILES = 8;
 
-/** One quick fact or one label/value row. */
-interface Fact {
-  icon: string;
-  label: string;
-  value: string;
-  note?: string;
-}
-
 @Component({
   selector: 'bb-admin-restaurant-review',
   imports: [
+    DetailNav,
     DatePipe,
     DecimalPipe,
     RouterLink,
     IconComponent,
     NpIconPipe,
     EmptyState,
-    NgTemplateOutlet,
+    InfoRows,
     ImageFallback,
     UsableImagePipe,
     KycReview,
@@ -112,7 +107,7 @@ export class AdminRestaurantReview {
           label: 'Hours',
           value: `${formatClockTime(r.openingTime)} – ${formatClockTime(r.closingTime)}`,
         },
-      ] as Fact[],
+      ] as InfoRow[],
       contact: [
         { icon: 'phone', label: 'Phone', value: r.phone },
         { icon: 'mail', label: 'Email', value: r.email || '—' },

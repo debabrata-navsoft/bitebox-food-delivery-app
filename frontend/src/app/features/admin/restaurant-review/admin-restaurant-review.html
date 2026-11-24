@@ -1,6 +1,4 @@
-<a routerLink="/admin/restaurants" class="bb-btn bb-btn--text back"
-  ><np-icon name="arrow-left" />All restaurants</a
->
+<bb-detail-nav [id]="id()" backLink="/admin/restaurants" />
 
 @if (loading()) {
   <span class="bb-skeleton" style="height: 360px"></span>
@@ -85,20 +83,7 @@
       </div>
     </div>
 
-    <ul class="kpis">
-      @for (k of v.kpis; track k.label) {
-        <li>
-          <np-icon [name]="k.icon" />
-          <div>
-            <span>{{ k.label }}</span
-            ><strong>{{ k.value }}</strong>
-            @if (k.note) {
-              <small>{{ k.note }}</small>
-            }
-          </div>
-        </li>
-      }
-    </ul>
+    <bb-info-rows facts [rows]="v.kpis" />
   </section>
 
   @if (r.statusReason) {
@@ -181,7 +166,7 @@
     <aside class="side">
       <section class="bb-card">
         <h2>Contact</h2>
-        <ng-container *ngTemplateOutlet="rows; context: { $implicit: v.contact }" />
+        <bb-info-rows [rows]="v.contact" />
       </section>
 
       <section class="bb-card">
@@ -197,7 +182,7 @@
             }
           </div>
         </div>
-        <ng-container *ngTemplateOutlet="rows; context: { $implicit: v.owner }" />
+        <bb-info-rows [rows]="v.owner" />
         @if (v.ownerId; as ownerId) {
           <a
             class="bb-btn bb-btn--outlined bb-btn--small wide"
@@ -209,7 +194,7 @@
 
       <section class="bb-card">
         <h2>Legal and tax</h2>
-        <ng-container *ngTemplateOutlet="rows; context: { $implicit: v.legal }" />
+        <bb-info-rows [rows]="v.legal" />
       </section>
 
       <section class="bb-card">
@@ -234,15 +219,3 @@
     </aside>
   </div>
 }
-
-<!-- A label/value list (Contact, Owner, Legal and tax) -->
-<ng-template #rows let-rows>
-  <ul class="rows">
-    @for (row of rows; track row.label) {
-      <li>
-        <np-icon [name]="row.icon" /><span>{{ row.label }}</span
-        ><strong>{{ row.value }}</strong>
-      </li>
-    }
-  </ul>
-</ng-template>

@@ -1,4 +1,5 @@
 import { DatePipe, TitleCasePipe } from '@angular/common';
+import { DetailNav } from '../../../../shared/components/detail-nav/detail-nav';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -66,9 +67,9 @@ const profileOf = (u: User | undefined) => ({
 
 /** Where a person's page leads back to, by role. */
 const BACK = {
-  customer: { link: '/admin/customers', label: 'All customers' },
-  restaurant: { link: '/admin/restaurant-accounts', label: 'All restaurant accounts' },
-  delivery: { link: '/admin/delivery-partner-accounts', label: 'All delivery partner accounts' },
+  customer: '/admin/customers',
+  restaurant: '/admin/restaurant-accounts',
+  delivery: '/admin/delivery-partner-accounts',
 };
 
 /**
@@ -80,6 +81,7 @@ const BACK = {
 @Component({
   selector: 'bb-admin-user-detail',
   imports: [
+    DetailNav,
     DatePipe,
     TitleCasePipe,
     RouterLink,

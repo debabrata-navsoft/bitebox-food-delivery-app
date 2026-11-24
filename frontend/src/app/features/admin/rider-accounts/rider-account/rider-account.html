@@ -1,6 +1,4 @@
-<a class="bb-back-link" routerLink="/admin/delivery-partner-accounts"
-  ><np-icon name="arrow-left" class="mat-icon" matButtonIcon />All delivery partners</a
->
+<bb-detail-nav [id]="id()" backLink="/admin/delivery-partner-accounts" />
 
 @if (loadError(); as message) {
   <div class="bb-alert error" role="alert">

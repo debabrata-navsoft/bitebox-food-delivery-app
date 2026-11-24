@@ -1,4 +1,5 @@
 import { DatePipe } from '@angular/common';
+import { DetailNav } from '../../../../shared/components/detail-nav/detail-nav';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -39,7 +40,8 @@ import { DECISIONS, Decision, availabilityOf } from '../rider-status';
  */
 @Component({
   selector: 'bb-rider-account',
-  imports: [DatePipe, RouterLink, IconComponent, TabStrip, StatTile, RecordTable, KycReview, InrPipe],
+  imports: [
+    DetailNav,DatePipe, RouterLink, IconComponent, TabStrip, StatTile, RecordTable, KycReview, InrPipe],
   templateUrl: './rider-account.html',
   styleUrl: './rider-account.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,6 +1,4 @@
-<a class="bb-back-link" [routerLink]="back().link"
-  ><np-icon name="arrow-left" class="mat-icon" matButtonIcon />{{ back().label }}</a
->
+<bb-detail-nav [id]="id()" [backLink]="back()" />
 
 @if (loadError(); as message) {
   <div class="bb-alert error" role="alert">

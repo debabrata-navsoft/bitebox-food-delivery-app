@@ -1,4 +1,5 @@
 import { DatePipe, TitleCasePipe } from '@angular/common';
+import { DetailNav } from '../../../../shared/components/detail-nav/detail-nav';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -42,6 +43,7 @@ import {
 @Component({
   selector: 'bb-restaurant-account',
   imports: [
+    DetailNav,
     DatePipe,
     TitleCasePipe,
     RouterLink,

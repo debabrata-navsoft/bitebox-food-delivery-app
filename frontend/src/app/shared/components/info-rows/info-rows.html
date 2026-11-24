@@ -1,0 +1,19 @@
+<ul>
+  @for (row of rows(); track row.label) {
+    <li>
+      <np-icon [name]="row.icon" />
+      @if (facts()) {
+        <div>
+          <span>{{ row.label }}</span
+          ><strong>{{ row.value }}</strong>
+          @if (row.note) {
+            <small>{{ row.note }}</small>
+          }
+        </div>
+      } @else {
+        <span>{{ row.label }}</span
+        ><strong>{{ row.value }}</strong>
+      }
+    </li>
+  }
+</ul>

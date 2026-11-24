@@ -1,4 +1,5 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
+import { DetailNav } from '../../../../shared/components/detail-nav/detail-nav';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -10,6 +11,8 @@ import { AdminOrdersService } from '../../../../core/services/order-management.s
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
 import { DECISIONS, Decision } from '../../rider-accounts/rider-status';
 import { riderStatusAction, riderStatusChanger } from '../rider-account-status';
+import { InfoRow, InfoRows } from '../../../../shared/components/info-rows/info-rows';
+import { dateText } from '../../../../shared/utils/dates';
 import { KycReview } from '../../../../shared/components/kyc/kyc-review/kyc-review';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 import { VEHICLE_LABEL } from '../../../../core/models/checkout.models';
@@ -23,7 +26,7 @@ import {
 /** One rider: details, verification documents and bank account, and the verification decision. */
 @Component({
   selector: 'bb-admin-rider-review',
-  imports: [DatePipe, RouterLink, IconComponent, KycReview],
+  imports: [DetailNav, DatePipe, DecimalPipe, RouterLink, IconComponent, KycReview, InfoRows],
   templateUrl: './admin-rider-review.html',
   styleUrl: './admin-rider-review.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -54,9 +57,44 @@ export class AdminRiderReview {
     }),
   );
   protected readonly decisions = computed(() => DECISIONS[this.status()]);
+  private readonly dates = dateText();
+
+  /** The rider with the hero's quick facts and the sidebar lists, worked out once. */
+  protected readonly view = computed(() => {
+    const detail = this.data();
+    if (!detail) return null;
+    const { user, profile: p } = detail;
+    const { day } = this.dates;
+    const vehicle = p.vehicleType ? VEHICLE_LABEL[p.vehicleType] : 'Not added';
+    return {
+      detail,
+      kpis: [
+        { icon: 'package-check', label: 'Deliveries', value: `${p.completedDeliveries}` },
+        {
+          icon: 'star',
+          label: 'Rating',
+          value: p.rating?.count ? p.rating.average.toFixed(1) : '—',
+          note: p.rating?.count ? `${p.rating.count} reviews` : undefined,
+        },
+        { icon: 'bike', label: 'Vehicle', value: vehicle, note: p.vehicleNumber?.toUpperCase() },
+        {
+          icon: 'radio',
+          label: 'Availability',
+          value: p.isOnline ? 'Online' : 'Offline',
+          note: p.locationUpdatedAt
+            ? `Seen ${day(p.locationUpdatedAt, 'd MMM, h:mm a')}`
+            : undefined,
+        },
+        { icon: 'calendar', label: 'Joined', value: day(user.createdAt) },
+      ] as InfoRow[],
+      contact: [
+        { icon: 'mail', label: 'Email', value: user.email },
+        { icon: 'phone', label: 'Phone', value: user.phone || '—' },
+      ],
+    };
+  });
   protected readonly label = RIDER_VERIFICATION_LABEL;
   protected readonly tone = RIDER_VERIFICATION_TONE;
-  protected readonly vehicleLabel = VEHICLE_LABEL;
   protected readonly statusAction = riderStatusAction;
   /** While a suspension or reactivation saves (its button waits). */
   protected readonly changingStatus = signal(false);

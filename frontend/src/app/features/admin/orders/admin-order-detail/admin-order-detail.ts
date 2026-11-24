@@ -1,8 +1,8 @@
 import { ButtonComponent, IconComponent } from 'nexprime';
+import { DetailNav } from '../../../../shared/components/detail-nav/detail-nav';
 import { pickRider } from '../assign-rider-dialog/assign-rider-dialog';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { EMPTY, Observable, catchError, switchMap, tap } from 'rxjs';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { liveRefresh } from '../../../../core/services/poll';
@@ -80,9 +80,9 @@ export interface JourneyStep {
 @Component({
   selector: 'bb-admin-order-detail',
   imports: [
+    DetailNav,
     DatePipe,
     DecimalPipe,
-    RouterLink,
     ButtonComponent,
     IconComponent,
     BillSummary,

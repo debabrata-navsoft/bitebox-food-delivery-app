@@ -1,6 +1,4 @@
-<a routerLink="/admin/support/queue/all" class="bb-back-link bb-link-button">
-  <np-icon name="arrow-left" class="mat-icon" /> All tickets
-</a>
+<bb-detail-nav [id]="id()" backLink="/admin/support/queue/all" />
 
 @if (error(); as message) {
   <div class="bb-alert error" role="alert">

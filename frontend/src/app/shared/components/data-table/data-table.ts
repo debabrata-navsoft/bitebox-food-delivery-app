@@ -8,15 +8,18 @@ import {
   computed,
   contentChild,
   contentChildren,
+  effect,
   inject,
   input,
   output,
+  untracked,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ButtonComponent, IconComponent, MenuComponent, MenuItem, PaginationComponent } from 'nexprime';
 import { initialsOf } from '../../../core/models/user.models';
 import { ImageFallback, UsableImagePipe } from '../../directives/broken-images';
 import { TableLabels } from '../../directives/table-labels';
+import { DetailOrder } from '../../list/detail-order';
 import { FilteredList } from '../../list/filtered-list';
 import { formatPaise } from '../../pipes/money.pipes';
 import { COMPACT_MENU_WIDTH, toggleEndAligned } from '../../utils/end-aligned-menu';
@@ -149,6 +152,13 @@ export class DataTable<T> {
       cells: columns.map((c) => this.cell(c, row, custom)),
       actions: actions.filter((a) => a.show?.(row) ?? true).map((a) => this.action(a, row)),
     }));
+  });
+
+  /** The rows' order, for previous / next on the details page a row opens (`bb-detail-nav`). */
+  private readonly detailOrder = inject(DetailOrder);
+  private readonly remembered = effect(() => {
+    const ids = this.view().map((r) => r.id).filter((id): id is string => typeof id === 'string');
+    untracked(() => this.detailOrder.remember(ids));
   });
 
   /** The Actions column shows only when some row on this page has a button (e.g. a refund). */
