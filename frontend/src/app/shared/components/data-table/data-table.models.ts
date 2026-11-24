@@ -69,9 +69,10 @@ export const DATE_YEAR_TIME = 'd MMM y, h:mm a';
  * popup menu of `menu` items. Icon-only (the label is its tooltip) unless `text` is set.
  */
 export interface TableAction<T> {
-  icon: string;
+  /** Required for icon buttons; on a `text` button, shown before the name when set. */
+  icon?: string;
   label: string | ((row: T) => string);
-  /** A small labelled outlined button instead of an icon. */
+  /** A small labelled button instead of an icon button. */
   text?: boolean;
   /** Red (e.g. Suspend), for rows where this is true. */
   danger?: (row: T) => boolean;

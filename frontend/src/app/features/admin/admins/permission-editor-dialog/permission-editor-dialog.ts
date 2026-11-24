@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { ButtonComponent, CheckboxComponent, IconComponent } from 'nexprime';
+import { ButtonComponent, CheckboxComponent, IconComponent, ToggleComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
 import { AdminStaffService } from '../../../../core/services/admin/admin-staff.service';
 import { errorMessage } from '../../../../shared/utils/api-error';
@@ -14,6 +14,20 @@ import {
 } from '../../../../shared/dialog/bb-dialog';
 import { Permission, ROLE_META, User } from '../../../../core/models/user.models';
 
+/** An icon per permission group (the catalogue's group names). */
+const GROUP_ICON: Record<string, string> = {
+  Customers: 'users',
+  Restaurants: 'store',
+  'Delivery partners': 'bike',
+  Accounts: 'shield-alert',
+  'Orders & operations': 'receipt',
+  Finance: 'wallet',
+  Support: 'life-buoy',
+  'Catalog & marketing': 'megaphone',
+  Rewards: 'gift',
+  Admin: 'settings',
+};
+
 /**
  * The super admin picks what one admin or operator may do: permissions in groups, ready-made sets
  * (Support, Restaurant, Delivery, KYC, Finance), or the role's preset. Shows what changes and asks
@@ -21,7 +35,7 @@ import { Permission, ROLE_META, User } from '../../../../core/models/user.models
  */
 @Component({
   selector: 'bb-permission-editor-dialog',
-  imports: [BbDialogTitle, ButtonComponent, CheckboxComponent, IconComponent],
+  imports: [BbDialogTitle, ButtonComponent, CheckboxComponent, IconComponent, ToggleComponent],
   templateUrl: './permission-editor-dialog.html',
   styleUrl: './permission-editor-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -98,8 +112,15 @@ export class PermissionEditorDialog {
     return set;
   }
 
-  protected allOn(items: { key: Permission }[]): boolean {
-    return items.every(({ key }) => this.selected().has(key));
+  /** How many of these the person holds. */
+  protected heldIn(items: { key: Permission }[]): number {
+    return items.filter(({ key }) => this.selected().has(key)).length;
+  }
+
+  protected readonly total = computed(() => this.data()?.permissions.length ?? 0);
+
+  protected groupIcon(group: string): string {
+    return GROUP_ICON[group] ?? 'key-round';
   }
 
   protected applyPreset(permissions: Permission[]): void {

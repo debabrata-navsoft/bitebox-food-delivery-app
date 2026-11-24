@@ -73,7 +73,7 @@ interface CellView {
 }
 
 interface ActionView {
-  icon: string;
+  icon?: string;
   label: string;
   text: boolean;
   danger: boolean;
