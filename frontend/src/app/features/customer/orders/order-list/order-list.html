@@ -23,20 +23,33 @@
       @for (o of orders(); track o.id) {
         <li>
           <a class="bb-card order" [routerLink]="['/orders', o.id]">
-            <div class="top">
-              <strong>{{ o.restaurantSnapshot.name }}</strong>
-              <span class="status status-{{ o.status }}">{{ statusLabel(o) }}</span>
+            <div class="head">
+              <span class="logo status-{{ o.status }}" aria-hidden="true"
+                ><np-icon name="chef-hat" class="mat-icon" matButtonIcon
+              /></span>
+              <div class="who">
+                <div class="title">
+                  <strong class="name">{{ o.restaurantSnapshot.name }}</strong>
+                  <span class="status status-{{ o.status }}">{{ statusLabel(o) }}</span>
+                </div>
+                <span class="number">{{ o.orderNumber }}</span>
+              </div>
             </div>
-            <span class="bb-muted items">{{ summary(o) }}</span>
+            <p class="items">{{ summary(o) }}</p>
             @if (o.myRating) {
               <span class="my-rating">
                 <bb-stars [value]="o.myRating" size="sm" [ariaLabel]="'You rated this ' + o.myRating + ' out of 5'" />
                 Your rating
               </span>
             }
-            <div class="bottom bb-muted">
-              <span>{{ o.createdAt | date: 'medium' }} · {{ o.orderNumber }}</span>
+            <div class="foot">
+              <span class="when"
+                ><np-icon name="calendar" class="mat-icon" matButtonIcon />{{
+                  o.createdAt | date: 'd MMM y, h:mm a'
+                }}</span
+              >
               <strong class="total">{{ o.pricing.totalPaise | inr }}</strong>
+              <np-icon name="chevron-right" class="mat-icon go" matButtonIcon />
             </div>
           </a>
           @if (o.status === 'delivered' && !o.myRating) {
