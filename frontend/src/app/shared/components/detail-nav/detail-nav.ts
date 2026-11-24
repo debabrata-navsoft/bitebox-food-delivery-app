@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  booleanAttribute,
+  computed,
+  inject,
+  input,
+} from '@angular/core';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { IconComponent } from 'nexprime';
@@ -23,9 +30,11 @@ export class DetailNav {
   /** The id shown (it is the URL's segment that previous / next swap). */
   readonly id = input.required<string>();
   readonly backLink = input.required<string | unknown[]>();
+  /** Previous / next (off on edit pages: only Back). */
+  readonly arrows = input(true, { transform: booleanAttribute });
 
   protected readonly around = computed(() => this.order.around(this.id()));
-  protected readonly arrows = [
+  protected readonly steps = [
     { step: -1, label: 'Previous', icon: 'chevron-left' },
     { step: 1, label: 'Next', icon: 'chevron-right' },
   ];

@@ -1,6 +1,24 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, linkedSignal, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  linkedSignal,
+  signal,
+  untracked,
+} from '@angular/core';
+import { DetailNav } from '../../../../shared/components/detail-nav/detail-nav';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { FormRoot, TreeValidationResult, form, maxLength, pattern, validate } from '@angular/forms/signals';
+import {
+  FormRoot,
+  TreeValidationResult,
+  form,
+  maxLength,
+  pattern,
+  validate,
+} from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { IconComponent } from 'nexprime';
 import { firstValueFrom } from 'rxjs';
@@ -16,7 +34,11 @@ import { PhoneInput } from '../../../../shared/components/phone-input/phone-inpu
 import { loaded } from '../../../../shared/coupons/coupon-list';
 import { birthDateRange, fromIsoDay, isoDay } from '../../../../shared/utils/dates';
 import { serverErrors, shownError } from '../../../../shared/forms/form-errors';
-import { POSTAL_CODE_PATTERN, phoneRules, requiredText } from '../../../../shared/validators/form-rules';
+import {
+  POSTAL_CODE_PATTERN,
+  phoneRules,
+  requiredText,
+} from '../../../../shared/validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
 import { VEHICLE_LABEL, VehicleType } from '../../../../core/models/checkout.models';
 import { GENDER_LABEL, Gender } from '../../../../core/models/user.models';
@@ -45,7 +67,12 @@ const modelOf = (a: RiderAccount | undefined) => ({
 type Model = ReturnType<typeof modelOf>;
 
 /** Only what changed, shaped as the API expects (blank optional parts become null). */
-function changes(before: Model, after: Model, photoBefore: string, photo: string): RiderAccountPatch {
+function changes(
+  before: Model,
+  after: Model,
+  photoBefore: string,
+  photo: string,
+): RiderAccountPatch {
   const patch: RiderAccountPatch = {};
   const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
   if (after.name.trim() !== before.name) patch.name = after.name.trim();
@@ -66,11 +93,13 @@ function changes(before: Model, after: Model, photoBefore: string, photo: string
   }
   if (!same(after.emergencyContact, before.emergencyContact)) {
     const e = after.emergencyContact;
-    patch.emergencyContact = e.name.trim() || e.phone
-      ? { name: e.name.trim(), phone: e.phone, relation: e.relation.trim() || null }
-      : null;
+    patch.emergencyContact =
+      e.name.trim() || e.phone
+        ? { name: e.name.trim(), phone: e.phone, relation: e.relation.trim() || null }
+        : null;
   }
-  if (after.vehicleType && after.vehicleType !== before.vehicleType) patch.vehicleType = after.vehicleType;
+  if (after.vehicleType && after.vehicleType !== before.vehicleType)
+    patch.vehicleType = after.vehicleType;
   if (after.vehicleNumber.trim().toUpperCase() !== before.vehicleNumber.toUpperCase())
     patch.vehicleNumber = after.vehicleNumber.trim().toUpperCase();
   if (after.zone.trim() !== before.zone) patch.zone = after.zone.trim() || null;
@@ -83,7 +112,15 @@ function changes(before: Model, after: Model, photoBefore: string, photo: string
  */
 @Component({
   selector: 'bb-rider-account-edit',
-  imports: [RouterLink, FormRoot, NP_FORM_FIELDS, IconComponent, ImageUpload, PhoneInput],
+  imports: [
+    DetailNav,
+    RouterLink,
+    FormRoot,
+    NP_FORM_FIELDS,
+    IconComponent,
+    ImageUpload,
+    PhoneInput,
+  ],
   templateUrl: './rider-account-edit.html',
   styleUrl: './rider-account-edit.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -105,10 +142,15 @@ export class RiderAccountEdit {
     label: VEHICLE_LABEL[v],
   }));
 
-  private readonly account = rxResource({ params: () => this.id(), stream: ({ params }) => this.api.get(params) });
+  private readonly account = rxResource({
+    params: () => this.id(),
+    stream: ({ params }) => this.api.get(params),
+  });
   protected readonly data = computed(() => loaded(this.account));
   protected readonly loadError = computed(() =>
-    this.account.error() ? errorMessage(this.account.error(), 'Could not load this delivery partner.') : null,
+    this.account.error()
+      ? errorMessage(this.account.error(), 'Could not load this delivery partner.')
+      : null,
   );
   protected readonly photo = linkedSignal(() => this.data()?.user.avatarUrl ?? '');
   private readonly model = signal(modelOf(undefined));
@@ -143,7 +185,8 @@ export class RiderAccountEdit {
   constructor() {
     effect(() => {
       const a = this.data();
-      if (a && !untracked(() => this.form().dirty())) untracked(() => this.form().reset(modelOf(a)));
+      if (a && !untracked(() => this.form().dirty()))
+        untracked(() => this.form().reset(modelOf(a)));
     });
   }
 
