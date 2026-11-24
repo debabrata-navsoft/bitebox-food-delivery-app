@@ -1,5 +1,5 @@
-<a class="bb-back-link" [routerLink]="base()"
-  ><np-icon name="arrow-left" class="mat-icon" matButtonIcon />{{ base().endsWith('customers') ? 'All customers' : 'All users' }}</a
+<a class="bb-back-link" [routerLink]="back().link"
+  ><np-icon name="arrow-left" class="mat-icon" matButtonIcon />{{ back().label }}</a
 >
 
 @if (loadError(); as message) {

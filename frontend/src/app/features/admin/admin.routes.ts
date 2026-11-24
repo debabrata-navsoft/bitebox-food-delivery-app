@@ -28,12 +28,6 @@ export const ADMIN_ROUTES: Routes = [
     loadComponent: () => import('./audit-log/audit-log').then((m) => m.AuditLogPage),
   },
   {
-    path: 'users',
-    title: 'Users | BiteBox Admin',
-    canActivate: [can('customers:view', 'restaurants:view', 'riders:view')],
-    loadComponent: () => import('./users/admin-users').then((m) => m.AdminUsers),
-  },
-  {
     path: 'restaurant-accounts',
     title: 'Restaurant accounts | BiteBox Admin',
     canActivate: [can('restaurants:view')],

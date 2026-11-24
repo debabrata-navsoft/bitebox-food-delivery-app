@@ -3,7 +3,6 @@ import { AuthService } from '../../core/auth/auth.service';
 import { AdminReviewCounts } from '../../core/services/admin/admin-review-counts.service';
 import {
   AdminRole,
-  MEMBER_VIEW_PERMISSION,
   Permission,
   ROLE_META,
 } from '../../core/models/user.models';
@@ -177,10 +176,8 @@ const PAGE_PERMISSION: [string, Permission][] = [
   ['/admin/audit-log', 'audit:view'],
 ];
 
-const permissionFor = ({ link, query }: NavItem): Permission | null => {
+const permissionFor = ({ link }: NavItem): Permission | null => {
   if (link === '/admin') return 'admins:manage';
-  if (link === '/admin/users')
-    return MEMBER_VIEW_PERMISSION[query?.['role'] as keyof typeof MEMBER_VIEW_PERMISSION];
   return PAGE_PERMISSION.find(([path]) => link?.startsWith(path))?.[1] ?? null;
 };
 

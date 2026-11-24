@@ -43,11 +43,6 @@ export class AdminUsersService {
   private readonly url = `${environment.baseUrl}/admin/users`;
   private readonly customersUrl = `${environment.baseUrl}/admin/customers`;
 
-  /** Customers, restaurant partners and riders (the kinds this admin may view). */
-  list(query: ListQuery = {}): Observable<Faceted<User>> {
-    return this.http.get<ApiResponse<Faceted<User>>>(this.url, { params: toParams(query) }).pipe(map((res) => res.data));
-  }
-
   /** A reason is required for anything but `active`. */
   setStatus(id: string, status: UserStatus, reason?: string): Observable<User> {
     return this.http
@@ -111,7 +106,10 @@ export class AdminUsersService {
   }
 
   /** Total number of accounts for a role (uses the pagination total). */
+  /** How many accounts have this role (the admin dashboard's totals). */
   countByRole(role: Role): Observable<number> {
-    return this.list({ role, limit: 1 }).pipe(map((page) => page.pagination.total));
+    return this.http
+      .get<ApiResponse<Paginated<User>>>(this.url, { params: toParams({ role, limit: 1 }) })
+      .pipe(map((res) => res.data.pagination.total));
   }
 }

@@ -295,23 +295,20 @@ def test_an_operator_with_customers_view_sees_customers_only() -> None:
     assert c.patch(f"/api/v1/admin/users/{customer.pk}", {"name": "New Name"}).status_code == 403
 
 
-def test_users_list_filters_by_several_roles_and_statuses_with_counts() -> None:
+def test_users_list_narrows_by_role_status_and_search() -> None:
     admin, _ = as_role()
     make.user(name="Asha Customer")
     rider = make.user(Role.DELIVERY, name="Bina Rider", status="suspended")
     make.user(Role.RESTAURANT, name="Chef Restaurant")
 
-    def get(query: str) -> Any:
+    def names(query: str) -> list[str]:
         res = admin.get(f"/api/v1/admin/users?{query}")
         assert res.status_code == 200, res.json()
-        return res.json()["data"]
+        return [u["name"] for u in res.json()["data"]["items"]]
 
-    data = get("role=customer,delivery&sort=name&facets=1")
-    assert [u["name"] for u in data["items"]] == ["Asha Customer", "Bina Rider"]
-    roles = {f["value"]: f["count"] for f in data["facets"]["role"]}
-    assert roles == {"customer": 1, "restaurant": 1, "delivery": 1}
-    assert [u["id"] for u in get("status=suspended,blocked")["items"]] == [str(rider.pk)]
-    assert [u["name"] for u in get(f"search=%23{str(rider.pk)[-8:]}")["items"]] == ["Bina Rider"]
+    assert names("role=delivery") == ["Bina Rider"]
+    assert names("status=suspended") == ["Bina Rider"]
+    assert names(f"search=%23{str(rider.pk)[-8:]}") == ["Bina Rider"]
     assert admin.get("/api/v1/admin/users?status=gone").status_code == 422
 
 

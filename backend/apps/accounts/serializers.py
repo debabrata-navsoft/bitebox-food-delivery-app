@@ -414,14 +414,11 @@ class CustomerListQuery(FacetQuery, JoinedListQuery):
     sort = optional_choice(CUSTOMER_SORT_VALUES)
 
 
-class MemberListQuery(FacetQuery, JoinedListQuery):
-    """GET /admin/users: `role` and `status` take several comma-separated values."""
+class MemberListQuery(PageQuery):
+    """GET /admin/users: one role and one status, both optional."""
 
-    role = multi_choice(MEMBER_ROLE_VALUES)
-    status = multi_choice(UserStatus.values)
-    joined_from = day_field()
-    joined_to = day_field()
-    sort = optional_choice(ACCOUNT_SORT_VALUES)
+    role = optional_choice(MEMBER_ROLE_VALUES)
+    status = optional_choice(UserStatus.values)
 
 
 # ---------------------------------------------------------------------------

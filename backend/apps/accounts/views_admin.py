@@ -56,7 +56,6 @@ from . import admin_services as admin
 from .authentication import current_user
 from .models import USER_STATUS_VALUES, User, UserStatus
 from .serializers import (
-    ACCOUNT_SORT_VALUES,
     CUSTOMER_SORT_VALUES,
     VERIFICATION_VALUES,
     CustomerListQuery,
@@ -71,8 +70,11 @@ from .serializers import (
 )
 
 PAGINATION = pagination("Pagination")
-MEMBER_PAGE = facets_page(
-    "MemberPage", admin.MEMBER_FACETS, items=UserOut(many=True), paging=PAGINATION
+MEMBER_PAGE = envelope(
+    "MemberPage",
+    inline_serializer(
+        name="MemberPageData", fields={"items": UserOut(many=True), "pagination": PAGINATION}
+    ),
 )
 STAFF_PAGE = facets_page(
     "StaffPage", admin.STAFF_FACETS, items=UserOut(many=True), paging=PAGINATION
@@ -104,11 +106,8 @@ class MembersView(APIView):
         tags=["Admin: users"],
         parameters=[
             *page_params("Name, email, phone, the id or its last 6+ characters"),
-            multi_param("role", MEMBER_ROLE_VALUES),
-            multi_param("status", USER_STATUS_VALUES),
-            *day_params("joined"),
-            OpenApiParameter("sort", str, enum=ACCOUNT_SORT_VALUES),
-            FACETS_PARAM,
+            OpenApiParameter("role", str, enum=MEMBER_ROLE_VALUES),
+            OpenApiParameter("status", str, enum=USER_STATUS_VALUES),
         ],
         responses={200: MEMBER_PAGE, **errors(401, 403, 422)},
     )

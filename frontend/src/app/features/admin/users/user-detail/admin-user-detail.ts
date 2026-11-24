@@ -64,6 +64,13 @@ const profileOf = (u: User | undefined) => ({
   birthDate: fromIsoDay(u?.birthDate),
 });
 
+/** Where a person's page leads back to, by role. */
+const BACK = {
+  customer: { link: '/admin/customers', label: 'All customers' },
+  restaurant: { link: '/admin/restaurant-accounts', label: 'All restaurant accounts' },
+  delivery: { link: '/admin/delivery-partner-accounts', label: 'All delivery partner accounts' },
+};
+
 /**
  * One customer, restaurant partner or rider: profile, order totals, saved addresses and recent
  * orders. /admin/users/:id shows it; /admin/users/:id/edit edits the name, date of birth and
@@ -104,14 +111,20 @@ export class AdminUserDetail {
   /** Route data: true on the edit page. */
   readonly edit = input(false, { transform: booleanAttribute });
   /**
-   * Route data: the list this page belongs to (Customers or Users). Routes without it bind
-   * `undefined`, which would override a plain default, hence the transform.
+   * Route data: where this page lives (/admin/customers, or /admin/users for any account).
+   * Routes without it bind `undefined`, which would override a plain default, hence the transform.
    */
   readonly base = input('/admin/users', {
     transform: (v: string | undefined) => v ?? '/admin/users',
   });
 
   protected readonly roleMeta = ROLE_META;
+  /** "← All …": the page's own list, or the list for this person's role. */
+  protected readonly back = computed(() => {
+    if (this.base() === '/admin/customers') return BACK.customer;
+    const role = this.data()?.user.role;
+    return role && role in BACK ? BACK[role as keyof typeof BACK] : BACK.customer;
+  });
   protected readonly statusMeta = USER_STATUS_META;
   protected readonly genderLabel = GENDER_LABEL;
   protected readonly fromIsoDay = fromIsoDay;

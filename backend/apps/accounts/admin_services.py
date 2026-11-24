@@ -20,7 +20,6 @@ from apps.orders.models import Order, OrderStatus
 from apps.rbac.roles import (
     ADMIN_ROLE_VALUES,
     ADMIN_ROLES,
-    MEMBER_ROLE_VALUES,
     MEMBER_ROLES,
     STAFF_ADMIN_ROLES,
     Permission,
@@ -426,26 +425,21 @@ def id_search(search: str) -> Q:
 
 
 # --- every member (the Users page) ---------------------------------------------------------------
-MEMBER_FACETS = (Facet("role", values=MEMBER_ROLE_VALUES), USER_STATUS_FACET)
-
-
 def list_members(actor: User, query: dict[str, Any], page: Page) -> dict[str, Any]:
     """
-    Customers, restaurant partners and riders: only the kinds this admin may view (asking for
-    another kind is a 403). `role` and `status` take several values; search, joined days and the
-    account sorts work as on the customers list.
+    Customers, restaurant partners and riders this admin may view (another kind is a 403), newest
+    first; `role`, `status` and `search` narrow it. The admin dashboard counts each role with it.
     """
     roles = viewable_roles(actor)
-    require(bool(roles) and set(query.get("role") or ()) <= set(roles))
-
-    def build(q: dict[str, Any]) -> QuerySet[User]:
-        return _accounts(User.objects.filter(role__in=roles), q, MEMBER_FACETS)
-
-    items, meta = paginate(
-        build(query).order_by(*ACCOUNT_SORTS[query.get("sort") or "newest"]), page
-    )
-    result = {"items": [user_json(u) for u in items], "pagination": meta}
-    return with_facets(result, query, build, MEMBER_FACETS)
+    role = query.get("role")
+    require(bool(roles) and (not role or role in roles))
+    qs = User.objects.filter(role__in=[role] if role else roles)
+    if query.get("status"):
+        qs = qs.filter(status=query["status"])
+    if search := (query.get("search") or "").strip():
+        qs = qs.filter(person_search(search) | id_search(search))
+    items, meta = paginate(qs.order_by(*ACCOUNT_SORTS["newest"]), page)
+    return {"items": [user_json(u) for u in items], "pagination": meta}
 
 
 CUSTOMER_FACETS = (

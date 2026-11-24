@@ -1,12 +1,7 @@
 <bb-page-header
   [title]="'Hello, ' + (user()?.name?.split(' ')?.[0] ?? 'Admin')"
   subtitle="Overview of BiteBox business and accounts."
->
-  <a class="bb-btn" routerLink="/admin/users">
-    <np-icon name="users" />
-    Manage users
-  </a>
-</bb-page-header>
+/>
 
 @if (error()) {
   <div class="bb-alert error" role="alert">
@@ -104,8 +99,7 @@
     @for (card of stats(); track card.role) {
       <a
         class="bb-card stat"
-        [routerLink]="card.role === 'admin' ? '/admin/admins' : '/admin/users'"
-        [queryParams]="card.role === 'admin' ? null : { role: card.role }"
+        [routerLink]="card.link"
       >
         <span class="stat-icon"
           ><np-icon [name]="card.icon | npIcon" class="mat-icon" matButtonIcon
@@ -114,48 +108,5 @@
         <span class="stat-label">{{ card.label }}</span>
       </a>
     }
-  }
-</section>
-
-<section class="bb-card recent" aria-labelledby="recent-title">
-  <div class="section-head">
-    <h2 class="bb-h3" id="recent-title">Newest accounts</h2>
-    <a class="bb-btn bb-btn--text" routerLink="/admin/users">View all</a>
-  </div>
-
-  @if (loading()) {
-    @for (i of [1, 2, 3]; track i) {
-      <span class="bb-skeleton row-skeleton"></span>
-    }
-  } @else if (recent().length === 0) {
-    <p class="bb-muted">No accounts yet.</p>
-  } @else {
-    <ul class="recent-list">
-      @for (u of recent(); track u.id) {
-        <li>
-          <a [routerLink]="['/admin/users', u.id]" [attr.aria-label]="'View ' + u.name">
-            <span class="avatar" aria-hidden="true">{{ u.name.charAt(0).toUpperCase() }}</span>
-            <span class="who">
-              <strong>{{ u.name }}</strong>
-              <span class="bb-muted">{{ u.email }}</span>
-            </span>
-            <span class="role"
-              ><span class="bb-role-chip role-{{ u.role }}">{{
-                roleMeta[u.role].label
-              }}</span></span
-            >
-            <span class="status"
-              ><span class="bb-badge {{ statusMeta[u.status].tone }}">{{
-                statusMeta[u.status].label
-              }}</span></span
-            >
-            <time class="bb-muted when" [attr.datetime]="u.createdAt">{{
-              u.createdAt | date: 'mediumDate'
-            }}</time>
-            <np-icon name="chevron-right" class="mat-icon chevron" />
-          </a>
-        </li>
-      }
-    </ul>
   }
 </section>

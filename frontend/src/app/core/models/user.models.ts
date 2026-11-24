@@ -164,13 +164,6 @@ export const ROLE_META: Record<
 /** The permission family of each member role (customers:edit, riders:status...). */
 export const MEMBER_KIND = { customer: 'customers', restaurant: 'restaurants', delivery: 'riders' } as const;
 
-/** The permission to see each kind of member account (Account management). */
-export const MEMBER_VIEW_PERMISSION: Record<'customer' | 'restaurant' | 'delivery', Permission> = {
-  customer: 'customers:view',
-  restaurant: 'restaurants:view',
-  delivery: 'riders:view',
-};
-
 export const initialsOf = (name = ''): string =>
   name
     .split(/\s+/)
