@@ -1,15 +1,18 @@
-// Same look as the boot splash in index.html (.bb-splash): keep them in step.
+// A Lottie-style loop in SVG and CSS (no animation library): the box hops with squash and
+// stretch, its lid pops open with rising steam, it blinks, sparkles twinkle, dashes run below.
+// Same artwork and timing as the launch splash in index.html (.bb-splash): keep them in step.
 :host {
   display: grid;
   place-items: center;
+  --loop: 1.6s;
 }
 
-// Over the page: a soft veil with the loader in the middle (phones and desktops alike).
+// Over the page: a soft veil with the loader in the middle.
 :host(.overlay) {
   position: fixed;
   inset: 0;
   z-index: 9999; // under the page-loader bar, over everything else
-  background: color-mix(in srgb, var(--bb-bg, #f5f3f7) 70%, transparent);
+  background: color-mix(in srgb, var(--bb-bg) 70%, transparent);
   backdrop-filter: blur(2px);
   animation: fade-in 0.2s ease-out;
 }
@@ -17,31 +20,89 @@
 .loader {
   display: grid;
   justify-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 
-.box {
-  width: clamp(56px, 16vw, 72px);
+.mascot {
+  width: clamp(88px, 24vw, 112px);
   height: auto;
-  filter: drop-shadow(0 10px 18px rgb(46 26 61 / 25%));
+  overflow: visible;
 
-  .tile {
-    fill: var(--bb-brand, #2e1a3d);
+  .body,
+  .lid {
+    fill: var(--bb-amber);
   }
-  .lid,
-  .body {
-    fill: var(--bb-amber, #ffb52e);
+  .eye {
+    fill: var(--bb-brand);
   }
   .smile {
     fill: none;
-    stroke: var(--bb-brand, #2e1a3d);
+    stroke: var(--bb-brand);
     stroke-width: 3.4;
     stroke-linecap: round;
   }
-  .lid {
-    transform-box: fill-box;
-    transform-origin: left bottom;
-    animation: lid 1.2s ease-in-out infinite;
+  .puff {
+    fill: none;
+    stroke: color-mix(in srgb, var(--bb-amber) 70%, var(--bb-surface));
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+  .spark {
+    fill: var(--bb-amber);
+  }
+  .shadow {
+    fill: rgb(0 0 0 / 18%);
+  }
+}
+
+// Every moving part turns around its own box.
+.hop,
+.lid,
+.eye,
+.puff,
+.spark,
+.shadow {
+  transform-box: fill-box;
+}
+
+.hop {
+  transform-origin: 50% 100%;
+  animation: hop var(--loop) cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.shadow {
+  transform-origin: 50% 50%;
+  animation: shadow var(--loop) cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.lid {
+  transform-origin: 0% 100%;
+  animation: lid var(--loop) cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+}
+.puff {
+  opacity: 0;
+  transform-origin: 50% 100%;
+  animation: steam var(--loop) ease-out infinite;
+
+  &.p2 {
+    animation-delay: 0.08s;
+  }
+  &.p3 {
+    animation-delay: 0.16s;
+  }
+}
+.eye {
+  transform-origin: 50% 50%;
+  animation: blink var(--loop) linear infinite;
+}
+.spark {
+  transform-origin: 50% 50%;
+  transform: scale(0);
+  animation: twinkle var(--loop) ease-in-out infinite;
+
+  &.s2 {
+    animation-delay: 0.25s;
+  }
+  &.s3 {
+    animation-delay: 0.5s;
   }
 }
 
@@ -52,7 +113,7 @@
   height: 5px;
   overflow: hidden;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--bb-amber, #ffb52e) 25%, transparent);
+  background: color-mix(in srgb, var(--bb-amber) 25%, transparent);
 
   i {
     position: absolute;
@@ -61,7 +122,7 @@
     width: 14px;
     height: 100%;
     border-radius: 999px;
-    background: var(--bb-amber, #ffb52e);
+    background: var(--bb-amber);
     animation: dash 1.2s linear infinite;
 
     &:nth-child(2) {
@@ -73,28 +134,99 @@
   }
 }
 
+// --- Keyframes (one 1.6 s loop) ------------------------------------------------------------------
+@keyframes hop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1.07, 0.93); // landed: squashed
+  }
+  14% {
+    transform: translateY(0) scale(0.96, 1.05); // spring up
+  }
+  42% {
+    transform: translateY(-16px) scale(1, 1);
+  }
+  70% {
+    transform: translateY(0) scale(1.1, 0.9); // land
+  }
+  82% {
+    transform: translateY(0) scale(0.98, 1.02); // settle
+  }
+}
+@keyframes shadow {
+  0%,
+  70%,
+  100% {
+    transform: scale(1.08, 1);
+    opacity: 1;
+  }
+  42% {
+    transform: scale(0.65, 0.8);
+    opacity: 0.5;
+  }
+}
 @keyframes lid {
   0%,
+  22%,
   100% {
     transform: translateY(0) rotate(0);
   }
-  40% {
-    transform: translateY(-7px) rotate(-14deg);
+  44%,
+  56% {
+    transform: translateY(-9px) rotate(-26deg); // pops open at the top of the hop
   }
-  60% {
-    transform: translateY(-7px) rotate(-14deg);
+  74% {
+    transform: translateY(0) rotate(3deg); // snaps shut, overshoots
+  }
+  84% {
+    transform: translateY(0) rotate(0);
   }
 }
-
-@keyframes dash {
-  from {
-    transform: translateX(0);
+@keyframes steam {
+  0%,
+  36% {
+    opacity: 0;
+    transform: translateY(6px) scaleY(0.6);
   }
+  50% {
+    opacity: 0.9;
+    transform: translateY(0) scaleY(1);
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: translateY(-14px) scaleY(1.1);
+  }
+}
+@keyframes blink {
+  0%,
+  86%,
+  94%,
+  100% {
+    transform: scaleY(1);
+  }
+  90% {
+    transform: scaleY(0.12);
+  }
+}
+@keyframes twinkle {
+  0%,
+  30%,
+  80%,
+  100% {
+    transform: scale(0) rotate(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1) rotate(45deg);
+    opacity: 1;
+  }
+}
+@keyframes dash {
   to {
     transform: translateX(108px);
   }
 }
-
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -102,7 +234,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .box .lid,
+  .hop,
+  .shadow,
+  .lid,
+  .puff,
+  .eye,
+  .spark,
   .dashes i {
     animation: none;
   }

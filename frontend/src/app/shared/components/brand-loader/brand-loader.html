@@ -1,9 +1,26 @@
 <div class="loader">
-  <svg class="box" viewBox="0 0 64 64" aria-hidden="true">
-    <rect class="tile" width="64" height="64" rx="15" />
-    <rect class="lid" x="9" y="14" width="46" height="12" rx="4" />
-    <rect class="body" x="12" y="28.5" width="40" height="25.5" rx="5" />
-    <path class="smile" d="M25.5 38.5 Q32 44.5 38.5 38.5" />
+  <!-- The same artwork and motion as the launch splash in index.html (keep the two alike). -->
+  <svg class="mascot" viewBox="0 0 120 120" aria-hidden="true">
+    <ellipse class="shadow" cx="60" cy="108" rx="26" ry="5" />
+    <g class="sparks">
+      <path class="spark s1" d="M20 40 l2 -6 l2 6 l6 2 l-6 2 l-2 6 l-2 -6 l-6 -2 z" />
+      <path class="spark s2" d="M98 30 l1.5 -4.5 l1.5 4.5 l4.5 1.5 l-4.5 1.5 l-1.5 4.5 l-1.5 -4.5 l-4.5 -1.5 z" />
+      <path class="spark s3" d="M100 74 l1.2 -3.6 l1.2 3.6 l3.6 1.2 l-3.6 1.2 l-1.2 3.6 l-1.2 -3.6 l-3.6 -1.2 z" />
+    </g>
+    <g class="hop">
+      <g class="steam">
+        <path class="puff p1" d="M48 40 q-4 -6 0 -12 q4 -6 0 -12" />
+        <path class="puff p2" d="M60 38 q-4 -6 0 -12 q4 -6 0 -12" />
+        <path class="puff p3" d="M72 40 q-4 -6 0 -12 q4 -6 0 -12" />
+      </g>
+      <rect class="body" x="30" y="58" width="60" height="40" rx="9" />
+      <rect class="lid" x="25" y="44" width="70" height="14" rx="5" />
+      <g class="face">
+        <circle class="eye" cx="49" cy="72" r="3.2" />
+        <circle class="eye" cx="71" cy="72" r="3.2" />
+        <path class="smile" d="M52 81 Q60 88 68 81" />
+      </g>
+    </g>
   </svg>
   <span class="dashes" aria-hidden="true"><i></i><i></i><i></i></span>
   <span class="bb-sr-only">{{ label() }}</span>
