@@ -1,0 +1,286 @@
+<a class="bb-back-link" routerLink="/admin/orders"
+  ><np-icon name="arrow-left" class="mat-icon" matButtonIcon />All orders</a
+>
+
+@if (order(); as o) {
+  <!-- Summary: number, badges, total, actions and the journey tracker. -->
+  <section class="bb-card summary" [class.stopped]="!!o.cancellation">
+    <div class="summary-top">
+      <div class="title">
+        <span class="eyebrow">Order</span>
+        <div class="bb-title-row">
+          <h1>{{ o.orderNumber }}</h1>
+          <bb-order-status-chip [status]="o.status" [label]="customerLabel(o)" />
+        </div>
+        <p class="meta">
+          <np-icon name="calendar" class="mat-icon" />{{ o.createdAt | date: 'd MMM y, h:mm a' }}
+          <span class="dot"></span>
+          <np-icon name="shopping-bag" class="mat-icon" />{{ o.items.length }}
+          {{ o.items.length === 1 ? 'item' : 'items' }}
+          <span class="dot"></span>
+          <np-icon name="store" class="mat-icon" />{{ o.restaurantSnapshot.name }}
+        </p>
+      </div>
+      <div class="total">
+        <span class="eyebrow">Total</span>
+        <strong>{{ o.pricing.totalPaise | inr }}</strong>
+        @if (pay(); as p) {
+          <span class="bb-badge {{ p.tone }}">{{ p.via }} · {{ p.label }}</span>
+        }
+      </div>
+    </div>
+
+    <ol class="journey" [attr.aria-label]="'Progress of order ' + o.orderNumber">
+      @for (s of journey(); track s.label) {
+        <li class="step {{ s.state }}">
+          <span class="node"><np-icon [name]="s.icon" class="mat-icon" /></span>
+          <span class="label">{{ s.label }}</span>
+          <span class="at">{{ s.at ? (s.at | date: 'd MMM, h:mm a') : '—' }}</span>
+        </li>
+      }
+    </ol>
+
+    @if (o.cancellation; as c) {
+      <div class="stop-note" role="status">
+        <np-icon name="circle-x" class="mat-icon" />
+        <span
+          ><strong>{{ o.status === 'rejected' ? 'Rejected' : 'Cancelled' }} by {{ c.by }}</strong
+          >{{ c.reason ? ': ' + c.reason : '' }}</span
+        >
+      </div>
+    }
+
+    @if (actions().length) {
+      <div class="actions">
+        @for (a of actions(); track a.label) {
+          <np-button
+            variant="outlined"
+            [severity]="a.danger ? 'danger' : 'primary'"
+            [icon]="a.icon"
+            [label]="a.label"
+            [disabled]="busy()"
+            (clicked)="a.run(o)"
+          />
+        }
+      </div>
+    }
+  </section>
+
+  <!-- Who is involved. -->
+  <!-- Who is involved, each with a call button. -->
+  <div class="people">
+    <section class="bb-card person tone-amber">
+      <span class="icon"><np-icon name="store" class="mat-icon" /></span>
+      <div class="body">
+        <span class="eyebrow">Restaurant</span>
+        <strong>{{ o.restaurantSnapshot.name }}</strong>
+        <span class="muted">{{ o.restaurantSnapshot.address }}</span>
+      </div>
+      <ng-container *ngTemplateOutlet="call; context: { $implicit: o.restaurantSnapshot.phone }" />
+    </section>
+
+    <section class="bb-card person tone-plum">
+      <span class="icon"><np-icon name="user" class="mat-icon" /></span>
+      <div class="body">
+        <span class="eyebrow">Customer</span>
+        @let a = o.deliveryAddress;
+        <strong>{{ a.recipientName }}</strong>
+        <span class="muted"
+          >{{ a.line1 }}{{ a.line2 ? ', ' + a.line2 : '' }}, {{ a.area ? a.area + ', ' : ''
+          }}{{ a.city }} {{ a.postalCode }}</span
+        >
+      </div>
+      <ng-container *ngTemplateOutlet="call; context: { $implicit: a.phone }" />
+    </section>
+
+    <section class="bb-card person tone-teal">
+      <span class="icon"><np-icon name="bike" class="mat-icon" /></span>
+      <div class="body">
+        <span class="eyebrow">Rider</span>
+        @if (o.rider; as r) {
+          <strong>{{ r.name }}</strong>
+          <span class="muted"
+            >{{ r.vehicleType ? vehicleLabel[r.vehicleType] : ''
+            }}{{ r.vehicleNumber ? ' · ' + r.vehicleNumber : '' }}</span
+          >
+          @if (o.arrivalDistanceMeters != null) {
+            <span class="arrival" [class.far]="o.arrivedFar">
+              @if (o.arrivedFar) {
+                <np-icon name="triangle-alert" class="mat-icon" />
+              }
+              Marked arrived {{ o.arrivalDistanceMeters | distance }} from the restaurant
+            </span>
+          }
+        } @else if (o.offer; as offer) {
+          <strong>Offered to {{ offer.rider?.name }}</strong>
+          <span class="muted">until {{ offer.expiresAt | date: 'h:mm:ss a' }}</span>
+        } @else if (o.status === 'ready_for_pickup') {
+          <strong>Looking for a rider</strong>
+          <span class="muted">Retrying automatically.</span>
+        } @else {
+          <strong class="muted">Not assigned</strong>
+        }
+      </div>
+      <ng-container *ngTemplateOutlet="call; context: { $implicit: o.rider?.phone }" />
+    </section>
+  </div>
+
+  <ng-template #call let-phone>
+    @if (phone) {
+      <a class="call" [href]="'tel:' + phone" [attr.aria-label]="'Call ' + phone" [title]="phone"
+        ><np-icon name="phone" class="mat-icon"
+      /></a>
+    }
+  </ng-template>
+
+  <div class="layout">
+    <div class="main">
+      @if (onTheRoad(o)) {
+        <section class="bb-card panel">
+          <header class="panel-head">
+            <h2><np-icon name="map-pin" class="mat-icon" />Live position</h2>
+            <span class="muted">
+              @if (tracking.riderSeenSeconds(); as s) {
+                Updated {{ s < 120 ? s + 's' : (s / 60 | number: '1.0-0') + ' min' }} ago{{
+                  tracking.riderStale() ? ' (stale)' : ''
+                }}
+              } @else {
+                No live location yet
+              }
+            </span>
+          </header>
+          <bb-tracking-map
+            [restaurant]="tracking.restaurant()"
+            [destination]="tracking.destination()"
+            [rider]="tracking.rider()"
+            [riderStale]="tracking.riderStale()"
+            [riderAccuracy]="tracking.riderAccuracy()"
+            [radiusKm]="range.km()"
+            radiusAround="home"
+            [route]="tracking.plannedRoute()?.path ?? null"
+            [trail]="tracking.trail()"
+            [label]="'Live map for order ' + o.orderNumber"
+          />
+        </section>
+      }
+
+      <section class="bb-card panel">
+        <header class="panel-head">
+          <h2><np-icon name="shopping-bag" class="mat-icon" />Items</h2>
+          <span class="muted"
+            >{{ o.items.length }} {{ o.items.length === 1 ? 'item' : 'items' }}</span
+          >
+        </header>
+        <ul class="items">
+          @for (item of o.items; track item.foodItem) {
+            <li>
+              <bb-veg-badge [veg]="item.isVeg" />
+              <span class="name">{{ item.name }}</span>
+              <span class="qty">× {{ item.quantity }}</span>
+              <span class="price">{{ item.lineTotalPaise | inr }}</span>
+            </li>
+          }
+        </ul>
+        @if (o.note) {
+          <p class="note"><np-icon name="message-square" class="mat-icon" />{{ o.note }}</p>
+        }
+        <div class="bill">
+          <bb-bill-summary
+            [pricing]="o.pricing"
+            [couponCode]="o.coupon?.code"
+            [discounts]="o.discounts"
+            [distanceMeters]="o.distanceMeters"
+            [coinsRedeemed]="o.coins?.redeemed"
+          />
+        </div>
+      </section>
+
+      <section class="bb-card panel">
+        <header class="panel-head">
+          <h2><np-icon name="credit-card" class="mat-icon" />Payment</h2>
+          @if (pay(); as p) {
+            <span class="bb-badge {{ p.tone }}">{{ p.label }}</span>
+          }
+        </header>
+        <dl class="facts">
+          @for (f of paymentFacts(); track f.label) {
+            <div>
+              <dt>{{ f.label }}</dt>
+              <dd>{{ f.value }}</dd>
+            </div>
+          }
+        </dl>
+        @if (o.payment?.failureReason; as reason) {
+          <p class="note warn"><np-icon name="info" class="mat-icon" />{{ reason }}</p>
+        }
+        @if (o.payment?.refunds?.length) {
+          <ul class="refunds">
+            @for (r of o.payment!.refunds!; track r.id) {
+              <li>
+                <span class="icon-sm"><np-icon name="undo-2" class="mat-icon" /></span>
+                <span class="grow">
+                  <strong>{{ r.amountPaise | inr }}</strong>
+                  <span class="muted"
+                    >{{ r.createdAt | date: 'd MMM, h:mm a'
+                    }}{{ r.reason ? ' · ' + r.reason : '' }}</span
+                  >
+                </span>
+                <span class="bb-badge {{ paymentTone(r.status) }}">{{
+                  refundLabel[r.status]
+                }}</span>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    </div>
+
+    <aside class="side">
+      <section class="bb-card panel">
+        <header class="panel-head">
+          <h2><np-icon name="truck" class="mat-icon" />Delivery</h2>
+        </header>
+        <dl class="facts one">
+          @for (f of deliveryFacts(); track f.label) {
+            <div>
+              <dt>{{ f.label }}</dt>
+              <dd>{{ f.value }}</dd>
+            </div>
+          }
+        </dl>
+      </section>
+
+      <section class="bb-card panel">
+        <header class="panel-head">
+          <h2><np-icon name="history" class="mat-icon" />Activity</h2>
+        </header>
+        <ol class="timeline">
+          @for (h of o.statusHistory; track $index; let lastStep = $last) {
+            <li
+              [class.latest]="lastStep"
+              [class.bad]="h.status === 'cancelled' || h.status === 'rejected'"
+              [class.good]="h.status === 'delivered'"
+            >
+              <span class="mark"></span>
+              <span class="what">{{ statusLabel[h.status] }}</span>
+              <span class="when">{{ h.at | date: 'd MMM, h:mm a' }}</span>
+              @if (h.note) {
+                <span class="muted">{{ h.note }}</span>
+              }
+            </li>
+          }
+        </ol>
+      </section>
+    </aside>
+  </div>
+} @else if (error(); as message) {
+  <div class="bb-alert error" role="alert">
+    <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span
+      >{{ message }} <button class="bb-link-button" (click)="load()">Retry</button></span
+    >
+  </div>
+} @else {
+  <span class="bb-skeleton" style="height: 220px"></span>
+  <span class="bb-skeleton" style="height: 120px"></span>
+  <span class="bb-skeleton" style="height: 320px"></span>
+}

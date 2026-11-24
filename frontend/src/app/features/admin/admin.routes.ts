@@ -237,6 +237,13 @@ export const ADMIN_ROUTES: Routes = [
     loadComponent: () => import('./orders/admin-orders').then((m) => m.AdminOrders),
   },
   {
+    path: 'orders/:id',
+    title: 'Order | BiteBox Admin',
+    canActivate: [can('orders:view')],
+    loadComponent: () =>
+      import('./orders/admin-order-detail/admin-order-detail').then((m) => m.AdminOrderDetail),
+  },
+  {
     path: 'restaurants',
     title: 'Restaurants | BiteBox Admin',
     canActivate: [can('restaurants:manage')],

@@ -21,7 +21,6 @@ import {
 } from '../../../shared/components/data-table/data-table';
 import { AuthService } from '../../../core/auth/auth.service';
 import { BbDialog } from '../../../shared/dialog/bb-dialog';
-import { openTransaction } from '../finance/transaction-dialog/transaction-dialog';
 import { openRefund } from './refund-dialog/refund-dialog';
 
 @Component({
@@ -63,7 +62,7 @@ export class AdminPayments {
     {
       label: 'Order',
       value: (p) => p.order?.orderNumber ?? 'Order removed',
-      run: (p) => this.details(p),
+      link: (p) => (p.order ? ['/admin/orders', p.order.id] : null),
       nowrap: true,
     },
     { label: 'Customer', value: (p) => p.customer?.name },
@@ -106,9 +105,6 @@ export class AdminPayments {
     },
   ];
 
-  protected details(p: AdminPayment): void {
-    openTransaction(this.dialog, p.id).subscribe();
-  }
 
   private retryable(p: AdminPayment): boolean {
     return p.refundNeeded && this.canRefund;

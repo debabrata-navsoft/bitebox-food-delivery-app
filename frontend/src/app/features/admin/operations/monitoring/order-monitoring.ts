@@ -1,5 +1,5 @@
 import { TableLabels } from '../../../../shared/directives/table-labels';
-import { BbDialog } from '../../../../shared/dialog/bb-dialog';
+import { Router } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -16,7 +16,6 @@ import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
 import { Monitoring, RestaurantAvailability } from '../../../../core/models/admin-roles.models';
 import { ORDER_STATUS_LABEL, OrderStatus } from '../../../../core/models/checkout.models';
 import { InrPipe } from '../../../../shared/pipes/money.pipes';
-import { openAdminOrder } from '../../orders/admin-order-dialog/admin-order-dialog';
 
 type Loaded<T> = { data: T; error: null } | { data: null; error: string };
 const loaded = <T>(data: T): Loaded<T> => ({ data, error: null });
@@ -46,7 +45,7 @@ const failed = <T>(err: unknown, text: string): Loaded<T> => ({
 })
 export class OrderMonitoring {
   private readonly api = inject(OperationsService);
-  private readonly dialog = inject(BbDialog);
+  private readonly router = inject(Router);
   protected readonly statusLabel = ORDER_STATUS_LABEL;
 
   /** Re-read on every order event, with a 20 s fallback poll while the tab is visible. */
@@ -136,6 +135,6 @@ export class OrderMonitoring {
   protected readonly updatedAt = computed(() => this.board()?.data?.at ?? null);
 
   protected open(orderId: string): void {
-    openAdminOrder(this.dialog, orderId).subscribe();
+    void this.router.navigate(['/admin/orders', orderId]);
   }
 }

@@ -18,7 +18,7 @@ import {
   STATUS_LABEL,
   subjectLabel,
 } from '../../../../core/models/review.models';
-import { openAdminOrder } from '../../orders/admin-order-dialog/admin-order-dialog';
+import { Router } from '@angular/router';
 import { openReviewHistory } from '../admin-review-dialog/admin-review-dialog';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 
@@ -53,6 +53,7 @@ export class AdminOrderReviewsDialog {
   private readonly orderId = inject<string>(MAT_DIALOG_DATA);
   private readonly reviews = inject(ReviewService);
   private readonly dialog = inject(MatDialog);
+  private readonly router = inject(Router);
   private readonly bbDialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
 
@@ -130,7 +131,8 @@ export class AdminOrderReviewsDialog {
   }
 
   protected openOrder(): void {
-    openAdminOrder(this.bbDialog, this.orderId).subscribe();
+    this.dialog.closeAll();
+    void this.router.navigate(['/admin/orders', this.orderId]);
   }
 
   /** The API answers with the moderated review; swap it in instead of reloading the order. */

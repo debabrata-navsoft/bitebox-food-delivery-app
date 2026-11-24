@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import { IconComponent } from 'nexprime';
 import { AdminOrdersService } from '../../../core/services/order-management.service';
 import { ListToolbar } from '../../../shared/components/list-toolbar/list-toolbar';
@@ -22,7 +21,6 @@ import {
   DataTable,
   TableColumn,
 } from '../../../shared/components/data-table/data-table';
-import { openAdminOrder } from './admin-order-dialog/admin-order-dialog';
 
 /** Whether the customer has paid: [label, badge tone]. Cash is "Not paid" until delivery. */
 const PAYMENT_BADGE: Record<PaymentStatus, [string, string]> = {
@@ -51,7 +49,6 @@ const PAYMENT_BADGE: Record<PaymentStatus, [string, string]> = {
 })
 export class AdminOrders {
   private readonly api = inject(AdminOrdersService);
-  private readonly dialog = inject(BbDialog);
   protected readonly statusLabel = customerStatusLabel;
   protected readonly payment = PAYMENT_BADGE;
 
@@ -75,7 +72,7 @@ export class AdminOrders {
   protected readonly list = this.orders.list;
 
   protected readonly columns: TableColumn<Order>[] = [
-    { label: 'Order', value: (o) => o.orderNumber, run: (o) => this.open(o.id), nowrap: true },
+    { label: 'Order', value: (o) => o.orderNumber, link: (o) => ['/admin/orders', o.id], nowrap: true },
     { label: 'Restaurant', value: (o) => o.restaurantSnapshot.name, sub: itemCount },
     { label: 'Placed', date: (o) => o.createdAt, dateFormat: DATE_TIME, nowrap: true },
     { label: 'Payment', value: (o) => (o.paymentMethod === 'cod' ? 'Cash' : 'Online') },
@@ -83,7 +80,4 @@ export class AdminOrders {
     { label: 'Status', key: 'status' },
   ];
 
-  protected open(id: string): void {
-    openAdminOrder(this.dialog, id).subscribe(() => this.list.reload());
-  }
 }

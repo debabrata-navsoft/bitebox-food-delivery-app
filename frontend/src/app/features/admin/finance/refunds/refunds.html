@@ -18,7 +18,11 @@
     />
   </ng-template>
   <ng-template [bbCellOf]="list" bbCell="order" let-r>
-    <button type="button" class="bb-link-button" (click)="details(r)">{{ r.order?.orderNumber ?? 'Order removed' }}</button>
+    @if (r.order; as o) {
+      <a class="bb-link-button" [routerLink]="['/admin/orders', o.id]">{{ o.orderNumber }}</a>
+    } @else {
+      Order removed
+    }
     @if (r.order?.reason) {
       <span class="sub">{{ r.order!.reason }}</span>
     }

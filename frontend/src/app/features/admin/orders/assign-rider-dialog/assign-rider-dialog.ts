@@ -1,15 +1,15 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { ButtonComponent, IconComponent, SelectComponent, SelectOption } from 'nexprime';
-import { AdminOrdersService } from '../../../../../core/services/order-management.service';
+import { AdminOrdersService } from '../../../../core/services/order-management.service';
 import {
   BB_DIALOG_DATA,
   BbDialog,
   BbDialogRef,
   BbDialogTitle,
-} from '../../../../../shared/dialog/bb-dialog';
-import { VEHICLE_LABEL } from '../../../../../core/models/checkout.models';
-import { AdminOrder } from '../../../../../core/models/order-management.models';
+} from '../../../../shared/dialog/bb-dialog';
+import { VEHICLE_LABEL } from '../../../../core/models/checkout.models';
+import { AdminOrder } from '../../../../core/models/order-management.models';
 
 /** Choose an online, free rider for a waiting order (manual assignment); closes with the id. */
 @Component({

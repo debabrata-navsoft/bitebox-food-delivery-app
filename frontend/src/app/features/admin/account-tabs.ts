@@ -38,10 +38,7 @@ import { AdminPayment, PAYMENT_STATUS_LABEL, PROVIDER_LABEL, paymentTone } from 
 import { AdminOrderReviews } from '../../core/models/review.models';
 import { AdminCoinTransaction, SOURCE_LABEL, TXN_TYPE_LABEL, coinChange } from '../../core/models/rewards.models';
 import { dateText } from '../../shared/utils/dates';
-import { openAdminOrder } from './orders/admin-order-dialog/admin-order-dialog';
 import { changeLines } from './audit-log/audit-log';
-import { openTransaction } from './finance/transaction-dialog/transaction-dialog';
-import { BbDialog } from '../../shared/dialog/bb-dialog';
 
 const FAILED = new Set(['cancelled', 'rejected']);
 
@@ -67,7 +64,6 @@ export function accountTabs() {
     dateFormat: DATE_YEAR_TIME,
   });
   const router = inject(Router);
-  const dialog = inject(BbDialog);
   const orders = inject(AdminOrdersService);
   const payments = inject(ReportsService);
   const rewards = inject(AdminRewardsService);
@@ -82,13 +78,13 @@ export function accountTabs() {
 
   return {
     /** Orders of a customer, a restaurant or a rider; each opens its details. */
-    orders: (by: 'customer' | 'restaurant' | 'rider', id: Id, onChange?: () => void): ListTab<Order> => ({
+    orders: (by: 'customer' | 'restaurant' | 'rider', id: Id): ListTab<Order> => ({
       id: 'orders',
       label: by === 'rider' ? 'Deliveries' : 'Orders',
       needs: 'orders:view',
       empty: 'No orders yet.',
       fetch: (page, limit) => orders.list({ [by]: id(), page, limit }),
-      open: (o) => openAdminOrder(dialog, o.id).subscribe(() => onChange?.()),
+      open: (o) => void router.navigate(['/admin/orders', o.id]),
       columns: [
         {
           label: 'Order',
@@ -113,8 +109,8 @@ export function accountTabs() {
       needs: 'finance:view',
       empty: 'No payments yet.',
       fetch: (page, limit) => payments.payments({ customer: customer(), page, limit }),
-      // The same payment details as Finance → Transactions.
-      open: (p) => openTransaction(dialog, p.id).subscribe(),
+      // Each payment opens its order's page, as on Finance → Transactions.
+      open: (p) => p.order && void router.navigate(['/admin/orders', p.order.id]),
       columns: [
         { label: 'Order', value: (p) => p.order?.orderNumber, sub: (p) => day(p.createdAt, DATE_YEAR_TIME) },
         { label: 'Method', value: (p) => (p.method === 'cod' ? 'Cash' : 'Online'), sub: (p) => PROVIDER_LABEL[p.provider] },

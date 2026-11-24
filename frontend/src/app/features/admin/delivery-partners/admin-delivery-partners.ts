@@ -17,8 +17,6 @@ import {
   riderReviewState,
 } from '../../../core/models/order-management.models';
 import { RouterLink } from '@angular/router';
-import { openAdminOrder } from '../orders/admin-order-dialog/admin-order-dialog';
-import { BbDialog } from '../../../shared/dialog/bb-dialog';
 import {
   BbCell,
   DataTable,
@@ -55,7 +53,6 @@ const RIDER_EVENTS: OrderStatus[] = [
 })
 export class AdminDeliveryPartners implements OnInit {
   private readonly api = inject(AdminOrdersService);
-  private readonly bbDialog = inject(BbDialog);
   private readonly changeStatus = riderStatusChanger();
 
   /** ?verification=pending (the dashboards' "Review" shortcut) preselects that filter. */
@@ -121,9 +118,6 @@ export class AdminDeliveryPartners implements OnInit {
     if (preset && preset in RIDER_VERIFICATION_LABEL) this.riders.panel.set({ verification: [preset] });
   }
 
-  protected openOrder(id: string): void {
-    openAdminOrder(this.bbDialog, id).subscribe(() => this.list.reload());
-  }
 
   protected toggleStatus(rider: AdminRider): void {
     this.busyId.set(rider.id);

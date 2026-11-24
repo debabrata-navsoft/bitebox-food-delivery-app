@@ -84,7 +84,7 @@ export class RiderAccount {
 
   protected readonly tab = signal('overview');
   protected readonly records = recordTabs(this.tab, (t) => [
-    t.orders('rider', this.id, () => this.account.reload()),
+    t.orders('rider', this.id),
     t.payouts('rider', this.id),
     t.reviews('rider', this.id),
     t.support(this.id, 'Complaints'),

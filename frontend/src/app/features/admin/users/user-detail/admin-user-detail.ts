@@ -54,7 +54,6 @@ import {
 import { openAccountStatus, statusChanged } from '../../../../shared/components/account-status-dialog/account-status-dialog';
 import { ImageUpload } from '../../../../shared/components/image-upload/image-upload';
 import { InrPipe } from '../../../../shared/pipes/money.pipes';
-import { openAdminOrder } from '../../orders/admin-order-dialog/admin-order-dialog';
 
 const RECENT_ORDERS = 5;
 
@@ -135,7 +134,7 @@ export class AdminUserDetail {
   // Each tab lists a different kind of record, so the list holds them loosely typed.
   protected readonly tab = linkedSignal<string>(() => (this.edit() ? 'profile' : 'overview'));
   protected readonly records = recordTabs(this.tab, (t) => [
-    t.orders('customer', this.id, () => this.recent.reload()),
+    t.orders('customer', this.id),
     t.payments(this.id),
     t.coins(this.id),
     t.reviews('customer', this.id),
@@ -239,7 +238,7 @@ export class AdminUserDetail {
   }
 
   protected openOrder(orderId: string): void {
-    openAdminOrder(this.bbDialog, orderId).subscribe(() => this.recent.reload());
+    void this.router.navigate(['/admin/orders', orderId]);
   }
 
   // Addresses (edit page): the customer's own address dialog, saving to the admin API.

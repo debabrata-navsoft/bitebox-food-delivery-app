@@ -18,8 +18,7 @@ import {
 import { datesSection, filteredList, optionsSection } from '../../../../shared/list/filtered-list';
 import { RefundRow } from '../../../../core/models/admin-roles.models';
 import { dateText } from '../../../../shared/utils/dates';
-import { openTransaction } from '../transaction-dialog/transaction-dialog';
-import { BbDialog } from '../../../../shared/dialog/bb-dialog';
+import { RouterLink } from '@angular/router';
 
 /**
  * Refund management. Refunds happen automatically when a paid online order is cancelled; this
@@ -27,7 +26,7 @@ import { BbDialog } from '../../../../shared/dialog/bb-dialog';
  */
 @Component({
   selector: 'bb-refunds',
-  imports: [DataTable, BbCell, BbEmpty, ListToolbar, ListEmpty, PageHeader],
+  imports: [RouterLink, DataTable, BbCell, BbEmpty, ListToolbar, ListEmpty, PageHeader],
   templateUrl: './refunds.html',
   styleUrl: './refunds.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,7 +34,6 @@ import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 export class RefundsPage {
   private readonly api = inject(FinanceService);
   private readonly payments = inject(ReportsService);
-  private readonly dialog = inject(BbDialog);
   private readonly notify = inject(NotificationService);
   private readonly dates = dateText();
   private readonly canRefund = inject(AuthService).can('refunds:manage');
@@ -79,9 +77,6 @@ export class RefundsPage {
     },
   ];
 
-  protected details(r: RefundRow): void {
-    openTransaction(this.dialog, r.id).subscribe();
-  }
 
   private retry(r: RefundRow): void {
     this.busy.set(r.id);
