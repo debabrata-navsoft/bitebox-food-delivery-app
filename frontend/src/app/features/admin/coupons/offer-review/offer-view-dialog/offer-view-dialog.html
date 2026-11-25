@@ -1,0 +1,49 @@
+<div class="bb-dialog__head">
+  <div>
+    <h2 bbDialogTitle>{{ title }}</h2>
+    <span class="bb-badge tone-warn">Waiting for review</span>
+  </div>
+  <button type="button" class="bb-dialog__close" aria-label="Close" (click)="ref.close()">
+    <np-icon name="x" class="mat-icon" />
+  </button>
+</div>
+
+<div class="bb-dialog__content">
+  <div class="deal">
+    <span class="deal-icon" aria-hidden="true"
+      ><np-icon name="badge-percent" class="mat-icon"
+    /></span>
+    <div>
+      <strong>{{ discount }}</strong>
+      <span>{{ conditions }}</span>
+    </div>
+  </div>
+
+  @if (offer.description) {
+    <p class="description">{{ offer.description }}</p>
+  }
+
+  <bb-info-rows [rows]="rows" />
+
+  @if (terms.length) {
+    <section class="terms">
+      <h3>Terms and conditions</h3>
+      <ol>
+        @for (t of terms; track $index) {
+          <li>{{ t }}</li>
+        }
+      </ol>
+    </section>
+  }
+</div>
+
+<div class="bb-dialog__actions">
+  <np-button
+    variant="soft"
+    severity="danger"
+    icon="x"
+    label="Reject"
+    (clicked)="ref.close('reject')"
+  />
+  <np-button severity="success" icon="check" label="Approve" (clicked)="ref.close('approve')" />
+</div>

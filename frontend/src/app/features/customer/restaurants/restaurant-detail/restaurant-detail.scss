@@ -115,11 +115,10 @@
   padding-block: var(--bb-space-5) var(--bb-space-7);
 
   @include bp.desktop-up {
-    grid-template-columns: minmax(0, 1fr) 320px;
     align-items: start;
 
     &.with-nav {
-      grid-template-columns: 200px minmax(0, 1fr) 320px;
+      grid-template-columns: 250px minmax(0, 1fr);
     }
   }
 }
@@ -295,126 +294,161 @@
   border-radius: 999px;
 }
 
-// Phones and tablets: a bar pinned above the bottom tab bar.
-// Desktop shows the cart panel beside the menu instead.
-.cart-bar {
+// The cart: a green bar pinned to the bottom (above the tab bar on phones); its caret opens the
+// white list of dishes above it, over a dimmed page.
+.cart-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  background: rgb(0 0 0 / 35%);
+}
+
+.cart-dock {
   position: sticky;
   bottom: var(--bb-tab-bar);
   z-index: 5;
   background: var(--bb-success-solid);
   color: #fff;
-  box-shadow: 0 -4px 16px rgb(0 0 0 / 12%);
+  box-shadow: 0 -6px 20px rgb(0 0 0 / 10%);
 
+  // No tab bar on desktop: the bar sits at the very bottom.
   @include bp.desktop-up {
-    display: none;
+    bottom: 0;
+  }
+
+  // The shared outlined button draws its outline and text from --btn / --btn-text.
+  .bb-btn--outlined {
+    --btn: #fff;
+    --btn-text: #fff;
   }
 }
 
-.cart-panel {
-  display: none;
+.cart-sheet {
+  max-height: min(42dvh, 320px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bb-surface);
+  color: var(--bb-ink);
+}
 
-  @include bp.desktop-up {
-    display: flex;
-    flex-direction: column;
-    gap: var(--bb-space-3);
-    position: sticky;
-    top: 88px;
-    max-height: calc(100vh - 112px);
-  }
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-block: var(--bb-space-2);
+  border-bottom: 1px solid var(--bb-border);
+  background: var(--bb-surface);
 
   h2 {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 1.05rem;
   }
 }
 
 .cart-lines {
-  list-style: none;
   margin: 0;
   padding: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: var(--bb-space-3);
+  list-style: none;
 
   li {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas:
-      'badge name name'
-      '. stepper total';
     align-items: center;
-    gap: var(--bb-space-1) var(--bb-space-2);
-    padding-bottom: var(--bb-space-3);
-    border-bottom: 1px dashed var(--bb-border);
-
-    &.unavailable {
-      opacity: 0.55;
-    }
+    gap: var(--bb-space-3);
+    padding-block: var(--bb-space-2);
   }
-
-  bb-veg-badge {
-    grid-area: badge;
+  li + li {
+    border-top: 1px solid var(--bb-border);
   }
-
-  bb-qty-stepper {
-    grid-area: stepper;
-    justify-self: start;
+  .unavailable .line-name {
+    opacity: 0.6;
   }
 }
 
 .line-name {
-  grid-area: name;
+  display: grid;
   font-weight: 600;
-  font-size: 0.92rem;
-}
 
-.line-total {
-  grid-area: total;
-  font-weight: 700;
-}
-
-.cart-subtotal {
-  display: flex;
-  justify-content: space-between;
-  font-size: 1rem;
-}
-
-.cart-note {
-  margin: 0;
-  font-size: 0.8rem;
-}
-
-.checkout {
-  width: 100%;
-}
-
-.cart-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--bb-space-2);
-  padding: var(--bb-space-5) 0;
-  text-align: center;
-  color: var(--bb-ink-muted);
-
-  np-icon {
-    --bb-icon-size: 40px;
-    color: var(--bb-amber-600);
-  }
-
-  p {
-    margin: 0;
-    font-size: 0.9rem;
+  small {
+    color: var(--bb-danger);
+    font-size: 0.8rem;
+    font-weight: 500;
   }
 }
 
-.cart-bar-inner {
+.line-end {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--bb-space-3);
+  font-size: 0.9rem;
+
+  strong {
+    min-width: 64px;
+    text-align: right;
+  }
+}
+
+.cart-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--bb-space-2) var(--bb-space-4);
   padding-block: var(--bb-space-3);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--bb-space-3);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+// A small square button, tinted from the text colour (so it suits the white list and the green bar).
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: var(--bb-radius-sm);
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  color: inherit;
+  cursor: pointer;
+  --bb-icon-size: 16px;
+}
+
+.subtotal {
+  margin-left: auto;
+  font-weight: 600;
+}
+
+.cart-actions {
+  display: flex;
+  gap: var(--bb-space-2);
+
+  .bb-btn {
+    min-width: 140px;
+  }
+
+  // Phones: the buttons take their own full-width row.
+  @include bp.phone-only {
+    flex-basis: 100%;
+
+    .bb-btn {
+      flex: 1;
+      min-width: 0;
+    }
+  }
 }
 
 .dish-rating {
@@ -459,7 +493,7 @@
   gap: var(--bb-space-2);
 
   &.above-cart {
-    bottom: calc(var(--bb-tab-bar) + 72px);
+    bottom: calc(var(--bb-tab-bar) + 120px);
   }
 
   @include bp.desktop-up {

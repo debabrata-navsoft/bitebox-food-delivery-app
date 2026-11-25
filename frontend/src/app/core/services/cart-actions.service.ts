@@ -48,6 +48,24 @@ export class CartActions {
       .subscribe({ error: (err: unknown) => this.notify.error(errorMessage(err)) });
   }
 
+  /** Empties the cart after the customer confirms. */
+  clear(): void {
+    confirmed(
+      this.bbDialog,
+      {
+        title: 'Clear your cart?',
+        message: 'All dishes will be removed from your cart.',
+        confirmLabel: 'Clear cart',
+      },
+      '420px',
+    )
+      .pipe(
+        filter((ok) => ok === true),
+        switchMap(() => this.cart.clear()),
+      )
+      .subscribe({ error: (err: unknown) => this.notify.error(errorMessage(err)) });
+  }
+
   private confirmReplace(message: string): Observable<true> {
     return confirmed(
       this.bbDialog,

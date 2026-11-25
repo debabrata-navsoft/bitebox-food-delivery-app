@@ -60,19 +60,31 @@ class PublicListView(PublicCacheMixin, APIView):
     @extend_schema(
         tags=["Catalogue"],
         parameters=[
-            OpenApiParameter(n, str)
-            for n in (
+            OpenApiParameter(
                 "search",
-                "cuisine",
-                "category",
-                "veg",
-                "sort",
-                "lat",
-                "lng",
-                "radiusKm",
-                "page",
-                "limit",
-            )
+                str,
+                description="A name, cuisine, dish or place (street, area, city, PIN code). "
+                "Comma-separated parts must all match, e.g. `Park Street, biryani`.",
+            ),
+            *(
+                OpenApiParameter(n, str)
+                for n in [
+                    "cuisine",
+                    "category",
+                    "veg",
+                    "sort",
+                    "lat",
+                    "lng",
+                    "radiusKm",
+                    "minRating",
+                    "costMin",
+                    "costMax",
+                    "openNow",
+                    "offers",
+                    "page",
+                    "limit",
+                ]
+            ),
         ],
         responses={200: ANY, **errors(400, 422)},
     )

@@ -449,6 +449,23 @@ def test_searches_restaurants_by_name_cuisine_and_dish() -> None:
     assert _names("/api/v1/restaurants?search=lassi") == ["Spice Route Kitchen"]
 
 
+def test_searches_restaurants_by_place() -> None:
+    seed_catalog()  # Spice Route Kitchen, 100 Feet Road, Indiranagar, Bengaluru 560038
+    other = other_restaurant("Pizza Planet")
+    Restaurant.objects.filter(pk=other["restaurant"]["id"]).update(
+        line1="7 Lake View Lane", area="Maple Town", city="Riverside", postal_code="700016"
+    )
+    assert _names("/api/v1/restaurants?search=maple town") == ["Pizza Planet"]
+    assert _names("/api/v1/restaurants?search=riverside") == ["Pizza Planet"]
+    assert _names("/api/v1/restaurants?search=lake view") == ["Pizza Planet"]
+    assert _names("/api/v1/restaurants?search=700016") == ["Pizza Planet"]
+    assert _names("/api/v1/restaurants?search=indiranagar") == ["Spice Route Kitchen"]
+    # Comma-separated parts must all match: a place and a dish or a cuisine.
+    assert _names("/api/v1/restaurants?search=Maple Town, Riverside") == ["Pizza Planet"]
+    assert _names("/api/v1/restaurants?search=indiranagar, lassi") == ["Spice Route Kitchen"]
+    assert _names("/api/v1/restaurants?search=riverside, lassi") == []
+
+
 def test_filters_by_veg_cuisine_and_category() -> None:
     seed_catalog()
     other = other_restaurant("Green Leaf")
@@ -457,6 +474,44 @@ def test_filters_by_veg_cuisine_and_category() -> None:
     assert _names("/api/v1/restaurants?cuisine=biryani") == ["Spice Route Kitchen"]
     desserts = FoodCategory.objects.get(slug="desserts")
     assert _names(f"/api/v1/restaurants?category={desserts.pk}") == ["Spice Route Kitchen"]
+
+
+def test_filters_by_rating_cost_cuisines_open_now_and_offers() -> None:
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.coupons.models import ApprovalStatus, Coupon, DiscountType
+
+    seed_catalog()  # Spice Route Kitchen
+    other = Restaurant.objects.get(pk=other_restaurant("Pizza Planet")["restaurant"]["id"])
+    spice = Restaurant.objects.exclude(pk=other.pk).get()
+    Restaurant.objects.filter(pk=spice.pk).update(rating_average=4.6, cost_for_two_paise=60000)
+    Restaurant.objects.filter(pk=other.pk).update(rating_average=3.9, cost_for_two_paise=25000)
+    names = lambda q: sorted(_names(f"/api/v1/restaurants?{q}"))  # noqa: E731
+    assert names("minRating=4") == ["Spice Route Kitchen"]
+    assert names("costMax=30000") == ["Pizza Planet"]
+    assert names("costMin=30000&costMax=70000") == ["Spice Route Kitchen"]
+    # Several cuisines: any of them.
+    assert names("cuisine=biryani,mughlai") == ["Pizza Planet", "Spice Route Kitchen"]
+    # Open now: open all day vs closed for orders.
+    Restaurant.objects.filter(pk=spice.pk).update(
+        opening_time="00:00", closing_time="00:00", weekly_hours=None, is_accepting_orders=True
+    )
+    Restaurant.objects.filter(pk=other.pk).update(is_accepting_orders=False)
+    assert names("openNow=true") == ["Spice Route Kitchen"]
+    # Offers: only a restaurant with a live offer of its own.
+    now = timezone.now()
+    Coupon.objects.create(
+        code="PIZZA20",
+        discount_type=DiscountType.PERCENT,
+        discount_value=20,
+        valid_from=now - timedelta(days=1),
+        valid_until=now + timedelta(days=1),
+        restaurant=other,
+        approval_status=ApprovalStatus.APPROVED,
+    )
+    assert names("offers=true") == ["Pizza Planet"]
 
 
 def test_finds_nearby_restaurants_with_straight_line_distance() -> None:

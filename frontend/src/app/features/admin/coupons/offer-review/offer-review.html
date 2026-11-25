@@ -1,17 +1,37 @@
-<bb-page-header title="Review restaurant offers" subtitle="Offers restaurants submitted. They reach customers only once approved.">
-  <a class="bb-btn bb-btn--text" routerLink="/admin/coupons">
-    <np-icon name="arrow-left" class="mat-icon" matButtonIcon />All coupons
-  </a>
+<bb-page-header
+  title="Review restaurant offers"
+  subtitle="Offers restaurants submitted. They reach customers only once approved."
+>
+  <bb-detail-nav id="" [arrows]="false" backLink="/admin/coupons" />
 </bb-page-header>
 
 <bb-data-table [list]="list" [columns]="columns" label="Offers waiting for review">
   <ng-template [bbCellOf]="list" bbCell="decide" let-o>
     <div class="decide">
-      <np-button severity="success" size="small" icon="check" label="Approve" [disabled]="busy() === o.id" (clicked)="approve(o)" />
-      <np-button variant="soft" severity="danger" size="small" icon="x" label="Reject" [disabled]="busy() === o.id" (clicked)="reject(o)" />
+      <np-button
+        severity="success"
+        size="small"
+        icon="check"
+        label="Approve"
+        [disabled]="busy() === o.id"
+        (clicked)="approve(o)"
+      />
+      <np-button
+        variant="soft"
+        severity="danger"
+        size="small"
+        icon="x"
+        label="Reject"
+        [disabled]="busy() === o.id"
+        (clicked)="reject(o)"
+      />
     </div>
   </ng-template>
   <ng-template bbEmpty>
-    <bb-empty-state icon="clipboard-check" title="Nothing to review" message="New restaurant offers will appear here." />
+    <bb-empty-state
+      icon="clipboard-check"
+      title="Nothing to review"
+      message="New restaurant offers will appear here."
+    />
   </ng-template>
 </bb-data-table>

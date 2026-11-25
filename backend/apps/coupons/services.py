@@ -341,6 +341,19 @@ def restaurant_offers(restaurant: Restaurant) -> list[dict[str, Any]]:
     return [offer_json(c) for c in ordered]
 
 
+def restaurants_with_offers() -> set[str]:
+    """Restaurants with a live offer of their own (the cards' offer badge; the "Offers" filter)."""
+    ids: set[str] = set()
+    for c in (
+        visible()
+        .filter(Q(restaurant_id__isnull=False) | Q(restaurants__isnull=False))
+        .distinct()
+        .prefetch_related("restaurants")
+    ):
+        ids |= _restaurant_ids(c)
+    return ids
+
+
 def best_offers(restaurant_ids: Iterable[Any]) -> dict[str, dict[str, Any]]:
     """Restaurant cards: each restaurant's best own offer (most saved on a typical order)."""
     ids = [str(i) for i in restaurant_ids]

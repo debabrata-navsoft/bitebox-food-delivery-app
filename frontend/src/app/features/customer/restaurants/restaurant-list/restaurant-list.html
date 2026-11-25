@@ -13,70 +13,84 @@
     </p>
   </header>
 
-  <div class="toolbar">
+  <!-- Search and where to deliver -->
+  <!-- Search and delivery location, one bar -->
+  <div class="finder">
     <np-text-input
-      class="search"
+      class="search bb-input-bare"
       [formField]="filters.search"
       ariaLabel="Search restaurants"
-      placeholder="Search restaurants, cuisines or dishes"
+      placeholder="Search restaurants, dishes or a place"
       icon="search"
       clearable
     />
-    @if (categories().length) {
-      <np-select
-        class="category-select"
-        ariaLabel="Category"
-        [options]="categoryOptions()"
-        [value]="category() ?? ''"
-        (valueChange)="setParams({ category: $event || null })"
-      />
-    }
-    <np-select
-      ariaLabel="Cuisine"
-      [options]="cuisineOptions()"
-      [value]="cuisine() ?? ''"
-      (valueChange)="setParams({ cuisine: $event || null })"
-    />
-    <np-select
-      ariaLabel="Sort by"
-      [options]="sortOptions()"
-      [value]="sort() ?? (nearby() ? 'distance' : 'rating')"
-      (valueChange)="setParams({ sort: $event })"
-    />
+    <span class="divider" aria-hidden="true"></span>
+    <button
+      type="button"
+      class="location"
+      [class.on]="coords()"
+      (click)="chooseLocation()"
+      [attr.aria-label]="coords() ? 'Delivering to ' + coords()!.label + '. Change location' : null"
+    >
+      <span class="pin" aria-hidden="true"
+        ><np-icon class="mat-icon" [name]="coords() ? 'map-pin' : 'locate-fixed'"
+      /></span>
+      <span class="where">
+        <small>{{ coords() ? 'Delivering to' : 'Delivery location' }}</small>
+        <strong>{{
+          coords()?.label ??
+            (deliveryLocation() ? 'Near ' + deliveryLocation()!.label : 'Set location')
+        }}</strong>
+      </span>
+      <np-icon name="chevron-down" class="mat-icon caret" />
+    </button>
   </div>
 
-  <div class="quick-filters">
-    @if (coords(); as c) {
-      <button mat-flat-button class="bb-btn-accent location-chip" (click)="chooseLocation()" [attr.aria-label]="'Delivering to ' + c.label + '. Change location'">
-        <np-icon name="map-pin" class="mat-icon" matButtonIcon />
-        <span class="chip-label">{{ c.label }}</span>
-      </button>
-      <button mat-button (click)="showAll()">
-        <np-icon name="list" class="mat-icon" matButtonIcon />
-        Show all restaurants
-      </button>
-    } @else {
-      <button mat-stroked-button (click)="chooseLocation()">
-        <np-icon name="locate-fixed" class="mat-icon" matButtonIcon />
-        {{ deliveryLocation() ? 'Only near ' + deliveryLocation()!.label : 'Set delivery location' }}
-      </button>
-    }
-    <np-toggle class="veg-toggle" label="Pure veg" [checked]="vegOnly()" (checkedChange)="setParams({ veg: $event || null })" />
-    @if (hasFilters()) {
-      <button mat-button (click)="clearFilters()">Clear all</button>
-    }
-  </div>
-
-  @if (categories().length) {
-    <mat-chip-listbox class="categories" aria-label="Filter by food category">
-      @for (c of categories(); track c.id) {
-        <mat-chip-option [selected]="category() === c.id" (click)="toggleCategory(c.id)">
-          <np-icon [name]="(c.icon) | npIcon: 'utensils'" class="mat-icon" matChipAvatar matButtonIcon />
-          {{ c.name }}
-        </mat-chip-option>
+  <!-- Filters: the full dialog, and one-tap chips for the common ones -->
+  <div class="chips" role="toolbar" aria-label="Filters">
+    <button type="button" class="chip main" [class.on]="activeFilters()" (click)="showFilters()">
+      <np-icon class="mat-icon" name="sliders-horizontal" />Filters
+      @if (activeFilters(); as n) {
+        <span class="count">{{ n }}</span>
       }
-    </mat-chip-listbox>
-  }
+    </button>
+    <button type="button" class="chip" (click)="showFilters('sort')">
+      <np-icon class="mat-icon" name="arrow-up-down" />{{ sortLabel()
+      }}<np-icon class="mat-icon" name="chevron-down" />
+    </button>
+    <span class="sep" aria-hidden="true"></span>
+    @for (q of quickChips(); track q.label) {
+      <button
+        type="button"
+        class="chip"
+        [class.on]="q.on"
+        [attr.aria-pressed]="q.on"
+        (click)="quick(q.change)"
+      >
+        <np-icon class="mat-icon" [name]="q.icon" />{{ q.label }}
+      </button>
+    }
+    @for (r of removable(); track r.label) {
+      <button
+        type="button"
+        class="chip on"
+        (click)="quick(r.change)"
+        [attr.aria-label]="'Remove ' + r.label"
+      >
+        {{ r.label }}<np-icon class="mat-icon" name="x" />
+      </button>
+    }
+    @if (hasFilters()) {
+      <button type="button" class="clear" (click)="clearFilters()">
+        <np-icon class="mat-icon" name="x" />Clear all
+      </button>
+    }
+    @if (coords()) {
+      <button type="button" class="clear" (click)="showAll()">
+        <np-icon class="mat-icon" name="globe" />Show all restaurants
+      </button>
+    }
+  </div>
 
   @if (error()) {
     <div class="bb-alert error" role="alert">
@@ -99,7 +113,13 @@
     <bb-empty-state
       icon="storefront"
       title="No restaurants found"
-      [message]="nearby() ? 'No restaurants deliver here yet. Try another location or show all restaurants.' : hasFilters() ? 'Try removing a filter or searching for something else.' : 'Restaurants will appear here once they are approved.'"
+      [message]="
+        nearby()
+          ? 'No restaurants deliver here yet. Try another location or show all restaurants.'
+          : hasFilters()
+            ? 'Try removing a filter or searching for something else.'
+            : 'Restaurants will appear here once they are approved.'
+      "
     >
       @if (nearby()) {
         <button mat-stroked-button (click)="showAll()">Show all restaurants</button>
@@ -126,7 +146,9 @@
   @if (search()) {
     <p class="dish-link bb-muted">
       Looking for a specific dish?
-      <a routerLink="/dishes" [queryParams]="{ search: search() }">See dishes matching “{{ search() }}”</a>
+      <a routerLink="/dishes" [queryParams]="{ search: search() }"
+        >See dishes matching “{{ search() }}”</a
+      >
     </p>
   }
 </section>

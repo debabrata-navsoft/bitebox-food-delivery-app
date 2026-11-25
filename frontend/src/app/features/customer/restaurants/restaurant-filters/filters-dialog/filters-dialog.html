@@ -1,0 +1,137 @@
+<div class="bb-dialog__head">
+  <div>
+    <h2 bbDialogTitle>Filters</h2>
+    <p>{{ count() ? count() + ' applied' : 'Find the right place to order from' }}</p>
+  </div>
+  <button type="button" class="bb-dialog__close" aria-label="Close" (click)="ref.close()">
+    <np-icon class="mat-icon" name="x" />
+  </button>
+</div>
+
+<div class="body">
+  <nav class="tabs" role="tablist" aria-label="Filter groups">
+    @for (t of tabs(); track t.id) {
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="tab() === t.id"
+        [class.on]="tab() === t.id"
+        (click)="tab.set(t.id)"
+      >
+        <span class="tab-icon" aria-hidden="true"
+          ><np-icon class="mat-icon" [name]="t.icon"
+        /></span>
+        <span class="tab-text">
+          <span>{{ t.label }}</span>
+          @if (t.picked) {
+            <small>{{ t.picked }}</small>
+          }
+        </span>
+        @if (t.picked && t.id !== 'sort') {
+          <i class="dot" aria-hidden="true"></i>
+        }
+      </button>
+    }
+  </nav>
+
+  <div class="panel" role="tabpanel">
+    @let current = tabs().find((t) => t.id === tab())!;
+    <h3>{{ current.label }}</h3>
+
+    @switch (tab()) {
+      @case ('cuisines') {
+        @if (data.cuisines.length) {
+          <div class="pills" role="group" aria-label="Cuisines">
+            @for (c of data.cuisines; track c) {
+              @let on = draft().cuisines.includes(c);
+              <button
+                type="button"
+                class="pill"
+                [class.on]="on"
+                [attr.aria-pressed]="on"
+                (click)="toggleCuisine(c, !on)"
+              >
+                @if (on) {
+                  <np-icon class="mat-icon" name="check" />
+                }
+                {{ c }}
+              </button>
+            }
+          </div>
+        } @else {
+          <p class="bb-muted">No cuisines yet.</p>
+        }
+      }
+      @case ('category') {
+        <div class="pills" role="radiogroup" aria-label="Category">
+          @for (c of choices.category; track c.value) {
+            @let on = chosen().category === c.value;
+            <button
+              type="button"
+              role="radio"
+              class="pill"
+              [class.on]="on"
+              [attr.aria-checked]="on"
+              (click)="choose('category', c.value)"
+            >
+              {{ c.label }}
+            </button>
+          }
+        </div>
+      }
+      @case ('more') {
+        <div class="switches">
+          @for (s of switches; track s.key) {
+            <label class="switch" [class.on]="draft()[s.key]">
+              <span class="opt-icon" aria-hidden="true"
+                ><np-icon class="mat-icon" [name]="s.icon"
+              /></span>
+              <span class="opt-text">
+                <strong>{{ s.label }}</strong>
+                <small>{{ s.hint }}</small>
+              </span>
+              <np-toggle [checked]="draft()[s.key]" (checkedChange)="set(s.key, $event)" />
+            </label>
+          }
+        </div>
+      }
+      @default {
+        <div
+          class="options"
+          [class.grid]="tab() !== 'sort'"
+          role="radiogroup"
+          [attr.aria-label]="current.label"
+        >
+          @for (c of choices[tab()] ?? []; track c.value) {
+            @let on = chosen()[tab()] === c.value;
+            <button
+              type="button"
+              role="radio"
+              class="option"
+              [class.on]="on"
+              [attr.aria-checked]="on"
+              (click)="choose(tab(), c.value)"
+            >
+              @if (c.icon) {
+                <span class="opt-icon" aria-hidden="true"
+                  ><np-icon class="mat-icon" [name]="c.icon"
+                /></span>
+              }
+              <span class="opt-label">{{ c.label }}</span>
+              <span class="mark" aria-hidden="true"><np-icon class="mat-icon" name="check" /></span>
+            </button>
+          }
+        </div>
+      }
+    }
+  </div>
+</div>
+
+<div class="bb-dialog__actions">
+  <button type="button" class="bb-btn bb-btn--text" (click)="clear()" [disabled]="!count()">
+    Clear all
+  </button>
+  <button type="button" class="bb-btn apply" (click)="apply()">
+    Apply{{ count() ? ' (' + count() + ')' : '' }}
+  </button>
+</div>

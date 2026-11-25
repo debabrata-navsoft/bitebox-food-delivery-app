@@ -2,6 +2,7 @@ import { NpIconPipe } from '../../pipes/np-icon-name';
 import { IconComponent } from 'nexprime';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { BB_DIALOG_DATA, BB_DIALOG_TITLE_ID, BbDialog, BbDialogRef } from '../../dialog/bb-dialog';
+import { lockDialog } from '../../dialog/outside-click';
 import { CheckoutSession } from '../../../core/models/payment.models';
 import { InrPipe } from '../../pipes/money.pipes';
 
@@ -68,7 +69,7 @@ export class MockPaymentDialog {
 
   protected finish(outcome: PaymentOutcome): void {
     this.processing.set(true);
-    this.ref.disableClose = true; // no closing half-way through "processing"
+    lockDialog(this.ref); // no closing half-way through "processing"
     const saveCard = this.method() === 'card' && this.card() === 'new' && this.saveCard();
     setTimeout(() => this.ref.close({ outcome, saveCard }), 700);
   }

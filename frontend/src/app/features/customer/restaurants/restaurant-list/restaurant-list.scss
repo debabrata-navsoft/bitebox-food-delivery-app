@@ -15,76 +15,233 @@
   }
 }
 
-.toolbar {
-  display: grid;
-  gap: var(--bb-space-3);
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-
-  // Phones: search and category on full rows, then cuisine and sort side by side.
-  .search,
-  .category-select {
-    grid-column: 1 / -1;
-  }
-
-  // Tablets: category, cuisine and sort in one row.
-  @include bp.tablet-up {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-
-    .category-select {
-      grid-column: auto;
-    }
-  }
-
-  @include bp.desktop-up {
-    grid-template-columns: minmax(0, 1fr) 220px 220px;
-
-    .search {
-      grid-column: auto;
-    }
-    // Desktop filters by category with the chips below. !important beats the global
-    // `display: block !important` on NexPrime inputs (styles.scss).
-    .category-select {
-      display: none !important;
-    }
-  }
-}
-
-.quick-filters {
+// Search and delivery location in one raised bar (stacked on phones).
+.finder {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--bb-space-3);
-  margin: var(--bb-space-3) 0;
+  flex-direction: column;
+  border: 1px solid var(--bb-border);
+  border-radius: 14px;
+  background: var(--bb-surface);
+  box-shadow: 0 4px 16px -8px rgb(0 0 0 / 0.18);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 
-  // Phones: the location gets its own full-width row; below it the veg switch on the left and the
-  // text actions on the right, so "Show all restaurants" no longer reads as the switch's label.
-  @include bp.phone-only {
-    gap: var(--bb-space-2) var(--bb-space-3);
+  &:focus-within {
+    border-color: var(--bb-plum);
+    box-shadow: 0 0 0 3px var(--bb-plum-100);
+  }
 
-    .location-chip {
-      flex: 1 1 100%;
+  @include bp.tablet-up {
+    flex-direction: row;
+    align-items: center;
+    max-width: 760px;
+  }
 
-      .chip-label {
-        max-width: none;
-      }
-    }
-    .veg-toggle {
-      order: 1;
-      margin-right: auto;
-    }
-    > button:not(.location-chip) {
-      order: 2;
-    }
+  .search {
+    flex: 1;
+    min-width: 0;
   }
 }
 
-.categories {
-  display: none;
-  margin-bottom: var(--bb-space-4);
+.divider {
+  align-self: stretch;
+  height: 1px;
+  margin: 0 var(--bb-space-3);
+  background: var(--bb-border);
 
-  // Desktop only; smaller screens use the Category dropdown in the toolbar.
-  @include bp.desktop-up {
-    display: block;
+  @include bp.tablet-up {
+    width: 1px;
+    height: auto;
+    margin: var(--bb-space-2) 0;
+  }
+}
+
+// Where to deliver: an icon tile, a small caption and the place; amber once a location is set.
+.location {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-space-2);
+  min-width: 0;
+  padding: var(--bb-space-2) var(--bb-space-3);
+  border: 0;
+  border-radius: 0 0 14px 14px;
+  background: none;
+  color: var(--bb-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  @include bp.tablet-up {
+    flex: none;
+    max-width: 280px;
+    border-radius: 0 14px 14px 0;
+  }
+
+  &:hover {
+    background: var(--bb-surface-alt);
+  }
+
+  .pin {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--bb-surface-alt);
+    color: var(--bb-ink-muted);
+    --bb-icon-size: 17px;
+  }
+  &.on .pin {
+    background: var(--bb-amber-100);
+    color: var(--bb-amber-600);
+  }
+
+  .where {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+    line-height: 1.25;
+
+    small {
+      color: var(--bb-ink-muted);
+      font-size: 0.72rem;
+    }
+    strong {
+      overflow: hidden;
+      font-size: 0.92rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .caret {
+    flex: none;
+    color: var(--bb-ink-muted);
+    --bb-icon-size: 16px;
+  }
+}
+
+// One row of filter chips (scrolls sideways on small screens).
+.chips {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-space-2);
+  margin: var(--bb-space-4) 0;
+  padding: 2px 0 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  // Wider screens: wrap instead of hiding chips off the edge.
+  @include bp.tablet-up {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+}
+
+.chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--bb-border);
+  border-radius: 999px;
+  background: var(--bb-surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  color: var(--bb-ink);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s,
+    transform 0.15s;
+  --bb-icon-size: 15px;
+
+  np-icon {
+    color: var(--bb-ink-muted);
+  }
+
+  &:hover {
+    border-color: var(--bb-plum);
+    transform: translateY(-1px);
+  }
+  &:active {
+    transform: none;
+  }
+  &.on {
+    border-color: var(--bb-plum);
+    background: var(--bb-plum-100);
+    color: var(--bb-plum);
+    font-weight: 600;
+
+    np-icon {
+      color: inherit;
+    }
+  }
+
+  // "Filters": the way into the full dialog, filled in the brand colour.
+  &.main {
+    border-color: var(--bb-brand);
+    background: var(--bb-brand);
+    color: var(--bb-on-brand);
+    font-weight: 600;
+
+    np-icon {
+      color: inherit;
+    }
+  }
+
+  .count {
+    display: grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--bb-amber);
+    color: var(--bb-on-accent);
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+}
+
+.sep {
+  flex: none;
+  width: 1px;
+  height: 22px;
+  background: var(--bb-border);
+}
+
+.clear {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 var(--bb-space-2);
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--bb-plum);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  --bb-icon-size: 15px;
+
+  &:hover {
+    background: var(--bb-plum-100);
   }
 }
 
@@ -130,17 +287,4 @@
 .dish-link {
   margin-top: var(--bb-space-5);
   text-align: center;
-}
-
-.location-chip {
-  max-width: 100%;
-
-  .chip-label {
-    display: inline-block;
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    vertical-align: bottom;
-  }
 }
