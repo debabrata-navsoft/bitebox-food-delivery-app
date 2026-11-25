@@ -541,6 +541,7 @@ AUDIT_ENTRY = inline_serializer(
         "description": serializers.CharField(),
         "resource_type": serializers.CharField(),
         "resource_id": serializers.CharField(),
+        "resource_label": serializers.CharField(),
         "ip": serializers.IPAddressField(allow_null=True),
         "account_type": serializers.CharField(),
         "changes": serializers.DictField(),

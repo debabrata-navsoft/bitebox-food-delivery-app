@@ -35,6 +35,8 @@ export interface AuditEntry {
   description: string;
   resourceType?: string;
   resourceId?: string;
+  /** A readable name for the record ("Peter Cat", "Christmas (XMAS40)"), when known. */
+  resourceLabel?: string;
   /** The target account's kind, when the change was to an account. */
   accountType?: 'customer' | 'restaurant' | 'delivery' | 'admin' | '';
   /** What changed: `{ field: { from, to } }`. */

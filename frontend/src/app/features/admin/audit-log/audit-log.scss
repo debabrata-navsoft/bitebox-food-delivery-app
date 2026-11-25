@@ -1,15 +1,83 @@
-// The Changes cell (bbCell).
-.ref {
-  font-family: ui-monospace, monospace;
-  font-size: 0.75rem;
+// The Changes cell (bbCell): one row per field, then the IP address.
+.changes {
+  display: grid;
+  gap: 4px;
+  min-width: 240px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 8px;
+  }
 }
 
-.changes {
-  font-size: 0.85rem;
-  min-width: 220px;
+.field {
+  color: var(--bb-ink-muted);
+  font-weight: 600;
 
-  span {
-    display: block;
-    overflow-wrap: anywhere;
+  &::after {
+    content: ':';
   }
+}
+
+.values {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  overflow-wrap: anywhere;
+}
+
+.from,
+.arrow {
+  color: var(--bb-ink-muted);
+}
+
+.from {
+  text-decoration: line-through;
+}
+
+.to {
+  color: var(--bb-ink);
+  font-weight: 600;
+}
+
+.list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.pill {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+
+  &.added {
+    background: var(--bb-success-bg);
+    color: var(--bb-success);
+  }
+  &.removed {
+    background: var(--bb-danger-bg);
+    color: var(--bb-danger);
+  }
+}
+
+.ip {
+  display: block;
+  margin-top: 4px;
+  color: var(--bb-ink-muted);
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+}
+
+// The Account column: wide enough for "PAN card · Restaurant name" on one or two lines.
+:host ::ng-deep td.account {
+  min-width: 280px;
 }

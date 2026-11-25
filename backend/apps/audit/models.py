@@ -23,6 +23,8 @@ class AuditLog(AppendOnlyModel):
     description = models.CharField(max_length=500)
     resource_type = models.CharField(max_length=40, blank=True, default="")
     resource_id = models.CharField(max_length=64, blank=True, default="")
+    # A readable name for the record ("Peter Cat"), taken when the entry is written.
+    resource_label = models.CharField(max_length=200, blank=True, default="")
     ip = models.GenericIPAddressField(null=True, blank=True)
     account_type = models.CharField(
         max_length=16, choices=AccountType.choices, blank=True, default=""

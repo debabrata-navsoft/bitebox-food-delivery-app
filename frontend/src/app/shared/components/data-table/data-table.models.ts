@@ -58,6 +58,12 @@ export interface TableColumn<T> {
   hideLabel?: boolean;
   /** Render this column with the page's `<ng-template bbCell="key" let-row>` instead. */
   key?: string;
+  /**
+   * Header click sorts the rows on screen by this column. On by default for columns with a
+   * `value`, `paise`, `date` or `badge`; `false` turns it off; `sortBy` gives a custom cell a sort key.
+   */
+  sortable?: boolean;
+  sortBy?: (row: T) => Maybe<string | number | Date>;
 }
 
 /** Date formats for `TableColumn.dateFormat`. */
