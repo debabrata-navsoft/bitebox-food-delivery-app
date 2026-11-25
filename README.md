@@ -16,6 +16,8 @@ BiteBox is a full-stack food delivery app with four role-based panels: **Custome
 | Document | What's in it |
 |---|---|
 | **[docs/DOCUMENTATION.md](docs/DOCUMENTATION.md)** | **The complete reference:** architecture, configuration, roles and permissions, data model, business rules, realtime events, push and PWA, every API endpoint, every screen, security, testing, deployment |
+| [docs/FRONTEND.md](docs/FRONTEND.md) ([PDF](docs/BiteBox-FRONTEND-Guide.pdf)) | Frontend developer guide: Angular app structure, building blocks, live data, styling, testing, how to add a page |
+| [docs/BACKEND.md](docs/BACKEND.md) ([PDF](docs/BiteBox-BACKEND-Guide.pdf)) | Backend developer guide: Django apps, request flow, auth and permissions, order workflow, dispatch, payments, ledgers, realtime, Celery, testing |
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Symptoms, causes and fixes |
 | [docs/SECURITY.md](docs/SECURITY.md) | Security audit: findings, fixes, accepted risks and how to rerun the checks |
 | [docs/COINS_REWARDS_PLAN.md](docs/COINS_REWARDS_PLAN.md) | Design notes for coins, referrals and campaigns |
