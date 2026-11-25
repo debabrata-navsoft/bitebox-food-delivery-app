@@ -5,12 +5,21 @@
   margin: 0;
   padding: 0;
 
+  // Icon, what it is, and its status (badge + button) at the end; on phones the button goes below.
   li {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--bb-space-2) var(--bb-space-3);
     padding: var(--bb-space-3) 0;
+
+    @include bp.phone-only {
+      align-items: start;
+
+      > .row-icon {
+        grid-area: 1 / 1;
+      }
+    }
   }
 
   li + li {
@@ -33,8 +42,35 @@
 .what {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-width: 160px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+
+  // Phones: the full width (the badge sits at the end of the title line, the email gets the room).
+  @include bp.phone-only {
+    grid-area: 1 / 2 / auto / -1;
+  }
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--bb-space-2);
+
+  // Phones: the badge top-right beside the title, the button (if any) on the next line, right.
+  @include bp.phone-only {
+    display: contents;
+
+    .bb-badge {
+      grid-area: 1 / 3;
+      align-self: start;
+    }
+    np-button,
+    .small {
+      grid-area: 2 / 2 / auto / -1;
+      justify-self: end;
+    }
+  }
 }
 
 .small {
