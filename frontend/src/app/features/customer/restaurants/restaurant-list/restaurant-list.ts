@@ -1,4 +1,3 @@
-import { NpIconPipe } from '../../../../shared/pipes/np-icon-name';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -13,7 +12,6 @@ import { form } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { MatChipsModule } from '@angular/material/chips';
 import { Subscription, catchError, debounceTime, distinctUntilChanged, of } from 'rxjs';
 import { CatalogService } from '../../../../core/services/catalog.service';
 import { errorMessage } from '../../../../shared/utils/api-error';
@@ -23,33 +21,29 @@ import { LocationPickerDialog } from '../../../../shared/components/location-pic
 import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
 import { RestaurantCard } from '../../../../shared/components/restaurant-card/restaurant-card';
 import { Pagination } from '../../../../core/models/api.models';
-import { Restaurant, RestaurantQuery, RestaurantSort } from '../../../../core/models/catalog.models';
+import {
+  Restaurant,
+  RestaurantQuery,
+  RestaurantSort,
+} from '../../../../core/models/catalog.models';
+import { BbDialog } from '../../../../shared/dialog/bb-dialog';
+import {
+  CostBand,
+  COST_BANDS,
+  RestaurantFilters,
+  SORT_LABELS,
+  activeCount,
+  toParams,
+  toQuery,
+} from '../restaurant-filters/restaurant-filters';
+import { openFilters } from '../restaurant-filters/filters-dialog/filters-dialog';
 
-const SORT_LABELS: Record<RestaurantSort, string> = {
-  rating: 'Top rated',
-  fastest: 'Fastest prep',
-  costLow: 'Cost: low to high',
-  costHigh: 'Cost: high to low',
-  newest: 'Newest',
-  distance: 'Nearest',
-};
-
-import { IconComponent, SelectOption, ToggleComponent } from 'nexprime';
+import { IconComponent } from 'nexprime';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
 
 @Component({
   selector: 'bb-restaurant-list',
-  imports: [
-    ToggleComponent,
-    NP_FORM_FIELDS,
-    RouterLink,
-    MatButtonModule,
-    MatChipsModule,
-    IconComponent,
-    NpIconPipe,
-    EmptyState,
-    RestaurantCard,
-  ],
+  imports: [NP_FORM_FIELDS, RouterLink, MatButtonModule, IconComponent, EmptyState, RestaurantCard],
   templateUrl: './restaurant-list.html',
   styleUrl: './restaurant-list.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -58,6 +52,7 @@ export class RestaurantList {
   private readonly catalog = inject(CatalogService);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
+  private readonly bbDialog = inject(BbDialog);
   private readonly locations = inject(DeliveryLocationService);
   protected readonly deliveryLocation = this.locations.location;
 
@@ -66,6 +61,10 @@ export class RestaurantList {
   readonly category = input<string>();
   readonly veg = input<string>();
   readonly sort = input<RestaurantSort>();
+  readonly rating = input<string>();
+  readonly cost = input<string>();
+  readonly open = input<string>();
+  readonly offers = input<string>();
   readonly lat = input<string>();
   readonly lng = input<string>();
   readonly all = input<string>();
@@ -77,20 +76,6 @@ export class RestaurantList {
   protected readonly cuisines = toSignal(this.catalog.cuisines().pipe(catchError(() => of([]))), {
     initialValue: [],
   });
-  protected readonly cuisineOptions = computed<SelectOption[]>(() => [
-    { value: '', label: 'All cuisines' },
-    ...this.cuisines().map((c) => ({ value: c, label: c })),
-  ]);
-  /** Phones and tablets pick a category from this dropdown; desktop uses the chips. */
-  protected readonly categoryOptions = computed<SelectOption[]>(() => [
-    { value: '', label: 'All categories' },
-    ...this.categories().map((c) => ({ value: c.id, label: c.name })),
-  ]);
-  protected readonly sortOptions = computed(() =>
-    (Object.keys(SORT_LABELS) as RestaurantSort[])
-      .filter((s) => s !== 'distance' || this.nearby())
-      .map((value) => ({ value, label: SORT_LABELS[value] })),
-  );
 
   protected readonly filters = form(signal({ search: '' }));
   protected readonly restaurants = signal<Restaurant[]>([]);
@@ -113,10 +98,45 @@ export class RestaurantList {
       : null;
   });
   protected readonly nearby = computed(() => this.coords() !== null);
-  protected readonly vegOnly = computed(() => this.veg() === 'true');
-  protected readonly hasFilters = computed(
-    () => !!(this.search() || this.cuisine() || this.category() || this.vegOnly()),
+  /** The filters from the URL (sort, cuisines, rating, cost, veg, open now, offers). */
+  protected readonly picked = computed<RestaurantFilters>(() => ({
+    sort: this.sort() ?? null,
+    category: this.category() ?? null,
+    cuisines: (this.cuisine() ?? '').split(',').filter(Boolean),
+    minRating: Number(this.rating()) || null,
+    cost: this.cost() && this.cost()! in COST_BANDS ? (this.cost() as CostBand) : null,
+    veg: this.veg() === 'true',
+    openNow: this.open() === 'true',
+    offers: this.offers() === 'true',
+  }));
+  protected readonly activeFilters = computed(() => activeCount(this.picked()));
+  protected readonly sortLabel = computed(
+    () => SORT_LABELS[this.picked().sort ?? (this.nearby() ? 'distance' : 'rating')],
   );
+  /** One-tap chips that switch a common filter on or off. */
+  protected readonly quickChips = computed(() => {
+    const f = this.picked();
+    const rated = f.minRating === 4;
+    return [
+      { label: 'Offers', icon: 'badge-percent', on: f.offers, change: { offers: !f.offers } },
+      { label: 'Rating 4.0+', icon: 'star', on: rated, change: { minRating: rated ? null : 4 } },
+      { label: 'Pure veg', icon: 'leaf', on: f.veg, change: { veg: !f.veg } },
+      { label: 'Open now', icon: 'clock', on: f.openNow, change: { openNow: !f.openNow } },
+    ];
+  });
+  /** What was picked in the dialog (category, cost, each cuisine), each removable with ×. */
+  protected readonly removable = computed(() => {
+    const f = this.picked();
+    const category = this.categories().find((c) => c.id === f.category)?.name;
+    const chips: { label: string; change: Partial<RestaurantFilters> }[] = f.cuisines.map((c) => ({
+      label: c,
+      change: { cuisines: f.cuisines.filter((x) => x !== c) },
+    }));
+    if (f.cost) chips.unshift({ label: COST_BANDS[f.cost].label, change: { cost: null } });
+    if (category) chips.unshift({ label: category, change: { category: null } });
+    return chips;
+  });
+  protected readonly hasFilters = computed(() => !!(this.search() || this.activeFilters()));
   protected readonly canLoadMore = computed(() => {
     const p = this.pagination();
     return !!p && p.page < p.totalPages;
@@ -126,10 +146,7 @@ export class RestaurantList {
 
   private readonly query = computed<RestaurantQuery>(() => ({
     search: this.search() || undefined,
-    cuisine: this.cuisine() || undefined,
-    category: this.category() || undefined,
-    veg: this.vegOnly() || undefined,
-    sort: this.sort() || undefined,
+    ...toQuery(this.picked()),
     lat: this.coords()?.latitude,
     lng: this.coords()?.longitude,
     limit: 12,
@@ -161,8 +178,20 @@ export class RestaurantList {
     });
   }
 
-  protected toggleCategory(id: string): void {
-    this.setParams({ category: this.category() === id ? null : id });
+  /** A quick chip: switches one filter on or off. */
+  protected quick(change: Partial<RestaurantFilters>): void {
+    this.setParams(toParams({ ...this.picked(), ...change }));
+  }
+
+  /** The full filters (tabs: sort, cuisines, rating, cost, more); applied on Apply. */
+  protected showFilters(tab?: 'sort'): void {
+    openFilters(this.bbDialog, {
+      filters: this.picked(),
+      cuisines: this.cuisines(),
+      categories: this.categories(),
+      nearby: this.nearby(),
+      tab,
+    }).subscribe((filters) => this.setParams(toParams(filters)));
   }
 
   protected clearFilters(): void {

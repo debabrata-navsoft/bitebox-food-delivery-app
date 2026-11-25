@@ -204,7 +204,13 @@ class AcceptingOrdersInput(serializers.Serializer):
 
 
 class PublicListQuery(PageQuery):
-    cuisine = serializers.CharField(required=False, max_length=40, allow_blank=True)
+    # One cuisine, or several separated by commas (any of them).
+    cuisine = serializers.CharField(required=False, max_length=400, allow_blank=True)
+    min_rating = serializers.FloatField(required=False, min_value=0, max_value=5)
+    cost_min = serializers.IntegerField(required=False, min_value=0)  # paise, cost for two
+    cost_max = serializers.IntegerField(required=False, min_value=0)
+    open_now = QueryBoolean()
+    offers = QueryBoolean()  # only restaurants with a live offer of their own
     category = UUIDRef(message="Invalid category", required=False)
     veg = QueryBoolean()
     sort = serializers.ChoiceField(

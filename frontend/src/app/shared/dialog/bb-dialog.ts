@@ -2,6 +2,7 @@ import { DIALOG_DATA, Dialog, DialogRef } from '@angular/cdk/dialog';
 import { ComponentType } from '@angular/cdk/portal';
 import { Directive, Injectable, InjectionToken, inject } from '@angular/core';
 import { Observable, filter } from 'rxjs';
+import { closeOnEscape } from './outside-click';
 
 /**
  * Dialogs without Angular Material: the CDK dialog (overlay, focus trap, Escape, backdrop,
@@ -24,8 +25,10 @@ export interface BbDialogConfig<D> {
   data?: D;
   /** CSS width; capped to the viewport on phones. Default 440px. */
   width?: string;
-  /** Stop backdrop clicks and Escape from closing it (e.g. while a payment is in progress). */
+  /** Also stop Escape from closing it (e.g. while a payment is in progress). */
   disableClose?: boolean;
+  /** Let a click outside close it (for light pickers such as the filters; off by default). */
+  closeOnOutsideClick?: boolean;
   /** Extra class on the overlay pane, for a dialog that needs its own panel styling. */
   panelClass?: string;
 }
@@ -41,19 +44,23 @@ export class BbDialog {
     config: BbDialogConfig<D> = {},
   ): DialogRef<R, C> {
     const titleId = `bb-dialog-title-${nextId++}`;
-    return this.dialog.open<R, D, C>(component, {
+    // The CDK closes on a click outside and on Escape; most dialogs keep only Escape (added below).
+    const cdkCloses = !!config.closeOnOutsideClick && !config.disableClose;
+    const ref = this.dialog.open<R, D, C>(component, {
       data: config.data,
       width: config.width ?? '440px',
       maxWidth: 'calc(100vw - 32px)',
       maxHeight: 'calc(100dvh - 32px)',
       panelClass: ['bb-dialog-panel', ...(config.panelClass ? [config.panelClass] : [])],
       backdropClass: 'bb-dialog-backdrop',
-      disableClose: config.disableClose ?? false,
+      disableClose: !cdkCloses,
       ariaLabelledBy: titleId,
       autoFocus: 'first-tabbable',
       restoreFocus: true,
       providers: [{ provide: BB_DIALOG_TITLE_ID, useValue: titleId }],
     });
+    if (!cdkCloses && !config.disableClose) closeOnEscape(ref);
+    return ref;
   }
 
   /** Opens the dialog and emits its result once, only if it closed with one (not dismissed). */

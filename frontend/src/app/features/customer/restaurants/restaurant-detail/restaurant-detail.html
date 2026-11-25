@@ -374,55 +374,89 @@
             </section>
           }
         </div>
-
-        <!-- Desktop: the cart sits beside the menu. Phones/tablets use the bar below. -->
-        <aside class="cart-panel bb-card" aria-labelledby="cart-panel-title">
-          <h2 id="cart-panel-title">Your cart</h2>
-          @if (cartHere(); as c) {
-            <ul class="cart-lines">
-              @for (line of c.items; track line.foodItemId) {
-                <li [class.unavailable]="!line.isAvailable">
-                  <bb-veg-badge [veg]="line.isVeg" />
-                  <span class="line-name">{{ line.name }}</span>
-                  <bb-qty-stepper
-                    [quantity]="line.quantity"
-                    [label]="line.name"
-                    [disabled]="cart.busy()"
-                    (changed)="cartActions.setQuantity(line.foodItemId, $event)"
-                  />
-                  <span class="line-total">{{ line.lineTotalPaise | inr }}</span>
-                </li>
-              }
-            </ul>
-            <div class="cart-subtotal">
-              <span>Subtotal</span>
-              <strong>{{ cartSubtotal() | inr }}</strong>
-            </div>
-            <p class="bb-muted cart-note">Delivery fee and taxes are added at checkout.</p>
-            <a mat-flat-button class="bb-btn-accent checkout" routerLink="/checkout">
-              Checkout <np-icon name="arrow-right" class="mat-icon" iconPositionEnd matButtonIcon />
-            </a>
-          } @else {
-            <div class="cart-empty">
-              <np-icon name="shopping-bag" class="mat-icon" matButtonIcon />
-              <p>Your cart is empty. Add dishes from the menu to get started.</p>
-            </div>
-          }
-        </aside>
       </section>
     }
   }
 
   @if (cartHere(); as c) {
-    <div class="cart-bar" role="region" aria-label="Your cart">
-      <div class="bb-container cart-bar-inner">
-        <span>
-          <strong>{{ c.itemCount }} {{ c.itemCount === 1 ? 'item' : 'items' }}</strong> ·
-          {{ cartSubtotal() | inr }}
-        </span>
-        <a mat-flat-button class="bb-btn-accent" routerLink="/checkout"
-          >View cart <np-icon name="arrow-right" class="mat-icon" iconPositionEnd matButtonIcon
-        /></a>
+    <!-- The cart: a bar at the bottom; its caret opens the list of dishes above it. -->
+    @if (cartOpen()) {
+      <div class="cart-scrim" aria-hidden="true" (click)="cartOpen.set(false)"></div>
+    }
+    <div
+      class="cart-dock"
+      role="region"
+      aria-label="Your cart"
+      (document:keydown.escape)="cartOpen.set(false)"
+    >
+      @if (cartOpen()) {
+        <div class="cart-sheet" id="cart-sheet">
+          <div class="bb-container">
+            <div class="sheet-head">
+              <h2>Your order</h2>
+              <button
+                type="button"
+                class="icon-btn"
+                aria-label="Close the order list"
+                (click)="cartOpen.set(false)"
+              >
+                <np-icon class="mat-icon" name="x" />
+              </button>
+            </div>
+            <ul class="cart-lines">
+              @for (line of c.items; track line.foodItemId) {
+                <li [class.unavailable]="!line.isAvailable">
+                  <bb-veg-badge [veg]="line.isVeg" />
+                  <span class="line-name">
+                    {{ line.name }}
+                    @if (!line.isAvailable) {
+                      <small>Not available right now</small>
+                    }
+                  </span>
+                  <span class="line-end">
+                    <bb-qty-stepper
+                      [quantity]="line.quantity"
+                      [label]="line.name"
+                      [disabled]="cart.busy()"
+                      (changed)="cartActions.setQuantity(line.foodItemId, $event)"
+                    />
+                    <strong>{{ line.lineTotalPaise | inr }}</strong>
+                  </span>
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+      }
+      <div class="bb-container cart-bar">
+        <button
+          type="button"
+          class="toggle"
+          aria-controls="cart-sheet"
+          [attr.aria-expanded]="cartOpen()"
+          (click)="cartOpen.update((open) => !open)"
+        >
+          <span class="icon-btn" aria-hidden="true"
+            ><np-icon class="mat-icon" [name]="cartOpen() ? 'chevron-down' : 'chevron-up'"
+          /></span>
+          Your order ({{ c.itemCount }})
+        </button>
+        <span class="subtotal"
+          >Subtotal: <strong>{{ cartSubtotal() | inr }}</strong></span
+        >
+        <div class="cart-actions">
+          @if (cartOpen()) {
+            <button
+              type="button"
+              class="bb-btn bb-btn--outlined"
+              [disabled]="cart.busy()"
+              (click)="cartActions.clear()"
+            >
+              Clear cart
+            </button>
+          }
+          <a class="bb-btn bb-btn--accent" routerLink="/checkout">Continue</a>
+        </div>
       </div>
     </div>
   }

@@ -1092,6 +1092,17 @@ np-toggle.bb-label-hidden-phone .toggle-label {
   min-height: 44px;
 }
 
+// A text input inside a bar that draws its own border (`class="bb-input-bare"`).
+np-text-input.bb-input-bare .ui-control {
+  &,
+  &:hover:not(:disabled),
+  &:focus {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
 // The date and time pickers also fix the width of their inner field.
 np-calendar .calendar-field,
 np-time-picker .time-picker-field {

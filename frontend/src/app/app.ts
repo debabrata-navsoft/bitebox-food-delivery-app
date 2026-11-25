@@ -4,6 +4,7 @@ import { PageLoader } from './core/services/page-loader';
 import { InstallPromptService } from './core/services/install-prompt.service';
 import { PushNotificationService } from './core/services/push-notification.service';
 import { ThemeService } from './core/services/theme.service';
+import { keepMaterialDialogsOpenOnOutsideClick } from './shared/dialog/outside-click';
 import { AppStatus } from './shared/components/app-status/app-status';
 
 @Component({
@@ -23,5 +24,7 @@ export class App {
     inject(PushNotificationService);
     // Keeps <html data-theme> in step with the stored choice and the device setting.
     inject(ThemeService);
+    // Dialogs close only through their own buttons (or Escape), never a click outside.
+    keepMaterialDialogsOpenOnOutsideClick();
   }
 }

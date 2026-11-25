@@ -70,6 +70,11 @@ class PublicListView(PublicCacheMixin, APIView):
                 "lat",
                 "lng",
                 "radiusKm",
+                "minRating",
+                "costMin",
+                "costMax",
+                "openNow",
+                "offers",
                 "page",
                 "limit",
             )

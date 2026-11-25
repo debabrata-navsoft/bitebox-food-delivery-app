@@ -192,6 +192,13 @@ export interface RestaurantQuery {
   lat?: number;
   lng?: number;
   radiusKm?: number;
+  minRating?: number;
+  /** Cost for two, in paise. */
+  costMin?: number;
+  costMax?: number;
+  openNow?: boolean;
+  /** Only restaurants with a live offer of their own. */
+  offers?: boolean;
   page?: number;
   limit?: number;
 }

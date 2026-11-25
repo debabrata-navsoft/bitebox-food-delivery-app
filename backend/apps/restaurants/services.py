@@ -26,7 +26,7 @@ from common.pagination import Page, paginate
 from common.slug import unique_slug
 
 from .models import ADMIN_STATUS_TRANSITIONS, Restaurant, RestaurantStatus
-from .presenters import restaurant_json
+from .presenters import is_open_now, restaurant_json
 
 OWNER_FIELDS = (
     "name",
@@ -324,11 +324,24 @@ def list_public(query: dict[str, Any], page: Page) -> dict[str, Any]:
             name__icontains=search, deleted_at__isnull=True
         ).values("restaurant_id")
         qs = _text_search(qs, search, Q(id__in=dish_restaurants))
-    if cuisine := (query.get("cuisine") or "").strip():
-        # One of the cuisines equals it, ignoring case (Node: cuisines: /^x$/i).
-        qs = qs.extra(  # noqa: S610 (the value is a bound parameter)
-            where=[CUISINE_MATCH_SQL], params=[cuisine]
+    if cuisines := [c.strip() for c in (query.get("cuisine") or "").split(",") if c.strip()]:
+        # Any of them equals one of the restaurant's cuisines, ignoring case.
+        qs = qs.extra(  # noqa: S610 (the values are bound parameters)
+            where=["(" + " OR ".join([CUISINE_MATCH_SQL] * len(cuisines)) + ")"], params=cuisines
         )
+    if (min_rating := query.get("min_rating")) is not None:
+        qs = qs.filter(rating_average__gte=min_rating)
+    if (cost_min := query.get("cost_min")) is not None:
+        qs = qs.filter(cost_for_two_paise__gte=cost_min)
+    if (cost_max := query.get("cost_max")) is not None:
+        qs = qs.filter(cost_for_two_paise__lte=cost_max)
+    if query.get("offers"):
+        from apps.coupons.services import restaurants_with_offers
+
+        qs = qs.filter(id__in=restaurants_with_offers())
+    if query.get("open_now"):
+        # The same rule as the card's "Open now" (weekly hours, time zone, overnight slots).
+        qs = qs.filter(id__in=[r.pk for r in qs.filter(is_accepting_orders=True) if is_open_now(r)])
     if query.get("veg"):
         qs = qs.filter(is_pure_veg=True)
     if category := query.get("category"):

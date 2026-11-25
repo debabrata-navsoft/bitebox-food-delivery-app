@@ -138,6 +138,8 @@ export class RestaurantDetail {
     const quote = this.cart.quote();
     return quote?.cart && quote.cart.restaurant?.id === this.restaurant()?.id ? quote.cart : null;
   });
+  /** The dish list above the cart bar is open. */
+  protected readonly cartOpen = signal(false);
   protected readonly cartSubtotal = computed(() => this.cart.quote()?.pricing.subtotalPaise ?? 0);
 
   protected readonly itemCount = computed(() =>
@@ -145,6 +147,13 @@ export class RestaurantDetail {
   );
 
   constructor() {
+    // While the order list is open only it scrolls, not the page behind (also undone on leaving).
+    effect((onCleanup) => {
+      if (!this.cartOpen() || !this.cartHere()) return;
+      const page = this.document.documentElement;
+      page.style.overflow = 'hidden';
+      onCleanup(() => (page.style.overflow = ''));
+    });
     effect(() => {
       const slug = this.slug();
       untracked(() => this.load(slug));
