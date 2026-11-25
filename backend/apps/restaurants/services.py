@@ -1,6 +1,8 @@
 """Restaurants: partner onboarding, admin review, public discovery (Node: restaurant.service.js)."""
 
 import uuid
+from functools import reduce
+from operator import or_
 from typing import Any
 
 from django.conf import settings
@@ -180,6 +182,14 @@ def _text_search(qs: QuerySet[Restaurant], search: str, also: Q) -> QuerySet[Res
     )
 
 
+PLACE_FIELDS = ("line1", "line2", "area", "city", "postal_code")
+
+
+def _place_match(term: str) -> Q:
+    """The restaurant's street, area, city or PIN code contains `term`."""
+    return reduce(or_, (Q(**{f"{f}__icontains": term}) for f in PLACE_FIELDS))
+
+
 VEG = {"pure_veg": Q(is_pure_veg=True), "mixed": Q(is_pure_veg=False)}
 ACCEPTING = {"open": Q(is_accepting_orders=True), "closed": Q(is_accepting_orders=False)}
 # Facets (and filters) shared with the restaurant accounts list (accounts.FACETS).
@@ -319,11 +329,12 @@ SORTS: dict[str, tuple[Any, ...]] = {
 
 def list_public(query: dict[str, Any], page: Page) -> dict[str, Any]:
     qs = Restaurant.objects.filter(status=RestaurantStatus.APPROVED)
-    if search := (query.get("search") or "").strip():
+    # A name, cuisine, dish or place ("Park Street"); "Park Street, Kolkata" needs every part.
+    for term in [t.strip() for t in (query.get("search") or "").split(",") if t.strip()]:
         dish_restaurants = FoodItem.objects.filter(
-            name__icontains=search, deleted_at__isnull=True
+            name__icontains=term, deleted_at__isnull=True
         ).values("restaurant_id")
-        qs = _text_search(qs, search, Q(id__in=dish_restaurants))
+        qs = _text_search(qs, term, Q(id__in=dish_restaurants) | _place_match(term))
     if cuisines := [c.strip() for c in (query.get("cuisine") or "").split(",") if c.strip()]:
         # Any of them equals one of the restaurant's cuisines, ignoring case.
         qs = qs.extra(  # noqa: S610 (the values are bound parameters)

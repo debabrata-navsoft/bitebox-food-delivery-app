@@ -449,6 +449,23 @@ def test_searches_restaurants_by_name_cuisine_and_dish() -> None:
     assert _names("/api/v1/restaurants?search=lassi") == ["Spice Route Kitchen"]
 
 
+def test_searches_restaurants_by_place() -> None:
+    seed_catalog()  # Spice Route Kitchen, 100 Feet Road, Indiranagar, Bengaluru 560038
+    other = other_restaurant("Pizza Planet")
+    Restaurant.objects.filter(pk=other["restaurant"]["id"]).update(
+        line1="7 Lake View Lane", area="Maple Town", city="Riverside", postal_code="700016"
+    )
+    assert _names("/api/v1/restaurants?search=maple town") == ["Pizza Planet"]
+    assert _names("/api/v1/restaurants?search=riverside") == ["Pizza Planet"]
+    assert _names("/api/v1/restaurants?search=lake view") == ["Pizza Planet"]
+    assert _names("/api/v1/restaurants?search=700016") == ["Pizza Planet"]
+    assert _names("/api/v1/restaurants?search=indiranagar") == ["Spice Route Kitchen"]
+    # Comma-separated parts must all match: a place and a dish or a cuisine.
+    assert _names("/api/v1/restaurants?search=Maple Town, Riverside") == ["Pizza Planet"]
+    assert _names("/api/v1/restaurants?search=indiranagar, lassi") == ["Spice Route Kitchen"]
+    assert _names("/api/v1/restaurants?search=riverside, lassi") == []
+
+
 def test_filters_by_veg_cuisine_and_category() -> None:
     seed_catalog()
     other = other_restaurant("Green Leaf")
