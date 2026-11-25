@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { ButtonComponent, IconComponent } from 'nexprime';
+import { ButtonComponent } from 'nexprime';
+import { DetailNav } from '../../../../shared/components/detail-nav/detail-nav';
 import { AdminCouponService } from '../../../../core/services/checkout-api.service';
 import { confirmed } from '../../../../shared/components/confirm-dialog/confirm-dialog';
 import {
@@ -12,26 +12,23 @@ import {
 } from '../../../../shared/components/data-table/data-table';
 import { EmptyState } from '../../../../shared/components/empty-state/empty-state';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
-import { couponColumns, offerTitle, scopeLabel } from '../../../../shared/coupons/coupon-labels';
+import {
+  couponColumns,
+  offerTitle,
+  scopeLabel,
+  usesLabel,
+} from '../../../../shared/coupons/coupon-labels';
 import { rowActions } from '../../../../shared/coupons/coupon-list';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 import { pagedList } from '../../../../shared/list/paged-list';
 import { AdminCoupon } from '../../../../core/models/checkout.models';
 import { dateText } from '../../../../shared/utils/dates';
+import { openOfferView } from './offer-view-dialog/offer-view-dialog';
 
 /** The approval queue: offers restaurants submitted, approved or rejected with a reason. */
 @Component({
   selector: 'bb-offer-review',
-  imports: [
-    RouterLink,
-    ButtonComponent,
-    IconComponent,
-    EmptyState,
-    PageHeader,
-    DataTable,
-    BbCell,
-    BbEmpty,
-  ],
+  imports: [ButtonComponent, DetailNav, EmptyState, PageHeader, DataTable, BbCell, BbEmpty],
   templateUrl: './offer-review.html',
   styleUrl: './offer-review.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -54,21 +51,30 @@ export class OfferReview {
       // Offers apply automatically, so admins know them by name rather than their internal code.
       value: offerTitle,
       strong: true,
-      sub: (o) => [o.name && o.description, o.terms],
+      // The name opens the offer in full (terms included); the table keeps it to two lines.
+      run: (o) => this.view(o),
+      class: 'offer',
+      sub: (o) => o.name && o.description,
     },
     { label: 'Applies to', value: scopeLabel },
     this.shared.discount,
-    {
-      ...this.shared.valid(),
-      sub: (o) =>
-        `${o.usageLimit ? o.usageLimit + ' uses' : 'Unlimited uses'} · ${o.perUserLimit} per customer`,
-    },
+    { ...this.shared.valid(), sub: usesLabel },
     { label: 'Sent', date: (o) => o.updatedAt ?? o.createdAt, dateFormat: DATE_TIME },
     { label: 'Decision', key: 'decide', class: 'actions', hideLabel: true },
   ];
 
+  protected view(o: AdminCoupon): void {
+    openOfferView(this.bbDialog, o).subscribe((decision) =>
+      decision === 'approve' ? this.approve(o) : this.reject(o),
+    );
+  }
+
   protected approve(o: AdminCoupon): void {
-    this.runner.run(o.id, this.service.approve(o.id), `${offerTitle(o)} approved. It now applies automatically.`);
+    this.runner.run(
+      o.id,
+      this.service.approve(o.id),
+      `${offerTitle(o)} approved. It now applies automatically.`,
+    );
   }
 
   protected reject(o: AdminCoupon): void {
@@ -79,5 +85,8 @@ export class OfferReview {
       danger: true,
       reasonLabel: 'Reason',
       reasonMax: 300,
-    }).subscribe((reason) => this.runner.run(o.id, this.service.reject(o.id, String(reason)), `${offerTitle(o)} rejected`));
-  }}
+    }).subscribe((reason) =>
+      this.runner.run(o.id, this.service.reject(o.id, String(reason)), `${offerTitle(o)} rejected`),
+    );
+  }
+}

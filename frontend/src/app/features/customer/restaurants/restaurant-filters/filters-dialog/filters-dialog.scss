@@ -1,41 +1,9 @@
 @use 'breakpoints' as bp;
 
-.head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--bb-space-3);
-  padding: var(--bb-space-4) var(--bb-space-3) var(--bb-space-4) var(--bb-space-5);
-  border-bottom: 1px solid var(--bb-border);
-
-  h2 {
-    margin: 0;
-    padding: 0;
-    font-size: 1.25rem;
-  }
-  p {
-    margin: 2px 0 0;
-    color: var(--bb-ink-muted);
-    font-size: 0.85rem;
-  }
-}
-
-.close {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 36px;
-  height: 36px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--bb-surface-alt);
-  color: var(--bb-ink);
-  cursor: pointer;
-  --bb-icon-size: 18px;
-
-  &:hover {
-    background: var(--bb-plum-100);
-  }
+.bb-dialog__head p {
+  margin: 0;
+  color: var(--bb-ink-muted);
+  font-size: 0.85rem;
 }
 
 // Tabs on the left, the chosen tab's options on the right.

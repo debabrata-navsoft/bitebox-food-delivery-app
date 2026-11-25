@@ -980,6 +980,38 @@ np-input-otp .otp.otp {
   line-height: 1.3;
 }
 
+// A header bar with the title (and anything under it) on the left and a round × on the right.
+.bb-dialog__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--bb-space-3);
+  padding: var(--bb-space-4) var(--bb-space-3) var(--bb-space-4) var(--bb-space-5);
+  border-bottom: 1px solid var(--bb-border);
+
+  .bb-dialog__title {
+    padding: 0 0 var(--bb-space-1);
+  }
+}
+
+.bb-dialog__close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bb-surface-alt);
+  color: var(--bb-ink);
+  cursor: pointer;
+  --bb-icon-size: 18px;
+
+  &:hover {
+    background: var(--bb-plum-100);
+  }
+}
+
 .bb-dialog__content {
   flex: 1 1 auto;
   min-height: 0;

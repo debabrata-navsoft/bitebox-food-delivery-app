@@ -26,7 +26,10 @@ describe('AdminCoupons', () => {
   afterEach(verifyHttp);
 
   it('sends the sort and the panel filters as comma lists, dates as instants', async () => {
-    const { fixture, http, list, applyFilters, text } = await listPage(AdminCoupons, '/admin/coupons');
+    const { fixture, http, list, applyFilters, text } = await listPage(
+      AdminCoupons,
+      '/admin/coupons',
+    );
     http
       .match((r) => r.url.endsWith('/admin/coupons/analytics'))
       .forEach((r) => r.flush({ success: true, message: '', data: null }));

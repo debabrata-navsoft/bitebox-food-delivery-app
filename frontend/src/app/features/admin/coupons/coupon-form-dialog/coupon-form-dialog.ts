@@ -37,7 +37,17 @@ import {
 /** Create or edit a coupon: the discount, who and where it applies, limits and dates. */
 @Component({
   selector: 'bb-coupon-form-dialog',
-  imports: [ToggleComponent, NP_FORM_FIELDS, SelectComponent, FormRoot, BbDialogTitle, ButtonComponent, IconComponent, CouponFields, ButtonToggleComponent],
+  imports: [
+    ToggleComponent,
+    NP_FORM_FIELDS,
+    SelectComponent,
+    FormRoot,
+    BbDialogTitle,
+    ButtonComponent,
+    IconComponent,
+    CouponFields,
+    ButtonToggleComponent,
+  ],
   templateUrl: './coupon-form-dialog.html',
   styleUrl: './coupon-form-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -51,16 +61,22 @@ export class CouponFormDialog {
   /** A restaurant's own offer stays tied to that restaurant. */
   protected readonly restaurantOffer = this.data?.source === 'restaurant';
   protected readonly restaurantName =
-    this.data?.restaurant && typeof this.data.restaurant === 'object' ? this.data.restaurant.name : null;
+    this.data?.restaurant && typeof this.data.restaurant === 'object'
+      ? this.data.restaurant.name
+      : null;
   /** Why an admin turned this offer down last time, shown while editing it. */
   protected readonly rejection =
     this.data?.approvalStatus === 'rejected' ? (this.data.rejectionReason ?? null) : null;
 
   private readonly restaurantList = rxResource({
     stream: () =>
-      this.catalog.restaurants({ status: 'approved', limit: 100 }).pipe(map((page) => asOptions(page.items))),
+      this.catalog
+        .restaurants({ status: 'approved', limit: 100 })
+        .pipe(map((page) => asOptions(page.items))),
   });
-  private readonly categoryList = rxResource({ stream: () => this.catalog.categories().pipe(map(asOptions)) });
+  private readonly categoryList = rxResource({
+    stream: () => this.catalog.categories().pipe(map(asOptions)),
+  });
   protected readonly restaurantOptions = computed(() =>
     withChosen(loaded(this.restaurantList), this.data?.restaurants),
   );
@@ -70,15 +86,19 @@ export class CouponFormDialog {
   protected readonly restaurantIds = signal(refIds(this.data?.restaurants));
 
   /** Coupon (a code), or an automatic platform or payment offer; a restaurant's offer stays one. */
-  protected readonly kinds = (['coupon', 'platform_offer', 'payment_offer'] as const).map((value) => ({
-    value,
-    label: COUPON_KIND_LABEL[value],
-  }));
+  protected readonly kinds = (['coupon', 'platform_offer', 'payment_offer'] as const).map(
+    (value) => ({
+      value,
+      label: COUPON_KIND_LABEL[value],
+    }),
+  );
   protected readonly kind = signal<CouponKind>(this.data?.kind ?? 'coupon');
-  protected readonly channelOptions = Object.entries(PAYMENT_CHANNEL_LABEL).map(([value, label]) => ({
-    value,
-    label,
-  }));
+  protected readonly channelOptions = Object.entries(PAYMENT_CHANNEL_LABEL).map(
+    ([value, label]) => ({
+      value,
+      label,
+    }),
+  );
   protected readonly channels = signal<string[]>(this.data?.paymentChannels ?? []);
   protected readonly kindLabel = computed(() => COUPON_KIND_LABEL[this.kind()]);
 
@@ -101,13 +121,16 @@ export class CouponFormDialog {
         : {
             restaurants: this.restaurantIds(),
             kind: this.kind() as AdminCouponInput['kind'],
-            paymentChannels: this.kind() === 'payment_offer' ? (this.channels() as PaymentChannel[]) : [],
+            paymentChannels:
+              this.kind() === 'payment_offer' ? (this.channels() as PaymentChannel[]) : [],
           }),
     };
     this.error.set(null);
     try {
       this.ref.close(
-        await firstValueFrom(this.data ? this.service.update(this.data.id, input) : this.service.create(input)),
+        await firstValueFrom(
+          this.data ? this.service.update(this.data.id, input) : this.service.create(input),
+        ),
       );
       return undefined;
     } catch (err) {

@@ -11,8 +11,18 @@
 
 @if (totals(); as s) {
   <section class="bb-grid cols-4 tiles" aria-label="Coupon totals">
-    <bb-stat-tile icon="ticket-percent" label="All coupons" [value]="s.total" [hint]="s.active + ' active now'" />
-    <bb-stat-tile icon="calendar-clock" label="Scheduled" [value]="s.scheduled" [hint]="s.paused + ' paused'" />
+    <bb-stat-tile
+      icon="ticket-percent"
+      label="All coupons"
+      [value]="s.total"
+      [hint]="s.active + ' active now'"
+    />
+    <bb-stat-tile
+      icon="calendar-clock"
+      label="Scheduled"
+      [value]="s.scheduled"
+      [hint]="s.paused + ' paused'"
+    />
     <bb-stat-tile icon="calendar-x" label="Expired" [value]="s.expired" />
     <bb-stat-tile
       icon="receipt-indian-rupee"
@@ -34,11 +44,18 @@
 <bb-data-table [list]="list" [columns]="columns" [actions]="actions" label="Coupons">
   <ng-template [bbCellOf]="list" bbCell="coupon" let-c>
     <button type="button" class="bb-link-button code" (click)="open(c)">{{ c.code }}</button>
-    <span class="sub">{{ c.name || c.description ? (c.name || c.description) + ' · ' : '' }}{{ owner(c) }}</span>
+    <span class="sub"
+      >{{ c.name || c.description ? (c.name || c.description) + ' · ' : '' }}{{ owner(c) }}</span
+    >
     <span class="kind">{{ kind(c) }}</span>
   </ng-template>
   <ng-template bbEmpty>
-    <bb-list-empty [list]="coupons" icon="ticket-percent" title="No coupons here" message="Try other filters, or create a coupon.">
+    <bb-list-empty
+      [list]="coupons"
+      icon="ticket-percent"
+      title="No coupons here"
+      message="Try other filters, or create a coupon."
+    >
       <np-button severity="primary" label="Create a coupon" (clicked)="open()" />
     </bb-list-empty>
   </ng-template>

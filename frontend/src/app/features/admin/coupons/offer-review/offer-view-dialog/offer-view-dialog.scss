@@ -1,0 +1,63 @@
+.bb-dialog__content {
+  display: grid;
+  gap: var(--bb-space-4);
+  padding-top: var(--bb-space-4);
+}
+
+// The discount and its conditions, as a highlighted strip.
+.deal {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-space-3);
+  padding: var(--bb-space-3);
+  border-radius: var(--bb-radius-md);
+  background: var(--bb-success-bg);
+
+  div {
+    display: grid;
+  }
+  strong {
+    font-size: 1.15rem;
+    color: var(--bb-success);
+  }
+  span {
+    color: var(--bb-ink-muted);
+    font-size: 0.88rem;
+  }
+}
+
+.deal-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--bb-radius-sm);
+  background: var(--bb-success-solid);
+  --bb-icon-size: 20px;
+
+  np-icon {
+    color: #fff;
+  }
+}
+
+.description {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.terms {
+  h3 {
+    margin: 0 0 var(--bb-space-2);
+    font-size: 0.95rem;
+  }
+  ol {
+    display: grid;
+    gap: var(--bb-space-1);
+    margin: 0;
+    padding-left: 1.25rem;
+    color: var(--bb-ink-muted);
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+}

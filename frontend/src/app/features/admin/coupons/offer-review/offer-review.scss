@@ -4,3 +4,15 @@
   justify-content: flex-end;
   white-space: nowrap;
 }
+
+// The Offer column: narrower, the description at most two lines (in full in the view dialog).
+:host ::ng-deep td.offer {
+  width: 36%;
+  max-width: 460px;
+}
+:host ::ng-deep td.offer .sub {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}

@@ -76,7 +76,9 @@ export class AdminCoupons {
     () =>
       new Map(
         (this.list.data()?.items ?? []).flatMap((c) =>
-          typeof c.restaurant === 'object' && c.restaurant ? [[c.restaurant.id, c.restaurant.name] as const] : [],
+          typeof c.restaurant === 'object' && c.restaurant
+            ? [[c.restaurant.id, c.restaurant.name] as const]
+            : [],
         ),
       ),
   );
@@ -84,7 +86,10 @@ export class AdminCoupons {
   protected readonly filterSections = [
     COUPON_STATUS_SECTION,
     optionsSection('kind', 'Type', COUPON_KIND_LABEL),
-    optionsSection('owner', 'Created by', { platform: 'BiteBox coupons', restaurant: 'Restaurant offers' }),
+    optionsSection('owner', 'Created by', {
+      platform: 'BiteBox coupons',
+      restaurant: 'Restaurant offers',
+    }),
     optionsSection('audience', 'Audience', {
       all: 'All customers',
       new: 'New customers',
@@ -126,7 +131,9 @@ export class AdminCoupons {
             ? [{ label: 'Pause', icon: 'pause', command: () => this.setActive(c, false) }]
             : [{ label: 'Activate', icon: 'play', command: () => this.setActive(c, true) }]),
         { label: 'Duplicate', icon: 'copy', command: () => this.duplicate(c) },
-        ...(c.usedCount === 0 ? [{ label: 'Delete', icon: 'trash-2', command: () => this.remove(c) }] : []),
+        ...(c.usedCount === 0
+          ? [{ label: 'Delete', icon: 'trash-2', command: () => this.remove(c) }]
+          : []),
       ],
     },
   ];
@@ -164,11 +171,19 @@ export class AdminCoupons {
   }
 
   protected setActive(c: AdminCoupon, isActive: boolean): void {
-    this.runner.run(c.id, this.service.setActive(c.id, isActive), isActive ? 'Coupon activated' : 'Coupon paused');
+    this.runner.run(
+      c.id,
+      this.service.setActive(c.id, isActive),
+      isActive ? 'Coupon activated' : 'Coupon paused',
+    );
   }
 
   protected duplicate(c: AdminCoupon): void {
-    this.runner.run(c.id, this.service.duplicate(c.id), 'Copy created (switched off until you activate it)');
+    this.runner.run(
+      c.id,
+      this.service.duplicate(c.id),
+      'Copy created (switched off until you activate it)',
+    );
   }
 
   protected remove(c: AdminCoupon): void {

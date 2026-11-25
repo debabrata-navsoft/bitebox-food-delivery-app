@@ -1,4 +1,6 @@
-<h2 bbDialogTitle>{{ data ? 'Edit ' + (data.name || data.code) : 'New ' + kindLabel().toLowerCase() }}</h2>
+<h2 bbDialogTitle>
+  {{ data ? 'Edit ' + (data.name || data.code) : 'New ' + kindLabel().toLowerCase() }}
+</h2>
 <form [formRoot]="form">
   <div class="bb-dialog__content bb-form">
     @if (error()) {
@@ -14,14 +16,20 @@
 
     @if (!restaurantOffer) {
       <div class="bb-field">
-        <np-button-toggle [options]="kinds" [value]="kind()" (valueChange)="pickKind($event)" ariaLabel="Type" />
+        <np-button-toggle
+          [options]="kinds"
+          [value]="kind()"
+          (valueChange)="pickKind($event)"
+          ariaLabel="Type"
+        />
         <p class="hint">
           @switch (kind()) {
             @case ('coupon') {
               Customers enter or pick the code at checkout.
             }
             @case ('platform_offer') {
-              Applies by itself to every eligible order (the best one, together with a restaurant offer and a coupon).
+              Applies by itself to every eligible order (the best one, together with a restaurant
+              offer and a coupon).
             }
             @case ('payment_offer') {
               Applies by itself when the customer pays online with one of the methods below.
@@ -50,7 +58,9 @@
       }
       <h3 class="bb-form-section">Where it applies</h3>
       @if (restaurantOffer) {
-        <p class="hint">Only at {{ restaurantName ?? 'this restaurant' }} (a restaurant's own offer).</p>
+        <p class="hint">
+          Only at {{ restaurantName ?? 'this restaurant' }} (a restaurant's own offer).
+        </p>
       } @else {
         <np-select
           label="Restaurants"
