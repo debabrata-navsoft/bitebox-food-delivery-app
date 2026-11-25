@@ -36,6 +36,35 @@ td.center {
   text-align: center;
 }
 
+// A sortable heading: the label, black, and on hover a black arrow showing the order now; a click
+// flips it. A column the user clicked keeps its arrow.
+.sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  --bb-icon-size: 14px;
+
+  np-icon {
+    opacity: 0;
+    transition: opacity 0.15s;
+
+    &.on {
+      opacity: 1;
+    }
+  }
+  &:hover np-icon,
+  &:focus-visible np-icon {
+    opacity: 1;
+  }
+}
+
 .text {
   display: flex;
   flex-direction: column;

@@ -24,15 +24,33 @@
     <table class="bb-table" [attr.aria-label]="label()">
       <thead>
         <tr>
-          @for (c of columns(); track c.label) {
+          @for (c of columns(); track c.label; let i = $index) {
+            @let sorted = sort()?.col === i ? sort()!.dir : 0;
             <th
               scope="col"
               [class]="c.class ?? ''"
               [class.num]="c.align === 'end' || !!c.paise"
               [class.center]="c.align === 'center'"
+              [attr.aria-sort]="sorted === 1 ? 'ascending' : sorted === -1 ? 'descending' : null"
             >
               @if (c.hideLabel) {
                 <span class="bb-sr-only">{{ c.label }}</span>
+              } @else if (sortable(c)) {
+                <button
+                  type="button"
+                  class="sort"
+                  [attr.aria-label]="'Sort by ' + c.label"
+                  (click)="toggleSort(i)"
+                >
+                  {{ c.label }}
+                  <!-- On hover: the order now, the opposite of what a click gives. A clicked column keeps it. -->
+                  <np-icon
+                    class="mat-icon"
+                    [class.on]="sort()?.col === i"
+                    [name]="nextDir()[i] === 1 ? 'arrow-down' : 'arrow-up'"
+                    aria-hidden="true"
+                  />
+                </button>
               } @else {
                 {{ c.label }}
               }
@@ -128,9 +146,11 @@
                       [routerLink]="a.link"
                       [attr.aria-label]="a.label"
                       [title]="a.label"
-                      >@if (a.icon) {
+                    >
+                      @if (a.icon) {
                         <np-icon [name]="a.icon" />
-                      }{{ a.text ? a.label : '' }}</a
+                      }
+                      {{ a.text ? a.label : '' }}</a
                     >
                   } @else {
                     <button
@@ -146,7 +166,8 @@
                       <!-- Icon buttons: the icon; labelled ones: the name, after an icon if set -->
                       @if (a.icon) {
                         <np-icon [name]="a.icon" />
-                      }{{ a.text ? a.label : '' }}
+                      }
+                      {{ a.text ? a.label : '' }}
                     </button>
                   }
                 }

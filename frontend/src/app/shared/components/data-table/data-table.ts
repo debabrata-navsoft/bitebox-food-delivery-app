@@ -12,6 +12,7 @@ import {
   inject,
   input,
   output,
+  signal,
   untracked,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -151,12 +152,81 @@ export class DataTable<T> {
   protected readonly initials = initialsOf;
 
   /** Every row's cells and buttons, worked out once per change of the rows or columns. */
+  /** The column clicked (its index) and the direction; null keeps the API's order. */
+  protected readonly sort = signal<{ col: number; dir: 1 | -1 } | null>(null);
+
+  protected sortable(c: TableColumn<T>): boolean {
+    const shown = c.value || c.paise || c.date || c.badge;
+    return !c.hideLabel && (c.sortable ?? !!(c.sortBy || (shown && !c.key)));
+  }
+
+  /**
+   * The direction a click on each column sorts to. Every column works the same: hover shows the
+   * opposite arrow (the order on screen, ↑ when it isn't sorted by the column) and the click flips
+   * it, so a click always changes both the arrow and the rows.
+   */
+  protected readonly nextDir = computed(() => {
+    const s = this.sort();
+    const shown = this.sortedItems();
+    return this.columns().map((c, col): 1 | -1 => {
+      if (s?.col === col) return s.dir === 1 ? -1 : 1;
+      if (!this.sortable(c)) return -1;
+      // Rows already descending by this column (e.g. newest first): hover shows ↓, click gives ↑.
+      return this.ordered(this.items(), col, -1).every((row, i) => row === shown[i]) ? 1 : -1;
+    });
+  });
+
+  protected toggleSort(col: number): void {
+    this.sort.set({ col, dir: this.nextDir()[col] });
+  }
+
+  /** The rows on screen in the chosen order. */
+  private readonly sortedItems = computed(() => {
+    const s = this.sort();
+    return s ? this.ordered(this.items(), s.col, s.dir) : this.items();
+  });
+
+  /** `rows` by one column: empty values last, numbers and dates by value, text naturally. */
+  private ordered(rows: readonly T[], col: number, dir: 1 | -1): readonly T[] {
+    const c = this.columns()[col];
+    // The column's own value; only a pill-only column (e.g. Status) sorts by its pill.
+    const read = (row: T) =>
+      c.sortBy
+        ? c.sortBy(row)
+        : c.paise
+          ? c.paise(row)
+          : c.date
+            ? c.date(row)
+            : c.value
+              ? c.value(row)
+              : list(c.badge?.(row))[0]?.label;
+    const key = (row: T): string | number | null => {
+      const v = read(row);
+      if (v === null || v === undefined || v === '') return null;
+      if (v instanceof Date) return v.getTime();
+      if (c.date && typeof v === 'string') return Date.parse(v);
+      return v;
+    };
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+    return rows
+      .map((row) => ({ row, k: key(row) }))
+      .sort((a, b) => {
+        if (a.k === null || b.k === null) return a.k === b.k ? 0 : a.k === null ? 1 : -1;
+        const diff =
+          typeof a.k === 'number' && typeof b.k === 'number'
+            ? a.k - b.k
+            : collator.compare(String(a.k), String(b.k));
+        return diff * dir;
+      })
+      .map((x) => x.row);
+  }
+
   protected readonly view = computed(() => {
     const custom = new Map(this.cellTemplates().map((c) => [c.bbCell(), c.template]));
     const columns = this.columns();
     const actions = this.actions();
     const track = this.trackBy();
-    return this.items().map((row) => ({
+    return this.sortedItems().map((row) => ({
       row,
       id: track(row),
       cells: columns.map((c) => this.cell(c, row, custom)),
