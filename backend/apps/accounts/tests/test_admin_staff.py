@@ -190,6 +190,30 @@ def test_get_staff_and_audit_log_listing(as_: dict[str, Any]) -> None:
     }
     assert entry["adminRole"] == "admin"
     assert entry["resourceId"] == created["id"]
+    assert entry["resourceLabel"] == NEW["name"]  # the new admin, named after creation
+
+
+def test_audit_entries_name_their_records_even_after_a_delete(as_: dict[str, Any]) -> None:
+    admin = client(as_["admin"]["token"])
+    gone = make.category(name="Sizzling Starters")
+    assert admin.delete(f"/api/v1/admin/categories/{gone.pk}").status_code == 200
+    # An older entry written without a name: the record still exists, so the list names it.
+    kept = make.category(name="Garden Bowls")
+    AuditLog.objects.create(
+        admin_id=as_["admin"]["user"]["id"],
+        admin_role="admin",
+        action="category.update",
+        description="Changed a category",
+        resource_type="category",
+        resource_id=str(kept.pk),
+    )
+
+    items = admin.get("/api/v1/admin/audit-logs").json()["data"]["items"]
+    labels = {e["resourceId"]: e["resourceLabel"] for e in items}
+    assert labels[str(gone.pk)] == "Sizzling Starters"  # named before the delete removed it
+    assert labels[str(kept.pk)] == "Garden Bowls"
+    found = admin.get("/api/v1/admin/audit-logs?search=sizzling").json()["data"]["items"]
+    assert [e["resourceId"] for e in found] == [str(gone.pk)]
 
 
 # --- riders -------------------------------------------------------------------------------------

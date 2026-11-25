@@ -19,15 +19,33 @@
     />
   </ng-template>
   <ng-template [bbCellOf]="list" bbCell="changes" let-e>
-    <div class="changes">
-      @for (line of changeLines(e); track $index) {
-        <span>{{ line }}</span>
-      } @empty {
-        <span class="bb-muted">—</span>
+    <ul class="changes">
+      @for (c of changeItems(e); track $index) {
+        <li>
+          <span class="field">{{ c.label }}</span>
+          @if (c.added || c.removed) {
+            <span class="list">
+              @for (x of c.added; track x) {
+                <span class="pill added">+ {{ x }}</span>
+              }
+              @for (x of c.removed; track x) {
+                <span class="pill removed">− {{ x }}</span>
+              }
+            </span>
+          } @else {
+            <span class="values">
+              @if (c.from !== undefined) {
+                <span class="from">{{ c.from }}</span>
+                <span class="arrow" aria-label="changed to">→</span>
+              }
+              <span class="to">{{ c.to }}</span>
+            </span>
+          }
+        </li>
       }
-      @if (e.ip) {
-        <span class="sub ref">IP {{ e.ip }}</span>
-      }
-    </div>
+    </ul>
+    @if (e.ip) {
+      <span class="ip">IP {{ e.ip }}</span>
+    }
   </ng-template>
 </bb-data-table>

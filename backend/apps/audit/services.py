@@ -26,6 +26,7 @@ from apps.rbac.roles import ADMIN_ROLE_VALUES
 from common.filters import Facet, apply_facets, with_facets
 from common.pagination import Page, paginate
 
+from .labels import label_of, labels_for
 from .models import AccountType, AuditLog
 
 logger = logging.getLogger("bitebox.audit")
@@ -98,8 +99,11 @@ def record(
     changes: dict[str, Any] | None = None,
     reason: str | None = None,
     account_type: str | None = None,
+    resource_label: str | None = None,
 ) -> None:
     try:
+        if resource_label is None:
+            resource_label = label_of(resource_type, resource_id)
         if account_type is None:
             account_type = _target_account_type(resource_type, resource_id)
         AuditLog.objects.create(
@@ -109,6 +113,7 @@ def record(
             description=str(description)[:500],
             resource_type=resource_type,
             resource_id=str(resource_id or "")[:64],
+            resource_label=str(resource_label or "")[:200],
             ip=ip,
             account_type=account_type or "",
             changes=changes or {},
@@ -129,19 +134,24 @@ def audited(
     def decorator(view: Callable[..., Response]) -> Callable[..., Response]:
         @functools.wraps(view)
         def wrapper(self: Any, request: Request, *args: Any, **kwargs: Any) -> Response:
+            # Named before the view runs, so a deleted record keeps its name in the log.
+            label = label_of(resource_type, kwargs.get("id"))
             response = view(self, request, *args, **kwargs)
             skip = getattr(request, "audit_skip", False)
             if response.status_code < 400 and request.user is not None and not skip:
+                resource_id = kwargs.get("id") or getattr(request, "audit_resource_id", None)
                 record(
                     request.user,
                     action,
                     resource_type,
-                    kwargs.get("id") or getattr(request, "audit_resource_id", None),
+                    resource_id,
                     describe(request),
                     _ip(request),
                     changes=getattr(request, "audit_changes", None),
                     reason=getattr(request, "audit_reason", None),
                     account_type=getattr(request, "audit_account_type", None),
+                    # A created record had no id before the view: name it now.
+                    resource_label=label or label_of(resource_type, resource_id),
                 )
             return response
 
@@ -164,7 +174,11 @@ def _entries(query: dict[str, Any]) -> QuerySet[AuditLog]:
     if query.get("resource_id"):  # a list of up to 5 ids
         qs = qs.filter(resource_id__in=query["resource_id"])
     if search := (query.get("search") or "").strip():
-        qs = qs.filter(Q(description__icontains=search) | Q(resource_id=search))
+        qs = qs.filter(
+            Q(description__icontains=search)
+            | Q(resource_label__icontains=search)
+            | Q(resource_id=search)
+        )
     start: datetime | None = query.get("from")
     end: datetime | None = query.get("to")
     if start:
@@ -177,6 +191,8 @@ def _entries(query: dict[str, Any]) -> QuerySet[AuditLog]:
 def list_entries(query: dict[str, Any], page: Page) -> dict[str, Any]:
     qs = _entries(query).select_related("admin").order_by("-created_at")
     items, meta = paginate(qs, page)
+    # Older entries have no stored name: name the records that still exist.
+    live = labels_for((e.resource_type, e.resource_id) for e in items if not e.resource_label)
     result = {
         "items": [
             {
@@ -189,6 +205,8 @@ def list_entries(query: dict[str, Any], page: Page) -> dict[str, Any]:
                 "description": e.description,
                 "resource_type": e.resource_type,
                 "resource_id": e.resource_id,
+                "resource_label": e.resource_label
+                or live.get((e.resource_type, e.resource_id), ""),
                 "ip": e.ip,
                 "account_type": e.account_type,
                 "changes": e.changes or {},

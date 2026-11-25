@@ -5,7 +5,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { AdminStaffService } from '../../../../core/services/admin/admin-staff.service';
 import { BB_DIALOG_DATA, BbDialog, BbDialogRef } from '../../../../shared/dialog/bb-dialog';
 import { User } from '../../../../core/models/user.models';
-import { changeLines } from '../../audit-log/audit-log';
+import { changeLines } from '../../audit-log/audit-format';
 import { PermissionEditorDialog } from './permission-editor-dialog';
 
 const catalogue = {
@@ -106,14 +106,23 @@ describe('PermissionEditorDialog', () => {
 });
 
 describe('audit changeLines', () => {
-  it('shows each change as old → new', () => {
+  it('shows each change as old → new, with readable names and values', () => {
     expect(
       changeLines({
         changes: {
           status: { from: 'active', to: 'suspended' },
-          cuisines: { from: null, to: ['a', 'b'] },
+          costForTwoPaise: { from: 30000, to: 120000 },
+          isPureVeg: { from: false, to: true },
         },
       } as never),
-    ).toEqual(['status: active → suspended', 'cuisines: — → a, b']);
+    ).toEqual(['Status: active → suspended', 'Cost for two: ₹300 → ₹1,200', 'Pure veg: No → Yes']);
+  });
+
+  it('shows list changes as what was added and removed', () => {
+    expect(
+      changeLines({
+        changes: { permissions: { from: ['orders:view'], to: ['orders:view', 'refunds:manage'] } },
+      } as never),
+    ).toEqual(['Permissions: + Refunds · manage']);
   });
 });

@@ -16,6 +16,7 @@ import { adminRoleSection } from '../filter-sections';
 import { AuditEntry } from '../../../core/models/admin-roles.models';
 import { ROLE_META } from '../../../core/models/user.models';
 import { shortId } from '../account-list';
+import { changeItems, resourceTypeLabel } from './audit-format';
 
 /** Labels for the actions the API records (the `audited(...)` routes of both backends). */
 const ACTIONS: Record<string, string> = {
@@ -81,13 +82,9 @@ const ACCOUNT_TYPES: Record<string, string> = {
   admin: 'Admin',
 };
 
-/** "status: active → suspended · name: Asha → Asha V." (lists and objects shortened). */
-const show = (v: unknown): string =>
-  v == null || v === '' || (Array.isArray(v) && !v.length) ? '—' : Array.isArray(v) ? (v.length > 4 ? `${v.length} items` : v.join(', ')) : typeof v === 'object' ? JSON.stringify(v).slice(0, 60) : String(v);
-export const changeLines = (e: AuditEntry): string[] =>
-  Object.entries(e.changes ?? {}).map(([field, c]) =>
-    c && typeof c === 'object' && 'from' in c ? `${field}: ${show(c.from)} → ${show(c.to)}` : `${field}: ${show(c)}`,
-  );
+/** "Restaurant", "Delivery partner", "KYC document"… */
+const typeLabel = (e: AuditEntry): string =>
+  (e.accountType && ACCOUNT_TYPES[e.accountType]) || resourceTypeLabel(e.resourceType ?? '');
 
 /** Where the changed account lives in the panel, when it has a page there. */
 const accountLink = (e: AuditEntry): string[] | null => {
@@ -113,13 +110,18 @@ const accountLink = (e: AuditEntry): string[] | null => {
 })
 export class AuditLogPage {
   private readonly api = inject(AdminStaffService);
-  protected readonly changeLines = changeLines;
+  protected readonly changeItems = changeItems;
 
   protected readonly filterSections: FilterSection[] = [
     // The actions that were recorded (the API's counts), by their label.
     { kind: 'options', key: 'action', label: 'Action', labelOf: (a) => ACTIONS[a] ?? a },
     adminRoleSection('Admin role'),
-    { kind: 'options', key: 'accountType', label: 'Account type', options: filterOptions(ACCOUNT_TYPES) },
+    {
+      kind: 'options',
+      key: 'accountType',
+      label: 'Account type',
+      options: filterOptions(ACCOUNT_TYPES),
+    },
     { kind: 'dates', key: 'when', label: 'Date', params: ['from', 'to'] },
   ];
   protected readonly log = filteredList((query) => this.api.auditLog(query), {
@@ -135,6 +137,7 @@ export class AuditLogPage {
       label: 'Admin',
       value: (e) => e.admin?.name ?? 'Removed account',
       strong: true,
+      nowrap: true,
       sub: (e) => ROLE_META[e.adminRole]?.label ?? e.adminRole,
     },
     {
@@ -142,15 +145,19 @@ export class AuditLogPage {
       badge: (e) => ({ label: ACTIONS[e.action] ?? e.action, tone: 'info' }),
       sub: (e) => [e.description, e.reason ? `Reason: ${e.reason}` : null],
     },
-    // The account type and the short id, linking to its page (or the record's type and id).
+    // The record's name (linked to its page when it has one), its kind and short id.
     {
       label: 'Account',
-      badge: (e) => (e.accountType ? { label: ACCOUNT_TYPES[e.accountType] ?? e.accountType } : null),
-      value: (e) => (e.resourceId && accountLink(e) ? shortId(e.resourceId) : null),
+      class: 'account',
+      // No name (an old entry about a deleted record): the kind tag and the id say enough.
+      value: (e) => e.resourceLabel || null,
+      strong: true,
       link: accountLink,
-      tag: (e) => (e.resourceId && !accountLink(e) ? `${e.resourceType} ${shortId(e.resourceId)}` : null),
+      badge: (e) =>
+        e.resourceType || e.accountType ? { label: typeLabel(e), tone: 'muted' } : null,
+      sub: (e) => (e.resourceId ? shortId(e.resourceId) : null),
     },
-    // "field: old → new" lines and the IP address.
+    // Each changed field (old → new, or what was added/removed) and the IP address.
     { label: 'Changes', key: 'changes' },
   ];
 }

@@ -54,7 +54,7 @@ import {
   coinChange,
 } from '../../core/models/rewards.models';
 import { dateText } from '../../shared/utils/dates';
-import { changeLines } from './audit-log/audit-log';
+import { changeLines } from './audit-log/audit-format';
 
 const FAILED = new Set(['cancelled', 'rejected']);
 
