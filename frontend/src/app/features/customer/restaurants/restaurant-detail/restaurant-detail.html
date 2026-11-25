@@ -102,7 +102,11 @@
             <dl class="details">
               <div>
                 <dt>Cuisines</dt>
-                <dd>{{ r.cuisines.join(', ') }}</dd>
+                <dd class="cuisine-tags">
+                  @for (c of r.cuisines; track c) {
+                    <span>{{ c }}</span>
+                  }
+                </dd>
               </div>
               <div>
                 <dt>Cost for two</dt>
