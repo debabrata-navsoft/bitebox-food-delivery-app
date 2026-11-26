@@ -402,6 +402,9 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": LOG_LEVEL},
     "loggers": {
         "django.request": {"level": "ERROR"},
+        # One line per request ("HTTP GET /api/v1/... 200 [0.07, ...]"): only this console handler,
+        # not also Django's own development console (which printed every request a second time).
+        "django.channels.server": {"handlers": ["console"], "level": "INFO", "propagate": False},
         "celery": {"level": LOG_LEVEL},
     },
 }
