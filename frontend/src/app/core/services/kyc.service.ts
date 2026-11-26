@@ -3,12 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api.models';
-import {
-  DocumentStatus,
-  KycDocument,
-  KycSummary,
-  PayoutAccountInput,
-} from '../models/kyc.models';
+import { DocumentStatus, KycDocument, KycSummary, PayoutAccountInput } from '../models/kyc.models';
 import { FileDownloadService } from './file-download.service';
 
 /** Partner verification: own documents and bank account; admin review. */

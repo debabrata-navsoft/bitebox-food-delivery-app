@@ -1,4 +1,4 @@
-import { DatePipe, TitleCasePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet, TitleCasePipe } from '@angular/common';
 import { DetailNav } from '../../../../shared/components/detail-nav/detail-nav';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -22,8 +22,12 @@ import { Restaurant, WEEK_DAYS } from '../../../../core/models/catalog.models';
 import { USER_STATUS_META } from '../../../../core/models/user.models';
 import { kindLabel } from '../../../../core/models/kyc.models';
 import { ClockTimePipe } from '../../../../shared/pipes/clock-time.pipe';
-import { InrPipe } from '../../../../shared/pipes/money.pipes';
+import { InrPipe, formatPaise } from '../../../../shared/pipes/money.pipes';
+import { InfoRow, InfoRows } from '../../../../shared/components/info-rows/info-rows';
+import { PersonInfo } from '../../../../shared/components/person-info/person-info';
+import { formatClockTime } from '../../../../shared/pipes/clock-time.pipe';
 import { shortId } from '../../account-list';
+import { dateText } from '../../../../shared/utils/dates';
 import { recordTabs } from '../../account-tabs';
 import {
   CONFIRM_TEXT,
@@ -45,6 +49,7 @@ import {
   imports: [
     DetailNav,
     DatePipe,
+    NgTemplateOutlet,
     TitleCasePipe,
     RouterLink,
     IconComponent,
@@ -54,6 +59,8 @@ import {
     KycReview,
     InrPipe,
     ClockTimePipe,
+    InfoRows,
+    PersonInfo,
   ],
   templateUrl: './restaurant-account.html',
   styleUrl: './restaurant-account.scss',
@@ -75,20 +82,80 @@ export class RestaurantAccount {
   protected readonly days = WEEK_DAYS;
   protected readonly shortId = shortId;
 
-  protected readonly account = rxResource({ params: () => this.id(), stream: ({ params }) => this.api.get(params) });
+  protected readonly account = rxResource({
+    params: () => this.id(),
+    stream: ({ params }) => this.api.get(params),
+  });
   protected readonly data = computed(() => loaded(this.account));
   protected readonly loadError = computed(() =>
-    this.account.error() ? errorMessage(this.account.error(), 'Could not load this restaurant.') : null,
+    this.account.error()
+      ? errorMessage(this.account.error(), 'Could not load this restaurant.')
+      : null,
   );
   protected readonly busy = signal(false);
-  protected readonly missingDocs = computed(() => (this.data()?.kyc.missing ?? []).map(kindLabel).join(', '));
+  private readonly day = dateText().day;
+
+  /** The Restaurant info tab (quick facts, map link, legal rows) and the restaurant's own contact. */
+  protected readonly info = computed(() => {
+    const r = this.data()?.restaurant;
+    if (!r) return null;
+    const [lng, lat] = r.location.coordinates;
+    const facts: InfoRow[] = [
+      { icon: 'wallet', label: 'Cost for two', value: formatPaise(r.costForTwoPaise) },
+      {
+        icon: 'shopping-bag',
+        label: 'Minimum order',
+        value: r.minOrderPaise ? formatPaise(r.minOrderPaise) : 'None',
+      },
+      { icon: 'timer', label: 'Preparation', value: `${r.avgPrepTimeMinutes} min` },
+      {
+        icon: 'clock',
+        label: 'Hours',
+        value: `${formatClockTime(r.openingTime)} – ${formatClockTime(r.closingTime)}`,
+      },
+    ];
+    const legal: InfoRow[] = [
+      {
+        icon: 'badge-check',
+        label: 'FSSAI licence',
+        value: r.fssaiNumber
+          ? r.fssaiNumber +
+            (r.fssaiValidUntil ? ` · valid until ${this.day(r.fssaiValidUntil)}` : '')
+          : '—',
+      },
+      {
+        icon: 'receipt',
+        label: 'GST',
+        value: r.gstRegistered ? r.gstin || 'Registered' : 'Not registered',
+      },
+    ];
+    const contact: InfoRow[] = [
+      { icon: 'phone', label: 'Phone', value: r.phone || '—' },
+      { icon: 'mail', label: 'Email', value: r.email || '—' },
+    ];
+    return {
+      facts,
+      legal,
+      contact,
+      mapLink: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=17/${lat}/${lng}`,
+      coords: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+    };
+  });
+
+  protected readonly missingDocs = computed(() =>
+    (this.data()?.kyc.missing ?? []).map(kindLabel).join(', '),
+  );
 
   /** Approve / reject / ask for documents / suspend / reinstate, as this admin may. */
   protected readonly actions = computed(() => {
     const status = this.data()?.restaurant.status;
     if (!status) return [];
     return RESTAURANT_ACTIONS[status].filter((a) =>
-      this.auth.can(a.status === 'suspended' || status === 'suspended' ? 'restaurants:status' : 'restaurants:approve'),
+      this.auth.can(
+        a.status === 'suspended' || status === 'suspended'
+          ? 'restaurants:status'
+          : 'restaurants:approve',
+      ),
     );
   });
 
@@ -108,10 +175,14 @@ export class RestaurantAccount {
     { id: 'overview', label: 'Overview', content: '' },
     { id: 'restaurant', label: 'Restaurant info', content: '' },
     { id: 'owner', label: 'Owner & contact', content: '' },
-    ...(this.canSeeKyc() ? [{ id: 'kyc', label: 'KYC & bank', content: '', badge: kycBadge(this.data()?.kyc.status) }] : []),
+    ...(this.canSeeKyc()
+      ? [{ id: 'kyc', label: 'KYC & bank', content: '', badge: kycBadge(this.data()?.kyc.status) }]
+      : []),
     ...this.records.strip(),
   ]);
-  protected readonly canSeeKyc = computed(() => this.auth.can('restaurants:kyc', 'restaurants:manage'));
+  protected readonly canSeeKyc = computed(() =>
+    this.auth.can('restaurants:kyc', 'restaurants:manage'),
+  );
 
   protected act(action: StatusAction): void {
     const r = this.data()!.restaurant;
@@ -122,7 +193,9 @@ export class RestaurantAccount {
       danger: action.danger,
       reasonLabel: action.needsReason ? 'Reason (shown to the restaurant owner)' : undefined,
     }).subscribe((result) =>
-      this.run(this.api.setStatus(r.id, action.status, typeof result === 'string' ? result : undefined)),
+      this.run(
+        this.api.setStatus(r.id, action.status, typeof result === 'string' ? result : undefined),
+      ),
     );
   }
 
@@ -139,7 +212,9 @@ export class RestaurantAccount {
       danger: closing,
       reasonLabel: closing ? 'Reason (shown to the restaurant owner)' : undefined,
     }).subscribe((result) =>
-      this.run(this.api.setAccepting(r.id, !closing, typeof result === 'string' ? result : undefined)),
+      this.run(
+        this.api.setAccepting(r.id, !closing, typeof result === 'string' ? result : undefined),
+      ),
     );
   }
 
@@ -151,7 +226,9 @@ export class RestaurantAccount {
       save: (status, reason) => this.users.setStatus(owner.id, status, reason),
     }).subscribe((updated) => {
       this.account.update((d) => d && { ...d, owner: updated });
-      this.notify.success(`The owner's account is now ${USER_STATUS_META[updated.status].label.toLowerCase()}`);
+      this.notify.success(
+        `The owner's account is now ${USER_STATUS_META[updated.status].label.toLowerCase()}`,
+      );
     });
   }
 

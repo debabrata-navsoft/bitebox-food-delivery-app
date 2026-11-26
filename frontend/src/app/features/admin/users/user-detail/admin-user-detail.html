@@ -103,9 +103,9 @@
 
     <!-- Profile: read-only, or the form on the edit page -->
     @if (shows('profile')) {
-      <section class="bb-card" aria-labelledby="profile-title">
-        <h2 id="profile-title">Profile</h2>
-        @if (edit()) {
+      @if (edit()) {
+        <section class="bb-card" aria-labelledby="profile-title">
+          <h2 id="profile-title">Profile</h2>
           @if (formError(); as e) {
             <div class="bb-alert error" role="alert">
               <np-icon name="circle-alert" class="mat-icon" matButtonIcon /><span>{{ e }}</span>
@@ -176,59 +176,10 @@
               </button>
             </div>
           </form>
-        } @else {
-          <dl>
-            <div>
-              <dt>Email</dt>
-              <dd>
-                {{ u.email }}
-                <span class="verified" [class.no]="!u.emailVerified">{{
-                  u.emailVerified ? 'Verified' : 'Not verified'
-                }}</span>
-              </dd>
-            </div>
-            <div>
-              <dt>Phone</dt>
-              <dd>
-                @if (u.phone) {
-                  {{ u.phone }}
-                  <span class="verified" [class.no]="!u.phoneVerified">{{
-                    u.phoneVerified ? 'Verified' : 'Not verified'
-                  }}</span>
-                } @else {
-                  <span class="bb-muted">Not added</span>
-                }
-              </dd>
-            </div>
-            <div>
-              <dt>Gender</dt>
-              <dd>{{ u.gender ? genderLabel[u.gender] : 'Not added' }}</dd>
-            </div>
-            @if (isCustomer()) {
-              <div>
-                <dt>Date of birth</dt>
-                <dd>
-                  {{ u.birthDate ? (fromIsoDay(u.birthDate) | date: 'd MMM y') : 'Not added' }}
-                </dd>
-              </div>
-            }
-            @if (u.referralCode) {
-              <div>
-                <dt>Referral code</dt>
-                <dd class="code">{{ u.referralCode }}</dd>
-              </div>
-            }
-            <div>
-              <dt>Joined</dt>
-              <dd>{{ u.createdAt | date: 'd MMM y, h:mm a' }}</dd>
-            </div>
-            <div>
-              <dt>Last sign-in</dt>
-              <dd>{{ u.lastLoginAt ? (u.lastLoginAt | date: 'd MMM y, h:mm a') : 'Never' }}</dd>
-            </div>
-          </dl>
-        }
-      </section>
+        </section>
+      } @else {
+        <bb-person-info [user]="u" />
+      }
     }
 
     <!-- What the partner runs: their restaurant or rider profile -->

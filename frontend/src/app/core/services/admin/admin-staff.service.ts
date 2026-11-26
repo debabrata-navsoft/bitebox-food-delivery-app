@@ -66,7 +66,10 @@ export class AdminStaffService {
   /** A reason is required for anything but `active`. */
   setStatus(id: string, status: UserStatus, reason?: string): Observable<User> {
     return this.http
-      .patch<ApiResponse<{ user: User }>>(`${this.url}/${id}/status`, { status, reason: reason || undefined })
+      .patch<ApiResponse<{ user: User }>>(`${this.url}/${id}/status`, {
+        status,
+        reason: reason || undefined,
+      })
       .pipe(map((r) => r.data.user));
   }
 

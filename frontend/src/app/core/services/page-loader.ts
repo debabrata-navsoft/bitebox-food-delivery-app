@@ -33,7 +33,8 @@ export class PageLoader {
   track<T>(request$: Observable<T>): Observable<T> {
     if (!this.browser || quiet) return request$;
     return defer(() => {
-      if (this.pending++ === 0) this.timer = setTimeout(() => this._visible.set(true), SHOW_AFTER_MS);
+      if (this.pending++ === 0)
+        this.timer = setTimeout(() => this._visible.set(true), SHOW_AFTER_MS);
       return request$.pipe(
         finalize(() => {
           if (--this.pending) return;

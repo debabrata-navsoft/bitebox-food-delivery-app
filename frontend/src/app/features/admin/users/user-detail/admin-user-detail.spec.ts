@@ -5,7 +5,10 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { AdminUserDetail as Detail, AdminUsersService } from '../../../../core/services/admin/admin-users.service';
+import {
+  AdminUserDetail as Detail,
+  AdminUsersService,
+} from '../../../../core/services/admin/admin-users.service';
 import { AdminOrdersService } from '../../../../core/services/order-management.service';
 import { User } from '../../../../core/models/user.models';
 import { AdminUserDetail } from './admin-user-detail';
@@ -40,7 +43,13 @@ const detail: Detail = {
       isDefault: true,
     },
   ],
-  stats: { orders: 3, delivered: 2, cancelled: 1, spentPaise: 84000, lastOrderAt: '2026-11-15T12:00:00Z' },
+  stats: {
+    orders: 3,
+    delivered: 2,
+    cancelled: 1,
+    spentPaise: 84000,
+    lastOrderAt: '2026-11-15T12:00:00Z',
+  },
   restaurant: null,
 };
 
@@ -70,10 +79,14 @@ describe('AdminUserDetail', () => {
 
   beforeEach(() => {
     api.get.mockReset().mockReturnValue(of(detail));
-    api.update.mockReset().mockImplementation((_id: string, patch: Partial<User>) => of({ ...user, ...patch }));
-    orders.list.mockReset().mockReturnValue(
-      of({ items: [], pagination: { page: 1, limit: 5, total: 0, totalPages: 0 }, counts: {} }),
-    );
+    api.update
+      .mockReset()
+      .mockImplementation((_id: string, patch: Partial<User>) => of({ ...user, ...patch }));
+    orders.list
+      .mockReset()
+      .mockReturnValue(
+        of({ items: [], pagination: { page: 1, limit: 5, total: 0, totalPages: 0 }, counts: {} }),
+      );
   });
 
   it('opens a customer on the overview: totals, account help and recent orders', async () => {
@@ -83,7 +96,17 @@ describe('AdminUserDetail', () => {
     expect(el.textContent).toContain('Send password reset link');
     expect(orders.list).toHaveBeenCalledWith({ customer: 'u1', limit: 5 });
     // The admin may see every area here, so every tab is offered.
-    for (const tab of ['Personal info', 'Addresses', 'Orders', 'Payments', 'Coins', 'Reviews', 'Support', 'Account activity', 'Admin log'])
+    for (const tab of [
+      'Personal info',
+      'Addresses',
+      'Orders',
+      'Payments',
+      'Coins',
+      'Reviews',
+      'Support',
+      'Account activity',
+      'Admin log',
+    ])
       expect(el.querySelector('np-tabs')?.textContent).toContain(tab);
   });
 

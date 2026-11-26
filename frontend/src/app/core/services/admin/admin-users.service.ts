@@ -46,12 +46,17 @@ export class AdminUsersService {
   /** A reason is required for anything but `active`. */
   setStatus(id: string, status: UserStatus, reason?: string): Observable<User> {
     return this.http
-      .patch<ApiResponse<{ user: User }>>(`${this.url}/${id}/status`, { status, reason: reason || undefined })
+      .patch<ApiResponse<{ user: User }>>(`${this.url}/${id}/status`, {
+        status,
+        reason: reason || undefined,
+      })
       .pipe(map((res) => res.data.user));
   }
 
   get(id: string): Observable<AdminUserDetail> {
-    return this.http.get<ApiResponse<AdminUserDetail>>(`${this.url}/${id}`).pipe(map((res) => res.data));
+    return this.http
+      .get<ApiResponse<AdminUserDetail>>(`${this.url}/${id}`)
+      .pipe(map((res) => res.data));
   }
 
   update(id: string, patch: UserProfilePatch): Observable<User> {
@@ -61,13 +66,18 @@ export class AdminUsersService {
   }
 
   // A customer's saved addresses (same bodies as their own /addresses).
-  createAddress = (id: string, input: AddressInput) => this.address('POST', `${id}/addresses`, input);
+  createAddress = (id: string, input: AddressInput) =>
+    this.address('POST', `${id}/addresses`, input);
   updateAddress = (id: string, addressId: string, input: Partial<AddressInput>) =>
     this.address('PATCH', `${id}/addresses/${addressId}`, input);
   setDefaultAddress = (id: string, addressId: string) =>
     this.address('PATCH', `${id}/addresses/${addressId}/default`, {});
 
-  private address(method: 'POST' | 'PATCH', path: string, body: object): Observable<DeliveryAddress> {
+  private address(
+    method: 'POST' | 'PATCH',
+    path: string,
+    body: object,
+  ): Observable<DeliveryAddress> {
     return this.http
       .request<ApiResponse<{ address: DeliveryAddress }>>(method, `${this.url}/${path}`, { body })
       .pipe(map((res) => res.data.address));
@@ -82,7 +92,9 @@ export class AdminUsersService {
   /** The person's sign-ins (newest first). */
   logins(id: string, page = 1, limit = 10): Observable<Paginated<LoginEntry>> {
     return this.http
-      .get<ApiResponse<Paginated<LoginEntry>>>(`${this.url}/${id}/logins`, { params: toParams({ page, limit }) })
+      .get<ApiResponse<Paginated<LoginEntry>>>(`${this.url}/${id}/logins`, {
+        params: toParams({ page, limit }),
+      })
       .pipe(map((res) => res.data));
   }
 

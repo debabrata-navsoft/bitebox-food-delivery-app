@@ -9,6 +9,7 @@ import { User } from '../../models/user.models';
 import { toParams } from '../../../shared/utils/http-params';
 import { Faceted, ListQuery } from '../../../shared/list/filtered-list';
 import { MyRestaurantService, MyRestaurantState } from '../my-restaurant.service';
+import { refreshesReviews } from './review-changes';
 
 export type KycState = 'verified' | 'pending' | 'incomplete' | 'rejected';
 type Rating = { average: number; count: number };
@@ -61,14 +62,18 @@ export class AdminRestaurantAccountsService {
   update = (id: string, input: RestaurantUpdate) => this.send('PATCH', id, '', input);
   /** A reason is required to reject, ask for documents or suspend. */
   setStatus = (id: string, status: RestaurantStatus, reason?: string) =>
-    this.send('PATCH', id, '/status', { status, reason: reason || undefined });
+    this.send('PATCH', id, '/status', { status, reason: reason || undefined }).pipe(
+      refreshesReviews(),
+    );
   /** Temporarily close (with a reason) or reopen the restaurant for new orders. */
   setAccepting = (id: string, isAcceptingOrders: boolean, reason?: string) =>
     this.send('PATCH', id, '/accepting-orders', { isAcceptingOrders, reason: reason || undefined });
 
   private send(method: 'PATCH', id: string, path: string, body: object): Observable<Restaurant> {
     return this.http
-      .request<ApiResponse<{ restaurant: Restaurant }>>(method, `${this.url}/${id}${path}`, { body })
+      .request<ApiResponse<{ restaurant: Restaurant }>>(method, `${this.url}/${id}${path}`, {
+        body,
+      })
       .pipe(map((r) => r.data.restaurant));
   }
 }

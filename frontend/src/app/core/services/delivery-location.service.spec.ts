@@ -14,7 +14,11 @@ describe('DeliveryLocationService', () => {
 
   function setup() {
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: GeolocationService, useValue: geo }],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: GeolocationService, useValue: geo },
+      ],
     });
     service = TestBed.inject(DeliveryLocationService);
     http = TestBed.inject(HttpTestingController);
@@ -27,7 +31,10 @@ describe('DeliveryLocationService', () => {
   afterEach(() => http.verify());
 
   it('is ready only once the saved location has been read', () => {
-    localStorage.setItem('bb_delivery_location', JSON.stringify({ label: 'Maple Town', latitude: 10, longitude: 20, source: 'search' }));
+    localStorage.setItem(
+      'bb_delivery_location',
+      JSON.stringify({ label: 'Maple Town', latitude: 10, longitude: 20, source: 'search' }),
+    );
     setup();
     expect(service.ready()).toBe(false);
     expect(service.location()).toBeNull();
@@ -45,11 +52,17 @@ describe('DeliveryLocationService', () => {
     await Promise.resolve();
     http
       .expectOne((r) => r.url === `${environment.baseUrl}/geo/reverse`)
-      .flush({ success: true, message: 'OK', data: { place: { label: 'Test Area, Test City', latitude: 10.5, longitude: 20.5 } } });
+      .flush({
+        success: true,
+        message: 'OK',
+        data: { place: { label: 'Test Area, Test City', latitude: 10.5, longitude: 20.5 } },
+      });
     const location = await pending;
     expect(location.label).toBe('Test Area, Test City');
     TestBed.tick();
-    expect(JSON.parse(localStorage.getItem('bb_delivery_location')!).label).toBe('Test Area, Test City');
+    expect(JSON.parse(localStorage.getItem('bb_delivery_location')!).label).toBe(
+      'Test Area, Test City',
+    );
   });
 
   it('labels a saved address by area and city', () => {
@@ -61,18 +74,36 @@ describe('DeliveryLocationService', () => {
       city: 'Sample City',
       location: { type: 'Point', coordinates: [21.5, 11.5] },
     } as DeliveryAddress);
-    expect(service.location()).toEqual(expect.objectContaining({ label: 'Sample Area, Sample City', latitude: 11.5, longitude: 21.5, addressId: 'a1' }));
+    expect(service.location()).toEqual(
+      expect.objectContaining({
+        label: 'Sample Area, Sample City',
+        latitude: 11.5,
+        longitude: 21.5,
+        addressId: 'a1',
+      }),
+    );
   });
 
   it('restores a saved choice after the first render and ignores corrupted data', () => {
-    localStorage.setItem('bb_delivery_location', JSON.stringify({ label: 'Sample Area, Sample City', latitude: 11.5, longitude: 21.5, source: 'search' }));
+    localStorage.setItem(
+      'bb_delivery_location',
+      JSON.stringify({
+        label: 'Sample Area, Sample City',
+        latitude: 11.5,
+        longitude: 21.5,
+        source: 'search',
+      }),
+    );
     setup();
     expect(service.location()).toBeNull(); // matches server-rendered HTML
     render();
     expect(service.location()?.label).toBe('Sample Area, Sample City');
 
     TestBed.resetTestingModule();
-    localStorage.setItem('bb_delivery_location', JSON.stringify({ label: 'x', latitude: 999, longitude: 0 }));
+    localStorage.setItem(
+      'bb_delivery_location',
+      JSON.stringify({ label: 'x', latitude: 999, longitude: 0 }),
+    );
     setup();
     render();
     expect(service.location()).toBeNull();
@@ -81,7 +112,8 @@ describe('DeliveryLocationService', () => {
   it('extracts structured address fields from a reverse-geocoded place', () => {
     const extracted = extractAddressFromPlace({
       label: 'Topsia, Kolkata',
-      displayName: 'Haute Street Building, 86A, Topsia Rd S, Seal Lane, Topsia, Kolkata, West Bengal, 700046, India',
+      displayName:
+        'Haute Street Building, 86A, Topsia Rd S, Seal Lane, Topsia, Kolkata, West Bengal, 700046, India',
       latitude: 22.54,
       longitude: 88.39,
       area: 'Topsia',

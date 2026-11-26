@@ -18,7 +18,10 @@ export class AdminPushService {
 
   sendPromotion(input: PromotionInput): Observable<{ recipients: number }> {
     return this.http
-      .post<ApiResponse<{ recipients: number }>>(`${environment.baseUrl}/admin/push/promotions`, input)
+      .post<ApiResponse<{ recipients: number }>>(
+        `${environment.baseUrl}/admin/push/promotions`,
+        input,
+      )
       .pipe(map((r) => r.data));
   }
 }

@@ -28,7 +28,9 @@ export abstract class CouponApi<TInput> {
   }
 
   analytics(): Observable<CouponAnalytics> {
-    return this.http.get<ApiResponse<CouponAnalytics>>(`${this.url}/analytics`).pipe(map((r) => r.data));
+    return this.http
+      .get<ApiResponse<CouponAnalytics>>(`${this.url}/analytics`)
+      .pipe(map((r) => r.data));
   }
 
   create(input: TInput): Observable<AdminCoupon> {

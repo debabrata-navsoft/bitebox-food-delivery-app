@@ -4,12 +4,16 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { ApiResponse, Paginated } from '../../models/api.models';
 import { VehicleType } from '../../models/checkout.models';
-import { RiderAddress, RiderProfile, RiderVerificationStatus } from '../../models/order-management.models';
+import {
+  RiderAddress,
+  RiderProfile,
+  RiderVerificationStatus,
+} from '../../models/order-management.models';
 import { Gender, User, UserStatus } from '../../models/user.models';
 import { toParams } from '../../../shared/utils/http-params';
 import { Faceted, ListQuery } from '../../../shared/list/filtered-list';
 import { KycState } from './admin-restaurant-accounts.service';
-
+import { refreshesReviews } from './review-changes';
 
 export interface EmergencyContact {
   name: string;
@@ -88,10 +92,17 @@ export class AdminRiderAccountsService {
   update = (id: string, patch: RiderAccountPatch) => this.send(id, '', patch);
   /** A reason is required to reject or ask for documents. */
   setVerification = (id: string, status: RiderVerificationStatus, reason?: string) =>
-    this.send(id, '/verification', { status, reason: reason || undefined });
+    this.send(id, '/verification', { status, reason: reason || undefined }).pipe(
+      refreshesReviews(),
+    );
   /** Takes the rider offline now (only the rider can go online). */
-  takeOffline = (id: string, reason: string) => this.send(id, '/availability', { isOnline: false, reason });
-  availability = (id: string, page: number, limit: number): Observable<Paginated<AvailabilityChange>> =>
+  takeOffline = (id: string, reason: string) =>
+    this.send(id, '/availability', { isOnline: false, reason });
+  availability = (
+    id: string,
+    page: number,
+    limit: number,
+  ): Observable<Paginated<AvailabilityChange>> =>
     this.http
       .get<ApiResponse<Paginated<AvailabilityChange>>>(`${this.url}/${id}/availability`, {
         params: toParams({ page, limit }),

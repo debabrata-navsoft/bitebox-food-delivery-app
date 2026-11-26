@@ -8,6 +8,7 @@ import { pollWhileVisible } from '../poll';
 import { AdminOrdersService } from '../order-management.service';
 import { AdminCatalogService } from './admin-catalog.service';
 import { RestaurantStatus } from '../../models/catalog.models';
+import { reviewChanges } from './review-changes';
 
 const POLL_MS = 60_000;
 
@@ -18,8 +19,8 @@ const whenAllowed = <T>(allowed: boolean, request: () => Observable<T>): Observa
 /**
  * What is waiting for an admin's decision: restaurant applications and delivery partners'
  * documents in review. Shared by the sidebar badges and the dashboards' review shortcuts. The admin
- * layout calls `watch()`; counts refresh every minute while the tab is visible and after each
- * navigation (so they drop as soon as something is approved).
+ * layout calls `watch()`; counts refresh every minute while the tab is visible, after each
+ * navigation, and as soon as an admin approves, rejects or verifies something (`reviewChanges`).
  */
 @Injectable({ providedIn: 'root' })
 export class AdminReviewCounts {
@@ -50,13 +51,14 @@ export class AdminReviewCounts {
 
   /** Keeps the counts fresh while the caller (the admin layout) lives. */
   watch(destroyRef: DestroyRef = inject(DestroyRef)): this {
-    const navigated = this.router.events.pipe(
-      filter((e) => e instanceof NavigationEnd),
-      switchMap(() => inBackground(this.load())),
-    );
+    // Also after each navigation and right after an approval or verification change.
+    const reload = merge(
+      this.router.events.pipe(filter((e) => e instanceof NavigationEnd)),
+      reviewChanges,
+    ).pipe(switchMap(() => inBackground(this.load())));
     merge(
       pollWhileVisible(() => this.load(), POLL_MS),
-      navigated,
+      reload,
     )
       .pipe(takeUntilDestroyed(destroyRef))
       .subscribe();

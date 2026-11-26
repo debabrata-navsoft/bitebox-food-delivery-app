@@ -31,30 +31,42 @@ export class AdminRewardsService {
   }
 
   /** POST/PUT/PATCH and return `data[key]`. */
-  private send<T>(method: 'POST' | 'PUT' | 'PATCH', path: string, key: string, body: object, headers?: Record<string, string>) {
+  private send<T>(
+    method: 'POST' | 'PUT' | 'PATCH',
+    path: string,
+    key: string,
+    body: object,
+    headers?: Record<string, string>,
+  ) {
     return this.http
       .request<ApiResponse<Record<string, T>>>(method, `${this.url}/${path}`, { body, headers })
       .pipe(map((r) => r.data[key]));
   }
 
   configuration = () =>
-    this.get<{ configuration: RewardConfiguration }>('configuration').pipe(map((d) => d.configuration));
+    this.get<{ configuration: RewardConfiguration }>('configuration').pipe(
+      map((d) => d.configuration),
+    );
   saveConfiguration = (version: number, patch: RewardConfigurationPatch) =>
     this.send<RewardConfiguration>('PUT', 'configuration', 'configuration', { version, ...patch });
 
   /** Filters take one value or several (arrays go comma-separated); `facets: 1` adds the counts. */
   campaigns = (query: ListQuery) => this.get<Faceted<AdminCampaign>>('campaigns', query);
   campaign = (id: string) => this.get<AdminCampaignDetail>(`campaigns/${id}`);
-  createCampaign = (input: AdminCampaignInput) => this.send<AdminCampaign>('POST', 'campaigns', 'campaign', input);
+  createCampaign = (input: AdminCampaignInput) =>
+    this.send<AdminCampaign>('POST', 'campaigns', 'campaign', input);
   updateCampaign = (id: string, input: Partial<AdminCampaignInput>) =>
     this.send<AdminCampaign>('PUT', `campaigns/${id}`, 'campaign', input);
   setCampaignStatus = (id: string, action: 'activate' | 'pause' | 'end') =>
     this.send<AdminCampaign>('PATCH', `campaigns/${id}/status`, 'campaign', { action });
   claims = (query: ListQuery) => this.get<Faceted<RewardClaim>>('claims', query);
 
-  transactions = (query: ListQuery) => this.get<Faceted<AdminCoinTransaction>>('transactions', query);
+  transactions = (query: ListQuery) =>
+    this.get<Faceted<AdminCoinTransaction>>('transactions', query);
   transaction = (id: string) =>
-    this.get<{ transaction: AdminCoinTransaction; related: AdminCoinTransaction[] }>(`transactions/${id}`);
+    this.get<{ transaction: AdminCoinTransaction; related: AdminCoinTransaction[] }>(
+      `transactions/${id}`,
+    );
   reverse = (id: string, body: { coins?: number; reason: string }, idempotencyKey: string) =>
     this.send<AdminCoinTransaction>('POST', `transactions/${id}/reverse`, 'transaction', body, {
       'Idempotency-Key': idempotencyKey,
