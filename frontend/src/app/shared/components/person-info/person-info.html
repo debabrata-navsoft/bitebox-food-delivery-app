@@ -1,0 +1,34 @@
+<div class="person-info">
+  <section class="bb-card">
+    <h2>Contact</h2>
+    <ul class="contacts">
+      @for (c of contacts(); track c.label) {
+        <li>
+          <span class="tile" aria-hidden="true"><np-icon [name]="c.icon" class="mat-icon" /></span>
+          <span class="what">
+            <small>{{ c.label }}</small>
+            <strong>{{ c.value ?? 'Not added' }}</strong>
+          </span>
+          @if (c.value) {
+            <span class="bb-badge" [class.tone-good]="c.verified" [class.tone-warn]="!c.verified">
+              {{ c.verified ? 'Verified' : 'Not verified' }}
+            </span>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+
+  <section class="bb-card">
+    <h2>Personal</h2>
+    <bb-info-rows [rows]="personal()" />
+  </section>
+
+  <section class="bb-card">
+    <h2>Account</h2>
+    <bb-info-rows [rows]="account()" />
+  </section>
+
+  <!-- More cards from the page (e.g. a restaurant's own contact), in the same grid -->
+  <ng-content />
+</div>

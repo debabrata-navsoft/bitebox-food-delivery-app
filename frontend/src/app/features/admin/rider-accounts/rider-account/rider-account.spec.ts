@@ -5,7 +5,10 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { AdminRiderAccountsService, RiderAccount as Account } from '../../../../core/services/admin/admin-rider-accounts.service';
+import {
+  AdminRiderAccountsService,
+  RiderAccount as Account,
+} from '../../../../core/services/admin/admin-rider-accounts.service';
 import { Permission, User } from '../../../../core/models/user.models';
 import { RiderAccountEdit } from '../rider-account-edit/rider-account-edit';
 import { RiderAccount } from './rider-account';
@@ -35,12 +38,24 @@ const account = (extra: Partial<Account['rider']> = {}): Account => ({
     zone: 'Indiranagar',
     ...extra,
   },
-  stats: { deliveries: 12, cancelled: 1, earningsPaise: 48000, lastDeliveryAt: null, rating: { average: 4.6, count: 9 } },
+  stats: {
+    deliveries: 12,
+    cancelled: 1,
+    earningsPaise: 48000,
+    lastDeliveryAt: null,
+    rating: { average: 4.6, count: 9 },
+  },
   kyc: { status: 'pending', missing: [] },
 });
 
 describe('RiderAccount', () => {
-  const api = { get: vi.fn(), update: vi.fn(), setVerification: vi.fn(), takeOffline: vi.fn(), availability: vi.fn() };
+  const api = {
+    get: vi.fn(),
+    update: vi.fn(),
+    setVerification: vi.fn(),
+    takeOffline: vi.fn(),
+    availability: vi.fn(),
+  };
 
   async function create<T>(component: Type<T>, permissions: Permission[]) {
     await TestBed.configureTestingModule({
@@ -50,7 +65,10 @@ describe('RiderAccount', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: AdminRiderAccountsService, useValue: api },
-        { provide: AuthService, useValue: { can: (p: Permission) => permissions.includes(p), user: signal(null) } },
+        {
+          provide: AuthService,
+          useValue: { can: (p: Permission) => permissions.includes(p), user: signal(null) },
+        },
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(component);
@@ -87,8 +105,8 @@ describe('RiderAccount', () => {
   it('edit sends only what changed, and needs a phone with an emergency contact name', async () => {
     const { fixture, el } = await create(RiderAccountEdit, ['riders:view', 'riders:edit']);
     const type = (label: string, value: string) => {
-      const input = [...el.querySelectorAll<HTMLInputElement>('np-text-input input')].find(
-        (i) => i.closest('np-text-input')?.querySelector('label')?.textContent?.trim().startsWith(label),
+      const input = [...el.querySelectorAll<HTMLInputElement>('np-text-input input')].find((i) =>
+        i.closest('np-text-input')?.querySelector('label')?.textContent?.trim().startsWith(label),
       )!;
       input.value = value;
       input.dispatchEvent(new Event('input'));

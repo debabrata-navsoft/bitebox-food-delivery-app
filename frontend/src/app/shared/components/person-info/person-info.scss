@@ -1,0 +1,75 @@
+@use 'breakpoints' as bp;
+
+// Two cards per row on desktop (Contact | Personal, Account | a page's own card), one on phones.
+.person-info {
+  display: grid;
+  gap: var(--bb-space-4);
+
+  @include bp.desktop-up {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  // Its own cards and any the page adds (those keep the page's heading styles).
+  ::ng-deep > * {
+    margin: 0;
+  }
+  h2 {
+    margin: 0 0 var(--bb-space-3);
+    font-size: 1.05rem;
+  }
+}
+
+.contacts {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--bb-space-3);
+    padding: var(--bb-space-3) 0;
+
+    // Phones: the badge on the label's line, so the email or number gets the full width.
+    @include bp.phone-only {
+      .what {
+        grid-area: 1 / 2 / auto / -1;
+      }
+      .bb-badge {
+        grid-area: 1 / 3;
+        align-self: start;
+      }
+    }
+
+    & + li {
+      border-top: 1px dashed var(--bb-border);
+    }
+  }
+}
+
+.tile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--bb-plum-100);
+  color: var(--bb-plum);
+  --bb-icon-size: 18px;
+}
+
+.what {
+  display: grid;
+  min-width: 0;
+
+  small {
+    color: var(--bb-ink-muted);
+    font-size: 0.78rem;
+  }
+  strong {
+    overflow-wrap: anywhere;
+  }
+}

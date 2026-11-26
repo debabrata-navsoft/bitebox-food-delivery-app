@@ -36,12 +36,27 @@ const restaurant = {
   updatedAt: '',
 } as unknown as Restaurant;
 
-const owner = { id: 'u9', name: 'Ravi Kumar', email: 'ravi@example.test', role: 'restaurant', status: 'active', createdAt: '', updatedAt: '' } as User;
+const owner = {
+  id: 'u9',
+  name: 'Ravi Kumar',
+  email: 'ravi@example.test',
+  role: 'restaurant',
+  status: 'active',
+  createdAt: '',
+  updatedAt: '',
+} as User;
 
 const account: Account = {
   restaurant,
   owner,
-  stats: { orders: 4, delivered: 3, cancelled: 1, grossPaise: 150000, lastOrderAt: null, rating: { average: 0, count: 0 } },
+  stats: {
+    orders: 4,
+    delivered: 3,
+    cancelled: 1,
+    grossPaise: 150000,
+    lastOrderAt: null,
+    rating: { average: 0, count: 0 },
+  },
   commission: { percent: 18, source: 'default' },
   kyc: { status: 'incomplete', missing: ['fssai'] },
 };
@@ -57,7 +72,10 @@ describe('RestaurantAccount', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: AdminRestaurantAccountsService, useValue: api },
-        { provide: AuthService, useValue: { can: (p: Permission) => permissions.includes(p), user: signal(null) } },
+        {
+          provide: AuthService,
+          useValue: { can: (p: Permission) => permissions.includes(p), user: signal(null) },
+        },
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(RestaurantAccount);
@@ -96,7 +114,10 @@ describe('AdminRestaurantStore', () => {
         provideHttpClient(),
         AdminRestaurantStore,
         { provide: AdminRestaurantAccountsService, useValue: api },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: restaurant.id }) } } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: convertToParamMap({ id: restaurant.id }) } },
+        },
       ],
     });
     const store = TestBed.inject(AdminRestaurantStore);

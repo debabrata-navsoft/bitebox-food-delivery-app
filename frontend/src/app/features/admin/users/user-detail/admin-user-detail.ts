@@ -40,6 +40,7 @@ import { StatTile } from '../../../../shared/components/stat-tile/stat-tile';
 import { loaded } from '../../../../shared/coupons/coupon-list';
 import { BbDialog } from '../../../../shared/dialog/bb-dialog';
 import { birthDateRange, fromIsoDay, isoDay } from '../../../../shared/utils/dates';
+import { PersonInfo } from '../../../../shared/components/person-info/person-info';
 import { serverErrors, shownError } from '../../../../shared/forms/form-errors';
 import { requiredText } from '../../../../shared/validators/form-rules';
 import { NP_FORM_FIELDS } from '../../../../shared/forms/np-form-fields';
@@ -87,6 +88,7 @@ const BACK = {
 @Component({
   selector: 'bb-admin-user-detail',
   imports: [
+    PersonInfo,
     DetailNav,
     DatePipe,
     TitleCasePipe,
@@ -134,8 +136,6 @@ export class AdminUserDetail {
     return role && role in BACK ? BACK[role as keyof typeof BACK] : BACK.customer;
   });
   protected readonly statusMeta = USER_STATUS_META;
-  protected readonly genderLabel = GENDER_LABEL;
-  protected readonly fromIsoDay = fromIsoDay;
   protected readonly shortId = shortId;
   protected readonly statusLabel = customerStatusLabel;
   protected readonly shownError = shownError;
