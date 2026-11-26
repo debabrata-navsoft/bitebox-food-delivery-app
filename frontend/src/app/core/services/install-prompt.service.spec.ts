@@ -25,10 +25,7 @@ describe('InstallPromptService', () => {
     mockDialog = { open: vi.fn() };
 
     TestBed.configureTestingModule({
-      providers: [
-        InstallPromptService,
-        { provide: MatDialog, useValue: mockDialog },
-      ],
+      providers: [InstallPromptService, { provide: MatDialog, useValue: mockDialog }],
     });
   });
 
@@ -96,10 +93,7 @@ describe('InstallPromptService', () => {
     localStorage.setItem('bb.install.dismissedAt', String(Date.now() - 1000));
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      providers: [
-        InstallPromptService,
-        { provide: MatDialog, useValue: mockDialog },
-      ],
+      providers: [InstallPromptService, { provide: MatDialog, useValue: mockDialog }],
     });
     const installer = TestBed.inject(InstallPromptService);
     expect(installer.showBanner()).toBe(false);

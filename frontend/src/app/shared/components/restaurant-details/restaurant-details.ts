@@ -368,10 +368,14 @@ export class RestaurantDetails {
         creating ? this.service.create(input) : this.service.update(input),
       );
       this.fill(restaurant);
+      // While it isn't approved yet the partner is still onboarding: KYC is the next step.
+      const onboarding = !this.embedded() && (creating || restaurant.status !== 'approved');
       this.notify.success(
-        creating ? 'Restaurant submitted for approval' : 'Restaurant details saved',
+        onboarding
+          ? 'Restaurant details saved. Next, verify your documents.'
+          : 'Restaurant details saved',
       );
-      if (creating) void this.router.navigateByUrl('/restaurant');
+      if (onboarding) void this.router.navigateByUrl('/restaurant/verification');
       return undefined;
     } catch (err) {
       this.error.set(errorMessage(err, 'Could not save your restaurant.'));

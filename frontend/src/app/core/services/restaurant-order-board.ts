@@ -2,10 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { Subscription, catchError, debounceTime, of, tap } from 'rxjs';
-import {
-  RestaurantActiveOrders,
-  RestaurantOrder,
-} from '../models/order-management.models';
+import { RestaurantActiveOrders, RestaurantOrder } from '../models/order-management.models';
 import { errorMessage } from '../../shared/utils/api-error';
 import { NotificationService } from './notification.service';
 import { RestaurantOrdersService } from './order-management.service';

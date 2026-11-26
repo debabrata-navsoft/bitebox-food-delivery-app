@@ -43,7 +43,11 @@ describe('InboxService', () => {
     TestBed.tick();
     http
       .expectOne((r) => r.url.endsWith('/notifications'))
-      .flush({ success: true, message: 'OK', data: { items: [note('a'), note('b', '2026-11-03T09:00:00.000Z')], unread: 1 } });
+      .flush({
+        success: true,
+        message: 'OK',
+        data: { items: [note('a'), note('b', '2026-11-03T09:00:00.000Z')], unread: 1 },
+      });
   };
 
   it('loads on sign-in and clears on sign-out', () => {
@@ -69,8 +73,12 @@ describe('InboxService', () => {
     inbox.markRead(inbox.items()[0]);
     expect(inbox.unread()).toBe(0);
     expect(inbox.items()[0].readAt).not.toBeNull();
-    http.expectOne((r) => r.url.endsWith('/notifications/a/read')).flush(null, { status: 500, statusText: 'Error' });
-    http.expectOne((r) => r.url.endsWith('/notifications')).flush({ success: true, message: 'OK', data: { items: [note('a')], unread: 1 } });
+    http
+      .expectOne((r) => r.url.endsWith('/notifications/a/read'))
+      .flush(null, { status: 500, statusText: 'Error' });
+    http
+      .expectOne((r) => r.url.endsWith('/notifications'))
+      .flush({ success: true, message: 'OK', data: { items: [note('a')], unread: 1 } });
     expect(inbox.unread()).toBe(1);
   });
 });

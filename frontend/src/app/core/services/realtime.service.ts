@@ -5,10 +5,7 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../auth/auth.service';
 import { OrderStatus } from '../models/checkout.models';
 import { AppNotification } from '../models/payment.models';
-import {
-  DjangoSocketTransport,
-  RealtimeTransport,
-} from './realtime-transport';
+import { DjangoSocketTransport, RealtimeTransport } from './realtime-transport';
 
 export interface OrderEvent {
   id: string;

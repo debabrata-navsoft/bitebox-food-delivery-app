@@ -8,7 +8,13 @@ import { RestaurantOrdersService } from './order-management.service';
 import { RestaurantOrderBoard } from './restaurant-order-board';
 
 const order = (id: string, status: RestaurantOrder['status'] = 'pending') =>
-  ({ id, orderNumber: `BB-${id}`, status, items: [], createdAt: new Date().toISOString() }) as unknown as RestaurantOrder;
+  ({
+    id,
+    orderNumber: `BB-${id}`,
+    status,
+    items: [],
+    createdAt: new Date().toISOString(),
+  }) as unknown as RestaurantOrder;
 const board = (...items: RestaurantOrder[]): RestaurantActiveOrders => ({
   items,
   counts: { pending: items.filter((o) => o.status === 'pending').length },
@@ -43,7 +49,10 @@ describe('RestaurantOrderBoard', () => {
 
   const fakeDestroyRef = () => {
     const callbacks: (() => void)[] = [];
-    return { ref: { onDestroy: (fn: () => void) => callbacks.push(fn) } as unknown as DestroyRef, destroy: () => callbacks.forEach((f) => f()) };
+    return {
+      ref: { onDestroy: (fn: () => void) => callbacks.push(fn) } as unknown as DestroyRef,
+      destroy: () => callbacks.forEach((f) => f()),
+    };
   };
 
   it('announces only orders that arrive after the first load, once each', () => {

@@ -24,7 +24,10 @@ export function pollWhileVisible<T>(
   // Only the first load shows the page loader; repeat polls refresh quietly.
   return merge(
     becameVisible.pipe(map(() => false)),
-    timer(intervalMs, intervalMs).pipe(map(() => false), filter(visible)),
+    timer(intervalMs, intervalMs).pipe(
+      map(() => false),
+      filter(visible),
+    ),
   ).pipe(
     startWith(true),
     switchMap((first) => (first ? request() : inBackground(request()))),

@@ -88,8 +88,12 @@ describe('PushNotificationService', () => {
     const done = push.enable();
     const key = http.expectOne((r) => r.url.endsWith('/push/public-key'));
     key.flush({ success: true, message: 'OK', data: { enabled: true, publicKey: 'BPublicKey' } });
-    await vi.waitFor(() => expect(swPush.requestSubscription).toHaveBeenCalledWith({ serverPublicKey: 'BPublicKey' }));
-    const register = await vi.waitFor(() => http.expectOne((r) => r.url.endsWith('/push/subscriptions')));
+    await vi.waitFor(() =>
+      expect(swPush.requestSubscription).toHaveBeenCalledWith({ serverPublicKey: 'BPublicKey' }),
+    );
+    const register = await vi.waitFor(() =>
+      http.expectOne((r) => r.url.endsWith('/push/subscriptions')),
+    );
     expect(register.request.method).toBe('POST');
     expect(register.request.body.endpoint).toContain('fcm.googleapis.com');
     register.flush({ success: true, message: 'OK', data: {} });

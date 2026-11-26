@@ -13,6 +13,7 @@ import {
   RestaurantStatus,
 } from '../../models/catalog.models';
 import { toParams } from '../../../shared/utils/http-params';
+import { refreshesReviews } from './review-changes';
 
 export type AdminFoodItem = Omit<FoodItem, 'restaurant'> & {
   restaurant: { _id?: string; id?: string; name: string; slug: string; status: RestaurantStatus };
@@ -62,7 +63,10 @@ export class AdminCatalogService {
         status,
         ...(reason ? { reason } : {}),
       })
-      .pipe(map((res) => res.data.restaurant));
+      .pipe(
+        map((res) => res.data.restaurant),
+        refreshesReviews(),
+      );
   }
 
   // Categories

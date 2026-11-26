@@ -127,7 +127,6 @@ export class OrderService {
       })
       .pipe(map((r) => r.data.offers));
   }
-
 }
 
 @Injectable({ providedIn: 'root' })
@@ -142,7 +141,9 @@ export class AdminCouponService extends CouponApi<AdminCouponInput> {
   /** Restaurant offers waiting for review. */
   pending(query: { page?: number; limit?: number }): Observable<Paginated<AdminCoupon>> {
     return this.http
-      .get<ApiResponse<Paginated<AdminCoupon>>>(`${this.offers}/pending`, { params: toParams(query) })
+      .get<ApiResponse<Paginated<AdminCoupon>>>(`${this.offers}/pending`, {
+        params: toParams(query),
+      })
       .pipe(map((r) => r.data));
   }
 

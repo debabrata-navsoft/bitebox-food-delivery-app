@@ -44,7 +44,10 @@ export class AppUpdateService {
         void this.check();
         const timer = setInterval(() => void this.check(), CHECK_EVERY_MS);
         const onVisible = () => {
-          if (this.document.visibilityState === 'visible' && Date.now() - this.lastCheck > MIN_GAP_MS)
+          if (
+            this.document.visibilityState === 'visible' &&
+            Date.now() - this.lastCheck > MIN_GAP_MS
+          )
             void this.check();
         };
         this.document.addEventListener('visibilitychange', onVisible);

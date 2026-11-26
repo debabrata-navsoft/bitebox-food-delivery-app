@@ -24,6 +24,7 @@ import {
   RiderStats,
 } from '../models/order-management.models';
 import { toParams } from '../../shared/utils/http-params';
+import { refreshesReviews } from './admin/review-changes';
 
 @Injectable({ providedIn: 'root' })
 export class RestaurantOrdersService {
@@ -175,7 +176,9 @@ export class AdminOrdersService {
    */
   list(query: ListQuery): Observable<AdminOrderList & Pick<Faceted<Order>, 'facets'>> {
     return this.http
-      .get<ApiResponse<AdminOrderList & Pick<Faceted<Order>, 'facets'>>>(`${this.api}/orders`, { params: toParams(query) })
+      .get<ApiResponse<AdminOrderList & Pick<Faceted<Order>, 'facets'>>>(`${this.api}/orders`, {
+        params: toParams(query),
+      })
       .pipe(map((r) => r.data));
   }
 
@@ -217,14 +220,19 @@ export class AdminOrdersService {
         `${this.api}/delivery-partners/${encodeURIComponent(id)}/verification`,
         { status, reason },
       )
-      .pipe(map((r) => r.data));
+      .pipe(
+        map((r) => r.data),
+        refreshesReviews(),
+      );
   }
 
   /**
    * Filters: verification, availability, vehicleType, zone (several each), search; the boolean
    * `online` (free or busy) still works; `facets: 1` adds the panel's counts.
    */
-  riders(query: ListQuery | { online?: boolean; verification?: RiderReviewState; limit?: number }): Observable<Faceted<AdminRider>> {
+  riders(
+    query: ListQuery | { online?: boolean; verification?: RiderReviewState; limit?: number },
+  ): Observable<Faceted<AdminRider>> {
     return this.http
       .get<ApiResponse<Faceted<AdminRider>>>(`${this.api}/delivery-partners`, {
         params: toParams(query),

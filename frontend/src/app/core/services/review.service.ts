@@ -89,7 +89,9 @@ export class ReviewService {
   }
 
   create(input: NewReview): Observable<MyReview> {
-    return this.review(this.http.post<ApiResponse<{ review: MyReview }>>(`${this.api}/reviews`, input));
+    return this.review(
+      this.http.post<ApiResponse<{ review: MyReview }>>(`${this.api}/reviews`, input),
+    );
   }
 
   update(
@@ -97,7 +99,10 @@ export class ReviewService {
     input: { rating?: number; comment?: string; images?: string[] },
   ): Observable<MyReview> {
     return this.review(
-      this.http.patch<ApiResponse<{ review: MyReview }>>(`${this.api}/reviews/${id(reviewId)}`, input),
+      this.http.patch<ApiResponse<{ review: MyReview }>>(
+        `${this.api}/reviews/${id(reviewId)}`,
+        input,
+      ),
     );
   }
 
@@ -122,7 +127,9 @@ export class ReviewService {
    */
   restaurantOrders(
     query: ListQuery,
-  ): Observable<ReviewPage<RestaurantOrderReviews> & Pick<Faceted<RestaurantOrderReviews>, 'facets'>> {
+  ): Observable<
+    ReviewPage<RestaurantOrderReviews> & Pick<Faceted<RestaurantOrderReviews>, 'facets'>
+  > {
     return this.get('my/restaurant/reviews/orders', query);
   }
 

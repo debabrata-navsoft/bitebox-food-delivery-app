@@ -1,6 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
-import { Injectable, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
+import {
+  Injectable,
+  PLATFORM_ID,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { SwPush } from '@angular/service-worker';
 import { Observable, firstValueFrom, map } from 'rxjs';
@@ -55,7 +63,10 @@ export class PushNotificationService {
 
   /** The Push API and the service worker are available in this browser. */
   readonly supported =
-    this.browser && this.swPush.isEnabled && typeof Notification !== 'undefined' && 'PushManager' in window;
+    this.browser &&
+    this.swPush.isEnabled &&
+    typeof Notification !== 'undefined' &&
+    'PushManager' in window;
 
   readonly permission = signal<NotificationPermission>(
     this.browser && typeof Notification !== 'undefined' ? Notification.permission : 'default',
@@ -138,7 +149,9 @@ export class PushNotificationService {
 
   private publicConfig() {
     this.config ??= this.data(
-      this.http.get<ApiResponse<{ enabled: boolean; publicKey: string | null }>>(`${this.url}/public-key`),
+      this.http.get<ApiResponse<{ enabled: boolean; publicKey: string | null }>>(
+        `${this.url}/public-key`,
+      ),
     ).catch((error) => {
       this.config = undefined; // retry next time
       throw error;
@@ -176,7 +189,11 @@ export class PushNotificationService {
         await this.swPush.unsubscribe(); // someone else's subscription on a shared browser
       } else {
         const [user, endpoint, at] = (storageGet(SYNCED_KEY) ?? '').split(' ');
-        if (user !== userId || endpoint !== existing.endpoint || Date.now() - Number(at) > RESYNC_MS)
+        if (
+          user !== userId ||
+          endpoint !== existing.endpoint ||
+          Date.now() - Number(at) > RESYNC_MS
+        )
           await this.register(existing);
       }
     } catch {
